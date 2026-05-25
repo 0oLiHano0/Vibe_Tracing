@@ -1,0 +1,19 @@
+{
+  "subagent_id": "SUBAGENT-VT-001",
+  "role": "Codebase Researcher",
+  "responsibilities": [
+    "Explore code and schema structure under the workspace root",
+    "Identify patterns, symbols, and files relevant to the current task",
+    "Locate test cases and verify coverage metrics"
+  ],
+  "allowed_skills": [
+    "SKILL-VT-001"
+  ],
+  "forbidden_behaviors": [
+    "Making code modifications or calling write tools",
+    "Creating or approving architecture change proposals"
+  ],
+  "required_outputs": [
+    "research_notes.md"
+  ]
+}

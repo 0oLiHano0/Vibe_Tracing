@@ -1,0 +1,141 @@
+{
+  "run_id": "RUN-8a6e0bd3-ffd9-468f-8d83-06e4736abdd7",
+  "project_id": "PROJECT-VT",
+  "scan_time": "2026-05-24T11:19:10.795129Z",
+  "gate_decision": "blocked",
+  "requirement_coverage": [
+    {
+      "req_id": "REQ-VT-001",
+      "status": "covered",
+      "evidence_ids": [
+        "EVIDENCE-VT-001"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "item_id": "architecture_constraints.json",
+      "item_type": "undocumented_change",
+      "reason": "检测到架构规则 'STORE-VT-999' 发生变更 (add)，但在 docs/architecture_change_log.md 中未找到对应的变更说明。"
+    }
+  ],
+  "risks": [
+    {
+      "risk_id": "RISK-VT-001",
+      "description": "架构约束违反 (规则 GATE-VT-014): 检测到架构规则 'STORE-VT-999' 发生变更 (add)，但在 docs/architecture_change_log.md 中未找到对应的变更说明。",
+      "severity": "must",
+      "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
+      "suggested_action": "根据规则 `GATE-VT-014` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-002",
+      "description": "架构约束 STORE-VT-999 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `STORE-VT-999` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-200",
+      "description": "检测到架构规则 'STORE-VT-999' 发生变更 (add)，但在 docs/architecture_change_log.md 中未找到对应的变更说明。",
+      "severity": "must",
+      "business_impact": "架构变更未经记录与合理化阐述，可能隐藏未审计的技术债或规则降级风险。",
+      "suggested_action": "请在 docs/architecture_change_log.md 中新增一条记录，阐述修改规则 '{rule_id}' 的原因与影响。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    }
+  ],
+  "architecture_compliance_status": [
+    {
+      "rule_id": "DEP-VT-001",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Core 不得依赖特定 Agent Runtime",
+      "description": "Vibe Tracing Core 必须能够在不依赖 Claude Code、Hermes、DeepSeek TUI 或任何特定 Agent Runtime 的情况下被调用。"
+    },
+    {
+      "rule_id": "DEP-VT-002",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Dashboard 不得依赖外部前端资源",
+      "description": "dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。"
+    },
+    {
+      "rule_id": "STORE-VT-001",
+      "status": "compliant",
+      "severity": "must",
+      "title": "MVP 不使用数据库",
+      "description": "MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。"
+    },
+    {
+      "rule_id": "GATE-VT-001",
+      "status": "compliant",
+      "severity": "must",
+      "title": "必需输入文件必须存在",
+      "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。"
+    },
+    {
+      "rule_id": "GATE-VT-006",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Must 级架构约束不得被违反",
+      "description": "Must 级架构约束不得存在已确认违反项。"
+    },
+    {
+      "rule_id": "GATE-VT-007",
+      "status": "compliant",
+      "severity": "must",
+      "title": "不明确的 Must 级架构约束必须导致保守门禁",
+      "description": "如果 Must 级架构约束无法被检查，系统不得输出完全 allow 的合并结论。"
+    },
+    {
+      "rule_id": "FORBID-VT-007",
+      "status": "compliant",
+      "severity": "must",
+      "title": "静默处理不明确架构约束",
+      "description": "当某条架构约束无法自动检查时，系统必须将其标记为 unclear，而不是忽略它。"
+    },
+    {
+      "rule_id": "GATE-VT-013",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Claude Code 自举配置必须可审查",
+      "description": "Claude Code 自举配置必须存在、格式正确，且符合安全审查原则。"
+    },
+    {
+      "rule_id": "GATE-VT-014",
+      "status": "violated",
+      "severity": "must",
+      "title": "架构约束变更建议必须显式记录",
+      "description": "架构约束变更没有通过显式记录提案审核，或提案本身不合法/缺失签名。"
+    },
+    {
+      "rule_id": "STORE-VT-999",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Drift Rule",
+      "description": "Silent drift rule."
+    }
+  ],
+  "architecture_violations": [
+    {
+      "rule_id": "GATE-VT-014",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "检测到架构规则 'STORE-VT-999' 发生变更 (add)，但在 docs/architecture_change_log.md 中未找到对应的变更说明。"
+    }
+  ],
+  "unclear_constraints": [
+    {
+      "rule_id": "STORE-VT-999",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    }
+  ]
+}

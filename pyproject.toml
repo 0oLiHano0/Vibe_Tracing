@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vibe-tracing"
+dynamic = ["version"]
+description = "Vibe Tracing - Consistency validation framework for agent coding"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "jsonschema>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "coverage>=7.0.0",
+    "ruff>=0.1.0",
+    "bandit>=1.7.0",
+]
+
+[project.scripts]
+vibe-tracing = "vibe_tracing.cli:main"
+
+[tool.hatch.version]
+path = "src/vibe_tracing/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vibe_tracing"]

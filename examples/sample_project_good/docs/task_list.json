@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1",
+  "project": {
+    "project_id": "PROJECT-VT",
+    "name": "Sample Project",
+    "stage": "mvp"
+  },
+  "tasks": [
+    {
+      "task_id": "TASK-VT-001",
+      "title": "Implement Feature",
+      "phase_id": "PHASE-VT-001",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "Implement the core feature requested",
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01"
+      ],
+      "definition_of_done": []
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "run_id": "RUN-248b18a0-25e4-4984-b524-1d9e5e03b404",
+  "project_id": "PROJECT-VT",
+  "scan_time": "2026-05-24T11:19:10.963386Z",
+  "input_files": {
+    "prd": "docs/prd.md",
+    "architecture_constraints": "docs/architecture_constraints.json",
+    "task_list": "docs/task_list.json",
+    "agent_claims": ".vibetracing/agent_claims.json"
+  },
+  "output_files": {
+    "evidence_index": ".vibetracing/output/evidence_index.json",
+    "traceability_report": ".vibetracing/output/traceability_report.json",
+    "dashboard": ".vibetracing/output/dashboard.html"
+  },
+  "gate_decision": "blocked",
+  "exit_code": 2,
+  "summary": "验收标准缺失测试证据 (AC-VT-001-01): Must acceptance criterion AC-VT-001-01 is missing passing test coverage.; 高风险或不自证违规 (RISK-VT-001): Claim CLAIM-VT-001 is completed but related AC AC-VT-001-01 has no test coverage.; 高风险或不自证违规 (RISK-VT-002): 验收标准 AC-VT-001-01 缺失通过的测试证据。"
+}

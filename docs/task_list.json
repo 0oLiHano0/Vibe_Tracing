@@ -1,0 +1,2148 @@
+{
+  "schema_version": "0.1",
+  "project": {
+    "project_id": "PROJECT-VT",
+    "name": "Vibe Tracing",
+    "stage": "mvp",
+    "task_list_id": "TASKLIST-VT-001",
+    "source_files": [
+      "PRD_final.md",
+      "architecture_constraints.json"
+    ],
+    "generated_for": "AI Coding atomic task execution"
+  },
+  "id_rules": {
+    "task_id_format": "TASK-VT-序号",
+    "dod_id_format": "DOD-VT-任务序号-子序号",
+    "all_tasks_must_link_requirements_and_acceptance_criteria": true,
+    "all_positive_status_must_reference_evidence": true
+  },
+  "status_enum": [
+    "todo",
+    "in_progress",
+    "blocked",
+    "done"
+  ],
+  "priority_enum": [
+    "must",
+    "should",
+    "could"
+  ],
+  "phases": [
+    {
+      "phase_id": "PHASE-VT-001",
+      "name": "项目骨架与机器契约",
+      "goal": "建立可独立运行、文件化、可校验的 MVP 工程基础。"
+    },
+    {
+      "phase_id": "PHASE-VT-002",
+      "name": "原始输入与 Schema 校验",
+      "goal": "读取 PRD、架构约束、任务列表、Claim、工具摘要，并在分析前完成确定性校验。"
+    },
+    {
+      "phase_id": "PHASE-VT-003",
+      "name": "证据索引构建",
+      "goal": "把任务、Claim、测试、代码路径和工具输出规范化为 evidence_index.json。"
+    },
+    {
+      "phase_id": "PHASE-VT-004",
+      "name": "追踪分析与缺口识别",
+      "goal": "建立需求、AC、任务、Claim、测试、证据之间的追踪矩阵并输出缺口。"
+    },
+    {
+      "phase_id": "PHASE-VT-005",
+      "name": "架构合规与风险识别",
+      "goal": "检查可机器判断的架构约束，识别风险和不明确项。"
+    },
+    {
+      "phase_id": "PHASE-VT-006",
+      "name": "合并门禁与报告输出",
+      "goal": "基于结构化证据和规则输出 traceability_report.json 与 merge gate 结论。"
+    },
+    {
+      "phase_id": "PHASE-VT-007",
+      "name": "单体 Dashboard 与端到端验收",
+      "goal": "生成单体 dashboard.html，并完成端到端样例与回归测试。"
+    },
+    {
+      "phase_id": "PHASE-VT-008",
+      "name": "Claude Code 自举与治理配置",
+      "goal": "在保持 Core 独立的前提下，建立 Claude Code 作为 MVP 首选 Agent Runtime 的自举配置、产物追踪和架构变更治理能力。"
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "TASK-VT-001",
+      "title": "建立依赖与完整目录骨架",
+      "phase_id": "PHASE-VT-001",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "建立 MVP 项目的可运行基础、目录边界和最小依赖。",
+      "atomic_scope": "创建 Python 包、CLI 入口、raw/output/schema/tests 目录、pyproject 依赖、README、示例输入输出目录；不得实现业务规则。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-002-01",
+        "AC-VT-006-01",
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-002",
+        "MOD-VT-003"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006",
+        "PRINCIPLE-VT-007",
+        "PRINCIPLE-VT-009",
+        "TECH-VT-001",
+        "TECH-VT-005",
+        "DEP-VT-001",
+        "STORE-VT-001"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "pyproject.toml",
+        "src/vibe_tracing/",
+        "tests/",
+        "raw/01_prd/",
+        "raw/02_architecture/",
+        "raw/03_tasks/",
+        "raw/04_claims/",
+        "tool_reports/",
+        "output/"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-001-01",
+          "description": "项目可通过本地 CLI 命令启动并显示帮助信息。"
+        },
+        {
+          "dod_id": "DOD-VT-001-02",
+          "description": "目录骨架包含 Raw Layer、Schema、输出、测试目录。"
+        },
+        {
+          "dod_id": "DOD-VT-001-03",
+          "description": "未引入数据库、后端服务、前端构建系统或 Agent Runtime 强依赖。"
+        },
+        {
+          "dod_id": "DOD-VT-001-04",
+          "description": "最小单元测试可运行并通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-002",
+      "title": "定义核心状态枚举与 ID 校验工具",
+      "phase_id": "PHASE-VT-001",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "统一项目中需求、AC、任务、证据、风险、门禁的状态与 ID 校验。",
+      "atomic_scope": "实现 ID 正则校验、状态枚举、严重等级枚举和错误码常量；不实现业务分析。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-03",
+        "AC-VT-002-01",
+        "AC-VT-006-02",
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-003",
+        "MOD-VT-006",
+        "MOD-VT-007"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-001",
+        "PRINCIPLE-VT-013",
+        "PRINCIPLE-VT-014",
+        "ERR-VT-003",
+        "LOG-VT-002"
+      ],
+      "depends_on": [
+        "TASK-VT-001"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/core/ids.py",
+        "src/vibe_tracing/core/enums.py",
+        "tests/test_ids_and_enums.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-002-01",
+          "description": "支持 REQ/AC/TASK/DOD/MOD/GATE/FORBID 等 ID 格式校验。"
+        },
+        {
+          "dod_id": "DOD-VT-002-02",
+          "description": "状态枚举包含 covered、partial、missing、unclear、low_confidence、blocked、compliant、violated。"
+        },
+        {
+          "dod_id": "DOD-VT-002-03",
+          "description": "非法 ID 和非法状态有清晰错误信息。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-003",
+      "title": "定义 JSON Schema 契约",
+      "phase_id": "PHASE-VT-001",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "为 task_list、agent_claims、evidence_index、traceability_report 定义机器可校验契约。",
+      "atomic_scope": "编写 schemas/*.schema.json；只定义 MVP 必需字段，不扩展复杂平台字段。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-002-01",
+        "AC-VT-006-02",
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-003",
+        "MOD-VT-005",
+        "MOD-VT-006",
+        "MOD-VT-007"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-014",
+        "GATE-VT-002",
+        "ERR-VT-002",
+        "TECH-VT-001"
+      ],
+      "depends_on": [
+        "TASK-VT-002"
+      ],
+      "expected_deliverables": [
+        "schemas/task_list.schema.json",
+        "schemas/agent_claims.schema.json",
+        "schemas/evidence_index.schema.json",
+        "schemas/traceability_report.schema.json",
+        "tests/test_schema_contracts.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-003-01",
+          "description": "所有 Schema 文件是合法 JSON Schema。"
+        },
+        {
+          "dod_id": "DOD-VT-003-02",
+          "description": "Schema 覆盖 ID、状态、evidence 引用、requirements/ac/tasks/claims/gate 字段。"
+        },
+        {
+          "dod_id": "DOD-VT-003-03",
+          "description": "缺少必填字段时测试能失败并指出字段路径。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-004",
+      "title": "实现 Schema Validator",
+      "phase_id": "PHASE-VT-002",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "实现分析前和报告生成前的 JSON Schema 校验能力。",
+      "atomic_scope": "加载 schemas，对 architecture_constraints、task_list、agent_claims、evidence_index、traceability_report 执行校验并返回结构化错误。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-03",
+        "AC-VT-006-02",
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-014",
+        "GATE-VT-002",
+        "ERR-VT-002"
+      ],
+      "depends_on": [
+        "TASK-VT-003"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/schema_validator.py",
+        "tests/test_schema_validator.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-004-01",
+          "description": "合法 JSON 通过校验。"
+        },
+        {
+          "dod_id": "DOD-VT-004-02",
+          "description": "无效 JSON 或 Schema 不兼容时返回 invalid_input。"
+        },
+        {
+          "dod_id": "DOD-VT-004-03",
+          "description": "错误包含文件路径、字段路径和修复提示。"
+        },
+        {
+          "dod_id": "DOD-VT-004-04",
+          "description": "Validator 不调用分析模块、门禁模块或 Dashboard 模块。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-005",
+      "title": "实现 Raw Input Loader",
+      "phase_id": "PHASE-VT-002",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "读取必需输入和可选输入，并生成 raw_input_manifest。",
+      "atomic_scope": "读取 prd.md、architecture_constraints.json、task_list.json、agent_claims.json、tool_reports、代码路径清单；只加载文件，不做治理判定。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-001-04",
+        "AC-VT-002-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-003"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-001",
+        "STORE-VT-004",
+        "ERR-VT-001",
+        "SEC-VT-001",
+        "GATE-VT-001"
+      ],
+      "depends_on": [
+        "TASK-VT-004"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/raw_input_loader.py",
+        "tests/test_raw_input_loader.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-005-01",
+          "description": "缺少必需输入时输出 missing_input。"
+        },
+        {
+          "dod_id": "DOD-VT-005-02",
+          "description": "Raw Layer 文件不会被修改或覆盖。"
+        },
+        {
+          "dod_id": "DOD-VT-005-03",
+          "description": "manifest 记录 inputs_used、文件路径、读取状态和错误。"
+        },
+        {
+          "dod_id": "DOD-VT-005-04",
+          "description": "Loader 不拥有 gate_decision、risk_decision、coverage_decision。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-006",
+      "title": "实现 PRD Markdown 需求与 AC 提取器",
+      "phase_id": "PHASE-VT-002",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "从 PRD Markdown 中提取 REQ 与 AC 基础结构。",
+      "atomic_scope": "解析 Markdown 标题中的 REQ-VT-* 与 AC-VT-*-*，提取标题、优先级、是否必须测试、父子关系；不做语义推断。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-001-04"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-006"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-013",
+        "ERR-VT-003",
+        "FORBID-VT-004"
+      ],
+      "depends_on": [
+        "TASK-VT-005"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/prd_parser.py",
+        "tests/test_prd_parser.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-006-01",
+          "description": "能提取 REQ-VT-001 至 REQ-VT-009 及其 AC。"
+        },
+        {
+          "dod_id": "DOD-VT-006-02",
+          "description": "重复 ID、缺失父需求、格式异常时输出错误或 unclear。"
+        },
+        {
+          "dod_id": "DOD-VT-006-03",
+          "description": "不根据相似文本推断不存在的 ID。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-007",
+      "title": "实现 Task List 读取与反向关联校验",
+      "phase_id": "PHASE-VT-002",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "读取 task_list.json 并校验任务到需求、AC 的显式关联。",
+      "atomic_scope": "校验每个任务必须有 task_id、related_requirements、related_acceptance_criteria、DoD；检查引用的 REQ/AC 是否存在。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-001-04"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-003",
+        "MOD-VT-006"
+      ],
+      "related_architecture_constraints": [
+        "GATE-VT-003",
+        "ERR-VT-004",
+        "LOG-VT-002"
+      ],
+      "depends_on": [
+        "TASK-VT-006"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/task_loader.py",
+        "tests/test_task_loader.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-007-01",
+          "description": "孤立任务被标记为 invalid 或 unclear。"
+        },
+        {
+          "dod_id": "DOD-VT-007-02",
+          "description": "引用不存在的 REQ/AC 会形成 gap。"
+        },
+        {
+          "dod_id": "DOD-VT-007-03",
+          "description": "Must 级需求没有任务覆盖时可被后续门禁识别。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-008",
+      "title": "实现 Agent Claim 读取与基础校验",
+      "phase_id": "PHASE-VT-002",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "读取 agent_claims.json 并校验 Claim 的任务、证据和状态字段。",
+      "atomic_scope": "校验 claim_id、related_task、claimed_status、evidence_refs、code_refs、test_refs；不接受 Claim 自身作为完成证据。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "AC-VT-002-03"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-003",
+        "MOD-VT-006"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-002",
+        "SEC-VT-004",
+        "FORBID-VT-001",
+        "GATE-VT-005"
+      ],
+      "depends_on": [
+        "TASK-VT-004"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/claim_loader.py",
+        "tests/test_claim_loader.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-008-01",
+          "description": "Claim 缺少 ID 或关联任务时返回 invalid_input。"
+        },
+        {
+          "dod_id": "DOD-VT-008-02",
+          "description": "Claim 引用不存在任务时生成 gap 候选。"
+        },
+        {
+          "dod_id": "DOD-VT-008-03",
+          "description": "completed Claim 没有外部证据时不能被标记完成。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-009",
+      "title": "实现工具输出规范化适配器",
+      "phase_id": "PHASE-VT-003",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 pytest、coverage、ruff、bandit 摘要规范化为工具证据候选项。",
+      "atomic_scope": "支持读取结构化 JSON 摘要或简单约定格式；记录命令、退出码、结果、covers AC ID；不直接做门禁判定。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-007",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-02",
+        "AC-VT-002-01",
+        "AC-VT-007-01",
+        "AC-VT-008-01"
+      ],
+      "related_modules": [
+        "MOD-VT-004",
+        "MOD-VT-005"
+      ],
+      "related_architecture_constraints": [
+        "TECH-VT-002",
+        "DEP-VT-004",
+        "FLOW-VT-006",
+        "FORBID-VT-006",
+        "ERR-VT-005",
+        "GATE-VT-011"
+      ],
+      "depends_on": [
+        "TASK-VT-005"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/tool_evidence_adapter.py",
+        "tests/test_tool_evidence_adapter.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-009-01",
+          "description": "pytest/coverage/ruff/bandit 结果被转为结构化 evidence candidate。"
+        },
+        {
+          "dod_id": "DOD-VT-009-02",
+          "description": "工具失败被标记为 tool_execution_failed，不能视为通过。"
+        },
+        {
+          "dod_id": "DOD-VT-009-03",
+          "description": "测试覆盖必须显式包含 covers AC ID。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-010",
+      "title": "实现 Evidence Index Builder",
+      "phase_id": "PHASE-VT-003",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "生成独立 evidence_index.json。",
+      "atomic_scope": "合并 PRD、任务、Claim、测试摘要、工具输出、代码路径引用为统一 evidence 记录；每条 evidence 有 ID、type、source、covers、status。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-002-01",
+        "AC-VT-002-02"
+      ],
+      "related_modules": [
+        "MOD-VT-005",
+        "MOD-VT-003"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-001",
+        "STORE-VT-002",
+        "PRINCIPLE-VT-001",
+        "PRINCIPLE-VT-014",
+        "LOG-VT-002"
+      ],
+      "depends_on": [
+        "TASK-VT-006",
+        "TASK-VT-007",
+        "TASK-VT-008",
+        "TASK-VT-009"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/evidence_index_builder.py",
+        "output/evidence_index.json",
+        "tests/test_evidence_index_builder.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-010-01",
+          "description": "evidence_index.json 可独立输出并通过 Schema 校验。"
+        },
+        {
+          "dod_id": "DOD-VT-010-02",
+          "description": "每条 evidence 具备 evidence_id、source_type、source_path、covers、status。"
+        },
+        {
+          "dod_id": "DOD-VT-010-03",
+          "description": "无来源证据不得被生成。"
+        },
+        {
+          "dod_id": "DOD-VT-010-04",
+          "description": "Evidence Builder 不生成 dashboard.html 或 human_decision。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-011",
+      "title": "实现需求到任务覆盖分析",
+      "phase_id": "PHASE-VT-004",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "分析每个需求是否有有效任务覆盖。",
+      "atomic_scope": "基于 PRD REQ 与 task_list 的显式 related_requirements 生成 coverage_status；不按标题相似度推断。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-001-03",
+        "AC-VT-001-04"
+      ],
+      "related_modules": [
+        "MOD-VT-006"
+      ],
+      "related_architecture_constraints": [
+        "GATE-VT-003",
+        "FORBID-VT-004",
+        "ERR-VT-003",
+        "LOG-VT-002"
+      ],
+      "depends_on": [
+        "TASK-VT-010"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/traceability/requirement_task_analyzer.py",
+        "tests/test_requirement_task_analyzer.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-011-01",
+          "description": "每个 REQ 输出 covered、partial、missing 或 unclear。"
+        },
+        {
+          "dod_id": "DOD-VT-011-02",
+          "description": "未被任务覆盖的 Must 需求生成 gap。"
+        },
+        {
+          "dod_id": "DOD-VT-011-03",
+          "description": "正向覆盖状态必须引用 task evidence。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-012",
+      "title": "实现 AC 到测试证据覆盖分析",
+      "phase_id": "PHASE-VT-004",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "分析每条验收标准是否有显式测试证据覆盖。",
+      "atomic_scope": "仅当测试 evidence 的 covers 字段包含 AC ID 且结果通过时，才视为 covered。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-008-01"
+      ],
+      "related_modules": [
+        "MOD-VT-006",
+        "MOD-VT-004"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-012",
+        "GATE-VT-004",
+        "FORBID-VT-002",
+        "FORBID-VT-004"
+      ],
+      "depends_on": [
+        "TASK-VT-010"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/traceability/ac_test_analyzer.py",
+        "tests/test_ac_test_analyzer.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-012-01",
+          "description": "无 covers AC ID 的测试不得算覆盖。"
+        },
+        {
+          "dod_id": "DOD-VT-012-02",
+          "description": "失败测试不得算覆盖。"
+        },
+        {
+          "dod_id": "DOD-VT-012-03",
+          "description": "Must AC 缺测试时输出 missing_test gap。"
+        },
+        {
+          "dod_id": "DOD-VT-012-04",
+          "description": "每个 covered AC 引用具体 test evidence_id。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-013",
+      "title": "实现 Claim 外部证据校验分析",
+      "phase_id": "PHASE-VT-004",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "校验每个 Agent Claim 是否有任务、代码、测试、Review 或工具证据支持。",
+      "atomic_scope": "将 Claim 与外部 evidence 比对，识别 evidence_gap、claim_evidence_mismatch、partial_support。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "AC-VT-002-03"
+      ],
+      "related_modules": [
+        "MOD-VT-006",
+        "MOD-VT-005"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-002",
+        "SEC-VT-004",
+        "GATE-VT-005",
+        "FORBID-VT-001"
+      ],
+      "depends_on": [
+        "TASK-VT-010"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+        "tests/test_claim_evidence_analyzer.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-013-01",
+          "description": "completed Claim 只有自身证据时输出 blocked 或 evidence_gap。"
+        },
+        {
+          "dod_id": "DOD-VT-013-02",
+          "description": "Claim 与测试失败、缺失或部分覆盖冲突时输出 risk/gap。"
+        },
+        {
+          "dod_id": "DOD-VT-013-03",
+          "description": "Claim 可信状态必须引用外部 evidence_id。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-014",
+      "title": "实现 Traceability Report 组装器",
+      "phase_id": "PHASE-VT-004",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "生成 traceability_report.json 的需求、AC、任务、Claim、缺口矩阵。",
+      "atomic_scope": "汇总覆盖状态、gap_list、risk_list 初稿、evidence 引用和运行元数据；不执行门禁最终判定。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "AC-VT-006-01"
+      ],
+      "related_modules": [
+        "MOD-VT-006",
+        "MOD-VT-003"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-002",
+        "LOG-VT-001",
+        "LOG-VT-002",
+        "GATE-VT-010"
+      ],
+      "depends_on": [
+        "TASK-VT-011",
+        "TASK-VT-012",
+        "TASK-VT-013"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/traceability_report_builder.py",
+        "output/traceability_report.json",
+        "tests/test_traceability_report_builder.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-014-01",
+          "description": "traceability_report.json 通过 Schema 校验。"
+        },
+        {
+          "dod_id": "DOD-VT-014-02",
+          "description": "所有 positive 状态引用 evidence_index 中存在的 evidence_id。"
+        },
+        {
+          "dod_id": "DOD-VT-014-03",
+          "description": "缺口、低置信度和冲突项显式展示。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-015",
+      "title": "实现架构约束合规检查器",
+      "phase_id": "PHASE-VT-005",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "检查可机器判断的架构约束，无法判断时输出 unclear。",
+      "atomic_scope": "基于 architecture_constraints.json 检查模块调用边界、禁止依赖、文件化存储、Dashboard 外部依赖等明确规则。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-009",
+        "MOD-VT-003",
+        "MOD-VT-005"
+      ],
+      "related_architecture_constraints": [
+        "GATE-VT-006",
+        "GATE-VT-007",
+        "FORBID-VT-007",
+        "ERR-VT-003",
+        "DEP-VT-001",
+        "DEP-VT-002",
+        "STORE-VT-001"
+      ],
+      "depends_on": [
+        "TASK-VT-010",
+        "TASK-VT-014"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/architecture_compliance_checker.py",
+        "tests/test_architecture_compliance_checker.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-015-01",
+          "description": "可自动检查的 must 约束输出 compliant 或 violated。"
+        },
+        {
+          "dod_id": "DOD-VT-015-02",
+          "description": "无法自动检查的 must 约束输出 unclear，不得假设合规。"
+        },
+        {
+          "dod_id": "DOD-VT-015-03",
+          "description": "架构违反项引用 rule_id 和 evidence_id。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-016",
+      "title": "实现风险与建议动作生成器",
+      "phase_id": "PHASE-VT-005",
+      "priority": "should",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "从缺口、Claim 不一致、测试缺失、架构不明确中生成风险项和建议动作。",
+      "atomic_scope": "生成 risk_id、severity、business_impact、suggested_action、evidence_ids；不使用 LLM 做硬判定。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-007",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-007-01",
+        "AC-VT-007-02",
+        "AC-VT-007-03",
+        "AC-VT-008-02",
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-010",
+        "MOD-VT-006",
+        "MOD-VT-007"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-003",
+        "FLOW-VT-005",
+        "DEP-VT-005",
+        "GATE-VT-008",
+        "TECH-VT-003"
+      ],
+      "depends_on": [
+        "TASK-VT-014",
+        "TASK-VT-015"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/risk_advisor.py",
+        "tests/test_risk_advisor.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-016-01",
+          "description": "每个 high 风险包含业务影响和建议行动。"
+        },
+        {
+          "dod_id": "DOD-VT-016-02",
+          "description": "推测性风险标记为 suggestion 或 low_confidence，不标记事实。"
+        },
+        {
+          "dod_id": "DOD-VT-016-03",
+          "description": "LLM 解释字段不得覆盖 status、evidence、gate_decision。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-017",
+      "title": "实现 Merge Gate 规则引擎",
+      "phase_id": "PHASE-VT-006",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "基于确定性规则输出 allow、conditional 或 block。",
+      "atomic_scope": "根据 Must REQ 任务覆盖、Must AC 测试覆盖、Claim 外部证据、架构违反/不明确、高风险建议动作计算 gate_decision。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-008",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-007"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-008-01",
+        "AC-VT-008-02",
+        "AC-VT-008-03",
+        "AC-VT-001-02",
+        "AC-VT-002-02"
+      ],
+      "related_modules": [
+        "MOD-VT-007",
+        "MOD-VT-006",
+        "MOD-VT-009"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-004",
+        "PRINCIPLE-VT-005",
+        "DEP-VT-005",
+        "GATE-VT-003",
+        "GATE-VT-004",
+        "GATE-VT-005",
+        "GATE-VT-006",
+        "GATE-VT-007",
+        "GATE-VT-008",
+        "GATE-VT-012"
+      ],
+      "depends_on": [
+        "TASK-VT-014",
+        "TASK-VT-015",
+        "TASK-VT-016"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/merge_gate_engine.py",
+        "tests/test_merge_gate_engine.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-017-01",
+          "description": "Must AC 缺测试时输出 block。"
+        },
+        {
+          "dod_id": "DOD-VT-017-02",
+          "description": "completed Claim 缺外部证据时输出 block。"
+        },
+        {
+          "dod_id": "DOD-VT-017-03",
+          "description": "Must 架构约束 violated 时输出 block。"
+        },
+        {
+          "dod_id": "DOD-VT-017-04",
+          "description": "unclear must 架构约束不得输出完全 allow。"
+        },
+        {
+          "dod_id": "DOD-VT-017-05",
+          "description": "gate_decision 与 human_decision 分离。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-018",
+      "title": "实现 CLI analyze 命令",
+      "phase_id": "PHASE-VT-006",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "串联加载、校验、证据索引、追踪报告、架构检查、风险、门禁输出。",
+      "atomic_scope": "提供 vibe-tracing analyze --project-root ... --out ...；输出 evidence_index.json、traceability_report.json、run_metadata.json。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-002-01",
+        "AC-VT-006-01",
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-002",
+        "MOD-VT-003",
+        "MOD-VT-005",
+        "MOD-VT-006",
+        "MOD-VT-007",
+        "MOD-VT-009"
+      ],
+      "related_architecture_constraints": [
+        "TECH-VT-005",
+        "LOG-VT-001",
+        "GATE-VT-001",
+        "GATE-VT-002",
+        "STORE-VT-002"
+      ],
+      "depends_on": [
+        "TASK-VT-017"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli.py",
+        "output/evidence_index.json",
+        "output/traceability_report.json",
+        "output/run_metadata.json",
+        "tests/test_cli_analyze.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-018-01",
+          "description": "CLI 可在无 Agent Runtime 环境独立运行。"
+        },
+        {
+          "dod_id": "DOD-VT-018-02",
+          "description": "输入缺失或无效时返回非零退出码和结构化错误。"
+        },
+        {
+          "dod_id": "DOD-VT-018-03",
+          "description": "成功时生成三个输出 JSON 并通过 Schema 校验。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-019",
+      "title": "实现单体 Dashboard Renderer",
+      "phase_id": "PHASE-VT-007",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "根据 evidence_index.json 和 traceability_report.json 生成单体 dashboard.html。",
+      "atomic_scope": "渲染模块状态、需求覆盖、任务覆盖、Claim 证据、测试覆盖、架构状态、风险清单、Merge Gate；不得重新计算状态。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-006"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-006-01",
+        "AC-VT-006-02",
+        "AC-VT-006-03"
+      ],
+      "related_modules": [
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-010",
+        "PRINCIPLE-VT-011",
+        "DEP-VT-002",
+        "FLOW-VT-003",
+        "FLOW-VT-004",
+        "STORE-VT-003",
+        "FORBID-VT-003",
+        "GATE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-018"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/dashboard_renderer.py",
+        "output/dashboard.html",
+        "tests/test_dashboard_renderer.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-019-01",
+          "description": "dashboard.html 内嵌 JSON、CSS、JavaScript。"
+        },
+        {
+          "dod_id": "DOD-VT-019-02",
+          "description": "不依赖 CDN、外部 JSON、后端服务或前端构建产物。"
+        },
+        {
+          "dod_id": "DOD-VT-019-03",
+          "description": "Dashboard 只展示报告已有状态，不重新计算 coverage、risk 或 gate_decision。"
+        },
+        {
+          "dod_id": "DOD-VT-019-04",
+          "description": "缺失项和不明确项必须可见。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-020",
+      "title": "实现端到端样例项目与黄金文件测试",
+      "phase_id": "PHASE-VT-007",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "用最小样例验证完整治理闭环。",
+      "atomic_scope": "准备 sample_project_good、sample_project_missing_tests、sample_project_bad_claim、sample_project_arch_unclear；运行 CLI 并比对关键输出。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "AC-VT-002-03",
+        "AC-VT-006-01",
+        "AC-VT-006-02",
+        "AC-VT-008-01",
+        "AC-VT-008-02",
+        "AC-VT-008-03",
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-002",
+        "MOD-VT-003",
+        "MOD-VT-004",
+        "MOD-VT-005",
+        "MOD-VT-006",
+        "MOD-VT-007",
+        "MOD-VT-008",
+        "MOD-VT-009"
+      ],
+      "related_architecture_constraints": [
+        "GATE-VT-001",
+        "GATE-VT-002",
+        "GATE-VT-003",
+        "GATE-VT-004",
+        "GATE-VT-005",
+        "GATE-VT-006",
+        "GATE-VT-007",
+        "GATE-VT-008",
+        "GATE-VT-009",
+        "GATE-VT-010",
+        "GATE-VT-011",
+        "GATE-VT-012",
+        "GATE-VT-013",
+        "GATE-VT-014"
+      ],
+      "depends_on": [
+        "TASK-VT-019"
+      ],
+      "expected_deliverables": [
+        "examples/sample_project_good/",
+        "examples/sample_project_missing_tests/",
+        "examples/sample_project_bad_claim/",
+        "examples/sample_project_arch_unclear/",
+        "tests/test_e2e_samples.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-020-01",
+          "description": "好样例输出 conditional 或 allow，并所有正向状态有 evidence。"
+        },
+        {
+          "dod_id": "DOD-VT-020-02",
+          "description": "缺测试样例必须 block。"
+        },
+        {
+          "dod_id": "DOD-VT-020-03",
+          "description": "坏 Claim 样例必须出现 claim_evidence_mismatch 或 evidence_gap。"
+        },
+        {
+          "dod_id": "DOD-VT-020-04",
+          "description": "架构不明确样例不得输出完全 allow。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-021",
+      "title": "实现质量门禁回归测试集合",
+      "phase_id": "PHASE-VT-007",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将架构约束中的 quality_gates 转化为自动化回归测试。",
+      "atomic_scope": "为 GATE-VT-001 至 GATE-VT-014 建立测试用例，覆盖输入缺失、Schema 失败、无证据 Done、Dashboard 外部依赖等。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-03",
+        "AC-VT-006-02",
+        "AC-VT-008-01",
+        "AC-VT-008-02",
+        "AC-VT-008-03",
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04"
+      ],
+      "related_modules": [
+        "MOD-VT-003",
+        "MOD-VT-006",
+        "MOD-VT-007",
+        "MOD-VT-008",
+        "MOD-VT-009"
+      ],
+      "related_architecture_constraints": [
+        "GATE-VT-001",
+        "GATE-VT-002",
+        "GATE-VT-003",
+        "GATE-VT-004",
+        "GATE-VT-005",
+        "GATE-VT-006",
+        "GATE-VT-007",
+        "GATE-VT-008",
+        "GATE-VT-009",
+        "GATE-VT-010",
+        "GATE-VT-011",
+        "GATE-VT-012",
+        "GATE-VT-013",
+        "GATE-VT-014"
+      ],
+      "depends_on": [
+        "TASK-VT-020"
+      ],
+      "expected_deliverables": [
+        "tests/test_quality_gates.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-021-01",
+          "description": "每个 GATE-VT-001 至 GATE-VT-014 至少有一个正向或负向测试。"
+        },
+        {
+          "dod_id": "DOD-VT-021-02",
+          "description": "无证据 positive 状态测试必须失败。"
+        },
+        {
+          "dod_id": "DOD-VT-021-03",
+          "description": "Dashboard 外部资源检查测试覆盖 CDN、外部 JS、外部 JSON。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-022",
+      "title": "编写 MVP 使用说明与任务执行规范",
+      "phase_id": "PHASE-VT-007",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "为后续 AI Coding 任务和 Claude Code 自举流程提供可执行说明。",
+      "atomic_scope": "编写如何准备输入、运行 CLI、查看输出、理解状态、扩展任务的文档；不写营销性说明。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-006",
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-006-03",
+        "AC-VT-008-03",
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-003",
+        "TECH-VT-005",
+        "LOG-VT-001",
+        "TECH-VT-006",
+        "DEP-VT-006",
+        "STORE-VT-005"
+      ],
+      "depends_on": [
+        "TASK-VT-021"
+      ],
+      "expected_deliverables": [
+        "README.md",
+        "docs/task_execution_rules.md",
+        "docs/input_output_contracts.md",
+        "docs/claude_code_bootstrap.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-022-01",
+          "description": "文档说明第一阶段输入、输出、运行命令。"
+        },
+        {
+          "dod_id": "DOD-VT-022-02",
+          "description": "文档解释 missing、unclear、blocked 等状态的业务含义。"
+        },
+        {
+          "dod_id": "DOD-VT-022-03",
+          "description": "文档明确人类最终决策与系统 gate_decision 分离。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-023",
+      "title": "定义 Claude Code 自举配置 Schema 与治理契约",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "为 Claude Code 自举配置、subagent/skill 审查信息和架构约束变更建议定义机器可校验契约。",
+      "atomic_scope": "新增 Claude Code bootstrap manifest、subagent definition、skill definition、architecture change proposal 等 JSON Schema；不实现 Claude Code 执行逻辑。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不引入数据库或前端构建系统",
+        "不把 Core 逻辑写入 subagent prompt"
+      ],
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04",
+        "AC-VT-001-03",
+        "AC-VT-002-02"
+      ],
+      "related_modules": [
+        "MOD-VT-011",
+        "MOD-VT-003"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-016",
+        "PRINCIPLE-VT-017",
+        "PRINCIPLE-VT-014",
+        "TECH-VT-006",
+        "DEP-VT-006",
+        "STORE-VT-005",
+        "GATE-VT-013",
+        "GATE-VT-014"
+      ],
+      "depends_on": [
+        "TASK-VT-003"
+      ],
+      "expected_deliverables": [
+        "schemas/claude_bootstrap_manifest.schema.json",
+        "schemas/claude_subagent_definition.schema.json",
+        "schemas/claude_skill_definition.schema.json",
+        "schemas/architecture_change_proposal.schema.json",
+        "tests/test_claude_bootstrap_schemas.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-023-01",
+          "description": "Claude Code 自举相关 Schema 是合法 JSON Schema，并能被 Schema Validator 加载。"
+        },
+        {
+          "dod_id": "DOD-VT-023-02",
+          "description": "bootstrap manifest Schema 覆盖 subagent、skill、提示词边界、禁止行为和结构化治理输出要求。"
+        },
+        {
+          "dod_id": "DOD-VT-023-03",
+          "description": "architecture change proposal Schema 覆盖提出者、理由、影响范围、相关 evidence、状态和人类确认字段。"
+        },
+        {
+          "dod_id": "DOD-VT-023-04",
+          "description": "Schema 不允许把 Claude Code 对话文本作为唯一事实源或完成证据。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-024",
+      "title": "创建 Claude Code 自举 subagent 与 skill 配置初版",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "建立可审查的 Claude Code 自举配置，使 VT MVP 自身开发过程具备清晰 subagent 职责、skill 声明和治理输出要求。",
+      "atomic_scope": "创建文件化 Claude Code 自举配置，包括 subagent 定义、skill 定义、bootstrap manifest 和自举说明；subagent 可显式声明可用或适用的 skill。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不自研完整 Agent Runtime 或编排平台",
+        "不允许 subagent 直接修改架构约束最终文件"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04"
+      ],
+      "related_modules": [
+        "MOD-VT-011"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-016",
+        "PRINCIPLE-VT-017",
+        "TECH-VT-006",
+        "STORE-VT-005",
+        "GATE-VT-013",
+        "SEC-VT-005",
+        "FORBID-VT-008",
+        "FORBID-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-023"
+      ],
+      "expected_deliverables": [
+        "claude_bootstrap/bootstrap_manifest.json",
+        "claude_bootstrap/subagents/",
+        "claude_bootstrap/skills/",
+        "claude_bootstrap/README.md",
+        "tests/fixtures/claude_bootstrap/"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-024-01",
+          "description": "自举配置以项目文件保存，不只存在于聊天上下文。"
+        },
+        {
+          "dod_id": "DOD-VT-024-02",
+          "description": "每个 subagent 定义包含职责、允许行为、禁止行为、结构化输出要求和适用 skill 声明。"
+        },
+        {
+          "dod_id": "DOD-VT-024-03",
+          "description": "skill 定义包含用途、输入、输出、边界和不得覆盖事实字段的限制。"
+        },
+        {
+          "dod_id": "DOD-VT-024-04",
+          "description": "配置明确 Claude Code 是首选 Runtime，而 Core 必须继续支持独立 CLI 调用。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-025",
+      "title": "实现 Claude Code Bootstrap Adapter 配置读取与校验",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "实现 MOD-VT-011 的最小读取与校验能力，判断 Claude Code 自举配置是否存在、可审查且未越权。",
+      "atomic_scope": "读取 bootstrap manifest、subagent 定义和 skill 定义，执行 Schema 校验、职责边界检查、skill 声明检查和 Core 独立性检查；不执行 Claude Code。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不调用 Merge Gate 直接批准合并",
+        "不生成 dashboard.html",
+        "不修改 architecture_constraints.json"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-01",
+        "AC-VT-009-03",
+        "AC-VT-009-04"
+      ],
+      "related_modules": [
+        "MOD-VT-011",
+        "MOD-VT-003",
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "MOD-VT-011",
+        "DEP-VT-006",
+        "ERR-VT-006",
+        "LOG-VT-004",
+        "SEC-VT-005",
+        "GATE-VT-013"
+      ],
+      "depends_on": [
+        "TASK-VT-004",
+        "TASK-VT-024"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/claude_code_bootstrap_adapter.py",
+        "src/vibe_tracing/claude_bootstrap_validator.py",
+        "tests/test_claude_bootstrap_adapter.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-025-01",
+          "description": "缺少自举配置时输出 missing 或 unclear，不得假设已配置。"
+        },
+        {
+          "dod_id": "DOD-VT-025-02",
+          "description": "职责不清、skill 声明缺失或禁止行为缺失时输出 governance_risk。"
+        },
+        {
+          "dod_id": "DOD-VT-025-03",
+          "description": "检测到 Core 逻辑只存在于 subagent prompt 或 Claude Code 依赖中时输出架构约束风险。"
+        },
+        {
+          "dod_id": "DOD-VT-025-04",
+          "description": "Adapter 不拥有 gate_decision、traceability_status、evidence_truth 或 human_decision。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-026",
+      "title": "实现 Claude Code 自举产物证据规范化",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 Claude Code subagent 在自举过程中产生的治理相关产物转为可进入 evidence_index.json 的结构化 evidence candidate。",
+      "atomic_scope": "支持读取 subagent 产生的任务、Claim、Review、测试摘要、工具摘要和自举运行元数据候选文件，并规范化为 evidence candidate；自然语言对话不得作为唯一证据。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Agent Claim 自证完成",
+        "不解析未结构化聊天记录作为完成事实",
+        "不直接做门禁判定"
+      ],
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-02",
+        "AC-VT-001-03",
+        "AC-VT-002-01",
+        "AC-VT-002-02"
+      ],
+      "related_modules": [
+        "MOD-VT-011",
+        "MOD-VT-005",
+        "MOD-VT-006"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-017",
+        "FLOW-VT-007",
+        "LOG-VT-004",
+        "FORBID-VT-008",
+        "GATE-VT-010",
+        "GATE-VT-013"
+      ],
+      "depends_on": [
+        "TASK-VT-010",
+        "TASK-VT-025"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/claude_bootstrap_evidence_adapter.py",
+        "tests/test_claude_bootstrap_evidence_adapter.py",
+        "tests/fixtures/claude_bootstrap_outputs/"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-026-01",
+          "description": "subagent 产生的结构化任务、Claim、Review、测试和工具摘要可转为 evidence candidate。"
+        },
+        {
+          "dod_id": "DOD-VT-026-02",
+          "description": "只有自然语言对话或总结时，自举完成状态必须为 missing、unclear 或 low_confidence。"
+        },
+        {
+          "dod_id": "DOD-VT-026-03",
+          "description": "每条自举 evidence 记录来源文件、subagent、skill、关联任务或 AC，以及运行元数据。"
+        },
+        {
+          "dod_id": "DOD-VT-026-04",
+          "description": "自举 evidence 不得覆盖 status、gate_decision 或 architecture constraint final change。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-027",
+      "title": "实现架构约束变更建议治理记录",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "确保 subagent 对架构约束的新增、修改或废弃建议只能以显式治理记录进入流程，不能静默修改最终约束。",
+      "atomic_scope": "实现 architecture_change_proposal 读取、校验、状态标记和风险输出；检测 architecture_constraints.json 变更是否缺少对应建议记录。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不自动批准架构约束变更",
+        "不允许 subagent 直接覆盖最终 architecture_constraints.json",
+        "不替代人类确认"
+      ],
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-04",
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-011",
+        "MOD-VT-009",
+        "MOD-VT-007"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-008",
+        "SEC-VT-005",
+        "FORBID-VT-009",
+        "GATE-VT-014",
+        "PRINCIPLE-VT-005"
+      ],
+      "depends_on": [
+        "TASK-VT-015",
+        "TASK-VT-025"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/architecture_change_proposal.py",
+        "tests/test_architecture_change_proposal.py",
+        "tests/fixtures/architecture_change_proposals/"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-027-01",
+          "description": "架构约束变更建议包含提出者、理由、影响范围、相关 evidence 和人类确认状态。"
+        },
+        {
+          "dod_id": "DOD-VT-027-02",
+          "description": "发现架构约束被修改但没有变更建议记录时输出 blocking risk。"
+        },
+        {
+          "dod_id": "DOD-VT-027-03",
+          "description": "未确认的变更建议不得被视为最终架构约束变更。"
+        },
+        {
+          "dod_id": "DOD-VT-027-04",
+          "description": "subagent 静默修改、删除、绕过或降低约束时触发 GATE-VT-014 失败。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-028",
+      "title": "将 Claude Code 自举状态纳入报告、Dashboard 与质量门禁",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "让用户在 traceability_report.json、dashboard.html 和质量门禁中看到 Claude Code 自举是否可追踪、可审查、未越权。",
+      "atomic_scope": "扩展 traceability_report、Dashboard、E2E 样例和 quality gate 回归测试，展示自举配置状态、subagent/skill 审查状态、结构化产物状态和架构变更建议状态。",
+      "out_of_scope": [
+        "不实现未列出的扩展能力",
+        "不让 Dashboard 重新计算状态",
+        "不把 gate_decision 等同于 human_decision",
+        "不新增数据库或前端构建系统"
+      ],
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04",
+        "AC-VT-006-01",
+        "AC-VT-006-02",
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-011",
+        "MOD-VT-006",
+        "MOD-VT-007",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "GATE-VT-013",
+        "GATE-VT-014",
+        "FLOW-VT-003",
+        "FLOW-VT-004",
+        "FORBID-VT-003",
+        "LOG-VT-004",
+        "PRINCIPLE-VT-017"
+      ],
+      "depends_on": [
+        "TASK-VT-026",
+        "TASK-VT-027",
+        "TASK-VT-021"
+      ],
+      "expected_deliverables": [
+        "tests/test_claude_bootstrap_quality_gates.py",
+        "examples/sample_project_claude_bootstrap_good/",
+        "examples/sample_project_claude_bootstrap_missing_config/",
+        "examples/sample_project_claude_bootstrap_bad_arch_change/",
+        "docs/claude_code_bootstrap.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-028-01",
+          "description": "traceability_report.json 包含 Claude Code 自举配置状态、结构化产物状态和架构变更建议状态。"
+        },
+        {
+          "dod_id": "DOD-VT-028-02",
+          "description": "dashboard.html 展示自举状态，但不重新计算 coverage、risk 或 gate_decision。"
+        },
+        {
+          "dod_id": "DOD-VT-028-03",
+          "description": "缺少自举配置样例触发 GATE-VT-013 失败或 blocked。"
+        },
+        {
+          "dod_id": "DOD-VT-028-04",
+          "description": "架构约束静默修改样例触发 GATE-VT-014 失败或 blocked。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持任务原子化；一次提交只完成本任务范围。",
+        "新增或修改的测试必须显式声明覆盖的 AC ID。",
+        "所有完成结论必须引用 evidence_id；证据缺失时输出 missing、unclear 或 blocked。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-029",
+      "title": "目录抽象重构与路径配置化实现",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "重构项目目录结构，支持通过 config.json 动态加载配置路径以实现引擎解耦。",
+      "atomic_scope": "将 prd、架构约束、任务列表移动到 docs/ 目录下，将 agent_claims 和自举文件夹移动到 .vibetracing/，支持 config.json 解析及向后兼容加载逻辑，修复相关测试。",
+      "out_of_scope": [
+        "不改变核心的治理算法逻辑",
+        "不引入第三方数据库组件"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-05"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-005"
+      ],
+      "related_architecture_constraints": [
+        "STORE-VT-004"
+      ],
+      "depends_on": [
+        "TASK-VT-028"
+      ],
+      "expected_deliverables": [
+        ".vibetracing/config.json",
+        "src/vibe_tracing/raw_input_loader.py",
+        "src/vibe_tracing/cli.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-029-01",
+          "description": "实现 config.json 路径配置解析，引擎在无配置文件时可降级至默认目录布局运行。"
+        },
+        {
+          "dod_id": "DOD-VT-029-02",
+          "description": "所有单元测试和 E2E 测试均正常通过，无路径加载错误。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持对旧版本路径的兼容性，测试需覆盖降级读取。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-030",
+      "title": "自身开发治理规程归档与规范补签",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "补齐治理性规范契约文件，并确立 VT 自身的生命周期变更自校验机制。",
+      "atomic_scope": "在 prd.md、architecture_constraints.json、task_list.json 中同步本次架构重构需求及约束，并在 task_execution_rules.md 中归档自身开发变更生命周期规程，运行自校验分析流。",
+      "out_of_scope": [
+        "不对其他需求进行不相关的功能性修改"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-06"
+      ],
+      "related_modules": [
+        "MOD-VT-011"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-008"
+      ],
+      "depends_on": [
+        "TASK-VT-029"
+      ],
+      "expected_deliverables": [
+        "docs/prd.md",
+        "docs/architecture_constraints.json",
+        "docs/task_list.json",
+        "docs/task_execution_rules.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-030-01",
+          "description": "PRD、架构约束、任务列表 and task_execution_rules.md 包含完整的变更历史与治理规程。"
+        },
+        {
+          "dod_id": "DOD-VT-030-02",
+          "description": "本地执行 vibe-tracing analyze 校验通过，无 MUST 或阻断性合规 Gap。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "确保各文档中的变更符合新定义的交互规程序列。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-031",
+      "title": "目录标准规范化与兼容性清理",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "移除旧有的兼容性降级分支，统一为以 .vibetracing 和 docs 目录为唯一事实源的标准模式。",
+      "atomic_scope": "修改 raw_input_loader.py 等核心逻辑和测试文件，移除了对旧 vibe/ 目录和 config.json 兼容性回滚的分支检查，保持标准一致性并让 100% 单元测试及 E2E 测试均在该标准下跑通。",
+      "out_of_scope": [
+        "不引入除此清理以外的功能模块设计"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-05"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "STORE-VT-004"
+      ],
+      "depends_on": [
+        "TASK-VT-030"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/raw_input_loader.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-031-01",
+          "description": "完全移除对 legacy raw/ 目录和 .vibe/config.json 的回退代码与降级路径。"
+        },
+        {
+          "dod_id": "DOD-VT-031-02",
+          "description": "所有单元测试和端到端测试在新标准路径下 100% 成功通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "确保没有漏掉任何对旧路径的逻辑检查或测试断言。"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "skill_id": "SKILL-VT-001",
+  "name": "view_file",
+  "purpose": "Read file contents",
+  "inputs": [{"name": "path", "type": "string"}],
+  "outputs": [{"name": "content", "type": "string"}],
+  "boundaries": [],
+  "constraints": ["must not override factual evidence fields"]
+}

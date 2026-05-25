@@ -1,0 +1,12 @@
+{
+  "tool": "pytest",
+  "command": "pytest --json-report",
+  "exit_code": 0,
+  "tests": [
+    {
+      "nodeid": "tests/test_unrelated.py::test_something_else",
+      "outcome": "passed",
+      "docstring": "covers: AC-VT-999-99"
+    }
+  ]
+}

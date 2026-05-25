@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Tracing 业务流程梳理与自举分析步骤解析</title>
+    <meta name="description" content="面向 AI 辅助编码生命周期的 Vibe Tracing 治理框架业务逻辑与分析步骤可视化。">
+    <style>
+        :root {
+            --bg-color: #0d0f14;
+            --container-bg: rgba(18, 22, 33, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-primary: #7c3aed;
+            --accent-secondary: #c084fc;
+            --accent-glow: rgba(124, 58, 237, 0.15);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.1);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.1);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.1);
+            --font-sans: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(124, 58, 237, 0.08) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(192, 132, 252, 0.05) 0px, transparent 50%);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto 2.5rem auto;
+            text-align: center;
+        }
+
+        .header-container h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-container p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .main-layout {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 步骤列表导航 */
+        .step-list-container {
+            background: var(--container-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: sticky;
+            top: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .step-list-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .step-list-title span {
+            background: var(--accent-glow);
+            color: var(--accent-secondary);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+            border: 1px solid rgba(192, 132, 252, 0.2);
+        }
+
+        .step-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .step-btn {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            color: var(--text-secondary);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        .step-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: var(--text-primary);
+        }
+
+        .step-btn.active {
+            background: var(--accent-glow);
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.1);
+        }
+
+        .step-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .step-btn.active .step-badge {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .step-btn-text {
+            font-weight: 600;
+            font-size: 0.95rem;
+            flex-grow: 1;
+        }
+
+        .step-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+
+        .step-btn.active svg {
+            opacity: 1;
+            transform: translateX(3px);
+        }
+
+        /* 核心详情显示区 */
+        .step-detail-container {
+            background: var(--container-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            min-height: 550px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .detail-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .detail-title-group h2 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-subtitle {
+            color: var(--accent-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .detail-module-badge {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 0.8rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-module-badge a {
+            color: var(--accent-secondary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .detail-module-badge a:hover {
+            text-decoration: underline;
+        }
+
+        /* 详情小节样式 */
+        .detail-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .section-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--accent-secondary);
+        }
+
+        .section-body {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            padding-left: 1.75rem;
+        }
+
+        /* 输入输出文件列表 */
+        .io-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .io-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .io-card {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+        }
+
+        .io-card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .io-card-title.input { color: var(--accent-secondary); }
+        .io-card-title.output { color: var(--success); }
+
+        .io-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .io-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        .io-item a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .io-item a:hover {
+            color: var(--text-primary);
+            text-decoration: underline;
+        }
+
+        .io-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        .input .io-dot { background: var(--accent-secondary); }
+        .output .io-dot { background: var(--success); }
+
+        /* 示例面板 */
+        .code-panel {
+            background: #07090e;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            overflow-x: auto;
+            color: #d1d5db;
+            position: relative;
+        }
+
+        .code-header {
+            position: absolute;
+            top: 0.5rem;
+            right: 1rem;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* 顶部导航与大纲 */
+        .footer-note {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 0.8rem;
+            margin-top: 3rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .footer-note a {
+            color: rgba(255, 255, 255, 0.4);
+            text-decoration: none;
+        }
+
+        .footer-note a:hover {
+            color: var(--text-primary);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>Vibe Tracing 业务流程图与运行步骤</h1>
+        <p>详细分解 vibe-tracing analyze 命令从输入加载、格式与自举校验、可追溯性 GAP 分析直到决策门禁计算的 10 个执行阶段。</p>
+    </div>
+
+    <div class="main-layout">
+        <!-- 侧边导航 -->
+        <div class="step-list-container">
+            <div class="step-list-title">
+                分析流水线步骤
+                <span id="step-count">共 10 步</span>
+            </div>
+            <div class="step-nav" id="step-nav-group">
+                <!-- 动态生成按钮 -->
+            </div>
+        </div>
+
+        <!-- 详情面板 -->
+        <div class="step-detail-container" id="detail-panel">
+            <!-- 动态填充 -->
+        </div>
+    </div>
+
+    <div class="footer-note">
+        <p>Vibe Tracing (VT) 一致性验证框架 • 点击文件/代码模块链接可直接访问对应文件路径。</p>
+        <p style="margin-top: 0.5rem;"><a href="file:///Users/lihan/Project/Vibe_Tracing/README.md">返回项目主页 README</a> • <a href="file:///Users/lihan/Project/Vibe_Tracing/docs/task_execution_rules.md">查阅开发作业规则</a></p>
+    </div>
+
+    <script>
+        // 步骤的结构化数据
+        const stepsData = [
+            {
+                id: 1,
+                title: "原始输入加载 (Raw Input Loading)",
+                subtitle: "Phase 01 — 事实收集",
+                moduleName: "raw_input_loader",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/raw_input_loader.py",
+                description: "扫描工作区根目录，加载来自产品线、架构设计、开发记录以及第三方工具的所有原始分析底座材料。对可选文件和必需文件进行区分加载，保证输入存在性。",
+                inputs: [
+                    { name: "prd.md", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/01_prd/prd.md" },
+                    { name: "architecture_constraints.json", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/02_architecture/architecture_constraints.json" },
+                    { name: "task_list.json", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/03_tasks/task_list.json" },
+                    { name: "agent_claims.json", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/04_claims/agent_claims.json" }
+                ],
+                outputs: [
+                    { name: "RawInputManifest (内存结构)", path: "" }
+                ],
+                explanation: "在此阶段，Vibe Tracing 不对逻辑内容进行分析，仅检索和读取指定目录下的材料。如果发现 `prd.md` 或 `task_list.json` 等必需输入丢失，会立即抛出 `missing_input` 错误，中止流程。",
+                example: `# 内部加载检查伪代码\nmanifest = RawInputLoader(project_root).load()\nif manifest.has_required_errors:\n    sys.exit(1) # 直接报错退出，防止盲目分析`
+            },
+            {
+                id: 2,
+                title: "格式与契约校验 (Schema Verification)",
+                subtitle: "Phase 02 — 规范一致性",
+                moduleName: "schema_validator",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/schema_validator.py",
+                description: "利用 Draft-07 JSON Schema 标准规范，对前一步骤加载进来的所有 JSON 文件（任务列表、Agent 事实声明等）进行严格的类型、属性、嵌套结构校验。",
+                inputs: [
+                    { name: "task_list.json", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/03_tasks/task_list.json" },
+                    { name: "agent_claims.json", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/04_claims/agent_claims.json" },
+                    { name: "各类 json 格式 schemas", path: "file:///Users/lihan/Project/Vibe_Tracing/schemas/" }
+                ],
+                outputs: [
+                    { name: "SchemaValidationResult (类型验证结果)", path: "" }
+                ],
+                explanation: "强制进行机器可读约定的 Schema 格式核对（如检查 `task_list.json` 内是否有非法状态、是否缺少 `related_requirements` 等）。如果有任何字段结构不正确，触发 `invalid_input` 中止运行。",
+                example: `# Schema Validator 验证调用\nres = SchemaValidator(schemas_dir).validate_file(task_list_path, "task_list")\nif not res.is_valid:\n    print(f"验证失败字段路径: {res.field_path}, 原因: {res.message}")`
+            },
+            {
+                id: 3,
+                title: "自举配置合规校验 (Bootstrap & Proposal Check)",
+                subtitle: "Phase 03 — 权限与防篡改审查",
+                moduleName: "claude_code_bootstrap_adapter",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/claude_code_bootstrap_adapter.py",
+                description: "加载 Claude Code 自举清单并检验子 Agent 与技能配置。扫描是否存在架构约束变更建议，执行防篡改漂移比对，防止 AI 代理静默修改约束规则。",
+                inputs: [
+                    { name: "bootstrap_manifest.json", path: "file:///Users/lihan/Project/Vibe_Tracing/claude_bootstrap/bootstrap_manifest.json" },
+                    { name: "subagents/ & skills/ *.json", path: "file:///Users/lihan/Project/Vibe_Tracing/claude_bootstrap/" },
+                    { name: "proposals/PROP-VT-xxx.json", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/02_architecture/proposals/" }
+                ],
+                outputs: [
+                    { name: "bootstrap_risks & proposal_risks (自举/提案风险项)", path: "" }
+                ],
+                explanation: "本阶段包含两个关键保护：1. 检查只读 Agent (Researcher) 是否被越权分配了写技能；2. 扫描架构变更提案并检查人类签字有效性。如果存在静默修改，立即注入 MUST 级风险封锁门禁。",
+                example: `# 检测静默篡改的差异比对逻辑\ndiffs = self._find_differences(base_constraints_json, current_constraints_json)\nfor diff in diffs:\n    if not is_covered_by_accepted_proposal(diff):\n        errors.append(f"检测到静默架构变更: {diff['action']} {diff['path']}")`
+            },
+            {
+                id: 4,
+                title: "PRD 需求与 AC 解析 (PRD & Requirements Parsing)",
+                subtitle: "Phase 04 — 规则与标准拆解",
+                moduleName: "prd_parser",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/prd_parser.py",
+                description: "解析 Markdown 格式的 PRD 需求说明书，利用正则表达式和行解析，将文本中的高优先级别需求和具体验收标准（Acceptance Criteria, AC）提取成结构化数据对象。",
+                inputs: [
+                    { name: "prd.md", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/01_prd/prd.md" }
+                ],
+                outputs: [
+                    { name: "List[PrdRequirement] (结构化需求与AC列表)", path: "" }
+                ],
+                explanation: "将人类容易读的 PRD 转成机器容易读的数组，提取的 AC 标识（例如 `AC-VT-009-02`）将是后续所有任务关联和测试覆盖的追溯源头。",
+                example: `# Markdown 需求行提取正则匹配\n# 提取诸如: [REQ-VT-001] 核心追溯链构建\n# 提取诸如: * AC-VT-001-01 验证任务列表格式校验`
+            },
+            {
+                id: 5,
+                title: "任务与事实声明装载 (Task & Claim Loading)",
+                subtitle: "Phase 05 — 关联分析准备",
+                moduleName: "task_loader & claim_loader",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/task_loader.py",
+                description: "分别实例化任务装载器和事实装载器。装载所有的 Task 和 Claim 并和第四步解析出的 PRD 需求数据进行映射。确保任务指向了合法的需求 ID，排查无效 ID 指向。",
+                inputs: [
+                    { name: "task_list.json", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/03_tasks/task_list.json" },
+                    { name: "agent_claims.json", path: "file:///Users/lihan/Project/Vibe_Tracing/raw/04_claims/agent_claims.json" }
+                ],
+                outputs: [
+                    { name: "TaskLoadResult & ClaimLoadResult (已验证的内存映射集合)", path: "" }
+                ],
+                explanation: "此阶段在加载过程中进行了静态 ID 逻辑比对。如果发现任务中关联的 `related_requirements` 根本不在 PRD 中存在，它会把错误记录在 loaders 的 errors 中，阻止后续分析的错误传播。",
+                example: `# 任务加载一致性检查\nfor req_id in task.related_requirements:\n    if req_id not in prd_requirements_map:\n        self.errors.append(f"任务 {task.task_id} 关联了不存在的需求 ID: {req_id}")`
+            },
+            {
+                id: 6,
+                title: "工具报告扫描与证据索引 (Tool Reports Scanner)",
+                subtitle: "Phase 06 — 工具集成与追溯关系提取",
+                moduleName: "evidence_index_builder",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/evidence_index_builder.py",
+                description: "最关键的事实证据搜集步骤。遍历并调用适配器，解析 pytest、coverage、ruff、bandit 的输出结果。如果运行 pytest，还会通过 AST 抽象语法树提取测试方法 docstring 中的 'covers: AC-VT-xxx' 行，并生成统一索引文件。",
+                inputs: [
+                    { name: "pytest_report.json / coverage.json", path: "file:///Users/lihan/Project/Vibe_Tracing/tool_reports/" },
+                    { name: "ruff.json / bandit.json", path: "file:///Users/lihan/Project/Vibe_Tracing/tool_reports/" },
+                    { name: "项目源代码 (AST 解析)", path: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/" }
+                ],
+                outputs: [
+                    { name: "evidence_index.json", path: "file:///Users/lihan/Project/Vibe_Tracing/output/evidence_index.json" }
+                ],
+                explanation: "将测试结果（passed/failed）、代码扫描错误数、覆盖率数据规范化为统一格式的 'evidence'（证据），每个证据都会包含其 'covers' 覆盖哪些验收标准。保存后同样会进行 Schema 校验。",
+                example: `# AST 提取测试覆盖关系伪代码\nclass DocstringVisitor(ast.NodeVisitor):\n    def visit_FunctionDef(self, node):\n        doc = ast.get_docstring(node)\n        if doc and "covers" in doc:\n            # 匹配 AC-VT-xxx-xx 格式并与测试 nodeid 关联作为证据`
+            },
+            {
+                id: 7,
+                title: "可追溯性 Gap 分析 (Traceability Gap Analysis)",
+                subtitle: "Phase 07 — 治理缺口审计",
+                moduleName: "traceability_analyzer",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/traceability/",
+                description: "基于证据索引、PRD 需求和任务映射结果，计算以下三方面并导出 Gaps：1. 是否存在需求没有安排 Task (RequirementTaskAnalyzer)；2. 是否有 AC 没有通过的 Test 覆盖 (AcTestAnalyzer)；3. Agent 的 Claim 是否有真实证据支持 (ClaimEvidenceAnalyzer)。",
+                inputs: [
+                    { name: "List[PrdRequirement] 和 List[Task]", path: "" },
+                    { name: "evidence_index.json", path: "file:///Users/lihan/Project/Vibe_Tracing/output/evidence_index.json" }
+                ],
+                outputs: [
+                    { name: "merged_gaps (合并后的缺口集合)", path: "" }
+                ],
+                explanation: "在追溯分析中，如果 Agent 在 `agent_claims.json` 中自称某个任务已做完，但实际上测试套件里根本找不到执行通过且带有对应 `covers` 标签的测试证据，或者 Claim 提及的代码文件的修改时间在 Claim 时间戳之后（Claim Outdated），就会产生 Gaps。",
+                example: `# 检查 Claim 与代码路径是否对应\nfor claim in claims:\n    for code_ref in claim.code_refs:\n        if not Path(code_ref).exists():\n            gaps.append({"item_id": claim.claim_id, "reason": f"代码文件 {code_ref} 不存在"})`
+            },
+            {
+                id: 8,
+                title: "静态架构合规校验 (Architecture Compliance Checker)",
+                subtitle: "Phase 08 — 架构红线合规",
+                moduleName: "architecture_compliance_checker",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/architecture_compliance_checker.py",
+                description: "运行 AST 静态规则分析。解析所有源代码文件的 import 语法，确保符合定义的架构边界约束：例如核心层（Core）绝对不能导入适配层（Adapter），不允许导入任何服务端数据库库，Dashboard 的 HTML 不得引用 CDN 等。",
+                inputs: [
+                    { name: "src/ 内所有 Python 源码", path: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/" },
+                    { name: "output/dashboard.html (检查外部资源依赖)", path: "file:///Users/lihan/Project/Vibe_Tracing/output/dashboard.html" }
+                ],
+                outputs: [
+                    { name: "architecture_compliance_status & violations (违规项列表)", path: "" }
+                ],
+                explanation: "这是强代码质量管理手段，即使代码运行通过且业务测试通过，如果 AI 违反了设计原则（例如在核心逻辑中擅自引入了特定 Agent API），该校验器会在这一步扫描时拦截并记录为 violated。",
+                example: `# 审查 Core 不得依赖特定运行时的导入分析\nfor imported_module in imports:\n    if "claude_code" in imported_module or "hermes" in imported_module:\n        if not is_adapter_file(current_file):\n            violations.append(f"核心代码 {current_file} 越权导入了特定 Agent 库: {imported_module}")`
+            },
+            {
+                id: 9,
+                title: "门禁决策评定 (Merge Gate Engine)",
+                subtitle: "Phase 09 — 合并状态裁决",
+                moduleName: "merge_gate_engine",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/merge_gate_engine.py",
+                description: "汇总以上所有步骤产出的 Gaps（追溯缺口）、Risks（安全与配置风险）以及 静态架构违规。利用 RiskAdvisor 决定危害等级，并输入门禁决定机制，裁决是否允许分支合并。",
+                inputs: [
+                    { name: "merged_gaps & final_risks", path: "" },
+                    { name: "architecture_compliance_status", path: "" }
+                ],
+                outputs: [
+                    { name: "gate_decision (pass / conditional / blocked)", path: "" }
+                ],
+                explanation: "遵循保守决策原则：只要存在未解决的 MUST 级风险、缺口（如必需文件缺失、架构违规、存在失败或缺失的测试），门禁决定就会被下限拦截至 `blocked`（非 0 退出码拦截合并）。仅存在 SHOULD 级警告时，可评定为 `conditional`。",
+                example: `# 门禁计算核心决策伪代码\nif has_must_severity_risk or has_unclear_must_constraint:\n    gate_decision = "blocked"\n    reasons.append("存在未满足的硬性架构红线或高危风险")\nelse:\n    gate_decision = "pass"`
+            },
+            {
+                id: 10,
+                title: "报告编译与 Dashboard 生成 (Compile & Render)",
+                subtitle: "Phase 10 — 治理可视化与交付",
+                moduleName: "traceability_report_builder & dashboard_renderer",
+                modulePath: "file:///Users/lihan/Project/Vibe_Tracing/src/vibe_tracing/dashboard_renderer.py",
+                description: "最终交付物输出阶段。根据汇总事实编译生成最终报告的 traceability_report.json，同时基于模板和数据在 output/ 生成一个单体独立的 dashboard.html 文件，提供所有依赖关系的完整树状渲染和图形化表达。",
+                inputs: [
+                    { name: "traceability_report.json (编译中结构)", path: "" },
+                    { name: "evidence_index.json (构建事实)", path: "file:///Users/lihan/Project/Vibe_Tracing/output/evidence_index.json" }
+                ],
+                outputs: [
+                    { name: "traceability_report.json", path: "file:///Users/lihan/Project/Vibe_Tracing/output/traceability_report.json" },
+                    { name: "dashboard.html", path: "file:///Users/lihan/Project/Vibe_Tracing/output/dashboard.html" },
+                    { name: "run_metadata.json", path: "file:///Users/lihan/Project/Vibe_Tracing/output/run_metadata.json" }
+                ],
+                explanation: "将追溯状态、测试通过统计、架构合规决策以最直观易懂的方式渲染到单体 HTML 中，该文件脱离后端和 CDN 依赖，保证能在任何离线浏览器中快速双击查阅。返回退出码 (BLOCKED 为 2，PASS 为 0)。",
+                example: `# 内嵌数据渲染 dashboard 的核心方式\nhtml_content = template_content.replace(\n    '<script id=\"boot-data-json\" type=\"application/json\">{}<\\/script>',\n    f'<script id=\"boot-data-json\" type=\"application/json\">{json_str}<\\/script>'\n)\noutput_path.write_text(html_content, encoding='utf-8')`
+            }
+        ];
+
+        // 渲染步骤按钮
+        function renderNav() {
+            const container = document.getElementById("step-nav-group");
+            container.innerHTML = "";
+            stepsData.forEach((step, index) => {
+                const btn = document.createElement("button");
+                btn.className = `step-btn ${index === 0 ? "active" : ""}`;
+                btn.onclick = () => selectStep(index);
+                btn.innerHTML = `
+                    <div class="step-badge">${step.id}</div>
+                    <div class="step-btn-text">${step.title.split(' ')[0]}</div>
+                    <svg viewBox="0 0 24 24"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        // 填充详情数据
+        function selectStep(index) {
+            // 更新按钮状态
+            const buttons = document.querySelectorAll(".step-btn");
+            buttons.forEach((btn, idx) => {
+                if (idx === index) {
+                    btn.classList.add("active");
+                } else {
+                    btn.classList.remove("active");
+                }
+            });
+
+            const step = stepsData[index];
+            const panel = document.getElementById("detail-panel");
+
+            // 格式化输入文件链接
+            let inputHtml = "";
+            if (step.inputs.length > 0) {
+                step.inputs.forEach(input => {
+                    const link = input.path ? `<a href="${input.path}">${input.name}</a>` : input.name;
+                    inputHtml += `<li class="io-item"><span class="io-dot"></span>${link}</li>`;
+                });
+            } else {
+                inputHtml = `<li class="io-item" style="color:rgba(255,255,255,0.2);">无</li>`;
+            }
+
+            // 格式化输出文件链接
+            let outputHtml = "";
+            if (step.outputs.length > 0) {
+                step.outputs.forEach(output => {
+                    const link = output.path ? `<a href="${output.path}">${output.name}</a>` : output.name;
+                    outputHtml += `<li class="io-item"><span class="io-dot"></span>${link}</li>`;
+                });
+            } else {
+                outputHtml = `<li class="io-item" style="color:rgba(255,255,255,0.2);">无</li>`;
+            }
+
+            // 安全过滤 HTML 内容防注入
+            const escapeHtml = (text) => {
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            };
+
+            panel.innerHTML = `
+                <div class="detail-header">
+                    <div class="detail-title-group">
+                        <div class="detail-subtitle">${step.subtitle}</div>
+                        <h2>${step.title}</h2>
+                    </div>
+                    <div class="detail-module-badge">
+                        负责模块: <a href="${step.modulePath}">${step.moduleName}</a>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                        步骤功能描述
+                    </div>
+                    <div class="section-body">
+                        ${step.description}
+                    </div>
+                </div>
+
+                <div class="io-grid">
+                    <div class="io-card">
+                        <div class="io-card-title input">
+                            <span class="io-dot"></span> 输入依赖 / Inputs
+                        </div>
+                        <ul class="io-list">
+                            ${inputHtml}
+                        </ul>
+                    </div>
+                    <div class="io-card">
+                        <div class="io-card-title output">
+                            <span class="io-dot"></span> 输出产物 / Outputs
+                        </div>
+                        <ul class="io-list">
+                            ${outputHtml}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+                        具体校验逻辑与动作
+                    </div>
+                    <div class="section-body">
+                        ${step.explanation}
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2z"/></svg>
+                        代码实现与行为示例
+                    </div>
+                    <div class="code-panel">
+                        <div class="code-header">Python / Logic</div>
+                        <pre style="margin: 0; white-space: pre-wrap;"><code>${escapeHtml(step.example)}</code></pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 初始化
+        renderNav();
+        selectStep(0);
+    </script>
+</body>
+</html>

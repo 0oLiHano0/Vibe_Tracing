@@ -1,0 +1,19 @@
+{
+  "run_id": "RUN-d4512b73-90ba-4e8a-a035-18941404d4ef",
+  "project_id": "PROJECT-VT",
+  "scan_time": "2026-05-24T11:19:10.978353Z",
+  "input_files": {
+    "prd": "docs/prd.md",
+    "architecture_constraints": "docs/architecture_constraints.json",
+    "task_list": "docs/task_list.json",
+    "agent_claims": ".vibetracing/agent_claims.json"
+  },
+  "output_files": {
+    "evidence_index": ".vibetracing/output/evidence_index.json",
+    "traceability_report": ".vibetracing/output/traceability_report.json",
+    "dashboard": ".vibetracing/output/dashboard.html"
+  },
+  "gate_decision": "blocked",
+  "exit_code": 2,
+  "summary": "高风险或不自证违规 (RISK-VT-001): Claim CLAIM-VT-001 references non-existent evidence EVIDENCE-VT-999."
+}

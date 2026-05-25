@@ -1,0 +1,95 @@
+{
+  "run_id": "RUN-fa180c6b-d8b1-4810-bd26-ffd359723520",
+  "project_id": "PROJECT-VT",
+  "scan_time": "2026-05-24T11:19:10.993638Z",
+  "gate_decision": "fail",
+  "requirement_coverage": [
+    {
+      "req_id": "REQ-VT-001",
+      "status": "covered",
+      "evidence_ids": [
+        "EVIDENCE-VT-001"
+      ]
+    }
+  ],
+  "gaps": [],
+  "risks": [
+    {
+      "risk_id": "RISK-VT-001",
+      "description": "架构约束 GATE-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-008` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    }
+  ],
+  "architecture_compliance_status": [
+    {
+      "rule_id": "DEP-VT-001",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Core 不得依赖特定 Agent Runtime",
+      "description": "Vibe Tracing Core 必须能够在不依赖 Claude Code、Hermes、DeepSeek TUI 或任何特定 Agent Runtime 的情况下被调用。"
+    },
+    {
+      "rule_id": "DEP-VT-002",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Dashboard 不得依赖外部前端资源",
+      "description": "dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。"
+    },
+    {
+      "rule_id": "STORE-VT-001",
+      "status": "compliant",
+      "severity": "must",
+      "title": "MVP 不使用数据库",
+      "description": "MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。"
+    },
+    {
+      "rule_id": "GATE-VT-001",
+      "status": "compliant",
+      "severity": "must",
+      "title": "必需输入文件必须存在",
+      "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。"
+    },
+    {
+      "rule_id": "GATE-VT-006",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Must 级架构约束不得被违反",
+      "description": "Must 级架构约束不得存在已确认违反项。"
+    },
+    {
+      "rule_id": "GATE-VT-007",
+      "status": "compliant",
+      "severity": "must",
+      "title": "不明确的 Must 级架构约束必须导致保守门禁",
+      "description": "如果 Must 级架构约束无法被检查，系统不得输出完全 allow 的合并结论。"
+    },
+    {
+      "rule_id": "FORBID-VT-007",
+      "status": "compliant",
+      "severity": "must",
+      "title": "静默处理不明确架构约束",
+      "description": "当某条架构约束无法自动检查时，系统必须将其标记为 unclear，而不是忽略它。"
+    },
+    {
+      "rule_id": "GATE-VT-008",
+      "status": "unclear",
+      "severity": "must",
+      "title": "A Must constraint not checked by ArchitectureComplianceChecker",
+      "description": "This rule is unchecked by the python code and should be flagged as unclear."
+    }
+  ],
+  "architecture_violations": [],
+  "unclear_constraints": [
+    {
+      "rule_id": "GATE-VT-008",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    }
+  ]
+}

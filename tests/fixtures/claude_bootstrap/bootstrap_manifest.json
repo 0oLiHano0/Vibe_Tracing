@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": "claude-code",
+  "subagents": [
+    {
+      "id": "SUBAGENT-VT-001",
+      "name": "Fixture Researcher",
+      "definition_file": "subagents/researcher.json",
+      "role": "researcher"
+    }
+  ],
+  "skills": [
+    {
+      "id": "SKILL-VT-001",
+      "name": "view_file",
+      "definition_file": "skills/view_file.json",
+      "purpose": "Read file contents"
+    }
+  ],
+  "forbidden_actions": [],
+  "structured_governance_outputs": []
+}

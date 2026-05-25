@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": "claude-code",
+  "subagents": [
+    {
+      "id": "SUBAGENT-VT-001",
+      "name": "Codebase Researcher",
+      "definition_file": ".vibetracing/claude_bootstrap/subagents/researcher.json",
+      "role": "researcher"
+    },
+    {
+      "id": "SUBAGENT-VT-002",
+      "name": "Code Developer",
+      "definition_file": ".vibetracing/claude_bootstrap/subagents/developer.json",
+      "role": "developer"
+    }
+  ],
+  "skills": [
+    {
+      "id": "SKILL-VT-001",
+      "name": "view_file",
+      "definition_file": ".vibetracing/claude_bootstrap/skills/view_file.json",
+      "purpose": "Read file contents from the workspace."
+    },
+    {
+      "id": "SKILL-VT-002",
+      "name": "edit_file",
+      "definition_file": ".vibetracing/claude_bootstrap/skills/edit_file.json",
+      "purpose": "Modify file contents in the workspace."
+    }
+  ],
+  "forbidden_actions": [
+    "modify_architecture_without_proposal"
+  ],
+  "structured_governance_outputs": [
+    "architecture_change_proposal"
+  ]
+}

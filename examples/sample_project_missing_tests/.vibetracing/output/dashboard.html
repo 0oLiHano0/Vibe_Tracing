@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Tracing 治理 Dashboard</title>
+    <!-- Embedded Font link, falls back gracefully to system sans-serif offline -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --accent-blue: #3b82f6;
+            --accent-blue-glow: rgba(59, 130, 246, 0.25);
+            --accent-purple: #8b5cf6;
+            --accent-purple-glow: rgba(139, 92, 246, 0.25);
+            
+            --status-pass: #10b981;
+            --status-pass-glow: rgba(16, 185, 129, 0.25);
+            --status-fail: #ef4444;
+            --status-fail-glow: rgba(239, 68, 68, 0.25);
+            --status-blocked: #f59e0b;
+            --status-blocked-glow: rgba(245, 158, 11, 0.25);
+            --status-unclear: #a855f7;
+            --status-unclear-glow: rgba(168, 85, 247, 0.25);
+            
+            --border-color: #334155;
+            --sidebar-width: 280px;
+            --transition-speed: 0.25s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 24px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .brand-logo {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 0 15px var(--accent-blue-glow);
+        }
+
+        .brand-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            font-weight: 500;
+            font-size: 14px;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            color: var(--text-primary);
+            background-color: var(--bg-card);
+            border-color: var(--border-color);
+        }
+
+        .nav-item.active {
+            color: var(--text-primary);
+            background: linear-gradient(135deg, var(--accent-blue-glow), var(--accent-purple-glow));
+            border-color: var(--accent-blue);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-icon {
+            margin-right: 12px;
+            font-size: 16px;
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .sidebar-footer span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Main Panel Styling */
+        .main-panel {
+            margin-left: var(--sidebar-width);
+            flex-grow: 1;
+            padding: 40px;
+            min-width: 0; /* Prevent flex blowout */
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        .header-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .gate-decision-badge {
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 20px var(--glow-color);
+            border: 1px solid var(--badge-border);
+        }
+
+        .gate-decision-badge.pass {
+            --glow-color: var(--status-pass-glow);
+            --badge-border: var(--status-pass);
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--status-pass);
+        }
+
+        .gate-decision-badge.fail {
+            --glow-color: var(--status-fail-glow);
+            --badge-border: var(--status-fail);
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--status-fail);
+        }
+
+        .gate-decision-badge.blocked {
+            --glow-color: var(--status-blocked-glow);
+            --badge-border: var(--status-blocked);
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--status-blocked);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-color, var(--accent-blue));
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Gate Panel */
+        .gate-panel {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .gate-panel-status {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            border: 1px solid var(--status-color);
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), var(--status-color-glow));
+            box-shadow: 0 8px 32px var(--status-color-glow);
+        }
+
+        .gate-panel-status .status-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: var(--status-color);
+        }
+
+        .gate-panel-status .status-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .gate-panel-status .status-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            max-width: 320px;
+        }
+
+        .gate-panel-reasons {
+            flex: 2;
+        }
+
+        .reasons-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .reason-item {
+            padding: 12px 16px;
+            background-color: var(--bg-primary);
+            border-left: 3px solid var(--accent-color, var(--accent-blue));
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .reason-item.failed {
+            border-left-color: var(--status-fail);
+            background-color: rgba(239, 68, 68, 0.05);
+        }
+        .reason-item.blocked {
+            border-left-color: var(--status-blocked);
+            background-color: rgba(245, 158, 11, 0.05);
+        }
+
+        /* Filters and Search */
+        .controls-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .search-wrapper {
+            flex-grow: 1;
+            position: relative;
+            min-width: 240px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px var(--accent-blue-glow);
+        }
+
+        .filter-select {
+            padding: 12px 16px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+            min-width: 160px;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .filter-select:focus {
+            border-color: var(--accent-blue);
+        }
+
+        /* Collapsible List */
+        .collapsible-item {
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--bg-card);
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color var(--transition-speed) ease;
+        }
+
+        .collapsible-header:hover {
+            background-color: var(--bg-card-hover);
+        }
+
+        .collapsible-title-block {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 0;
+            flex-grow: 1;
+        }
+
+        .collapsible-id {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-secondary);
+            background-color: var(--bg-primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .collapsible-title {
+            font-weight: 600;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-primary);
+        }
+
+        .collapsible-badge-block {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            margin-left: 16px;
+        }
+
+        .collapsible-body {
+            display: none;
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background-color: rgba(15, 23, 42, 0.4);
+            animation: slideDown 0.25s ease-out forwards;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .collapsible-item.open .collapsible-body {
+            display: block;
+        }
+
+        .collapsible-item.open .chevron {
+            transform: rotate(180deg);
+        }
+
+        .chevron {
+            transition: transform var(--transition-speed) ease;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+
+        /* Table Styling */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            background-color: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tbody tr:hover td {
+            background-color: rgba(51, 65, 85, 0.2);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border: 1px solid transparent;
+        }
+
+        .badge-priority-must, .badge-severity-must {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--status-fail);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .badge-priority-should, .badge-severity-should {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--status-blocked);
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        .badge-priority-could, .badge-severity-could {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--accent-blue);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .badge-status-covered, .badge-status-compliant {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--status-pass);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-status-partial {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--status-blocked);
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        .badge-status-missing, .badge-status-violated {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--status-fail);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .badge-status-unclear {
+            background-color: rgba(168, 85, 247, 0.1);
+            color: var(--status-unclear);
+            border-color: rgba(168, 85, 247, 0.2);
+        }
+
+        .badge-status-low_confidence {
+            background-color: rgba(139, 92, 246, 0.1);
+            color: #d8b4fe;
+            border-color: rgba(139, 92, 246, 0.2);
+        }
+
+        .badge-status-blocked {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--status-blocked);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        /* General UI Elements */
+        .section-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-val {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .ref-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .ref-link:hover {
+            text-decoration: underline;
+        }
+
+        .code-block {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            color: #cbd5e1;
+            margin-top: 8px;
+        }
+
+        .alert-box {
+            padding: 16px 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--alert-color);
+            background-color: var(--alert-bg);
+            margin-bottom: 16px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .alert-box.violation {
+            --alert-color: var(--status-fail);
+            --alert-bg: rgba(239, 68, 68, 0.05);
+        }
+
+        .alert-box.unclear {
+            --alert-color: var(--status-unclear);
+            --alert-bg: rgba(168, 85, 247, 0.05);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .empty-state {
+            padding: 48px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+        }
+
+        .no-testing-required {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">VT</div>
+            <div class="brand-name">Vibe Tracing</div>
+        </div>
+        <ul class="nav-menu">
+            <a class="nav-item active" onclick="switchTab('overview')">
+                <span class="nav-icon">📊</span>
+                <span>概览 / Overview</span>
+            </a>
+            <a class="nav-item" onclick="switchTab('requirements')">
+                <span class="nav-icon">📋</span>
+                <span>需求覆盖 / Requirements</span>
+            </a>
+            <a class="nav-item" onclick="switchTab('risks')">
+                <span class="nav-icon">⚠️</span>
+                <span>缺口与风险 / Risks & Gaps</span>
+            </a>
+            <a class="nav-item" onclick="switchTab('architecture')">
+                <span class="nav-icon">🧱</span>
+                <span>架构合规 / Architecture</span>
+            </a>
+            <a class="nav-item" onclick="switchTab('bootstrap')">
+                <span class="nav-icon">⚙️</span>
+                <span>自举状态 / Bootstrap</span>
+            </a>
+            <a class="nav-item" onclick="switchTab('evidence')">
+                <span class="nav-icon">🔍</span>
+                <span>证据索引 / Evidences</span>
+            </a>
+        </ul>
+        <div class="sidebar-footer">
+            <span>项目: <b id="footer-project-id">-</b></span>
+            <span>运行 ID: <b id="footer-run-id" title="-">-</b></span>
+            <span>扫描时间: <span id="footer-scan-time">-</span></span>
+        </div>
+    </div>
+
+    <!-- MAIN PANEL -->
+    <div class="main-panel">
+        <div class="header">
+            <div class="header-title" id="page-title">概览 / Overview</div>
+            <div class="gate-decision-badge" id="gate-decision-badge">
+                <span id="gate-decision-text">-</span>
+            </div>
+        </div>
+
+        <!-- TAB: OVERVIEW -->
+        <div class="tab-content active" id="tab-overview">
+            <div class="gate-panel">
+                <div class="gate-panel-status" id="gate-panel-status">
+                    <div class="status-icon" id="gate-panel-icon">❓</div>
+                    <div class="status-title" id="gate-panel-title">UNKNOWN</div>
+                    <div class="status-desc" id="gate-panel-desc">未完成加载</div>
+                </div>
+                <div class="gate-panel-reasons card">
+                    <div class="card-title" style="margin-bottom: 12px;">判定依据与原因 / Gate Evaluation Reasons</div>
+                    <ul class="reasons-list" id="gate-reasons-list">
+                        <li class="empty-state">无判定说明</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card" style="--accent-color: var(--accent-blue);">
+                    <div class="stat-label">需求总数 / Total Requirements</div>
+                    <div class="stat-value" id="stat-req-total">0</div>
+                    <div class="stat-meta" id="stat-req-breakdown">-</div>
+                </div>
+                <div class="stat-card" style="--accent-color: var(--status-fail);">
+                    <div class="stat-label">活动风险 / Active Risks</div>
+                    <div class="stat-value" id="stat-risk-total">0</div>
+                    <div class="stat-meta" id="stat-risk-breakdown">-</div>
+                </div>
+                <div class="stat-card" style="--accent-color: var(--status-unclear);">
+                    <div class="stat-label">架构校验 / Arch Compliance</div>
+                    <div class="stat-value" id="stat-arch-status">Compliant</div>
+                    <div class="stat-meta" id="stat-arch-breakdown">-</div>
+                </div>
+                <div class="stat-card" style="--accent-color: var(--accent-purple);">
+                    <div class="stat-label">收集证据 / Collected Evidences</div>
+                    <div class="stat-value" id="stat-evidence-total">0</div>
+                    <div class="stat-meta" id="stat-evidence-breakdown">-</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 16px;">工作空间分析配置 / Workspace Analysis Metadata</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Run ID</div>
+                        <div class="info-val" id="meta-run-id">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Project ID</div>
+                        <div class="info-val" id="meta-project-id">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Scan Timestamp</div>
+                        <div class="info-val" id="meta-scan-time">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: REQUIREMENTS -->
+        <div class="tab-content" id="tab-requirements">
+            <div class="controls-row">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" id="req-search" placeholder="输入 ID 或关键字搜索需求 / Search by ID or title..." oninput="onReqFilterChange()">
+                </div>
+                <select class="filter-select" id="req-filter-priority" onchange="onReqFilterChange()">
+                    <option value="all">所有优先级 / All Priorities</option>
+                    <option value="must">MUST</option>
+                    <option value="should">SHOULD</option>
+                    <option value="could">COULD</option>
+                </select>
+                <select class="filter-select" id="req-filter-status" onchange="onReqFilterChange()">
+                    <option value="all">所有状态 / All Statuses</option>
+                    <option value="covered">COVERED (覆盖)</option>
+                    <option value="partial">PARTIAL (部分覆盖)</option>
+                    <option value="missing">MISSING (缺失)</option>
+                    <option value="unclear">UNCLEAR (模糊/未匹配)</option>
+                </select>
+            </div>
+            <div id="requirements-list">
+                <!-- Requirements will be rendered here -->
+            </div>
+        </div>
+
+        <!-- TAB: RISKS & GAPS -->
+        <div class="tab-content" id="tab-risks">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">风险列表 / Identified Risks</div>
+                    <select class="filter-select" id="risk-filter-severity" onchange="onRiskFilterChange()">
+                        <option value="all">所有严重程度 / All Severities</option>
+                        <option value="must">MUST</option>
+                        <option value="should">SHOULD</option>
+                        <option value="could">COULD</option>
+                    </select>
+                </div>
+                <div class="controls-row" style="margin-bottom: 16px;">
+                    <div class="search-wrapper">
+                        <input type="text" class="search-input" id="risk-search" placeholder="搜索风险描述或关联 ID / Search risks..." oninput="onRiskFilterChange()">
+                    </div>
+                </div>
+                <div id="risks-list">
+                    <!-- Risks will be rendered here -->
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 16px;">覆盖率缺口列表 / Coverage Gaps</div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>缺口目标 / Item ID</th>
+                                <th>类型 / Type</th>
+                                <th>缺口原因 / Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gaps-table-body">
+                            <!-- Gaps will be rendered here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: ARCHITECTURE COMPLIANCE -->
+        <div class="tab-content" id="tab-architecture">
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 16px;">架构规约检查状态 / Rules Verification Matrix</div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>规约 ID / Rule ID</th>
+                                <th>说明 / Title</th>
+                                <th>严重程度 / Severity</th>
+                                <th>状态 / Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="arch-rules-body">
+                            <!-- Architecture rules will be rendered here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" id="arch-violations-card">
+                <div class="card-title" style="margin-bottom: 16px; color: var(--status-fail);">架构违规项 / Architectural Violations</div>
+                <div id="arch-violations-list">
+                    <!-- Violations list -->
+                </div>
+            </div>
+
+            <div class="card" id="arch-unclear-card">
+                <div class="card-title" style="margin-bottom: 16px; color: var(--status-unclear);">无法验证的约束 / Unverifiable Constraints (Manual Review Required)</div>
+                <div id="arch-unclear-list">
+                    <!-- Unclear list -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: CLAUDE CODE BOOTSTRAP -->
+        <div class="tab-content" id="tab-bootstrap">
+            <div class="stats-grid" style="margin-bottom: 24px;">
+                <div class="stat-card" style="--accent-color: var(--accent-purple);">
+                    <div class="stat-label">自举配置文件数 / Bootstrap Configs</div>
+                    <div class="stat-value" id="stat-boot-files">0</div>
+                    <div class="stat-meta" id="stat-boot-status">-</div>
+                </div>
+                <div class="stat-card" style="--accent-color: var(--status-unclear);">
+                    <div class="stat-label">运行 Subagent / Active Subagents</div>
+                    <div class="stat-value" id="stat-boot-subagents">0</div>
+                    <div class="stat-meta" id="stat-boot-subagents-meta">-</div>
+                </div>
+                <div class="stat-card" style="--accent-color: var(--status-fail);">
+                    <div class="stat-label">治理警告 / Governance Warnings</div>
+                    <div class="stat-value" id="stat-boot-warnings">0</div>
+                    <div class="stat-meta" id="stat-boot-warnings-meta">-</div>
+                </div>
+                <div class="stat-card" style="--accent-color: var(--status-pass);">
+                    <div class="stat-label">架构提案数 / Change Proposals</div>
+                    <div class="stat-value" id="stat-boot-proposals">0</div>
+                    <div class="stat-meta" id="stat-boot-proposals-meta">-</div>
+                </div>
+            </div>
+
+            <div class="card" id="boot-warnings-card" style="display: none;">
+                <div class="card-title" style="margin-bottom: 16px; color: var(--status-fail);">自举治理警告与错误 / Governance Warnings & Errors</div>
+                <div id="boot-warnings-list"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 16px;">配置 Subagent 列表 / Configured Subagents</div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Subagent ID</th>
+                                <th style="width: 150px;">名称 / Name</th>
+                                <th style="width: 200px;">职责角色 / Role</th>
+                                <th>允许技能 / Allowed Skills</th>
+                                <th>输出产物要求 / Required Outputs</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boot-subagents-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 16px;">定义 Skill 列表 / Defined Skills</div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Skill ID</th>
+                                <th style="width: 150px;">名称 / Name</th>
+                                <th>用途说明 / Purpose</th>
+                                <th>约束边界 / Boundaries</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boot-skills-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 16px;">架构变更建议提案 / Architecture Change Proposals</div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">提案 ID / Proposal ID</th>
+                                <th style="width: 100px;">作者 / Author</th>
+                                <th>变更描述 / Rationale & Changes</th>
+                                <th style="width: 100px;">状态 / Status</th>
+                                <th>人工签署 / Human Approval</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boot-proposals-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: EVIDENCE INDEX -->
+        <div class="tab-content" id="tab-evidence">
+            <div class="controls-row">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" id="evidence-search" placeholder="输入 ID、路径或关联项搜索证据 / Search evidence..." oninput="onEvidenceFilterChange()">
+                </div>
+                <select class="filter-select" id="evidence-filter-type" onchange="onEvidenceFilterChange()">
+                    <option value="all">所有来源类型 / All Source Types</option>
+                    <option value="task">TASK (开发任务)</option>
+                    <option value="claim">CLAIM (Agent 声称)</option>
+                    <option value="test">TEST (单元测试)</option>
+                    <option value="tool">TOOL (静态工具)</option>
+                    <option value="code">CODE (源代码路径)</option>
+                </select>
+                <select class="filter-select" id="evidence-filter-status" onchange="onEvidenceFilterChange()">
+                    <option value="all">所有状态 / All Statuses</option>
+                    <option value="covered">COVERED</option>
+                    <option value="partial">PARTIAL</option>
+                    <option value="missing">MISSING</option>
+                    <option value="unclear">UNCLEAR</option>
+                </select>
+            </div>
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>证据 ID / Evidence ID</th>
+                                <th>类型 / Type</th>
+                                <th>位置与路径 / Source Path</th>
+                                <th>状态 / Status</th>
+                                <th>覆盖目标 / Covers</th>
+                                <th>详情 / Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="evidence-table-body">
+                            <!-- Evidence list -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA EMBEDDED SCRIPTS -->
+    <script id="prd-reqs-json" type="application/json">[{"req_id": "REQ-VT-001", "title": "全链路需求追踪", "priority": "must", "acceptance_criteria": [{"ac_id": "AC-VT-001-01", "title": "需求必须能关联任务", "is_testing_required": true}]}]</script>
+    <script id="evidence-idx-json" type="application/json">{"run_id": "RUN-248b18a0-25e4-4984-b524-1d9e5e03b404", "project_id": "PROJECT-VT", "scan_time": "2026-05-24T11:19:10.963386Z", "evidences": [{"evidence_id": "EVIDENCE-VT-001", "source_type": "task", "source_path": "docs/task_list.json", "covers": ["AC-VT-001-01", "REQ-VT-001"], "status": "covered", "details": {"task_id": "TASK-VT-001", "title": "Implement Feature", "phase_id": "PHASE-VT-001", "priority": "must"}}, {"evidence_id": "EVIDENCE-VT-002", "source_type": "claim", "source_path": ".vibetracing/agent_claims.json", "covers": ["AC-VT-001-01", "REQ-VT-001"], "status": "covered", "details": {"claim_id": "CLAIM-VT-001", "related_task": "TASK-VT-001", "timestamp": "2030-05-22T12:00:00Z", "notes": ""}}, {"evidence_id": "EVIDENCE-VT-003", "source_type": "test", "source_path": "tests/test_unrelated.py::test_something_else", "covers": ["AC-VT-999-99"], "status": "covered", "details": {"nodeid": "tests/test_unrelated.py::test_something_else", "outcome": "passed", "command": "pytest --json-report", "exit_code": 0}}]}</script>
+    <script id="trace-report-json" type="application/json">{"run_id": "RUN-248b18a0-25e4-4984-b524-1d9e5e03b404", "project_id": "PROJECT-VT", "scan_time": "2026-05-24T11:19:10.963386Z", "gate_decision": "blocked", "requirement_coverage": [{"req_id": "REQ-VT-001", "status": "covered", "evidence_ids": ["EVIDENCE-VT-001"]}], "gaps": [{"item_id": "AC-VT-001-01", "item_type": "ac", "reason": "Must acceptance criterion AC-VT-001-01 is missing passing test coverage."}], "risks": [{"risk_id": "RISK-VT-001", "description": "Claim CLAIM-VT-001 is completed but related AC AC-VT-001-01 has no test coverage.", "severity": "must", "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。", "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。", "evidence_ids": []}, {"risk_id": "RISK-VT-002", "description": "验收标准 AC-VT-001-01 缺失通过的测试证据。", "severity": "must", "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。", "suggested_action": "针对验收标准 `AC-VT-001-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-001-01`。", "evidence_ids": ["EVIDENCE-VT-999"]}], "architecture_compliance_status": [{"rule_id": "DEP-VT-001", "status": "compliant", "severity": "must", "title": "Core 不得依赖特定 Agent Runtime", "description": "Vibe Tracing Core 必须能够在不依赖 Claude Code、Hermes、DeepSeek TUI 或任何特定 Agent Runtime 的情况下被调用。"}, {"rule_id": "DEP-VT-002", "status": "compliant", "severity": "must", "title": "Dashboard 不得依赖外部前端资源", "description": "dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。"}, {"rule_id": "STORE-VT-001", "status": "compliant", "severity": "must", "title": "MVP 不使用数据库", "description": "MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。"}, {"rule_id": "GATE-VT-001", "status": "compliant", "severity": "must", "title": "必需输入文件必须存在", "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。"}, {"rule_id": "GATE-VT-006", "status": "compliant", "severity": "must", "title": "Must 级架构约束不得被违反", "description": "Must 级架构约束不得存在已确认违反项。"}, {"rule_id": "GATE-VT-007", "status": "compliant", "severity": "must", "title": "不明确的 Must 级架构约束必须导致保守门禁", "description": "如果 Must 级架构约束无法被检查，系统不得输出完全 allow 的合并结论。"}, {"rule_id": "FORBID-VT-007", "status": "compliant", "severity": "must", "title": "静默处理不明确架构约束", "description": "当某条架构约束无法自动检查时，系统必须将其标记为 unclear，而不是忽略它。"}], "architecture_violations": [], "unclear_constraints": []}</script>
+    <script id="boot-data-json" type="application/json">{"is_valid": false, "errors": ["Claude Code bootstrap manifest not found at: /Users/lihan/Project/Vibe_Tracing/examples/sample_project_missing_tests/.vibetracing/claude_bootstrap/bootstrap_manifest.json"], "warnings": [], "manifest": null, "subagents": {}, "skills": {}}</script>
+    <script id="prop-data-json" type="application/json">{"is_valid": true, "errors": [], "warnings": [], "risks": [], "gaps": [], "proposals": []}</script>
+
+    <!-- FRONTEND JAVASCRIPT -->
+    <script>
+        // Load data from script tags
+        let prdReqs = [];
+        let evidenceIndex = { evidences: [] };
+        let report = { requirement_coverage: [], gaps: [], risks: [] };
+
+        try {
+            prdReqs = JSON.parse(document.getElementById('prd-reqs-json').textContent);
+        } catch(e) { console.error("Error parsing PRD requirements", e); }
+
+        try {
+            evidenceIndex = JSON.parse(document.getElementById('evidence-idx-json').textContent);
+        } catch(e) { console.error("Error parsing evidence index", e); }
+
+        try {
+            report = JSON.parse(document.getElementById('trace-report-json').textContent);
+        } catch(e) { console.error("Error parsing report", e); }
+
+        // Build mappings for quick lookups
+        const reqMap = new Map(prdReqs.map(r => [r.req_id, r]));
+        const reqCoverageMap = new Map((report.requirement_coverage || []).map(c => [c.req_id, c]));
+        
+        // Find evidences that claim to cover a specific ID (Req ID or AC ID)
+        const itemEvidenceMap = new Map();
+        if (evidenceIndex && evidenceIndex.evidences) {
+            evidenceIndex.evidences.forEach(ev => {
+                if (ev.covers && Array.isArray(ev.covers)) {
+                    ev.covers.forEach(cov => {
+                        if (!itemEvidenceMap.has(cov)) {
+                            itemEvidenceMap.set(cov, []);
+                        }
+                        itemEvidenceMap.get(cov).push(ev);
+                    });
+                }
+            });
+        }
+
+        // State variables
+        let currentTab = 'overview';
+        let reqFilters = { search: '', priority: 'all', status: 'all' };
+        let riskFilters = { search: '', severity: 'all' };
+        let evidenceFilters = { search: '', type: 'all', status: 'all' };
+
+        // DOM Elements
+        const footerProjectId = document.getElementById('footer-project-id');
+        const footerRunId = document.getElementById('footer-run-id');
+        const footerScanTime = document.getElementById('footer-scan-time');
+
+        const metaProjectId = document.getElementById('meta-project-id');
+        const metaRunId = document.getElementById('meta-run-id');
+        const metaScanTime = document.getElementById('meta-scan-time');
+
+        const gateBadge = document.getElementById('gate-decision-badge');
+        const gateText = document.getElementById('gate-decision-text');
+
+        // Initialize metadata UI
+        const runId = report.run_id || evidenceIndex.run_id || "MISSING";
+        const projectId = report.project_id || evidenceIndex.project_id || "MISSING";
+        const scanTime = report.scan_time || evidenceIndex.scan_time || "MISSING";
+
+        footerProjectId.textContent = projectId;
+        footerRunId.textContent = runId;
+        footerRunId.title = runId;
+        footerScanTime.textContent = formatDateTime(scanTime);
+
+        metaProjectId.textContent = projectId;
+        metaRunId.textContent = runId;
+        metaScanTime.textContent = formatDateTime(scanTime);
+
+        // Format Date Time
+        function formatDateTime(isoString) {
+            if (!isoString || isoString === 'MISSING') return '无';
+            try {
+                const date = new Date(isoString);
+                if (isNaN(date.getTime())) return isoString;
+                return date.toLocaleString('zh-CN', { timeZone: 'UTC' }) + ' UTC';
+            } catch(e) {
+                return isoString;
+            }
+        }
+
+        // Initialize Gate Decision
+        const gateDecision = (report.gate_decision || 'blocked').toLowerCase();
+        gateBadge.className = 'gate-decision-badge ' + gateDecision;
+        gateText.textContent = 'GATE: ' + gateDecision;
+
+        // Initialize gate panel on Overview Tab
+        const gatePanel = document.getElementById('gate-panel-status');
+        const gatePanelIcon = document.getElementById('gate-panel-icon');
+        const gatePanelTitle = document.getElementById('gate-panel-title');
+        const gatePanelDesc = document.getElementById('gate-panel-desc');
+
+        if (gateDecision === 'pass') {
+            gatePanel.style.setProperty('--status-color', 'var(--status-pass)');
+            gatePanel.style.setProperty('--status-color-glow', 'var(--status-pass-glow)');
+            gatePanelIcon.textContent = '✅';
+            gatePanelTitle.textContent = 'PASS';
+            gatePanelDesc.textContent = '项目已满足所有质量门禁规则，符合合并要求。';
+        } else if (gateDecision === 'fail') {
+            gatePanel.style.setProperty('--status-color', 'var(--status-fail)');
+            gatePanel.style.setProperty('--status-color-glow', 'var(--status-fail-glow)');
+            gatePanelIcon.textContent = '❌';
+            gatePanelTitle.textContent = 'FAIL';
+            gatePanelDesc.textContent = '项目未通过质量门禁校验，存在违规项或严重缺失。';
+        } else {
+            gatePanel.style.setProperty('--status-color', 'var(--status-blocked)');
+            gatePanel.style.setProperty('--status-color-glow', 'var(--status-blocked-glow)');
+            gatePanelIcon.textContent = '⚠️';
+            gatePanelTitle.textContent = 'BLOCKED';
+            gatePanelDesc.textContent = '项目门禁由于关键信息（例如测试覆盖）缺失被阻断。';
+        }
+
+        // Populating Gate Reasons
+        const gateReasonsList = document.getElementById('gate-reasons-list');
+        const gaps = report.gaps || [];
+        const risks = report.risks || [];
+        
+        // Populate reasons directly from the report's gaps and violations if gate is not pass
+        let reasonsHtml = '';
+        if (gaps.length === 0 && risks.length === 0 && (!report.architecture_violations || report.architecture_violations.length === 0)) {
+            reasonsHtml = '<li class="empty-state">✅ 项目状态健康，无阻塞原因。</li>';
+        } else {
+            // Add risks if any
+            risks.filter(r => r.severity === 'must').forEach(r => {
+                reasonsHtml += `<li class="reason-item failed">【高风险】${escapeHtml(r.description)}</li>`;
+            });
+            // Add gaps
+            gaps.forEach(g => {
+                reasonsHtml += `<li class="reason-item blocked">【覆盖缺口】${escapeHtml(g.reason)}</li>`;
+            });
+            // Add violations
+            if (report.architecture_violations && Array.isArray(report.architecture_violations)) {
+                report.architecture_violations.forEach(v => {
+                    reasonsHtml += `<li class="reason-item failed">【架构违规】${escapeHtml(v.message)}</li>`;
+                });
+            }
+            
+            // If empty (e.g. no must risks, but gate is blocked/fail)
+            if (!reasonsHtml) {
+                reasonsHtml = '<li class="reason-item blocked">存在中低风险或部分不合规，请检查各面板详情。</li>';
+            }
+        }
+        gateReasonsList.innerHTML = reasonsHtml;
+
+        // Populate stats cards
+        // 1. Requirements stat
+        const totalReqs = prdReqs.length || report.requirement_coverage.length || 0;
+        document.getElementById('stat-req-total').textContent = totalReqs;
+        let reqCovered = 0, reqPartial = 0, reqMissing = 0, reqUnclear = 0;
+        (report.requirement_coverage || []).forEach(c => {
+            if (c.status === 'covered') reqCovered++;
+            else if (c.status === 'partial') reqPartial++;
+            else if (c.status === 'missing') reqMissing++;
+            else reqUnclear++;
+        });
+        document.getElementById('stat-req-breakdown').innerHTML = 
+            `已覆盖: <span style="color:var(--status-pass)">${reqCovered}</span> | ` +
+            `部分: <span style="color:var(--status-blocked)">${reqPartial}</span> | ` +
+            `缺失: <span style="color:var(--status-fail)">${reqMissing}</span>`;
+
+        // 2. Risks stat
+        const totalRisks = risks.length;
+        document.getElementById('stat-risk-total').textContent = totalRisks;
+        let riskMust = 0, riskShould = 0, riskCould = 0;
+        risks.forEach(r => {
+            if (r.severity === 'must') riskMust++;
+            else if (r.severity === 'should') riskShould++;
+            else if (r.severity === 'could') riskCould++;
+        });
+        document.getElementById('stat-risk-breakdown').innerHTML = 
+            `高: <span style="color:var(--status-fail)">${riskMust}</span> | ` +
+            `中: <span style="color:var(--status-blocked)">${riskShould}</span> | ` +
+            `低: <span style="color:var(--accent-blue)">${riskCould}</span>`;
+
+        // 3. Architecture stat
+        const archRules = report.architecture_compliance_status || [];
+        const archViolations = report.architecture_violations || [];
+        const archUnclear = report.unclear_constraints || [];
+        const isArchViolated = archViolations.length > 0;
+        const isArchUnclear = archUnclear.length > 0;
+        
+        let archStatusText = "Compliant";
+        let archStatusColor = "var(--status-pass)";
+        if (isArchViolated) {
+            archStatusText = "Violated";
+            archStatusColor = "var(--status-fail)";
+        } else if (isArchUnclear) {
+            archStatusText = "Unclear";
+            archStatusColor = "var(--status-unclear)";
+        }
+        document.getElementById('stat-arch-status').textContent = archStatusText;
+        document.getElementById('stat-arch-status').style.color = archStatusColor;
+        document.getElementById('stat-arch-breakdown').innerHTML = 
+            `规则: ${archRules.length} | ` +
+            `违规: <span style="color:var(--status-fail)">${archViolations.length}</span> | ` +
+            `未明: <span style="color:var(--status-unclear)">${archUnclear.length}</span>`;
+
+        // 4. Evidence stat
+        const totalEvidences = (evidenceIndex.evidences || []).length;
+        document.getElementById('stat-evidence-total').textContent = totalEvidences;
+        let evTask = 0, evClaim = 0, evTest = 0, evTool = 0, evCode = 0;
+        (evidenceIndex.evidences || []).forEach(e => {
+            if (e.source_type === 'task') evTask++;
+            else if (e.source_type === 'claim') evClaim++;
+            else if (e.source_type === 'test') evTest++;
+            else if (e.source_type === 'tool') evTool++;
+            else if (e.source_type === 'code') evCode++;
+        });
+        document.getElementById('stat-evidence-breakdown').textContent = 
+            `测试: ${evTest} | 任务: ${evTask} | 声称: ${evClaim} | 工具: ${evTool}`;
+
+        // TAB SWITCHER
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // Update sidebar nav state
+            document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const clickedItem = window.event ? window.event.currentTarget : null;
+            if (clickedItem) {
+                clickedItem.classList.add('active');
+            } else {
+                // Fallback selection by index/text
+                const idxMap = {'overview':0, 'requirements':1, 'risks':2, 'architecture':3, 'bootstrap':4, 'evidence':5};
+                const items = document.querySelectorAll('.sidebar .nav-item');
+                if (items[idxMap[tabName]]) items[idxMap[tabName]].classList.add('active');
+            }
+
+            // Update page header title
+            const titlesMap = {
+                'overview': '概览 / Overview',
+                'requirements': '需求追踪矩阵 / Requirements Coverage',
+                'risks': '缺陷与治理风险 / Risks & Gaps',
+                'architecture': '架构规约检查 / Architecture Compliance',
+                'bootstrap': 'Claude Code 自举状态与治理 / Bootstrap Status',
+                'evidence': '收集的证据清单 / Gathered Evidences'
+            };
+            document.getElementById('page-title').textContent = titlesMap[tabName];
+
+            // Hide/Show tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            // Trigger tab specific rendering
+            if (tabName === 'requirements') renderRequirements();
+            else if (tabName === 'risks') renderRisksAndGaps();
+            else if (tabName === 'architecture') renderArchitecture();
+            else if (tabName === 'evidence') renderEvidences();
+            else if (tabName === 'bootstrap') renderBootstrap();
+        }
+
+        // HTML Escape Helper
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Collapse toggle helper
+        function toggleCollapse(element) {
+            element.closest('.collapsible-item').classList.toggle('open');
+        }
+
+        // ==========================================
+        // TAB 2: REQUIREMENTS RENDERER
+        // ==========================================
+        function onReqFilterChange() {
+            reqFilters.search = document.getElementById('req-search').value.toLowerCase().trim();
+            reqFilters.priority = document.getElementById('req-filter-priority').value;
+            reqFilters.status = document.getElementById('req-filter-status').value;
+            renderRequirements();
+        }
+
+        function renderRequirements() {
+            const listContainer = document.getElementById('requirements-list');
+            listContainer.innerHTML = '';
+
+            let filteredReqs = prdReqs.filter(req => {
+                // Search text
+                const matchesSearch = req.req_id.toLowerCase().includes(reqFilters.search) || 
+                                      req.title.toLowerCase().includes(reqFilters.search);
+                // Priority filter
+                const matchesPriority = reqFilters.priority === 'all' || req.priority === reqFilters.priority;
+                // Status filter
+                const status = (reqCoverageMap.get(req.req_id) || { status: 'missing' }).status;
+                const matchesStatus = reqFilters.status === 'all' || status === reqFilters.status;
+
+                return matchesSearch && matchesPriority && matchesStatus;
+            });
+
+            if (filteredReqs.length === 0) {
+                listContainer.innerHTML = '<div class="empty-state">没有找到匹配的需求 / No requirements match the filters</div>';
+                return;
+            }
+
+            filteredReqs.forEach(req => {
+                const cov = reqCoverageMap.get(req.req_id) || { status: 'missing', evidence_ids: [] };
+                const status = cov.status;
+                const evidences = itemEvidenceMap.get(req.req_id) || [];
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `collapsible-item`;
+                itemDiv.id = `req-card-${req.req_id}`;
+
+                let acRowsHtml = '';
+                if (req.acceptance_criteria && req.acceptance_criteria.length > 0) {
+                    req.acceptance_criteria.forEach(ac => {
+                        const acGaps = gaps.filter(g => g.item_id === ac.ac_id);
+                        const acEvidences = itemEvidenceMap.get(ac.ac_id) || [];
+                        
+                        let acStatus = 'covered';
+                        let acReason = '';
+                        if (acGaps.length > 0) {
+                            acStatus = acGaps[0].reason.includes('missing') ? 'missing' : 'partial';
+                            acReason = acGaps[0].reason;
+                        } else if (acEvidences.length === 0 && ac.is_testing_required) {
+                            acStatus = 'missing';
+                            acReason = '缺乏测试证据';
+                        } else if (acEvidences.length === 0 && !ac.is_testing_required) {
+                            acStatus = 'covered';
+                        }
+
+                        let acEvLinks = '<i>无证据 / None</i>';
+                        if (acEvidences.length > 0) {
+                            acEvLinks = acEvidences.map(ev => 
+                                `<a class="ref-link" onclick="jumpToEvidence('${ev.evidence_id}')">${ev.evidence_id}</a>`
+                            ).join(', ');
+                        }
+
+                        acRowsHtml += `
+                            <tr>
+                                <td style="white-space: nowrap;"><span class="collapsible-id">${ac.ac_id}</span></td>
+                                <td>${escapeHtml(ac.title)}</td>
+                                <td>${ac.is_testing_required ? '是 / Yes' : '<span class="no-testing-required">否 / No</span>'}</td>
+                                <td><span class="badge badge-status-${acStatus}">${acStatus}</span></td>
+                                <td>${acEvLinks}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    acRowsHtml = '<tr><td colspan="5" class="empty-state">该需求下未定义任何验收标准 / No Acceptance Criteria defined</td></tr>';
+                }
+
+                let reqEvLinks = '<i>无关联证据 / None</i>';
+                if (evidences.length > 0) {
+                    reqEvLinks = evidences.map(ev => 
+                        `<a class="ref-link" onclick="jumpToEvidence('${ev.evidence_id}')">${ev.evidence_id}</a>`
+                    ).join(', ');
+                }
+
+                itemDiv.innerHTML = `
+                    <div class="collapsible-header" onclick="toggleCollapse(this)">
+                        <div class="collapsible-title-block">
+                            <span class="collapsible-id">${req.req_id}</span>
+                            <span class="collapsible-title" title="${escapeHtml(req.title)}">${escapeHtml(req.title)}</span>
+                        </div>
+                        <div class="collapsible-badge-block">
+                            <span class="badge badge-priority-${req.priority}">${req.priority}</span>
+                            <span class="badge badge-status-${status}">${status}</span>
+                            <span class="chevron">▼</span>
+                        </div>
+                    </div>
+                    <div class="collapsible-body">
+                        <div style="margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px;">关联证据 / Associated Evidences</div>
+                            <div style="font-size: 14px;">${reqEvLinks}</div>
+                        </div>
+                        <div style="font-weight: 700; font-size: 14px; margin-bottom: 12px; font-family: 'Outfit', sans-serif;">验收标准覆盖明细 / Acceptance Criteria Verification Matrix</div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 120px;">标准 ID / AC ID</th>
+                                        <th>验收内容描述 / Title</th>
+                                        <th style="width: 120px;">必须测试 / Test Req</th>
+                                        <th style="width: 100px;">验证状态 / Status</th>
+                                        <th style="width: 220px;">证明证据 / Evidences</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${acRowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(itemDiv);
+            });
+        }
+
+        // ==========================================
+        // TAB 3: RISKS & GAPS RENDERER
+        // ==========================================
+        function onRiskFilterChange() {
+            riskFilters.search = document.getElementById('risk-search').value.toLowerCase().trim();
+            riskFilters.severity = document.getElementById('risk-filter-severity').value;
+            renderRisksAndGaps();
+        }
+
+        function renderRisksAndGaps() {
+            const risksContainer = document.getElementById('risks-list');
+            risksContainer.innerHTML = '';
+
+            let filteredRisks = risks.filter(r => {
+                const matchesSearch = r.risk_id.toLowerCase().includes(riskFilters.search) || 
+                                      r.description.toLowerCase().includes(riskFilters.search) ||
+                                      (r.business_impact && r.business_impact.toLowerCase().includes(riskFilters.search)) ||
+                                      (r.suggested_action && r.suggested_action.toLowerCase().includes(riskFilters.search));
+                const matchesSeverity = riskFilters.severity === 'all' || r.severity === riskFilters.severity;
+                return matchesSearch && matchesSeverity;
+            });
+
+            if (filteredRisks.length === 0) {
+                risksContainer.innerHTML = '<div class="empty-state">没有发现或匹配任何风险 / No risks match the filters</div>';
+            } else {
+                filteredRisks.forEach(r => {
+                    const card = document.createElement('div');
+                    card.className = 'collapsible-item';
+                    
+                    let refEvs = '<i>无 / None</i>';
+                    if (r.evidence_ids && r.evidence_ids.length > 0) {
+                        refEvs = r.evidence_ids.map(id => 
+                            `<a class="ref-link" onclick="jumpToEvidence('${id}')">${id}</a>`
+                        ).join(', ');
+                    }
+
+                    card.innerHTML = `
+                        <div class="collapsible-header" onclick="toggleCollapse(this)">
+                            <div class="collapsible-title-block">
+                                <span class="collapsible-id">${r.risk_id}</span>
+                                <span class="collapsible-title">${escapeHtml(r.description)}</span>
+                            </div>
+                            <div class="collapsible-badge-block">
+                                <span class="badge badge-severity-${r.severity}">${r.severity}</span>
+                                <span class="chevron">▼</span>
+                            </div>
+                        </div>
+                        <div class="collapsible-body">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">业务影响评估 / Business Impact</div>
+                                    <div style="font-size: 13px; margin-top: 4px; line-height: 1.4;">${escapeHtml(r.business_impact || '无 / Not specified')}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">改进建议动作 / Action Items</div>
+                                    <div style="font-size: 13px; margin-top: 4px; line-height: 1.4; color: var(--text-primary); font-weight: 500;">${escapeHtml(r.suggested_action || '无 / Not specified')}</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--border-color); padding-top: 8px;">关联证据 refs / Evidence references</div>
+                            <div style="font-size: 13px; margin-top: 4px;">${refEvs}</div>
+                        </div>
+                    `;
+                    risksContainer.appendChild(card);
+                });
+            }
+
+            // Render Gaps Table
+            const gapsBody = document.getElementById('gaps-table-body');
+            gapsBody.innerHTML = '';
+            if (gaps.length === 0) {
+                gapsBody.innerHTML = '<tr><td colspan="3" class="empty-state">✅ 没有任何跟踪缺口 / No coverage gaps identified</td></tr>';
+            } else {
+                gaps.forEach(g => {
+                    const row = document.createElement('tr');
+                    
+                    let linkHtml = escapeHtml(g.item_id);
+                    if (g.item_id.startsWith('REQ-VT-')) {
+                        linkHtml = `<a class="ref-link" onclick="jumpToRequirement('${g.item_id}')">${escapeHtml(g.item_id)}</a>`;
+                    } else if (g.item_id.startsWith('AC-VT-')) {
+                        const parentReqId = 'REQ-VT-' + g.item_id.split('-')[2];
+                        linkHtml = `<a class="ref-link" onclick="jumpToRequirement('${parentReqId}')">${escapeHtml(g.item_id)}</a>`;
+                    }
+
+                    row.innerHTML = `
+                        <td><b>${linkHtml}</b></td>
+                        <td><span class="badge badge-priority-could">${escapeHtml(g.item_type)}</span></td>
+                        <td>${escapeHtml(g.reason)}</td>
+                    `;
+                    gapsBody.appendChild(row);
+                });
+            }
+        }
+
+        // ==========================================
+        // TAB 4: ARCHITECTURE COMPLIANCE RENDERER
+        // ==========================================
+        function renderArchitecture() {
+            // Render rules table
+            const rulesBody = document.getElementById('arch-rules-body');
+            rulesBody.innerHTML = '';
+
+            if (archRules.length === 0) {
+                rulesBody.innerHTML = '<tr><td colspan="4" class="empty-state">未定义或未扫描到任何架构规约 / No architecture rules scanned</td></tr>';
+            } else {
+                archRules.forEach(rule => {
+                    const row = document.createElement('tr');
+                    
+                    const ruleId = rule.rule_id;
+                    const ruleTitle = rule.title || '规约定义';
+                    const ruleSeverity = rule.severity || 'must';
+                    const ruleStatus = rule.status || 'compliant';
+
+                    row.innerHTML = `
+                        <td><b>${escapeHtml(ruleId)}</b></td>
+                        <td>
+                            <div style="font-weight:600;">${escapeHtml(ruleTitle)}</div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${escapeHtml(rule.description || '')}</div>
+                        </td>
+                        <td><span class="badge badge-severity-${ruleSeverity}">${ruleSeverity}</span></td>
+                        <td><span class="badge badge-status-${ruleStatus}">${ruleStatus}</span></td>
+                    `;
+                    rulesBody.appendChild(row);
+                });
+            }
+
+            // Render Violations
+            const violationsCard = document.getElementById('arch-violations-card');
+            const violationsList = document.getElementById('arch-violations-list');
+            violationsList.innerHTML = '';
+            
+            if (archViolations.length === 0) {
+                violationsCard.style.display = 'none';
+            } else {
+                violationsCard.style.display = 'block';
+                archViolations.forEach(v => {
+                    const box = document.createElement('div');
+                    box.className = 'alert-box violation';
+                    
+                    let evLink = '';
+                    if (v.evidence_id) {
+                        evLink = `<div style="font-size:11px; margin-top:6px; color: var(--text-secondary);">证据 / Evidence: <a class="ref-link" onclick="jumpToEvidence('${v.evidence_id}')">${v.evidence_id}</a></div>`;
+                    }
+
+                    box.innerHTML = `
+                        <div class="alert-title">🚨 规约违背: ${escapeHtml(v.rule_id)}</div>
+                        <div>${escapeHtml(v.message)}</div>
+                        ${evLink}
+                    `;
+                    violationsList.appendChild(box);
+                });
+            }
+
+            // Render Unclear Constraints
+            const unclearCard = document.getElementById('arch-unclear-card');
+            const unclearList = document.getElementById('arch-unclear-list');
+            unclearList.innerHTML = '';
+
+            if (archUnclear.length === 0) {
+                unclearCard.style.display = 'none';
+            } else {
+                unclearCard.style.display = 'block';
+                archUnclear.forEach(uc => {
+                    const box = document.createElement('div');
+                    box.className = 'alert-box unclear';
+                    box.innerHTML = `
+                        <div class="alert-title">🔍 需要人工核验: ${escapeHtml(uc.rule_id)}</div>
+                        <div>${escapeHtml(uc.reason || '该约束无法静态或自动化验证，请人工核查是否合规。')}</div>
+                    `;
+                    unclearList.appendChild(box);
+                });
+            }
+        }
+
+        // ==========================================
+        // TAB 5: EVIDENCE INDEX RENDERER
+        // ==========================================
+        function onEvidenceFilterChange() {
+            evidenceFilters.search = document.getElementById('evidence-search').value.toLowerCase().trim();
+            evidenceFilters.type = document.getElementById('evidence-filter-type').value;
+            evidenceFilters.status = document.getElementById('evidence-filter-status').value;
+            renderEvidences();
+        }
+
+        function renderEvidences() {
+            const body = document.getElementById('evidence-table-body');
+            body.innerHTML = '';
+
+            const filteredEvs = (evidenceIndex.evidences || []).filter(e => {
+                // Search text
+                const matchesSearch = e.evidence_id.toLowerCase().includes(evidenceFilters.search) ||
+                                      e.source_path.toLowerCase().includes(evidenceFilters.search) ||
+                                      (e.covers && e.covers.some(c => c.toLowerCase().includes(evidenceFilters.search))) ||
+                                      (e.details && JSON.stringify(e.details).toLowerCase().includes(evidenceFilters.search));
+                // Type filter
+                const matchesType = evidenceFilters.type === 'all' || e.source_type === evidenceFilters.type;
+                // Status filter
+                const matchesStatus = evidenceFilters.status === 'all' || e.status === evidenceFilters.status;
+
+                return matchesSearch && matchesType && matchesStatus;
+            });
+
+            if (filteredEvs.length === 0) {
+                body.innerHTML = '<tr><td colspan="6" class="empty-state">没有收集或匹配到任何证据 / No evidence found matching the filters</td></tr>';
+                return;
+            }
+
+            filteredEvs.forEach(e => {
+                const row = document.createElement('tr');
+                row.id = `ev-row-${e.evidence_id}`;
+
+                let coversBadges = '<i>无 / None</i>';
+                if (e.covers && e.covers.length > 0) {
+                    coversBadges = e.covers.map(cov => {
+                        if (cov.startsWith('REQ-VT-')) {
+                            return `<span class="badge badge-priority-could" style="cursor:pointer;" onclick="jumpToRequirement('${cov}')">${cov}</span>`;
+                        } else if (cov.startsWith('AC-VT-')) {
+                            const parentReqId = 'REQ-VT-' + cov.split('-')[2];
+                            return `<span class="badge badge-priority-should" style="cursor:pointer;" onclick="jumpToRequirement('${parentReqId}')">${cov}</span>`;
+                        }
+                        return `<span class="badge" style="background-color:var(--bg-primary); border-color:var(--border-color); color:var(--text-secondary);">${cov}</span>`;
+                    }).join(' ');
+                }
+
+                let detailsJson = '<i>无详细信息 / No details</i>';
+                if (e.details && Object.keys(e.details).length > 0) {
+                    detailsJson = `<pre class="code-block">${escapeHtml(JSON.stringify(e.details, null, 2))}</pre>`;
+                }
+
+                row.innerHTML = `
+                    <td style="white-space: nowrap;"><b>${escapeHtml(e.evidence_id)}</b></td>
+                    <td><span class="badge" style="background-color: var(--accent-blue-glow); color: var(--accent-blue); border-color: rgba(59,130,246,0.3);">${escapeHtml(e.source_type.toUpperCase())}</span></td>
+                    <td style="word-break: break-all; max-width: 260px;" title="${escapeHtml(e.source_path)}">${escapeHtml(e.source_path)}</td>
+                    <td><span class="badge badge-status-${e.status}">${e.status}</span></td>
+                    <td style="max-width: 240px;">${coversBadges}</td>
+                    <td>
+                        <button class="nav-item" style="padding: 6px 12px; font-size: 11px; margin: 0;" onclick="toggleDetailsRow(this)">
+                            展开 / Details
+                        </button>
+                    </td>
+                `;
+                body.appendChild(row);
+
+                // Embedded details row
+                const detailsRow = document.createElement('tr');
+                detailsRow.className = 'details-expand-row';
+                detailsRow.style.display = 'none';
+                detailsRow.innerHTML = `
+                    <td colspan="6" style="background-color: rgba(15,23,42,0.3); padding: 16px 24px; border-bottom: 1px solid var(--border-color);">
+                        <div style="font-weight: 700; margin-bottom: 8px; font-size: 12px; color: var(--text-secondary);">证据完整元数据 / Complete Metadata Details</div>
+                        ${detailsJson}
+                    </td>
+                `;
+                body.appendChild(detailsRow);
+            });
+        }
+
+        function toggleDetailsRow(btn) {
+            const row = btn.closest('tr');
+            const detailsRow = row.nextElementSibling;
+            if (detailsRow.style.display === 'none') {
+                detailsRow.style.display = 'table-row';
+                btn.textContent = '收起 / Collapse';
+            } else {
+                detailsRow.style.display = 'none';
+                btn.textContent = '展开 / Details';
+            }
+        }
+
+        // ==========================================
+        // CROSS REFERENCE NAVIGATION HELPERS
+        // ==========================================
+        function jumpToEvidence(evidenceId) {
+            switchTab('evidence');
+            document.getElementById('evidence-search').value = evidenceId;
+            onEvidenceFilterChange();
+            
+            // Highlight the target row
+            setTimeout(() => {
+                const targetRow = document.getElementById(`ev-row-${evidenceId}`);
+                if (targetRow) {
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetRow.style.backgroundColor = 'var(--accent-blue-glow)';
+                    
+                    // Trigger expansion
+                    const btn = targetRow.querySelector('button');
+                    if (btn && btn.textContent.includes('Details')) {
+                        toggleDetailsRow(btn);
+                    }
+
+                    setTimeout(() => {
+                        targetRow.style.transition = 'background-color 1s ease';
+                        targetRow.style.backgroundColor = '';
+                    }, 2000);
+                }
+            }, 200);
+        }
+
+        function jumpToRequirement(reqId) {
+            switchTab('requirements');
+            document.getElementById('req-search').value = reqId;
+            onReqFilterChange();
+
+            // Expand the requirement card
+            setTimeout(() => {
+                const targetCard = document.getElementById(`req-card-${reqId}`);
+                if (targetCard) {
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetCard.classList.add('open');
+                    
+                    // Highlight header
+                    const header = targetCard.querySelector('.collapsible-header');
+                    if (header) {
+                        header.style.backgroundColor = 'var(--accent-blue-glow)';
+                        setTimeout(() => {
+                            header.style.transition = 'background-color 1s ease';
+                            header.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                }
+            }, 200);
+        }
+
+        function renderBootstrap() {
+            let bootData = { is_valid: false, errors: [], warnings: [], manifest: null, subagents: {}, skills: {} };
+            let propData = { is_valid: false, errors: [], warnings: [], risks: [], gaps: [], proposals: [] };
+
+            try {
+                bootData = JSON.parse(document.getElementById('boot-data-json').textContent);
+            } catch(e) { console.error("Error parsing bootstrap data", e); }
+
+            try {
+                propData = JSON.parse(document.getElementById('prop-data-json').textContent);
+            } catch(e) { console.error("Error parsing proposals data", e); }
+
+            let filesCount = 0;
+            if (bootData.manifest) filesCount++;
+            filesCount += Object.keys(bootData.subagents || {}).length;
+            filesCount += Object.keys(bootData.skills || {}).length;
+
+            document.getElementById('stat-boot-files').textContent = filesCount;
+            document.getElementById('stat-boot-status').textContent = bootData.is_valid ? '验证通过 / Valid' : '存在异常 / Invalid';
+            document.getElementById('stat-boot-status').style.color = bootData.is_valid ? 'var(--status-pass)' : 'var(--status-fail)';
+
+            const subagentsCount = Object.keys(bootData.subagents || {}).length;
+            document.getElementById('stat-boot-subagents').textContent = subagentsCount;
+            document.getElementById('stat-boot-subagents-meta').textContent = bootData.manifest ? '结构化自举' : '未配置自举';
+
+            const totalBootWarnings = (bootData.errors || []).length + (bootData.warnings || []).length + (propData.errors || []).length + (propData.warnings || []).length;
+            document.getElementById('stat-boot-warnings').textContent = totalBootWarnings;
+            document.getElementById('stat-boot-warnings-meta').textContent = totalBootWarnings > 0 ? '需人工干预' : '环境安全';
+            document.getElementById('stat-boot-warnings-meta').style.color = totalBootWarnings > 0 ? 'var(--status-fail)' : 'var(--status-pass)';
+
+            const proposalsCount = (propData.proposals || []).length;
+            document.getElementById('stat-boot-proposals').textContent = proposalsCount;
+            let acceptedCount = 0;
+            (propData.proposals || []).forEach(p => {
+                if (p.status === 'accepted') acceptedCount++;
+            });
+            document.getElementById('stat-boot-proposals-meta').innerHTML = `已接受: <span style="color:var(--status-pass)">${acceptedCount}</span> | 草稿: ${proposalsCount - acceptedCount}`;
+
+            const warningsCard = document.getElementById('boot-warnings-card');
+            const warningsList = document.getElementById('boot-warnings-list');
+            warningsList.innerHTML = '';
+
+            const allErrors = [
+                ...(bootData.errors || []),
+                ...(propData.errors || [])
+            ];
+            const allWarnings = [
+                ...(bootData.warnings || []),
+                ...(propData.warnings || [])
+            ];
+
+            if (allErrors.length === 0 && allWarnings.length === 0) {
+                warningsCard.style.display = 'none';
+            } else {
+                warningsCard.style.display = 'block';
+                allErrors.forEach(err => {
+                    const box = document.createElement('div');
+                    box.className = 'alert-box violation';
+                    box.innerHTML = `<div class="alert-title">🚨 治理错误 / Error</div><div>${escapeHtml(err)}</div>`;
+                    warningsList.appendChild(box);
+                });
+                allWarnings.forEach(warn => {
+                    const box = document.createElement('div');
+                    box.className = 'alert-box unclear';
+                    box.innerHTML = `<div class="alert-title">⚠️ 安全警告 / Warning</div><div>${escapeHtml(warn)}</div>`;
+                    warningsList.appendChild(box);
+                });
+            }
+
+            const subagentsBody = document.getElementById('boot-subagents-body');
+            subagentsBody.innerHTML = '';
+            const subagentKeys = Object.keys(bootData.subagents || {});
+            if (subagentKeys.length === 0) {
+                subagentsBody.innerHTML = '<tr><td colspan="5" class="empty-state">未定义任何 Subagent / No subagents defined</td></tr>';
+            } else {
+                subagentKeys.forEach(saId => {
+                    const sa = bootData.subagents[saId];
+                    const row = document.createElement('tr');
+                    
+                    const skillsHtml = (sa.allowed_skills || []).map(sk => 
+                        `<span class="badge" style="background-color: var(--accent-blue-glow); color: var(--accent-blue); border-color: rgba(59,130,246,0.3); margin-right: 4px;">${escapeHtml(sk)}</span>`
+                    ).join(' ');
+
+                    const outputsHtml = (sa.required_outputs || []).map(out => 
+                        `<code style="background-color:rgba(15,23,42,0.4); padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px;">${escapeHtml(out)}</code>`
+                    ).join(' ');
+
+                    row.innerHTML = `
+                        <td><b>${escapeHtml(saId)}</b></td>
+                        <td>${escapeHtml(sa.name || '未命名')}</td>
+                        <td>${escapeHtml(sa.role || '无')}</td>
+                        <td>${skillsHtml || '<i>无</i>'}</td>
+                        <td>${outputsHtml || '<i>无</i>'}</td>
+                    `;
+                    subagentsBody.appendChild(row);
+                });
+            }
+
+            const skillsBody = document.getElementById('boot-skills-body');
+            skillsBody.innerHTML = '';
+            const skillKeys = Object.keys(bootData.skills || {});
+            if (skillKeys.length === 0) {
+                skillsBody.innerHTML = '<tr><td colspan="4" class="empty-state">未定义任何 Skill / No skills defined</td></tr>';
+            } else {
+                skillKeys.forEach(skId => {
+                    const sk = bootData.skills[skId];
+                    const row = document.createElement('tr');
+
+                    const boundsHtml = (sk.boundaries || []).map(b => 
+                        `<div style="font-size:11px; color:var(--text-secondary);">- ${escapeHtml(b)}</div>`
+                    ).join('');
+
+                    row.innerHTML = `
+                        <td><b>${escapeHtml(skId)}</b></td>
+                        <td>${escapeHtml(sk.name || '未命名')}</td>
+                        <td>
+                            <div style="font-weight:600;">${escapeHtml(sk.purpose || '')}</div>
+                        </td>
+                        <td>${boundsHtml || '<i>无</i>'}</td>
+                    `;
+                    skillsBody.appendChild(row);
+                });
+            }
+
+            const proposalsBody = document.getElementById('boot-proposals-body');
+            proposalsBody.innerHTML = '';
+            const proposals = propData.proposals || [];
+            if (proposals.length === 0) {
+                proposalsBody.innerHTML = '<tr><td colspan="5" class="empty-state">未检测到任何架构变更提案 / No proposals found</td></tr>';
+            } else {
+                proposals.forEach(p => {
+                    const row = document.createElement('tr');
+                    
+                    let changesHtml = '';
+                    (p.proposed_changes || []).forEach(ch => {
+                        changesHtml += `<div style="font-size:11px; margin-top: 4px;">
+                            <span class="badge" style="background-color: var(--accent-purple-glow); color: var(--accent-purple); border-color: rgba(139,92,246,0.3); font-size: 10px; padding: 2px 4px;">${escapeHtml(ch.action)}</span>
+                            <code>${escapeHtml(ch.constraint_path)}</code>
+                        </div>`;
+                    });
+
+                    let approvalHtml = '<i>未审批 / Pending</i>';
+                    if (p.human_approval) {
+                        approvalHtml = `
+                            <div style="font-size:11px;">
+                                <div>审批人: <b>${escapeHtml(p.human_approval.approved_by)}</b></div>
+                                <div style="color:var(--text-muted);">${escapeHtml(formatDateTime(p.human_approval.timestamp))}</div>
+                                <div style="color:var(--status-pass); font-family: monospace; font-size:10px;">${escapeHtml(p.human_approval.signature)}</div>
+                            </div>
+                        `;
+                    }
+
+                    row.innerHTML = `
+                        <td><b>${escapeHtml(p.proposal_id)}</b></td>
+                        <td>${escapeHtml(p.author || '未知')}</td>
+                        <td>
+                            <div style="font-weight:600; max-width: 300px; word-break: break-all;">${escapeHtml(p.rationale || '')}</div>
+                            ${changesHtml}
+                        </td>
+                        <td><span class="badge badge-status-${p.status === 'accepted' ? 'covered' : 'missing'}">${escapeHtml(p.status)}</span></td>
+                        <td>${approvalHtml}</td>
+                    `;
+                    proposalsBody.appendChild(row);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

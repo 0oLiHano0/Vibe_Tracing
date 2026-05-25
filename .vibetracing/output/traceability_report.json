@@ -1,0 +1,2224 @@
+{
+  "run_id": "RUN-2c459be2-2a61-46a8-beb8-779cb400552a",
+  "project_id": "PROJECT-VT",
+  "scan_time": "2026-05-24T04:40:39.225388Z",
+  "gate_decision": "blocked",
+  "requirement_coverage": [
+    {
+      "req_id": "REQ-VT-001",
+      "status": "partial",
+      "evidence_ids": [
+        "EVIDENCE-VT-001",
+        "EVIDENCE-VT-002",
+        "EVIDENCE-VT-003",
+        "EVIDENCE-VT-004",
+        "EVIDENCE-VT-005",
+        "EVIDENCE-VT-006",
+        "EVIDENCE-VT-007",
+        "EVIDENCE-VT-009",
+        "EVIDENCE-VT-010",
+        "EVIDENCE-VT-011",
+        "EVIDENCE-VT-012",
+        "EVIDENCE-VT-014",
+        "EVIDENCE-VT-015",
+        "EVIDENCE-VT-017",
+        "EVIDENCE-VT-018",
+        "EVIDENCE-VT-020",
+        "EVIDENCE-VT-021",
+        "EVIDENCE-VT-023",
+        "EVIDENCE-VT-026"
+      ]
+    },
+    {
+      "req_id": "REQ-VT-002",
+      "status": "partial",
+      "evidence_ids": [
+        "EVIDENCE-VT-001",
+        "EVIDENCE-VT-002",
+        "EVIDENCE-VT-003",
+        "EVIDENCE-VT-005",
+        "EVIDENCE-VT-008",
+        "EVIDENCE-VT-009",
+        "EVIDENCE-VT-010",
+        "EVIDENCE-VT-013",
+        "EVIDENCE-VT-014",
+        "EVIDENCE-VT-017",
+        "EVIDENCE-VT-018",
+        "EVIDENCE-VT-020",
+        "EVIDENCE-VT-021",
+        "EVIDENCE-VT-023",
+        "EVIDENCE-VT-026"
+      ]
+    },
+    {
+      "req_id": "REQ-VT-003",
+      "status": "missing",
+      "evidence_ids": []
+    },
+    {
+      "req_id": "REQ-VT-004",
+      "status": "missing",
+      "evidence_ids": []
+    },
+    {
+      "req_id": "REQ-VT-005",
+      "status": "missing",
+      "evidence_ids": []
+    },
+    {
+      "req_id": "REQ-VT-006",
+      "status": "partial",
+      "evidence_ids": [
+        "EVIDENCE-VT-001",
+        "EVIDENCE-VT-002",
+        "EVIDENCE-VT-003",
+        "EVIDENCE-VT-004",
+        "EVIDENCE-VT-014",
+        "EVIDENCE-VT-018",
+        "EVIDENCE-VT-019",
+        "EVIDENCE-VT-020",
+        "EVIDENCE-VT-021",
+        "EVIDENCE-VT-022",
+        "EVIDENCE-VT-028"
+      ]
+    },
+    {
+      "req_id": "REQ-VT-007",
+      "status": "partial",
+      "evidence_ids": [
+        "EVIDENCE-VT-009",
+        "EVIDENCE-VT-016",
+        "EVIDENCE-VT-017"
+      ]
+    },
+    {
+      "req_id": "REQ-VT-008",
+      "status": "partial",
+      "evidence_ids": [
+        "EVIDENCE-VT-001",
+        "EVIDENCE-VT-002",
+        "EVIDENCE-VT-003",
+        "EVIDENCE-VT-004",
+        "EVIDENCE-VT-009",
+        "EVIDENCE-VT-012",
+        "EVIDENCE-VT-015",
+        "EVIDENCE-VT-016",
+        "EVIDENCE-VT-017",
+        "EVIDENCE-VT-018",
+        "EVIDENCE-VT-020",
+        "EVIDENCE-VT-021",
+        "EVIDENCE-VT-022",
+        "EVIDENCE-VT-027",
+        "EVIDENCE-VT-028"
+      ]
+    },
+    {
+      "req_id": "REQ-VT-009",
+      "status": "partial",
+      "evidence_ids": [
+        "EVIDENCE-VT-006",
+        "EVIDENCE-VT-020",
+        "EVIDENCE-VT-021",
+        "EVIDENCE-VT-022",
+        "EVIDENCE-VT-023",
+        "EVIDENCE-VT-024",
+        "EVIDENCE-VT-025",
+        "EVIDENCE-VT-026",
+        "EVIDENCE-VT-027",
+        "EVIDENCE-VT-028",
+        "EVIDENCE-VT-029",
+        "EVIDENCE-VT-030",
+        "EVIDENCE-VT-031"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "item_id": "AC-VT-001-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-001-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-001-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-001-02 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-001-03",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-001-03 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-001-04",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-001-04 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-002-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-002-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-002-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-002-02 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-002-03",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-002-03 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-006-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-006-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-006-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-006-02 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-008-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-008-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-008-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-008-02 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-008-03",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-008-03 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-02 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-03",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-03 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-04",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-04 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-05",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-05 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-06",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-06 is missing passing test coverage."
+    }
+  ],
+  "risks": [
+    {
+      "risk_id": "RISK-VT-001",
+      "description": "验收标准 AC-VT-001-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-001-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-001-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-002",
+      "description": "验收标准 AC-VT-001-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-001-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-001-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-003",
+      "description": "验收标准 AC-VT-001-03 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-001-03` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-001-03`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-004",
+      "description": "验收标准 AC-VT-001-04 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-001-04` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-001-04`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-005",
+      "description": "验收标准 AC-VT-002-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-002-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-002-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-006",
+      "description": "验收标准 AC-VT-002-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-002-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-002-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-007",
+      "description": "验收标准 AC-VT-002-03 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-002-03` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-002-03`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-008",
+      "description": "验收标准 AC-VT-006-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-006-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-006-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-009",
+      "description": "验收标准 AC-VT-006-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-006-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-006-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-010",
+      "description": "验收标准 AC-VT-008-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-008-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-008-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-011",
+      "description": "验收标准 AC-VT-008-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-008-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-008-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-012",
+      "description": "验收标准 AC-VT-008-03 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-008-03` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-008-03`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-013",
+      "description": "验收标准 AC-VT-009-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-014",
+      "description": "验收标准 AC-VT-009-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-015",
+      "description": "验收标准 AC-VT-009-03 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-03` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-03`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-016",
+      "description": "验收标准 AC-VT-009-04 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-04` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-04`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-017",
+      "description": "验收标准 AC-VT-009-05 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-05` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-05`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-018",
+      "description": "验收标准 AC-VT-009-06 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-06` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-06`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-019",
+      "description": "架构约束违反 (规则 MOD-VT-001): Import of 'claude_code_bootstrap_adapter' (module MOD-VT-011) at line 134 in cli.py is not in allowed_to_call whitelist",
+      "severity": "must",
+      "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
+      "suggested_action": "根据规则 `MOD-VT-001` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-020",
+      "description": "架构约束违反 (规则 MOD-VT-006): Import of 'raw_input_loader' (module MOD-VT-002) at line 14 in traceability_report_builder.py is not in allowed_to_call whitelist",
+      "severity": "must",
+      "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
+      "suggested_action": "根据规则 `MOD-VT-006` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-021",
+      "description": "架构约束违反 (规则 MOD-VT-009): Import of 'raw_input_loader' (module MOD-VT-002) at line 486 in architecture_compliance_checker.py is not in allowed_to_call whitelist",
+      "severity": "must",
+      "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
+      "suggested_action": "根据规则 `MOD-VT-009` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-022",
+      "description": "架构约束违反 (规则 DEP-VT-001): Prohibited import of Agent Runtime package 'vibe_tracing.claude_code_bootstrap_adapter' at line 620 in architecture_compliance_checker.py",
+      "severity": "must",
+      "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
+      "suggested_action": "根据规则 `DEP-VT-001` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-023",
+      "description": "架构约束违反 (规则 DEP-VT-002): Dashboard references external front-end resources: href=\"https://fonts.googleapis.com\", href=\"https://fonts.gstatic.com\", href=\"https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap\"",
+      "severity": "must",
+      "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
+      "suggested_action": "根据规则 `DEP-VT-002` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-024",
+      "description": "架构约束违反 (规则 GATE-VT-006): One or more Must-level architecture constraints are violated.",
+      "severity": "must",
+      "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
+      "suggested_action": "根据规则 `GATE-VT-006` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-025",
+      "description": "架构约束 PRINCIPLE-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-001` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-026",
+      "description": "架构约束 PRINCIPLE-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-002` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-027",
+      "description": "架构约束 PRINCIPLE-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-003` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-028",
+      "description": "架构约束 PRINCIPLE-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-029",
+      "description": "架构约束 PRINCIPLE-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-005` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-030",
+      "description": "架构约束 PRINCIPLE-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-006` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-031",
+      "description": "架构约束 PRINCIPLE-VT-007 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-007` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-032",
+      "description": "架构约束 PRINCIPLE-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-008` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-033",
+      "description": "架构约束 PRINCIPLE-VT-009 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-009` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-034",
+      "description": "架构约束 PRINCIPLE-VT-010 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-010` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-035",
+      "description": "架构约束 PRINCIPLE-VT-011 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-011` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-036",
+      "description": "架构约束 PRINCIPLE-VT-012 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-012` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-037",
+      "description": "架构约束 PRINCIPLE-VT-013 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-013` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-038",
+      "description": "架构约束 PRINCIPLE-VT-014 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-014` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-039",
+      "description": "架构约束 PRINCIPLE-VT-015 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-015` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-040",
+      "description": "架构约束 PRINCIPLE-VT-016 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-016` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-041",
+      "description": "架构约束 PRINCIPLE-VT-017 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `PRINCIPLE-VT-017` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-042",
+      "description": "架构约束 DEP-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `DEP-VT-003` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-043",
+      "description": "架构约束 DEP-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `DEP-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-044",
+      "description": "架构约束 DEP-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `DEP-VT-005` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-045",
+      "description": "架构约束 DEP-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `DEP-VT-006` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-046",
+      "description": "架构约束 FLOW-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FLOW-VT-001` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-047",
+      "description": "架构约束 FLOW-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FLOW-VT-002` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-048",
+      "description": "架构约束 FLOW-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FLOW-VT-003` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-049",
+      "description": "架构约束 FLOW-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FLOW-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-050",
+      "description": "架构约束 FLOW-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FLOW-VT-005` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-051",
+      "description": "架构约束 FLOW-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FLOW-VT-006` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-052",
+      "description": "架构约束 FLOW-VT-007 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FLOW-VT-007` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-053",
+      "description": "架构约束 FLOW-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FLOW-VT-008` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-054",
+      "description": "架构约束 STORE-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `STORE-VT-002` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-055",
+      "description": "架构约束 STORE-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `STORE-VT-003` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-056",
+      "description": "架构约束 STORE-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `STORE-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-057",
+      "description": "架构约束 STORE-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `STORE-VT-005` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-058",
+      "description": "架构约束 ERR-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `ERR-VT-001` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-059",
+      "description": "架构约束 ERR-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `ERR-VT-002` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-060",
+      "description": "架构约束 ERR-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `ERR-VT-003` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-061",
+      "description": "架构约束 ERR-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `ERR-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-062",
+      "description": "架构约束 ERR-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `ERR-VT-005` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-063",
+      "description": "架构约束 ERR-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `ERR-VT-006` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-064",
+      "description": "架构约束 LOG-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `LOG-VT-001` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-065",
+      "description": "架构约束 LOG-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `LOG-VT-002` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-066",
+      "description": "架构约束 LOG-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `LOG-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-067",
+      "description": "架构约束 SEC-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `SEC-VT-001` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-068",
+      "description": "架构约束 SEC-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `SEC-VT-002` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-069",
+      "description": "架构约束 SEC-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `SEC-VT-003` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-070",
+      "description": "架构约束 SEC-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `SEC-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-071",
+      "description": "架构约束 SEC-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `SEC-VT-005` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-072",
+      "description": "架构约束 TECH-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `TECH-VT-001` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-073",
+      "description": "架构约束 TECH-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `TECH-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-074",
+      "description": "架构约束 TECH-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `TECH-VT-005` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-075",
+      "description": "架构约束 TECH-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `TECH-VT-006` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-076",
+      "description": "架构约束 FORBID-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FORBID-VT-001` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-077",
+      "description": "架构约束 FORBID-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FORBID-VT-002` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-078",
+      "description": "架构约束 FORBID-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FORBID-VT-003` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-079",
+      "description": "架构约束 FORBID-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FORBID-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-080",
+      "description": "架构约束 FORBID-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FORBID-VT-005` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-081",
+      "description": "架构约束 FORBID-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FORBID-VT-006` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-082",
+      "description": "架构约束 FORBID-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FORBID-VT-008` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-083",
+      "description": "架构约束 FORBID-VT-009 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `FORBID-VT-009` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-084",
+      "description": "架构约束 GATE-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-002` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-085",
+      "description": "架构约束 GATE-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-003` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-086",
+      "description": "架构约束 GATE-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-004` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-087",
+      "description": "架构约束 GATE-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-005` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-088",
+      "description": "架构约束 GATE-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-008` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-089",
+      "description": "架构约束 GATE-VT-009 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-009` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-090",
+      "description": "架构约束 GATE-VT-010 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-010` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-091",
+      "description": "架构约束 GATE-VT-011 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-011` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    },
+    {
+      "risk_id": "RISK-VT-092",
+      "description": "架构约束 GATE-VT-012 状态不明确：This constraint is not machine-verifiable and requires manual review.",
+      "severity": "should",
+      "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
+      "suggested_action": "由架构师或人类项目经理对约束 `GATE-VT-012` 进行人工核对，并在 Review 流程中确认合规。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ],
+      "confidence": "low_confidence",
+      "type": "suggestion"
+    }
+  ],
+  "architecture_compliance_status": [
+    {
+      "rule_id": "MOD-VT-001",
+      "status": "violated",
+      "severity": "must",
+      "title": "Module Boundary: agent_runtime_adapter",
+      "description": "为成熟 Agent Runtime 或 CLI 环境提供集成入口。该模块可以准备命令并调用 Vibe Tracing Core，但不得拥有治理规则。"
+    },
+    {
+      "rule_id": "MOD-VT-002",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Module Boundary: raw_input_loader",
+      "description": "加载项目原始材料，包括 PRD、架构约束、任务列表、Agent Claim、代码库元数据和可选工具输出。"
+    },
+    {
+      "rule_id": "MOD-VT-003",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Module Boundary: schema_validator",
+      "description": "在分析前和报告生成前，对所有机器可读 JSON 输入和输出进行 Schema 校验。"
+    },
+    {
+      "rule_id": "MOD-VT-004",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Module Boundary: tool_evidence_adapter",
+      "description": "将 pytest、coverage、ruff、bandit 等 MVP 工具输出规范化为结构化证据候选项。"
+    },
+    {
+      "rule_id": "MOD-VT-005",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Module Boundary: evidence_index_builder",
+      "description": "基于原始输入、任务记录、Agent Claim、测试摘要、工具输出和代码路径引用，生成 evidence_index.json。"
+    },
+    {
+      "rule_id": "MOD-VT-006",
+      "status": "violated",
+      "severity": "must",
+      "title": "Module Boundary: traceability_analyzer",
+      "description": "基于结构化证据，分析需求到任务、验收标准到测试、任务到 Claim、Claim 到证据之间的关系。"
+    },
+    {
+      "rule_id": "MOD-VT-007",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Module Boundary: merge_gate_engine",
+      "description": "基于确定性规则、证据状态、测试覆盖、架构合规状态和风险等级计算 gate_decision。"
+    },
+    {
+      "rule_id": "MOD-VT-008",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Module Boundary: dashboard_renderer",
+      "description": "根据 evidence_index.json 和 traceability_report.json 渲染单体 dashboard.html，不得重新计算事实或结论。"
+    },
+    {
+      "rule_id": "MOD-VT-009",
+      "status": "violated",
+      "severity": "must",
+      "title": "Module Boundary: architecture_compliance_checker",
+      "description": "检查明确且可机器判断的架构约束。对于无法自动检查的约束，必须输出 unclear，而不是假设合规。"
+    },
+    {
+      "rule_id": "MOD-VT-010",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Module Boundary: llm_semantic_inspector",
+      "description": "可选生成面向人类的解释、风险总结、不明确原因和建议行动。该模块不得决定完成状态、覆盖状态、合规状态或合并许可。"
+    },
+    {
+      "rule_id": "MOD-VT-011",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Module Boundary: claude_code_bootstrap_adapter",
+      "description": "为 MVP 自举提供 Claude Code subagent、skill、提示词和运行约束的配置入口。该模块负责组织 Claude Code 工作流并调用 Vibe Tracing Core，但不得拥有治理事实、门禁判定或架构约束最终修改权。"
+    },
+    {
+      "rule_id": "DEP-VT-001",
+      "status": "violated",
+      "severity": "must",
+      "title": "Core 不得依赖特定 Agent Runtime",
+      "description": "Vibe Tracing Core 必须能够在不依赖 Claude Code、Hermes、DeepSeek TUI 或任何特定 Agent Runtime 的情况下被调用。"
+    },
+    {
+      "rule_id": "DEP-VT-002",
+      "status": "violated",
+      "severity": "must",
+      "title": "Dashboard 不得依赖外部前端资源",
+      "description": "dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。"
+    },
+    {
+      "rule_id": "STORE-VT-001",
+      "status": "compliant",
+      "severity": "must",
+      "title": "MVP 不使用数据库",
+      "description": "MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。"
+    },
+    {
+      "rule_id": "GATE-VT-001",
+      "status": "compliant",
+      "severity": "must",
+      "title": "必需输入文件必须存在",
+      "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。"
+    },
+    {
+      "rule_id": "GATE-VT-006",
+      "status": "violated",
+      "severity": "must",
+      "title": "Must 级架构约束不得被违反",
+      "description": "Must 级架构约束不得存在已确认违反项。"
+    },
+    {
+      "rule_id": "GATE-VT-007",
+      "status": "compliant",
+      "severity": "must",
+      "title": "不明确的 Must 级架构约束必须导致保守门禁",
+      "description": "如果 Must 级架构约束无法被检查，系统不得输出完全 allow 的合并结论。"
+    },
+    {
+      "rule_id": "FORBID-VT-007",
+      "status": "compliant",
+      "severity": "must",
+      "title": "静默处理不明确架构约束",
+      "description": "当某条架构约束无法自动检查时，系统必须将其标记为 unclear，而不是忽略它。"
+    },
+    {
+      "rule_id": "GATE-VT-013",
+      "status": "compliant",
+      "severity": "must",
+      "title": "Claude Code 自举配置必须可审查",
+      "description": "Claude Code 自举配置必须存在、格式正确，且符合安全审查原则。"
+    },
+    {
+      "rule_id": "GATE-VT-014",
+      "status": "compliant",
+      "severity": "must",
+      "title": "架构约束变更建议必须显式记录",
+      "description": "检测到架构约束漂移/变更比对通过，且所有修改均有合法的已接受提案。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-001",
+      "status": "unclear",
+      "severity": "must",
+      "title": "证据优先",
+      "description": "没有明确证据支持时，任何需求、验收标准、任务、Claim、风险或门禁结论都不得标记为完成、覆盖、合规或允许。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-002",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Agent 不能自证完成",
+      "description": "Agent Claim 不能作为任务完成的充分证据。完成状态必须由任务记录、代码路径、测试证据、Review 结果或工具输出等外部证据支持。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-003",
+      "status": "unclear",
+      "severity": "must",
+      "title": "面向人类的治理表达",
+      "description": "报告和 Dashboard 必须使用非开发背景用户能够理解的业务语言或项目管理语言，解释状态、缺口、风险和门禁结论。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "规则引擎负责门禁判定",
+      "description": "Merge Gate 结论必须由确定性规则基于结构化证据计算得出。Agent 可以提供发现项、解释和建议，但不能直接批准合并。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-005",
+      "status": "unclear",
+      "severity": "must",
+      "title": "人类负责最终项目决策",
+      "description": "系统可以输出 allow、conditional 或 block 等门禁结论，但最终项目决策必须由人类项目负责人或项目经理作出。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-006",
+      "status": "unclear",
+      "severity": "must",
+      "title": "插件优先，核心独立",
+      "description": "Vibe Tracing v0.1 可以由 Claude Code、Hermes、DeepSeek TUI 等成熟 Agent Runtime 调用，但核心规则、Schema、证据模型和报告生成能力必须保持独立可运行。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-007",
+      "status": "unclear",
+      "severity": "must",
+      "title": "MVP 不自研完整 Agent Harness",
+      "description": "MVP 阶段不得尝试自研完整 Agent Runtime 或编排平台。应复用成熟 Agent Runtime 作为执行环境，同时保持 Vibe Tracing Core 独立。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-008",
+      "status": "unclear",
+      "severity": "must",
+      "title": "核心语言无关，MVP 适配 Python",
+      "description": "核心数据模型必须保持语言无关。pytest、coverage、ruff、bandit 等 Python 工具仅作为 MVP 阶段的工具适配器，不得写死进核心对象模型。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-009",
+      "status": "unclear",
+      "severity": "must",
+      "title": "MVP 不使用数据库",
+      "description": "MVP 阶段不得依赖数据库。所有输入和输出必须以文件形式存在，以保证系统简单、可检查、可移植。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-010",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Dashboard 必须是单体 HTML",
+      "description": "Dashboard 必须是一个可独立打开的 HTML 文件，内嵌 JSON、CSS 和 JavaScript。不得依赖前端构建系统、CDN、后端服务或浏览时外部 JSON 文件。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-011",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Dashboard 只负责渲染",
+      "description": "Dashboard 只能渲染 evidence_index.json 和 traceability_report.json 中已经存在的内容。不得重新解释事实、编造结论或重新计算治理状态。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-012",
+      "status": "unclear",
+      "severity": "must",
+      "title": "测试覆盖必须显式关联 AC",
+      "description": "只有测试证据明确声明关联的 AC ID 时，该测试才可算作覆盖对应验收标准。文件名相似、自然语言相似或 Agent 推断均不得作为已确认覆盖。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-013",
+      "status": "unclear",
+      "severity": "must",
+      "title": "保守判定",
+      "description": "当证据缺失、含糊、冲突或无法读取时，系统必须输出 unclear、low_confidence、missing 或 blocked，而不是假设完成或合规。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-014",
+      "status": "unclear",
+      "severity": "must",
+      "title": "机器契约必须通过 Schema 校验",
+      "description": "architecture_constraints.json、task_list.json、agent_claims.json、evidence_index.json、traceability_report.json 等机器可读文件必须通过明确的 Schema 校验。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-015",
+      "status": "unclear",
+      "severity": "must",
+      "title": "MVP 范围受控",
+      "description": "MVP 必须聚焦需求覆盖、验收标准测试覆盖、Agent Claim 证据和架构约束状态。不得承诺完整自动重建业务流程、完整理解代码或建设企业级平台能力。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-016",
+      "status": "unclear",
+      "severity": "must",
+      "title": "MVP 默认以 Claude Code 作为首选 Agent Runtime",
+      "description": "MVP 阶段默认使用 Claude Code 作为 Vibe Tracing 自身开发的首选 AI Coding Agent Runtime，用于组织 subagent、skill、提示词和自举工作流。但 Claude Code 只能位于 Runtime Adapter 层，Vibe Tracing Core 的规则、Schema、证据模型、报告生成和门禁判定能力必须保持独立可运行。"
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-017",
+      "status": "unclear",
+      "severity": "must",
+      "title": "自举产物必须可追踪",
+      "description": "Claude Code 自举过程中产生的任务、Agent Claim、测试、Review、证据和报告相关产物必须进入结构化治理文件。自然语言对话、聊天记录或未结构化总结不得作为唯一事实源。"
+    },
+    {
+      "rule_id": "DEP-VT-003",
+      "status": "unclear",
+      "severity": "must",
+      "title": "MVP 不得强依赖 Graphify",
+      "description": "Graphify 或任何 graph/context layer 可以在后续版本作为可选增强引入，但不得阻塞 v0.1 报告生成。"
+    },
+    {
+      "rule_id": "DEP-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Python 工具是适配器，不是核心依赖",
+      "description": "pytest、coverage、ruff 和 bandit 可以用于 Python MVP 工具适配器，但核心报告模型不得假设所有项目都是 Python 项目。"
+    },
+    {
+      "rule_id": "DEP-VT-005",
+      "status": "unclear",
+      "severity": "must",
+      "title": "规则引擎不得依赖 LLM 输出作硬判定",
+      "description": "Merge Gate 和状态判定必须基于结构化证据和确定性规则，不能依赖自由文本形式的 LLM 解释。"
+    },
+    {
+      "rule_id": "DEP-VT-006",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Claude Code 是首选 Runtime，不是 Core 强依赖",
+      "description": "MVP 自举必须提供 Claude Code 适配能力，但 Vibe Tracing Core 不得只能在 Claude Code 中运行。Core 必须继续支持独立 CLI 调用和文件化输入输出。"
+    },
+    {
+      "rule_id": "FLOW-VT-001",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Raw 输入流入 Evidence Index",
+      "description": "原始 PRD、架构约束、任务列表、Agent Claim、工具报告和代码引用可以被规范化为 evidence_index.json。"
+    },
+    {
+      "rule_id": "FLOW-VT-002",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Evidence Index 流入 Traceability Report",
+      "description": "traceability_report.json 必须引用 evidence_index.json 中的证据记录，不得在报告中编造没有来源的内联证据。"
+    },
+    {
+      "rule_id": "FLOW-VT-003",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Traceability Report 流入 Dashboard",
+      "description": "dashboard.html 必须以内嵌数据的方式渲染 traceability_report.json 和 evidence_index.json，不得在浏览时请求外部报告文件。"
+    },
+    {
+      "rule_id": "FLOW-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Dashboard 不得反向修改报告",
+      "description": "Dashboard 渲染过程不得修改 evidence_index.json、traceability_report.json、gate_decision 或原始材料。"
+    },
+    {
+      "rule_id": "FLOW-VT-005",
+      "status": "unclear",
+      "severity": "must",
+      "title": "LLM 解释不得覆盖事实字段",
+      "description": "LLM 生成的总结、解释和建议可以作为 interpretation 字段附加，但不得覆盖 evidence、status 或 gate_decision 等事实与判定字段。"
+    },
+    {
+      "rule_id": "FLOW-VT-006",
+      "status": "unclear",
+      "severity": "must",
+      "title": "工具输出必须先规范化再用于治理",
+      "description": "pytest、coverage、ruff 或 bandit 的原始输出必须先解析为结构化证据记录，再交给 traceability_analyzer 或 merge_gate_engine 使用。"
+    },
+    {
+      "rule_id": "FLOW-VT-007",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Claude Code 自举输出必须进入治理文件",
+      "description": "Claude Code subagent 在自举过程中产生的任务、Claim、测试、Review、证据候选和架构变更建议，必须先写入对应结构化治理文件或候选文件，再被 Evidence Index、Traceability Report 或治理流程消费。"
+    },
+    {
+      "rule_id": "FLOW-VT-008",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Subagent 不得直接覆盖架构约束",
+      "description": "Claude Code subagent 可以提出 architecture_constraints.json 的变更建议，但不得直接绕过治理流程修改、删除、降级或静默覆盖既有架构约束。"
+    },
+    {
+      "rule_id": "STORE-VT-002",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Evidence Index 必须独立输出",
+      "description": "MVP 必须将 evidence_index.json 作为独立文件输出，而不是只内嵌在 traceability_report.json 中。"
+    },
+    {
+      "rule_id": "STORE-VT-003",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Dashboard 必须内嵌报告数据",
+      "description": "虽然 evidence_index.json 和 traceability_report.json 是独立输出文件，但 dashboard.html 必须内嵌所需报告数据，确保 HTML 文件可独立打开。"
+    },
+    {
+      "rule_id": "STORE-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Raw Layer 必须保持可检查",
+      "description": "系统在分析过程中不得覆盖原始 PRD、架构约束、任务列表、Agent Claim 或工具输出。"
+    },
+    {
+      "rule_id": "STORE-VT-005",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Claude Code 自举配置必须文件化",
+      "description": "MVP 中 Claude Code 的 subagent、skill、提示词边界和自举说明必须以可检查的项目文件保存，不得只存在于一次性聊天上下文中。具体路径和文件格式由架构实现约束定义。"
+    },
+    {
+      "rule_id": "ERR-VT-001",
+      "status": "unclear",
+      "severity": "must",
+      "title": "缺少输入不得生成虚假完成结论",
+      "description": "如果必需输入缺失，系统必须报告 missing_input，并阻止受影响项被标记为 done、covered、compliant 或 allowed。"
+    },
+    {
+      "rule_id": "ERR-VT-002",
+      "status": "unclear",
+      "severity": "must",
+      "title": "无效 JSON 必须停止受影响分析",
+      "description": "如果必需 JSON 输入无法通过 Schema 校验，受影响的分析必须标记为 invalid_input 或 blocked，不得基于不完整假设继续分析。"
+    },
+    {
+      "rule_id": "ERR-VT-003",
+      "status": "unclear",
+      "severity": "must",
+      "title": "含糊证据必须降级",
+      "description": "如果证据存在但无法可靠关联到需求、任务、Claim 或验收标准，系统必须将该关系标记为 unclear 或 low_confidence。"
+    },
+    {
+      "rule_id": "ERR-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "材料冲突必须显式展示",
+      "description": "当 PRD、任务列表、Agent Claim、测试证据或工具报告之间存在冲突时，系统必须报告冲突，不得静默选择其中一方。"
+    },
+    {
+      "rule_id": "ERR-VT-005",
+      "status": "unclear",
+      "severity": "must",
+      "title": "工具执行失败必须显式展示",
+      "description": "如果 pytest、coverage、ruff 或 bandit 执行失败，该失败必须记录为 tool_execution_failed，且不得被视为通过结果。"
+    },
+    {
+      "rule_id": "ERR-VT-006",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Claude Code 自举配置缺失必须降级",
+      "description": "如果 MVP 声明使用 Claude Code 自举，但缺少 subagent、skill、提示词边界或治理输出要求等配置，系统必须将自举状态标记为 missing 或 unclear。"
+    },
+    {
+      "rule_id": "LOG-VT-001",
+      "status": "unclear",
+      "severity": "must",
+      "title": "核心分析必须记录运行元数据",
+      "description": "每次分析运行必须记录 project_id、run_id、scan_time、使用的输入文件、生成的输出文件和最终 gate_decision。"
+    },
+    {
+      "rule_id": "LOG-VT-002",
+      "status": "unclear",
+      "severity": "must",
+      "title": "证据判定必须可追踪",
+      "description": "当系统将某个条目标记为 covered、missing、unclear、compliant、violated 或 blocked 时，日志或报告必须标明使用的 evidence 和 rule。"
+    },
+    {
+      "rule_id": "LOG-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Claude Code 自举运行必须记录关键元数据",
+      "description": "当通过 Claude Code 自举工作流执行任务时，应记录参与的 subagent、使用的 skill、输入文件、输出文件、关联任务和生成的 Claim 或 evidence ID。"
+    },
+    {
+      "rule_id": "SEC-VT-001",
+      "status": "unclear",
+      "severity": "must",
+      "title": "不得执行不可信项目指令",
+      "description": "系统不得执行 PRD、源码注释、Markdown 文件或 Agent Claim 中包含的指令，除非这些指令属于显式允许的工具命令。"
+    },
+    {
+      "rule_id": "SEC-VT-002",
+      "status": "unclear",
+      "severity": "must",
+      "title": "敏感信息不得不必要暴露",
+      "description": "报告、日志和 Dashboard 应避免暴露密钥、Token、密码、私钥或不必要的敏感文件内容。"
+    },
+    {
+      "rule_id": "SEC-VT-003",
+      "status": "unclear",
+      "severity": "must",
+      "title": "安全工具发现项是证据，不是最终判定",
+      "description": "bandit 或 semgrep 的发现项可以作为安全证据和风险输入，但是否阻塞合并必须由规则引擎根据严重等级和配置门禁决定。"
+    },
+    {
+      "rule_id": "SEC-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Agent Claim 不得覆盖外部证据",
+      "description": "如果 Agent Claim 声称任务完成，但代码、测试、Review 或工具证据缺失或冲突，系统必须报告 evidence_gap 或 claim_evidence_mismatch。"
+    },
+    {
+      "rule_id": "SEC-VT-005",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Subagent 不得越权修改治理边界",
+      "description": "Claude Code subagent 不得自行修改、绕过或降低架构约束、门禁规则、Schema 或证据规则。其发现的问题必须作为变更建议或风险项进入治理流程。"
+    },
+    {
+      "rule_id": "TECH-VT-001",
+      "status": "unclear",
+      "severity": "must",
+      "title": "MVP 使用文件化契约",
+      "description": "MVP 必须使用 Markdown 承载人类编写的需求，使用 JSON 承载机器可读契约，使用 HTML 承载人类审查视图。"
+    },
+    {
+      "rule_id": "TECH-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Graphify 不进入 MVP 核心路径",
+      "description": "Graphify 或 graph/context 工具不得作为 v0.1 必需组件。"
+    },
+    {
+      "rule_id": "TECH-VT-005",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Core 必须支持独立 CLI 调用",
+      "description": "Vibe Tracing Core 应能够作为本地命令被调用，而不依赖任何 Agent Runtime。"
+    },
+    {
+      "rule_id": "TECH-VT-006",
+      "status": "unclear",
+      "severity": "must",
+      "title": "MVP 提供 Claude Code 自举配置",
+      "description": "MVP 必须提供 Claude Code 自举所需的 subagent、skill、提示词边界和治理输出约束配置。subagent 可在定义中声明可用或适用的 skill，避免另设与 Claude Code 机制冲突的动态匹配规则。"
+    },
+    {
+      "rule_id": "FORBID-VT-001",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Agent 自证完成",
+      "description": "声称完成任务的同一个 Agent 不得作为验证该任务完成的唯一权威。"
+    },
+    {
+      "rule_id": "FORBID-VT-002",
+      "status": "unclear",
+      "severity": "must",
+      "title": "隐式推断测试覆盖",
+      "description": "系统不得在没有显式 AC ID 映射的情况下，根据文件名相似、注释相似或 LLM 猜测来推断 AC 覆盖。"
+    },
+    {
+      "rule_id": "FORBID-VT-003",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Dashboard 重新计算治理状态",
+      "description": "Dashboard 中的 JavaScript 不得从原始数据重新计算 coverage、compliance、risk 或 gate_decision。"
+    },
+    {
+      "rule_id": "FORBID-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "缺少证据却显示 Done",
+      "description": "任何没有支持证据的条目都不得显示为 done、covered、compliant 或 allowed。"
+    },
+    {
+      "rule_id": "FORBID-VT-005",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Core 绑定到单一 Agent Runtime",
+      "description": "核心治理逻辑不得只实现为 Claude Code、Hermes 或 DeepSeek TUI 的专属提示词逻辑。"
+    },
+    {
+      "rule_id": "FORBID-VT-006",
+      "status": "unclear",
+      "severity": "must",
+      "title": "直接使用非结构化工具输出做判定",
+      "description": "pytest、coverage、ruff 或 bandit 的终端原始输出不得在未规范化的情况下直接被门禁规则消费。"
+    },
+    {
+      "rule_id": "FORBID-VT-008",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Claude Code 自举不可追踪",
+      "description": "不得只依赖 Claude Code 对话、自然语言总结或临时上下文证明自举过程已经完成。"
+    },
+    {
+      "rule_id": "FORBID-VT-009",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Subagent 静默修改架构约束",
+      "description": "Claude Code subagent 不得在没有显式变更记录、人类确认或治理流程的情况下修改、删除、绕过或降低架构约束。"
+    },
+    {
+      "rule_id": "GATE-VT-002",
+      "status": "unclear",
+      "severity": "must",
+      "title": "必需 JSON 输入必须通过 Schema 校验",
+      "description": "机器可读输入必须是合法 JSON，并在分析前通过预期 Schema 校验。"
+    },
+    {
+      "rule_id": "GATE-VT-003",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Must 级需求必须有任务覆盖",
+      "description": "每个 Must 级需求必须至少关联一个有效任务，否则该需求不能视为已覆盖。"
+    },
+    {
+      "rule_id": "GATE-VT-004",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Must 级验收标准必须有显式测试覆盖",
+      "description": "每个 Must 级验收标准必须由测试证据覆盖，且测试证据必须显式声明对应 AC ID。"
+    },
+    {
+      "rule_id": "GATE-VT-005",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Agent Claim 必须有外部证据",
+      "description": "标记为 completed 的 Agent Claim 必须有 Claim 自身之外的外部证据支持。"
+    },
+    {
+      "rule_id": "GATE-VT-008",
+      "status": "unclear",
+      "severity": "must",
+      "title": "高风险项必须有处理建议",
+      "description": "每个 high 风险项必须包含业务影响说明和建议行动。"
+    },
+    {
+      "rule_id": "GATE-VT-009",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Dashboard 必须是单体文件",
+      "description": "dashboard.html 必须包含内嵌数据、CSS 和 JavaScript，不得在查看时依赖外部资源。"
+    },
+    {
+      "rule_id": "GATE-VT-010",
+      "status": "unclear",
+      "severity": "must",
+      "title": "Traceability Report 不得包含无证据的正向状态",
+      "description": "任何 done、covered、compliant 或 allowed 状态都必须引用 evidence_index.json 中存在的 evidence ID。"
+    },
+    {
+      "rule_id": "GATE-VT-011",
+      "status": "unclear",
+      "severity": "must",
+      "title": "工具失败不得视为通过证据",
+      "description": "如果已配置 pytest、coverage、ruff 或 bandit，但工具运行失败，该失败必须显式展示，并导致受影响证据降级。"
+    },
+    {
+      "rule_id": "GATE-VT-012",
+      "status": "unclear",
+      "severity": "must",
+      "title": "人类最终决策必须与系统门禁分离",
+      "description": "系统可以输出 gate_decision，但不得声称人类已经接受、拒绝或批准交付，除非该决策被显式记录。"
+    }
+  ],
+  "architecture_violations": [
+    {
+      "rule_id": "MOD-VT-001",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "Import of 'claude_code_bootstrap_adapter' (module MOD-VT-011) at line 134 in cli.py is not in allowed_to_call whitelist"
+    },
+    {
+      "rule_id": "MOD-VT-006",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "Import of 'raw_input_loader' (module MOD-VT-002) at line 14 in traceability_report_builder.py is not in allowed_to_call whitelist"
+    },
+    {
+      "rule_id": "MOD-VT-009",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "Import of 'raw_input_loader' (module MOD-VT-002) at line 486 in architecture_compliance_checker.py is not in allowed_to_call whitelist"
+    },
+    {
+      "rule_id": "MOD-VT-009",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "Import of 'raw_input_loader' (module MOD-VT-002) at line 26 in architecture_compliance_checker.py is not in allowed_to_call whitelist"
+    },
+    {
+      "rule_id": "MOD-VT-009",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "Import of 'claude_code_bootstrap_adapter' (module MOD-VT-011) at line 620 in architecture_compliance_checker.py is not in allowed_to_call whitelist"
+    },
+    {
+      "rule_id": "DEP-VT-001",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "Prohibited import of Agent Runtime package 'vibe_tracing.claude_code_bootstrap_adapter' at line 620 in architecture_compliance_checker.py"
+    },
+    {
+      "rule_id": "DEP-VT-001",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "Prohibited import of adapter module 'vibe_tracing.claude_code_bootstrap_adapter' (module MOD-VT-011) at line 620 in architecture_compliance_checker.py"
+    },
+    {
+      "rule_id": "DEP-VT-002",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "Dashboard references external front-end resources: href=\"https://fonts.googleapis.com\", href=\"https://fonts.gstatic.com\", href=\"https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap\""
+    },
+    {
+      "rule_id": "GATE-VT-006",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "One or more Must-level architecture constraints are violated."
+    }
+  ],
+  "unclear_constraints": [
+    {
+      "rule_id": "PRINCIPLE-VT-001",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-002",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-003",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-005",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-006",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-007",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-008",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-009",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-010",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-011",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-012",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-013",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-014",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-015",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-016",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "PRINCIPLE-VT-017",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "DEP-VT-003",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "DEP-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "DEP-VT-005",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "DEP-VT-006",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FLOW-VT-001",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FLOW-VT-002",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FLOW-VT-003",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FLOW-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FLOW-VT-005",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FLOW-VT-006",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FLOW-VT-007",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FLOW-VT-008",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "STORE-VT-002",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "STORE-VT-003",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "STORE-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "STORE-VT-005",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "ERR-VT-001",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "ERR-VT-002",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "ERR-VT-003",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "ERR-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "ERR-VT-005",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "ERR-VT-006",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "LOG-VT-001",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "LOG-VT-002",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "LOG-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "SEC-VT-001",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "SEC-VT-002",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "SEC-VT-003",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "SEC-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "SEC-VT-005",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "TECH-VT-001",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "TECH-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "TECH-VT-005",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "TECH-VT-006",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FORBID-VT-001",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FORBID-VT-002",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FORBID-VT-003",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FORBID-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FORBID-VT-005",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FORBID-VT-006",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FORBID-VT-008",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "FORBID-VT-009",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "GATE-VT-002",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "GATE-VT-003",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "GATE-VT-004",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "GATE-VT-005",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "GATE-VT-008",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "GATE-VT-009",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "GATE-VT-010",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "GATE-VT-011",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    },
+    {
+      "rule_id": "GATE-VT-012",
+      "reason": "This constraint is not machine-verifiable and requires manual review."
+    }
+  ]
+}

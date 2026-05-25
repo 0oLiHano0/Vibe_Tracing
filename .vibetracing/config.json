@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "PROJECT-VT",
+  "paths": {
+    "prd": "docs/prd.md",
+    "architecture_constraints": "docs/architecture_constraints.json",
+    "task_list": "docs/task_list.json",
+    "agent_claims": ".vibetracing/agent_claims.json",
+    "tool_reports": ".vibetracing/tool_reports",
+    "output_dir": ".vibetracing/output"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "skill_id": "SKILL-VT-002",
+  "name": "edit_file",
+  "purpose": "Modify or create file contents in the workspace.",
+  "inputs": [
+    {
+      "name": "TargetFile",
+      "type": "string"
+    },
+    {
+      "name": "ReplacementContent",
+      "type": "string"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "success",
+      "type": "boolean"
+    }
+  ],
+  "boundaries": [
+    "Only edit files inside the Vibe Tracing project workspace"
+  ],
+  "constraints": [
+    "must not override factual evidence fields"
+  ]
+}

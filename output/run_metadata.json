@@ -1,0 +1,18 @@
+{
+  "run_id": "RUN-207de37f-d58a-4bf2-afef-7f964b2b32fb",
+  "project_id": "PROJECT-VT",
+  "scan_time": "2026-05-22T13:53:29.368210Z",
+  "input_files": {
+    "prd": "raw/01_prd/prd.md",
+    "architecture_constraints": "raw/02_architecture/architecture_constraints.json",
+    "task_list": "raw/03_tasks/task_list.json",
+    "agent_claims": "raw/04_claims/agent_claims.json"
+  },
+  "output_files": {
+    "evidence_index": "output/evidence_index.json",
+    "traceability_report": "output/traceability_report.json"
+  },
+  "gate_decision": "blocked",
+  "exit_code": 2,
+  "summary": "验收标准缺失测试证据 (AC-VT-001-01): Must acceptance criterion AC-VT-001-01 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-001-02): Must acceptance criterion AC-VT-001-02 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-001-03): Must acceptance criterion AC-VT-001-03 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-001-04): Must acceptance criterion AC-VT-001-04 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-002-01): Must acceptance criterion AC-VT-002-01 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-002-02): Must acceptance criterion AC-VT-002-02 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-002-03): Must acceptance criterion AC-VT-002-03 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-006-01): Must acceptance criterion AC-VT-006-01 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-006-02): Must acceptance criterion AC-VT-006-02 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-008-01): Must acceptance criterion AC-VT-008-01 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-008-02): Must acceptance criterion AC-VT-008-02 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-008-03): Must acceptance criterion AC-VT-008-03 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-009-01): Must acceptance criterion AC-VT-009-01 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-009-02): Must acceptance criterion AC-VT-009-02 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-009-03): Must acceptance criterion AC-VT-009-03 is missing passing test coverage.; 验收标准缺失测试证据 (AC-VT-009-04): Must acceptance criterion AC-VT-009-04 is missing passing test coverage.; 高风险或不自证违规 (RISK-VT-001): 验收标准 AC-VT-001-01 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-002): 验收标准 AC-VT-001-02 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-003): 验收标准 AC-VT-001-03 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-004): 验收标准 AC-VT-001-04 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-005): 验收标准 AC-VT-002-01 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-006): 验收标准 AC-VT-002-02 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-007): 验收标准 AC-VT-002-03 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-008): 验收标准 AC-VT-006-01 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-009): 验收标准 AC-VT-006-02 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-010): 验收标准 AC-VT-008-01 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-011): 验收标准 AC-VT-008-02 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-012): 验收标准 AC-VT-008-03 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-013): 验收标准 AC-VT-009-01 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-014): 验收标准 AC-VT-009-02 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-015): 验收标准 AC-VT-009-03 缺失通过的测试证据。; 高风险或不自证违规 (RISK-VT-016): 验收标准 AC-VT-009-04 缺失通过的测试证据。"
+}

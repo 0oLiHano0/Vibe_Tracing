@@ -1,0 +1,12 @@
+{
+  "tool": "pytest",
+  "command": "pytest --json-report",
+  "exit_code": 0,
+  "tests": [
+    {
+      "nodeid": "tests/test_feature.py::test_feature_works",
+      "outcome": "passed",
+      "docstring": "covers: AC-VT-001-01"
+    }
+  ]
+}

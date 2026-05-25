@@ -1,0 +1,8 @@
+{
+  "subagent_id": "SUBAGENT-VT-001",
+  "role": "Fixture Researcher",
+  "responsibilities": ["Read code files"],
+  "allowed_skills": ["SKILL-VT-001"],
+  "forbidden_behaviors": [],
+  "required_outputs": []
+}

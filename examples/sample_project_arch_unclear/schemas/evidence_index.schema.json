@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vibe-tracing/schemas/evidence_index.schema.json",
+  "title": "EvidenceIndex",
+  "description": "Schema for evidence_index.json — index of all gathered evidence artefacts.",
+  "type": "object",
+  "required": ["run_id", "project_id", "scan_time", "evidences"],
+  "additionalProperties": true,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Unique identifier for this scan run."
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^PROJECT-VT$",
+      "description": "Project identifier."
+    },
+    "scan_time": {
+      "type": "string",
+      "description": "ISO-8601 timestamp when the scan was performed."
+    },
+    "evidences": {
+      "type": "array",
+      "description": "List of evidence records collected during the scan.",
+      "items": {
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "source_type",
+          "source_path",
+          "covers",
+          "status"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "pattern": "^EVIDENCE-VT-\\d+$",
+            "description": "Unique evidence identifier."
+          },
+          "source_type": {
+            "type": "string",
+            "enum": ["task", "claim", "test", "tool", "code"],
+            "description": "Category of the evidence source."
+          },
+          "source_path": {
+            "type": "string",
+            "description": "Relative or absolute path to the evidence source."
+          },
+          "covers": {
+            "type": "array",
+            "description": "AC IDs or REQ IDs that this evidence covers.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "covered",
+              "partial",
+              "missing",
+              "unclear",
+              "low_confidence",
+              "blocked",
+              "compliant",
+              "violated"
+            ],
+            "description": "Coverage status represented by this evidence."
+          }
+        }
+      }
+    }
+  }
+}

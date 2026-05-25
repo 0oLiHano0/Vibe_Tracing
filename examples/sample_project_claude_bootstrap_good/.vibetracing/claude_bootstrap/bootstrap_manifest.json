@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": "claude-code",
+  "subagents": [
+    {
+      "id": "SUBAGENT-VT-001",
+      "name": "Researcher",
+      "definition_file": ".vibetracing/claude_bootstrap/subagents/researcher.json",
+      "role": "researcher"
+    }
+  ],
+  "skills": [
+    {
+      "id": "SKILL-VT-001",
+      "name": "View File",
+      "definition_file": ".vibetracing/claude_bootstrap/skills/view_file.json",
+      "purpose": "Read file"
+    }
+  ],
+  "forbidden_actions": [
+    "modify_architecture_without_proposal"
+  ],
+  "structured_governance_outputs": [
+    "architecture_change_proposal"
+  ]
+}

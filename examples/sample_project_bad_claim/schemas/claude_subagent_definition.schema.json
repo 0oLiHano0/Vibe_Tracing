@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Claude Code Subagent Definition",
+  "type": "object",
+  "required": [
+    "subagent_id",
+    "role",
+    "responsibilities",
+    "allowed_skills",
+    "forbidden_behaviors",
+    "required_outputs"
+  ],
+  "properties": {
+    "subagent_id": {
+      "type": "string",
+      "pattern": "^SUBAGENT-VT-\\d+$"
+    },
+    "role": {
+      "type": "string"
+    },
+    "responsibilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allowed_skills": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^SKILL-VT-\\d+$"
+      }
+    },
+    "forbidden_behaviors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "required_outputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

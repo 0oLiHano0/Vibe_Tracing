@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vibe-tracing/schemas/agent_claims.schema.json",
+  "title": "AgentClaims",
+  "description": "Schema for agent_claims.json — a top-level array of claim objects.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "claim_id",
+      "related_task",
+      "claimed_status",
+      "evidence_refs",
+      "timestamp"
+    ],
+    "additionalProperties": true,
+    "properties": {
+      "claim_id": {
+        "type": "string",
+        "pattern": "^CLAIM-VT-\\d+$",
+        "description": "Unique claim identifier."
+      },
+      "related_task": {
+        "type": "string",
+        "pattern": "^TASK-VT-\\d+$",
+        "description": "Task ID this claim is associated with."
+      },
+      "claimed_status": {
+        "type": "string",
+        "enum": [
+          "covered",
+          "partial",
+          "missing",
+          "unclear",
+          "low_confidence",
+          "blocked",
+          "compliant",
+          "violated"
+        ],
+        "description": "The coverage/compliance status claimed by the agent."
+      },
+      "evidence_refs": {
+        "type": "array",
+        "description": "References to evidence supporting this claim.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "timestamp": {
+        "type": "string",
+        "description": "ISO-8601 timestamp when the claim was made."
+      },
+      "code_refs": {
+        "type": "array",
+        "description": "Optional references to source code locations.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "test_refs": {
+        "type": "array",
+        "description": "Optional references to test file locations.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "notes": {
+        "type": "string",
+        "description": "Optional free-form notes from the agent."
+      }
+    }
+  }
+}

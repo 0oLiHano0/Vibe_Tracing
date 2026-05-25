@@ -1,0 +1,599 @@
+{
+  "run_id": "RUN-207de37f-d58a-4bf2-afef-7f964b2b32fb",
+  "project_id": "PROJECT-VT",
+  "scan_time": "2026-05-22T13:53:29.368210Z",
+  "evidences": [
+    {
+      "evidence_id": "EVIDENCE-VT-001",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-002-01",
+        "AC-VT-006-01",
+        "AC-VT-008-03",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-001",
+        "title": "建立依赖与完整目录骨架",
+        "phase_id": "PHASE-VT-001",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-002",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-002-01",
+        "AC-VT-006-02",
+        "AC-VT-008-03",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-002",
+        "title": "定义核心状态枚举与 ID 校验工具",
+        "phase_id": "PHASE-VT-001",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-003",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-002-01",
+        "AC-VT-006-02",
+        "AC-VT-008-03",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-003",
+        "title": "定义 JSON Schema 契约",
+        "phase_id": "PHASE-VT-001",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-004",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-006-02",
+        "AC-VT-008-03",
+        "REQ-VT-001",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-004",
+        "title": "实现 Schema Validator",
+        "phase_id": "PHASE-VT-002",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-005",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-005",
+        "title": "实现 Raw Input Loader",
+        "phase_id": "PHASE-VT-002",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-006",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-001-04",
+        "REQ-VT-001",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-006",
+        "title": "实现 PRD Markdown 需求与 AC 提取器",
+        "phase_id": "PHASE-VT-002",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-007",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04",
+        "REQ-VT-001"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-007",
+        "title": "实现 Task List 读取与反向关联校验",
+        "phase_id": "PHASE-VT-002",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-008",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "AC-VT-002-03",
+        "REQ-VT-002"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-008",
+        "title": "实现 Agent Claim 读取与基础校验",
+        "phase_id": "PHASE-VT-002",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-009",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-002-01",
+        "AC-VT-007-01",
+        "AC-VT-008-01",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-007",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-009",
+        "title": "实现工具输出规范化适配器",
+        "phase_id": "PHASE-VT-003",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-010",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-010",
+        "title": "实现 Evidence Index Builder",
+        "phase_id": "PHASE-VT-003",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-011",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-03",
+        "AC-VT-001-04",
+        "REQ-VT-001"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-011",
+        "title": "实现需求到任务覆盖分析",
+        "phase_id": "PHASE-VT-004",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-012",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-008-01",
+        "REQ-VT-001",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-012",
+        "title": "实现 AC 到测试证据覆盖分析",
+        "phase_id": "PHASE-VT-004",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-013",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "AC-VT-002-03",
+        "REQ-VT-002"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-013",
+        "title": "实现 Claim 外部证据校验分析",
+        "phase_id": "PHASE-VT-004",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-014",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "AC-VT-006-01",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-014",
+        "title": "实现 Traceability Report 组装器",
+        "phase_id": "PHASE-VT-004",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-015",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03",
+        "REQ-VT-001",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-015",
+        "title": "实现架构约束合规检查器",
+        "phase_id": "PHASE-VT-005",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-016",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-007-02",
+        "AC-VT-007-03",
+        "AC-VT-008-02",
+        "AC-VT-008-03",
+        "REQ-VT-007",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-016",
+        "title": "实现风险与建议动作生成器",
+        "phase_id": "PHASE-VT-005",
+        "priority": "should"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-017",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-002-02",
+        "AC-VT-008-01",
+        "AC-VT-008-02",
+        "AC-VT-008-03",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-007",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-017",
+        "title": "实现 Merge Gate 规则引擎",
+        "phase_id": "PHASE-VT-006",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-018",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-002-01",
+        "AC-VT-006-01",
+        "AC-VT-008-03",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-018",
+        "title": "实现 CLI analyze 命令",
+        "phase_id": "PHASE-VT-006",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-019",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-006-01",
+        "AC-VT-006-02",
+        "AC-VT-006-03",
+        "REQ-VT-006"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-019",
+        "title": "实现单体 Dashboard Renderer",
+        "phase_id": "PHASE-VT-007",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-020",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "AC-VT-002-03",
+        "AC-VT-006-01",
+        "AC-VT-006-02",
+        "AC-VT-008-01",
+        "AC-VT-008-02",
+        "AC-VT-008-03",
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-020",
+        "title": "实现端到端样例项目与黄金文件测试",
+        "phase_id": "PHASE-VT-007",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-021",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-006-02",
+        "AC-VT-008-01",
+        "AC-VT-008-02",
+        "AC-VT-008-03",
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-006",
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-021",
+        "title": "实现质量门禁回归测试集合",
+        "phase_id": "PHASE-VT-007",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-022",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-006-03",
+        "AC-VT-008-03",
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04",
+        "REQ-VT-006",
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-022",
+        "title": "编写 MVP 使用说明与任务执行规范",
+        "phase_id": "PHASE-VT-007",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-023",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-002-02",
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-023",
+        "title": "定义 Claude Code 自举配置 Schema 与治理契约",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-024",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-024",
+        "title": "创建 Claude Code 自举 subagent 与 skill 配置初版",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-025",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-009-01",
+        "AC-VT-009-03",
+        "AC-VT-009-04",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-025",
+        "title": "实现 Claude Code Bootstrap Adapter 配置读取与校验",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-026",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "AC-VT-009-02",
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-026",
+        "title": "实现 Claude Code 自举产物证据规范化",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-027",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-008-03",
+        "AC-VT-009-04",
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-027",
+        "title": "实现架构约束变更建议治理记录",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-028",
+      "source_type": "task",
+      "source_path": "raw/03_tasks/task_list.json",
+      "covers": [
+        "AC-VT-006-01",
+        "AC-VT-006-02",
+        "AC-VT-008-03",
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04",
+        "REQ-VT-006",
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-028",
+        "title": "将 Claude Code 自举状态纳入报告、Dashboard 与质量门禁",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    }
+  ]
+}

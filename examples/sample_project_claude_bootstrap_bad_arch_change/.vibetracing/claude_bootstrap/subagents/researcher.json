@@ -1,0 +1,16 @@
+{
+  "subagent_id": "SUBAGENT-VT-001",
+  "role": "Codebase Researcher",
+  "responsibilities": [
+    "Read files"
+  ],
+  "allowed_skills": [
+    "SKILL-VT-001"
+  ],
+  "forbidden_behaviors": [
+    "Write code files"
+  ],
+  "required_outputs": [
+    "research_notes.md"
+  ]
+}

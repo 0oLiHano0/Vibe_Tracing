@@ -284,62 +284,71 @@ class SchemaValidator:
         if not field_name:
             return None
 
-        if schema_name == "agent_claims":
-            if isinstance(data, list):
-                for item in data:
-                    if isinstance(item, dict) and "__field_hints__" in item:
-                        return item["__field_hints__"].get(field_name)
-        elif schema_name == "task_list":
-            if isinstance(data, dict):
-                is_task_error = False
-                if absolute_path and absolute_path[0] == "tasks":
-                    is_task_error = True
+        # 1. Special case: data itself is a list and absolute_path is empty or points to a list element
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict) and "__field_hints__" in item:
+                    hint = item["__field_hints__"].get(field_name)
+                    if hint:
+                        return hint
 
-                if is_task_error:
-                    tasks = data.get("tasks", [])
-                    for t in tasks:
-                        if isinstance(t, dict) and "__field_hints__" in t:
-                            return t["__field_hints__"].get(field_name)
-                elif absolute_path and absolute_path[0] == "project":
-                    project_data = data.get("project", {})
-                    if isinstance(project_data, dict):
-                        project_hints = project_data.get("__field_hints__", {})
-                        return project_hints.get(field_name)
-                else:
-                    root_hints = data.get("__field_hints__", {})
-                    return root_hints.get(field_name)
-        elif schema_name == "architecture_constraints":
-            if isinstance(data, dict):
-                categories = [
-                    "architecture_principles",
-                    "module_boundaries",
-                    "dependency_rules",
-                    "data_flow_rules",
-                    "storage_rules",
-                    "error_handling_rules",
-                    "logging_rules",
-                    "security_rules",
-                    "technology_constraints",
-                    "forbidden_patterns",
-                    "quality_gates",
-                    "interface_contracts",
-                    "performance_constraints",
-                    "deployment_constraints",
-                    "test_constraints",
-                ]
-                if absolute_path and absolute_path[0] in categories:
-                    items = data.get(absolute_path[0], [])
-                    if isinstance(items, list):
-                        for item in items:
+        # 2. Determine container path where the field is expected to live
+        if validator == "required":
+            container_path = absolute_path
+        else:
+            container_path = absolute_path[:-1] if absolute_path else []
+
+        # 3. Helper to walk up the ancestor chain of container paths
+        curr_path = list(container_path)
+        while True:
+            # Resolve the container at the current path level
+            curr_container = data
+            valid_path = True
+            for p in curr_path:
+                try:
+                    if isinstance(curr_container, list) and isinstance(p, int):
+                        curr_container = curr_container[p]
+                    elif isinstance(curr_container, dict):
+                        curr_container = curr_container[p]
+                    else:
+                        valid_path = False
+                        break
+                except (IndexError, KeyError):
+                    valid_path = False
+                    break
+
+            if valid_path:
+                # Case A: If container is a dict, check its __field_hints__
+                if isinstance(curr_container, dict):
+                    hints = curr_container.get("__field_hints__", {})
+                    if isinstance(hints, dict) and field_name in hints:
+                        return hints[field_name]
+
+                # Case B: If container's parent is a list, check sibling items in that list (homogeneous array items)
+                if curr_path:
+                    parent_path = curr_path[:-1]
+                    parent = data
+                    for p in parent_path:
+                        try:
+                            if isinstance(parent, list) and isinstance(p, int):
+                                parent = parent[p]
+                            elif isinstance(parent, dict):
+                                parent = parent[p]
+                            else:
+                                break
+                        except (IndexError, KeyError):
+                            break
+
+                    if isinstance(parent, list):
+                        for item in parent:
                             if isinstance(item, dict) and "__field_hints__" in item:
-                                return item["__field_hints__"].get(field_name)
-                elif absolute_path and absolute_path[0] == "project":
-                    project_data = data.get("project", {})
-                    if isinstance(project_data, dict):
-                        project_hints = project_data.get("__field_hints__", {})
-                        return project_hints.get(field_name)
-                else:
-                    root_hints = data.get("__field_hints__", {})
-                    return root_hints.get(field_name)
+                                hints = item["__field_hints__"]
+                                if isinstance(hints, dict) and field_name in hints:
+                                    return hints[field_name]
+
+            if not curr_path:
+                break
+            curr_path.pop()
 
         return None
+

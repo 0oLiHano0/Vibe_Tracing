@@ -8,7 +8,7 @@ from pathlib import Path
 from vibe_tracing.cli import main
 from vibe_tracing.schema_validator import SchemaValidator
 
-EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
+EXAMPLES_DIR = Path(__file__).parent / "fixtures" / "examples"
 
 
 def test_e2e_claude_bootstrap_good():

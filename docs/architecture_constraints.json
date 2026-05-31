@@ -117,11 +117,15 @@
       "responsibility": "为成熟 Agent Runtime 或 CLI 环境提供集成入口。该模块可以准备命令并调用 Vibe Tracing Core，但不得拥有治理规则。",
       "allowed_to_call": [
         "MOD-VT-002",
-        "MOD-VT-003"
+        "MOD-VT-003",
+        "MOD-VT-005",
+        "MOD-VT-006",
+        "MOD-VT-007",
+        "MOD-VT-008",
+        "MOD-VT-009",
+        "MOD-VT-011"
       ],
-      "forbidden_to_call": [
-        "MOD-VT-007"
-      ],
+      "forbidden_to_call": [],
       "owned_data": [],
       "must_not_own_data": [
         "gate_decision",
@@ -232,8 +236,9 @@
       "name": "traceability_analyzer",
       "responsibility": "基于结构化证据，分析需求到任务、验收标准到测试、任务到 Claim、Claim 到证据之间的关系。",
       "allowed_to_call": [
-        "MOD-VT-005",
-        "MOD-VT-003"
+        "MOD-VT-002",
+        "MOD-VT-003",
+        "MOD-VT-005"
       ],
       "forbidden_to_call": [
         "MOD-VT-008"
@@ -302,8 +307,10 @@
       "name": "architecture_compliance_checker",
       "responsibility": "检查明确且可机器判断的架构约束。对于无法自动检查的约束，必须输出 unclear，而不是假设合规。",
       "allowed_to_call": [
+        "MOD-VT-002",
         "MOD-VT-003",
-        "MOD-VT-005"
+        "MOD-VT-005",
+        "MOD-VT-011"
       ],
       "forbidden_to_call": [
         "MOD-VT-008"

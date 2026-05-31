@@ -19,6 +19,8 @@ class ClaudeBootstrapValidator:
     ) -> None:
         self.project_root = Path(project_root)
         self.schemas_dir = self.project_root / "schemas"
+        if not self.schemas_dir.is_dir():
+            self.schemas_dir = Path(__file__).parent / "schemas"
         self.schema_validator = schema_validator or SchemaValidator(self.schemas_dir)
 
         from vibe_tracing.raw_input_loader import RawInputLoader

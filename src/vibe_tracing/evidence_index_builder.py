@@ -23,6 +23,8 @@ class EvidenceIndexBuilder:
         """Initialize the Evidence Index Builder with the project root directory."""
         self.project_root = project_root
         self.schemas_dir = project_root / "schemas"
+        if not self.schemas_dir.is_dir():
+            self.schemas_dir = Path(__file__).parent / "schemas"
 
         import importlib
 

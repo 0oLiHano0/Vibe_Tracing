@@ -79,3 +79,18 @@
 > [!CAUTION]
 > 任何在未同步更新 PRD、约束和任务列表的情况下直接修改或添加代码的“绕过”行为，均被判定为严重规程违规，合并门禁在分析自身开发时将拦截该合并。
 
+---
+
+## 6. 子智能体与技能合规要求 (Subagent and Skill Compliance Rules)
+
+当项目配置或启用了 Claude Code 自举治理模式时，AI 代理在委派子智能体（Subagents）或分配工具权限（Skills）时必须遵循以下合规约束：
+
+1. **静态配置声明原则**：
+   - 任何在开发或运行时被调用的 Subagent，必须事先在 `.vibetracing/claude_bootstrap/bootstrap_manifest.json` 中进行声明，且在 `subagents/` 目录中拥有匹配的 `.json` 定义文件。未声明的 Subagent 产生的工作将无法被 VT 证据链追溯。
+
+2. **职责与权限隔离原则 (Principle of Least Privilege)**：
+   - **研究/审查智能体 (Researcher / Auditor)**：其 `skills` 列表中绝对禁止配置任何修改类工具（如 `edit_file`、`write_file`）或命令执行工具（如 `execute_command`、`run_command`）。它们只能拥有只读权限（如 `view_file`）。
+   - **开发智能体 (Developer)**：其 `skills` 列表可以包含修改工具，但其操作必须严格受限于在 `task_list.json` 中已标记为 `in_progress` 的任务原子范围内。
+
+3. **越权阻断机制**：
+   - 任何试图绕过上述规则、修改配置文件越权分配特权，或在 Claim 中隐秘使用未授权 Subagent 的行为，都会在本地 `vibe-tracing analyze` 阶段被判定为 `blocked`。

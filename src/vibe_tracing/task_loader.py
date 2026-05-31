@@ -63,7 +63,7 @@ class TaskListLoadResult:
 class TaskLoader:
     """Loads and validates the task list, cross-referencing with the PRD."""
 
-    def __init__(self, schemas_dir: Path) -> None:
+    def __init__(self, schemas_dir: Optional[Path] = None) -> None:
         self.schema_validator = SchemaValidator(schemas_dir)
 
     def load_and_validate(
@@ -136,12 +136,25 @@ class TaskLoader:
         gaps: List[TaskGap] = []
         is_valid = True
 
-        # Check for duplicate task IDs
+        # Extract template field hints if they exist
+        template_hints = {}
+        for t in tasks_list:
+            if isinstance(t, dict) and t.get("task_id", "").endswith("-9999"):
+                template_hints = t.get("__field_hints__", {})
+                break
+
+        def get_err_msg(field_key: str, base_msg: str) -> str:
+            hint = template_hints.get(field_key)
+            if hint:
+                return f"{base_msg}【修复指南】{hint}"
+            return base_msg
+
+        # Check for duplicate task IDs (ignoring template tasks)
         task_ids_seen = set()
         duplicate_task_ids = set()
         for task_dict in tasks_list:
             task_id = task_dict.get("task_id")
-            if task_id:
+            if task_id and not task_id.endswith("-9999"):
                 if task_id in task_ids_seen:
                     duplicate_task_ids.add(task_id)
                 task_ids_seen.add(task_id)
@@ -162,6 +175,11 @@ class TaskLoader:
 
         for task_dict in tasks_list:
             task_id = task_dict.get("task_id", "")
+
+            # Silently ignore template records ending in -9999
+            if task_id.endswith("-9999"):
+                continue
+
             title = task_dict.get("title", "")
             phase_id = task_dict.get("phase_id", "")
             priority = task_dict.get("priority", "")
@@ -201,16 +219,30 @@ class TaskLoader:
             id_ok, id_err = validate_id(task_id)
             if not id_ok:
                 task_obj.is_valid = False
-                task_obj.errors.append(f"Invalid task ID format: {id_err}")
-                errors.append(f"Task {task_id} has invalid ID format: {id_err}")
+                base_msg = f"Invalid task ID format: {id_err}."
+                full_msg = get_err_msg("task_id", f"{base_msg} ")
+                task_obj.errors.append(full_msg)
+                errors.append(
+                    f"Task {task_id} has invalid ID format: {id_err}."
+                    + (
+                        f" 【修复指南】{template_hints.get('task_id')}"
+                        if template_hints.get("task_id")
+                        else ""
+                    )
+                )
                 is_valid = False
 
             # Check isolated task condition: DOD-VT-007-01
             if not related_requirements and not related_acceptance_criteria:
                 task_obj.is_valid = False
-                err_msg = f"Task {task_id} is isolated (no related requirements or acceptance criteria)"
-                task_obj.errors.append(err_msg)
-                errors.append(err_msg)
+                base_msg = f"Task {task_id} is isolated (no related requirements or acceptance criteria)."
+                hint = template_hints.get("related_requirements") or template_hints.get(
+                    "related_acceptance_criteria"
+                )
+                hint_str = f" 【修复指南】{hint}" if hint else ""
+                full_msg = f"{base_msg}{hint_str}".strip()
+                task_obj.errors.append(full_msg)
+                errors.append(full_msg)
                 gaps.append(TaskGap(item_id=task_id, reason="Task is isolated"))
 
             # If prd_result is provided, perform cross-reference checks: DOD-VT-007-02
@@ -219,13 +251,21 @@ class TaskLoader:
                 for req_id in related_requirements:
                     if req_id not in prd_req_ids:
                         task_obj.is_valid = False
-                        task_obj.errors.append(
-                            f"References non-existent requirement: {req_id}"
+                        base_msg = f"References non-existent requirement: {req_id}."
+                        full_msg = get_err_msg("related_requirements", f"{base_msg} ")
+                        task_obj.errors.append(full_msg)
+                        errors.append(
+                            f"Task {task_id} references non-existent requirement {req_id}."
+                            + (
+                                f" 【修复指南】{template_hints.get('related_requirements')}"
+                                if template_hints.get("related_requirements")
+                                else ""
+                            )
                         )
                         gaps.append(
                             TaskGap(
                                 item_id=task_id,
-                                reason=f"References non-existent requirement: {req_id}",
+                                reason=full_msg,
                             )
                         )
 
@@ -233,13 +273,25 @@ class TaskLoader:
                 for ac_id in related_acceptance_criteria:
                     if ac_id not in prd_ac_ids:
                         task_obj.is_valid = False
-                        task_obj.errors.append(
-                            f"References non-existent acceptance criterion: {ac_id}"
+                        base_msg = (
+                            f"References non-existent acceptance criterion: {ac_id}."
+                        )
+                        full_msg = get_err_msg(
+                            "related_acceptance_criteria", f"{base_msg} "
+                        )
+                        task_obj.errors.append(full_msg)
+                        errors.append(
+                            f"Task {task_id} references non-existent acceptance criterion {ac_id}."
+                            + (
+                                f" 【修复指南】{template_hints.get('related_acceptance_criteria')}"
+                                if template_hints.get("related_acceptance_criteria")
+                                else ""
+                            )
                         )
                         gaps.append(
                             TaskGap(
                                 item_id=task_id,
-                                reason=f"References non-existent acceptance criterion: {ac_id}",
+                                reason=full_msg,
                             )
                         )
                     else:
@@ -248,15 +300,23 @@ class TaskLoader:
                             parent_req_id = get_parent_req_id(ac_id)
                             if parent_req_id not in related_requirements:
                                 task_obj.is_valid = False
-                                task_obj.errors.append(
-                                    f"References acceptance criterion {ac_id} but parent requirement {parent_req_id} "
-                                    f"is missing from related_requirements"
+                                base_msg = f"References acceptance criterion {ac_id} but parent requirement {parent_req_id} is missing from related_requirements."
+                                full_msg = get_err_msg(
+                                    "related_requirements", f"{base_msg} "
+                                )
+                                task_obj.errors.append(full_msg)
+                                errors.append(
+                                    f"Task {task_id} references AC {ac_id} but misses parent REQ {parent_req_id} in related_requirements."
+                                    + (
+                                        f" 【修复指南】{template_hints.get('related_requirements')}"
+                                        if template_hints.get("related_requirements")
+                                        else ""
+                                    )
                                 )
                                 gaps.append(
                                     TaskGap(
                                         item_id=task_id,
-                                        reason=f"References acceptance criterion {ac_id} but parent requirement {parent_req_id} "
-                                        f"is missing from related_requirements",
+                                        reason=full_msg,
                                     )
                                 )
                         except ValueError as val_err:

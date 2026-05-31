@@ -12,7 +12,7 @@ from vibe_tracing.schema_validator import SchemaValidator
 @pytest.fixture
 def schemas_dir() -> Path:
     """Fixture returning the actual schemas directory."""
-    return Path(__file__).parent.parent / "schemas"
+    return Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
 
 
 def setup_mock_project(base: Path) -> None:
@@ -24,7 +24,7 @@ def setup_mock_project(base: Path) -> None:
     (base / "schemas").mkdir(parents=True, exist_ok=True)
 
     # Copy real schemas to mock project so schema validator can load them
-    real_schemas = Path(__file__).parent.parent / "schemas"
+    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
     for schema_file in real_schemas.glob("*.json"):
         (base / "schemas" / schema_file.name).write_text(
             schema_file.read_text(encoding="utf-8")

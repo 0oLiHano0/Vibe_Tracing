@@ -39,7 +39,7 @@ def setup_gate_test_project(
         )
 
     # Copy real schemas to mock project
-    real_schemas = Path(__file__).parent.parent / "schemas"
+    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
     for schema_file in real_schemas.glob("*.json"):
         (base / "schemas" / schema_file.name).write_text(
             schema_file.read_text(encoding="utf-8")
@@ -70,12 +70,32 @@ must
 
     # Write Architecture Constraints
     if custom_constraints is not None:
+        try:
+            data = json.loads(custom_constraints)
+            if isinstance(data, dict):
+                if "schema_version" not in data:
+                    data["schema_version"] = "1.0.0"
+                if "project" not in data:
+                    data["project"] = {
+                        "project_id": "PROJECT-VT",
+                        "name": "Vibe Tracing",
+                        "stage": "mvp"
+                    }
+                custom_constraints = json.dumps(data)
+        except Exception:
+            pass
         (base / "docs" / "architecture_constraints.json").write_text(
             custom_constraints, encoding="utf-8"
         )
     else:
         # Default compliant constraint set (only contains checked rules to achieve PASS)
         default_constraints = {
+            "schema_version": "1.0.0",
+            "project": {
+                "project_id": "PROJECT-VT",
+                "name": "Vibe Tracing",
+                "stage": "mvp",
+            },
             "module_boundaries": [],
             "architecture_principles": [
                 {

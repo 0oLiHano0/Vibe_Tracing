@@ -39,7 +39,7 @@ def test_e2e_claude_bootstrap_good():
     assert dashboard_path.exists()
 
     # Validate output files schemas
-    validator = SchemaValidator(project_root / "schemas")
+    validator = SchemaValidator()
     val_ev = validator.validate_file(evidence_index_path, "evidence_index")
     assert val_ev.is_valid is True, val_ev.message
 

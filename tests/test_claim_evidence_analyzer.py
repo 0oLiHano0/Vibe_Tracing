@@ -461,3 +461,159 @@ def test_code_ref_outdated(temp_project_dir) -> None:
     assert "was modified after the claim timestamp" in res["risks"][0]["description"]
 
     assert res["claims_analysis"][0]["status"] == CoverageStatus.LOW_CONFIDENCE.value
+
+
+def test_claim_lookup_by_nodeid_and_source_path(temp_project_dir) -> None:
+    """
+    Validate that completed claims referencing evidence by nodeid or source_path are correctly verified.
+    covers: AC-VT-002-01
+    """
+    code_file = temp_project_dir / "app.py"
+    code_file.write_text("print('hello')")
+
+    os_time_mtime = 1000000000
+    import os
+
+    os.utime(code_file, (os_time_mtime, os_time_mtime))
+
+    claim = Claim(
+        claim_id="CLAIM-VT-001",
+        related_task="TASK-VT-001",
+        claimed_status=CoverageStatus.COVERED.value,
+        evidence_refs=["tests/my_test.py::test_func"],
+        timestamp="2026-05-22T10:00:00Z",
+        code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+    )
+
+    evidences = [
+        {
+            "evidence_id": "EVIDENCE-VT-001",
+            "source_type": "task",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"task_id": "TASK-VT-001"},
+        },
+        {
+            "evidence_id": "EVIDENCE-VT-002",
+            "source_type": "test",
+            "source_path": "tests/my_test.py::test_func",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {
+                "nodeid": "tests/my_test.py::test_func",
+                "outcome": "passed",
+            },
+        },
+    ]
+
+    analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+    res = analyzer.analyze([claim], evidences)
+
+    assert len(res["gaps"]) == 0
+    assert len(res["risks"]) == 0
+    assert len(res["claims_analysis"]) == 1
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
+
+
+def test_claim_lookup_multi_matching_and_fail_fast(temp_project_dir) -> None:
+    """
+    Validate that completed claims referencing a NodeID with multiple executions are verified correctly (fail-fast and conflict warning).
+    covers: AC-VT-002-04
+    """
+    code_file = temp_project_dir / "app.py"
+    code_file.write_text("print('hello')")
+    os_time_mtime = 1000000000
+    import os
+
+    os.utime(code_file, (os_time_mtime, os_time_mtime))
+
+    # Test Case 1: Both pass -> Claim passes and links both evidences
+    claim1 = Claim(
+        claim_id="CLAIM-VT-001",
+        related_task="TASK-VT-001",
+        claimed_status=CoverageStatus.COVERED.value,
+        evidence_refs=["tests/my_test.py::test_func"],
+        timestamp="2026-05-22T10:00:00Z",
+        code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+    )
+
+    evidences1 = [
+        {
+            "evidence_id": "EVIDENCE-VT-001",
+            "source_type": "task",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"task_id": "TASK-VT-001"},
+        },
+        {
+            "evidence_id": "EVIDENCE-VT-002",
+            "source_type": "test",
+            "source_path": "tests/my_test.py::test_func",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"nodeid": "tests/my_test.py::test_func"},
+        },
+        {
+            "evidence_id": "EVIDENCE-VT-003",
+            "source_type": "test",
+            "source_path": "tests/my_test.py::test_func",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"nodeid": "tests/my_test.py::test_func"},
+        },
+    ]
+
+    analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+    res1 = analyzer.analyze([claim1], evidences1)
+    assert len(res1["risks"]) == 0
+    assert res1["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
+    # Links both evidence IDs
+    assert sorted(res1["claims_analysis"][0]["evidence_ids"]) == [
+        "EVIDENCE-VT-002",
+        "EVIDENCE-VT-003",
+    ]
+
+    # Test Case 2: One passes, one fails -> Fail-fast: claim becomes violated + Conflict warning
+    evidences2 = [
+        {
+            "evidence_id": "EVIDENCE-VT-001",
+            "source_type": "task",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"task_id": "TASK-VT-001"},
+        },
+        {
+            "evidence_id": "EVIDENCE-VT-002",
+            "source_type": "test",
+            "source_path": "tests/my_test.py::test_func",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"nodeid": "tests/my_test.py::test_func"},
+        },
+        {
+            "evidence_id": "EVIDENCE-VT-003",
+            "source_type": "test",
+            "source_path": "tests/my_test.py::test_func",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.VIOLATED.value,  # failed run!
+            "details": {"nodeid": "tests/my_test.py::test_func"},
+        },
+    ]
+
+    res2 = analyzer.analyze([claim1], evidences2)
+    assert res2["claims_analysis"][0]["status"] == CoverageStatus.VIOLATED.value
+    # There should be:
+    # 1. A risk for the failed evidence (must)
+    # 2. A risk for the conflict (should)
+    # 3. An additional risk for AC test coverage checks (must)
+    # Total = 3 risks
+    assert len(res2["risks"]) == 3
+    assert any(r["severity"] == "must" for r in res2["risks"])
+    assert any(r["severity"] == "should" for r in res2["risks"])
+    assert any(
+        "conflicting statuses" in m for m in res2["claims_analysis"][0]["mismatches"]
+    )
+    assert any(
+        "which has status 'violated'" in m
+        for m in res2["claims_analysis"][0]["mismatches"]
+    )

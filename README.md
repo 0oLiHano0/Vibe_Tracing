@@ -4,6 +4,16 @@ Vibe Tracing (VT) is a consistency validation and governance framework for AI Co
 
 ---
 
+## Core Philosophy: "Black-Box Execution, White-Box Auditing"
+
+Vibe Tracing deviates fundamentally from traditional prompt-driven or skill-constrained Agent frameworks:
+
+1. **Result-Oriented, Not Process-Micromanaged**: We do not restrict how the AI Coding Agent implements requirements or what programming techniques it uses. Rather than micromanaging the process (which is brittle and fails as models evolve), VT establishes a rigid **"delivery contract" (JSON Schemas)** and a **"merge gate"** at the endpoint.
+2. **Local Feedback Loop (The AI Checker)**: We do not manually prompt or nudge the Agent to submit files. Instead, VT provides a local analyzer CLI (`vibe-tracing analyze`). Because AI Agents excel at reading terminal outputs and debugging issues recursively, they use the VT Checker as a "compiler" to iteratively refine their output structures, docstrings, and tests until they pass.
+3. **Evidence-based Trust**: Natural language claims from AI Agents (e.g., "I finished the task") are treated as unverified. VT degrades missing or unproven items to "unclear" or "missing" and blocks the gate unless verified by objective, external tool outputs (tests, linters) and code paths.
+
+---
+
 ## Project Structure
 
 The project layout follows a clean separation of project specification documents, source code, tests, and hidden VT governance data:
@@ -20,15 +30,15 @@ The project layout follows a clean separation of project specification documents
 │   ├── task_execution_rules.md # AI Coding guidelines and task rules
 │   ├── input_output_contracts.md # Schema specs and directory layouts
 │   └── claude_code_bootstrap.md # Claude Code bootstrap & isolation rules
-├── schemas/                    # JSON Schema draft-07 contract definitions
-│   ├── task_list.schema.json
-│   ├── agent_claims.schema.json
-│   ├── evidence_index.schema.json
-│   └── traceability_report.schema.json
 ├── src/
 │   └── vibe_tracing/           # Core Python source package
 │       ├── __init__.py         # Package initialization
 │       ├── cli.py              # CLI entry point and analyze command
+│       ├── schemas/            # JSON Schema draft-07 contract definitions
+│       │   ├── task_list.schema.json
+│       │   ├── agent_claims.schema.json
+│       │   ├── evidence_index.schema.json
+│       │   └── traceability_report.schema.json
 │       ├── core/               # Shared constants, enums, and ID validators
 │       ├── traceability/       # Analyzers for tasks, ACs, and claims
 │       └── dashboard_renderer.py # Monolithic HTML Dashboard generator

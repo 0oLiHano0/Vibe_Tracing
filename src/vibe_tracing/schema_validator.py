@@ -7,6 +7,7 @@ NOT perform business analysis, gate decisions, or dashboard generation.
 """
 
 import json
+import re
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -97,11 +98,12 @@ class SchemaValidator:
         "claude_subagent_definition": "claude_subagent_definition.schema.json",
         "claude_skill_definition": "claude_skill_definition.schema.json",
         "architecture_change_proposal": "architecture_change_proposal.schema.json",
+        "architecture_constraints": "architecture_constraints.schema.json",
     }
 
-    def __init__(self, schemas_dir: Path):
-        """Initialize with path to schemas directory."""
-        self.schemas_dir = schemas_dir
+    def __init__(self, schemas_dir: Optional[Path] = None):
+        """Initialize with path to schemas directory. Defaults to internal packaged schemas."""
+        self.schemas_dir = schemas_dir or (Path(__file__).parent / "schemas")
         self._schema_cache: dict = {}
 
     def _load_schema(self, schema_name: str) -> dict:
@@ -241,6 +243,15 @@ class SchemaValidator:
         except ValidationError as exc:
             field_path = _deque_path_to_string(exc.absolute_path)
             hint = _build_hint(exc)
+            custom_hint = self.resolve_field_hint(
+                data=data,
+                schema_name=schema_name,
+                absolute_path=list(exc.absolute_path),
+                validator=exc.validator,
+                message=exc.message,
+            )
+            if custom_hint:
+                hint = f"【修复指南】{custom_hint}"
             return ValidationResult(
                 is_valid=False,
                 error_code=ErrorCode.SCHEMA_VIOLATION,
@@ -251,3 +262,84 @@ class SchemaValidator:
             )
 
         return ValidationResult(is_valid=True, file_path=source_label)
+
+    def resolve_field_hint(
+        self,
+        data: Union[dict, list],
+        schema_name: str,
+        absolute_path: list,
+        validator: str,
+        message: str = "",
+    ) -> Optional[str]:
+        """Extract dynamic field hint from the template data in the JSON structure."""
+        field_name = None
+        if validator == "required":
+            match = re.search(r"'([^']+)' is a required property", message)
+            if match:
+                field_name = match.group(1)
+        else:
+            if absolute_path:
+                field_name = str(absolute_path[-1])
+
+        if not field_name:
+            return None
+
+        if schema_name == "agent_claims":
+            if isinstance(data, list):
+                for item in data:
+                    if isinstance(item, dict) and "__field_hints__" in item:
+                        return item["__field_hints__"].get(field_name)
+        elif schema_name == "task_list":
+            if isinstance(data, dict):
+                is_task_error = False
+                if absolute_path and absolute_path[0] == "tasks":
+                    is_task_error = True
+
+                if is_task_error:
+                    tasks = data.get("tasks", [])
+                    for t in tasks:
+                        if isinstance(t, dict) and "__field_hints__" in t:
+                            return t["__field_hints__"].get(field_name)
+                elif absolute_path and absolute_path[0] == "project":
+                    project_data = data.get("project", {})
+                    if isinstance(project_data, dict):
+                        project_hints = project_data.get("__field_hints__", {})
+                        return project_hints.get(field_name)
+                else:
+                    root_hints = data.get("__field_hints__", {})
+                    return root_hints.get(field_name)
+        elif schema_name == "architecture_constraints":
+            if isinstance(data, dict):
+                categories = [
+                    "architecture_principles",
+                    "module_boundaries",
+                    "dependency_rules",
+                    "data_flow_rules",
+                    "storage_rules",
+                    "error_handling_rules",
+                    "logging_rules",
+                    "security_rules",
+                    "technology_constraints",
+                    "forbidden_patterns",
+                    "quality_gates",
+                    "interface_contracts",
+                    "performance_constraints",
+                    "deployment_constraints",
+                    "test_constraints",
+                ]
+                if absolute_path and absolute_path[0] in categories:
+                    items = data.get(absolute_path[0], [])
+                    if isinstance(items, list):
+                        for item in items:
+                            if isinstance(item, dict) and "__field_hints__" in item:
+                                return item["__field_hints__"].get(field_name)
+                elif absolute_path and absolute_path[0] == "project":
+                    project_data = data.get("project", {})
+                    if isinstance(project_data, dict):
+                        project_hints = project_data.get("__field_hints__", {})
+                        return project_hints.get(field_name)
+                else:
+                    root_hints = data.get("__field_hints__", {})
+                    return root_hints.get(field_name)
+
+        return None

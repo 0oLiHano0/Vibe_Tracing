@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0.0",
+  "project": {
+    "project_id": "PROJECT-VT",
+    "name": "Vibe Tracing Project",
+    "stage": "Development",
+    "__field_hints__": {
+      "project_id": "项目ID，必须为 'PROJECT-VT'。",
+      "name": "项目名称，人类可读字符串。",
+      "stage": "项目当前所处的阶段。"
+    }
+  },
+  "__field_hints__": {
+    "schema_version": "指明当前模式的版本，例如 '1.0.0'。",
+    "project": "项目元数据对象，包含项目基本信息。",
+    "tasks": "任务列表数组，每个元素代表一个具体的开发任务。"
+  },
+  "tasks": [
+    {
+      "task_id": "TASK-VT-9999",
+      "title": "样例任务标题",
+      "phase_id": "PHASE-VT-9999",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Developer",
+      "objective": "样例任务目标，用于演示字段填写规范。",
+      "related_requirements": [
+        "REQ-VT-9999"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-9999-99"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-9999-99",
+          "description": "样例DoD描述"
+        }
+      ],
+      "__field_hints__": {
+        "task_id": "任务ID，必须符合正则格式 `TASK-VT-\\d+`，例如 `TASK-VT-001`。",
+        "title": "任务标题，简短描述开发任务内容。",
+        "phase_id": "阶段ID，必须符合正则格式 `PHASE-VT-\\d+`，例如 `PHASE-VT-001`。",
+        "priority": "任务优先级，必须是 'must'、'should' 或 'could' 之一。",
+        "status": "任务当前状态，必须是 'todo'、'in_progress'、'blocked' 或 'done' 之一。",
+        "owner_role": "负责人角色，例如 'AI Developer'。",
+        "objective": "开发目标，详述此任务要达成的目的。",
+        "related_requirements": "关联需求ID列表，每个ID必须符合 `REQ-VT-\\d+` 格式。",
+        "related_acceptance_criteria": "关联验收标准ID列表，每个ID必须符合 `AC-VT-\\d+-\\d+` 格式。",
+        "definition_of_done": "完成定义（DoD）的检查项列表，每项需包含 `dod_id` 与 `description`。"
+      }
+    }
+  ]
+}

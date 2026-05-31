@@ -57,8 +57,15 @@ class ClaimEvidenceAnalyzer:
         risks: List[Dict[str, Any]] = []
         risk_counter = 1
 
-        # Quick lookup for evidences by evidence_id
-        ev_map = {ev["evidence_id"]: ev for ev in evidences if "evidence_id" in ev}
+        # Quick lookup for evidences by evidence_id, source_path, and nodeid
+        ev_map = {}
+        for ev in evidences:
+            if "evidence_id" in ev:
+                ev_map.setdefault(ev["evidence_id"], []).append(ev)
+            if ev.get("source_path"):
+                ev_map.setdefault(ev["source_path"], []).append(ev)
+            if ev.get("source_type") == "test" and ev.get("details", {}).get("nodeid"):
+                ev_map.setdefault(ev["details"]["nodeid"], []).append(ev)
 
         # Find task evidence by task_id
         task_evs = {}
@@ -118,17 +125,60 @@ class ClaimEvidenceAnalyzer:
                 else:
                     for ref in external_refs:
                         if ref in ev_map:
-                            ev = ev_map[ref]
-                            ev_status = ev.get("status")
-                            if ev_status not in (
-                                CoverageStatus.COVERED.value,
-                                CoverageStatus.COMPLIANT.value,
-                            ):
-                                if ev_status == CoverageStatus.VIOLATED.value:
-                                    has_failed_test = True
+                            matches = ev_map[ref]
+
+                            # Filter unique matches based on evidence_id
+                            seen_ids = set()
+                            unique_matches = []
+                            for ev in matches:
+                                ev_id = ev.get("evidence_id")
+                                if ev_id and ev_id not in seen_ids:
+                                    seen_ids.add(ev_id)
+                                    unique_matches.append(ev)
+
+                            # Check status across unique matches
+                            has_failed_in_matches = False
+                            has_unclear_or_missing_in_matches = False
+                            failed_status = ""
+                            unclear_status = ""
+                            statuses = set()
+
+                            for ev in unique_matches:
+                                ev_status = ev.get("status")
+                                statuses.add(ev_status)
+                                if ev_status not in (
+                                    CoverageStatus.COVERED.value,
+                                    CoverageStatus.COMPLIANT.value,
+                                ):
+                                    if ev_status == CoverageStatus.VIOLATED.value:
+                                        has_failed_in_matches = True
+                                        failed_status = ev_status
+                                    else:
+                                        has_unclear_or_missing_in_matches = True
+                                        unclear_status = ev_status
                                 else:
-                                    has_other_mismatch = True
-                                reason = f"Claim {claim_id} references evidence {ref} which has status '{ev_status}'."
+                                    supporting_evidence_ids.append(ev["evidence_id"])
+
+                            # Expose conflicts (outcome inconsistency)
+                            if len(statuses) > 1:
+                                conflict_msg = (
+                                    f"Claim {claim_id} references evidence {ref} "
+                                    f"which has conflicting statuses: {sorted(list(statuses))}."
+                                )
+                                mismatches.append(conflict_msg)
+                                risks.append(
+                                    {
+                                        "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                        "description": conflict_msg,
+                                        "severity": "should",
+                                    }
+                                )
+                                risk_counter += 1
+
+                            # Fail-fast evaluation based on matches
+                            if has_failed_in_matches:
+                                has_failed_test = True
+                                reason = f"Claim {claim_id} references evidence {ref} which has status '{failed_status}'."
                                 mismatches.append(reason)
                                 risks.append(
                                     {
@@ -138,8 +188,18 @@ class ClaimEvidenceAnalyzer:
                                     }
                                 )
                                 risk_counter += 1
-                            else:
-                                supporting_evidence_ids.append(ref)
+                            elif has_unclear_or_missing_in_matches:
+                                has_other_mismatch = True
+                                reason = f"Claim {claim_id} references evidence {ref} which has status '{unclear_status}'."
+                                mismatches.append(reason)
+                                risks.append(
+                                    {
+                                        "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                        "description": reason,
+                                        "severity": "must",
+                                    }
+                                )
+                                risk_counter += 1
                         else:
                             has_other_mismatch = True
                             reason = f"Claim {claim_id} references non-existent evidence {ref}."

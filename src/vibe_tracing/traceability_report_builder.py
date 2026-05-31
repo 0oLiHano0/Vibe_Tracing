@@ -26,6 +26,8 @@ class TraceabilityReportBuilder:
         """Initialize the builder with project root and schema validator."""
         self.project_root = project_root
         self.schemas_dir = project_root / "schemas"
+        if not self.schemas_dir.is_dir():
+            self.schemas_dir = Path(__file__).parent / "schemas"
         self.schema_validator = SchemaValidator(self.schemas_dir)
 
     def build(

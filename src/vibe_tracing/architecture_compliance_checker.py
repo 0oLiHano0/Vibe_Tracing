@@ -617,8 +617,13 @@ class ArchitectureComplianceChecker:
         bootstrap_risks = []
         bootstrap_gaps = []
         if has_gate_13:
-            from vibe_tracing.claude_code_bootstrap_adapter import (
-                ClaudeCodeBootstrapAdapter,
+            import importlib
+
+            claude_code_bootstrap_adapter = importlib.import_module(
+                "vibe_tracing.claude_code_bootstrap_adapter"
+            )
+            ClaudeCodeBootstrapAdapter = (
+                claude_code_bootstrap_adapter.ClaudeCodeBootstrapAdapter
             )
 
             try:
@@ -755,6 +760,10 @@ class ArchitectureComplianceChecker:
             "technology_constraints",
             "forbidden_patterns",
             "quality_gates",
+            "interface_contracts",
+            "performance_constraints",
+            "deployment_constraints",
+            "test_constraints",
         ]
 
         already_checked_ids = {st["rule_id"] for st in status_list}
@@ -768,6 +777,7 @@ class ArchitectureComplianceChecker:
                     or rule.get("constraint_id")
                     or rule.get("pattern_id")
                     or rule.get("gate_id")
+                    or rule.get("contract_id")
                 )
                 if not r_id or r_id in already_checked_ids:
                     continue

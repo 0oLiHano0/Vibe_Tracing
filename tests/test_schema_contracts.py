@@ -12,7 +12,7 @@ import pytest
 from pathlib import Path
 from jsonschema import validate, ValidationError
 
-SCHEMAS_DIR = Path(__file__).parent.parent / "schemas"
+SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
 
 
 def load_schema(name: str) -> dict:
@@ -23,6 +23,18 @@ def load_schema(name: str) -> dict:
 # ---------------------------------------------------------------------------
 # Helpers — minimal valid documents for each schema
 # ---------------------------------------------------------------------------
+
+
+def _minimal_architecture_constraints() -> dict:
+    """Return a minimal valid architecture_constraints document."""
+    return {
+        "schema_version": "1.0.0",
+        "project": {
+            "project_id": "PROJECT-VT",
+            "name": "Vibe Tracing",
+            "stage": "mvp"
+        }
+    }
 
 
 def _minimal_task_list() -> dict:
@@ -732,5 +744,126 @@ class TestTraceabilityReportSchema:
         schema = load_schema(self.SCHEMA_NAME)
         doc = _minimal_traceability_report()
         doc["risks"][0] = {"risk_id": "RISK-VT-001", "description": "No severity."}
+        with pytest.raises(ValidationError):
+            validate(instance=doc, schema=schema)
+
+
+class TestArchitectureConstraintsSchema:
+    SCHEMA_NAME = "architecture_constraints.schema.json"
+
+    def test_minimal_valid_document_passes(self):
+        """
+        Validates that a minimal valid architecture_constraints document passes.
+        Covers: AC-VT-001-01
+        """
+        schema = load_schema(self.SCHEMA_NAME)
+        doc = _minimal_architecture_constraints()
+        validate(instance=doc, schema=schema)
+
+    def test_missing_required_schema_version_raises(self):
+        """
+        Validates that omitting 'schema_version' raises ValidationError.
+        Covers: AC-VT-001-02
+        """
+        schema = load_schema(self.SCHEMA_NAME)
+        doc = _minimal_architecture_constraints()
+        del doc["schema_version"]
+        with pytest.raises(ValidationError):
+            validate(instance=doc, schema=schema)
+
+    def test_missing_required_project_id_raises(self):
+        """
+        Validates that omitting 'project_id' in project metadata raises ValidationError.
+        Covers: AC-VT-001-02
+        """
+        schema = load_schema(self.SCHEMA_NAME)
+        doc = _minimal_architecture_constraints()
+        del doc["project"]["project_id"]
+        with pytest.raises(ValidationError):
+            validate(instance=doc, schema=schema)
+
+    def test_invalid_project_id_pattern_raises(self):
+        """
+        Validates that an invalid project_id raises ValidationError.
+        Covers: AC-VT-002-01
+        """
+        schema = load_schema(self.SCHEMA_NAME)
+        doc = _minimal_architecture_constraints()
+        doc["project"]["project_id"] = "PROJECT INVALID ID"
+        with pytest.raises(ValidationError):
+            validate(instance=doc, schema=schema)
+
+    def test_valid_optional_categories_passes(self):
+        """
+        Validates that correct lists for optional fields like principles pass.
+        Covers: AC-VT-001-01
+        """
+        schema = load_schema(self.SCHEMA_NAME)
+        doc = _minimal_architecture_constraints()
+        doc["architecture_principles"] = [
+            {
+                "principle_id": "PRINCIPLE-VT-001",
+                "title": "Clean Code",
+                "description": "Keep code clean.",
+                "severity": "must"
+            }
+        ]
+        doc["module_boundaries"] = [
+            {
+                "module_id": "MOD-VT-001",
+                "name": "core",
+                "responsibility": "Core module."
+            }
+        ]
+        doc["dependency_rules"] = [
+            {
+                "rule_id": "DEP-VT-001",
+                "title": "No DB",
+                "description": "No DB library in MVP.",
+                "severity": "must"
+            }
+        ]
+        doc["interface_contracts"] = [
+            {
+                "contract_id": "IFC-VT-001",
+                "title": "CLI contract",
+                "description": "Input validation contract."
+            }
+        ]
+        validate(instance=doc, schema=schema)
+
+    def test_invalid_principle_id_pattern_raises(self):
+        """
+        Validates that malformed principle_id raises ValidationError.
+        Covers: AC-VT-002-01
+        """
+        schema = load_schema(self.SCHEMA_NAME)
+        doc = _minimal_architecture_constraints()
+        doc["architecture_principles"] = [
+            {
+                "principle_id": "PRINCIPLE INVALID ID",
+                "title": "Invalid ID",
+                "description": "ID does not match regex.",
+                "severity": "must"
+            }
+        ]
+        with pytest.raises(ValidationError):
+            validate(instance=doc, schema=schema)
+
+    def test_invalid_severity_enum_raises(self):
+        """
+        Validates that an invalid severity enum raises ValidationError.
+        Covers: AC-VT-001-02
+        """
+        schema = load_schema(self.SCHEMA_NAME)
+        doc = _minimal_architecture_constraints()
+        doc["architecture_principles"] = [
+            {
+                "principle_id": "PRINCIPLE-VT-001",
+                "title": "Invalid Severity",
+                "description": "Severity is wrong.",
+                "severity": "wrong"
+            }
+        ]
         with pytest.raises(ValidationError):
             validate(instance=doc, schema=schema)

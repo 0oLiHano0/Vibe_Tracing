@@ -1,1 +1,129 @@
-[]
+[
+  {
+    "claim_id": "CLAIM-VT-005",
+    "related_task": "TASK-VT-005",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_raw_input_loader.py::test_load_all_valid_files_returns_ok_manifest",
+      "tests/test_raw_input_loader.py::test_required_files_have_content",
+      "tests/test_raw_input_loader.py::test_missing_required_file_sets_has_required_errors",
+      "tests/test_raw_input_loader.py::test_missing_required_file_record_has_error_code",
+      "tests/test_raw_input_loader.py::test_missing_optional_file_does_not_set_has_required_errors",
+      "tests/test_raw_input_loader.py::test_invalid_json_file_sets_parse_error",
+      "tests/test_raw_input_loader.py::test_raw_files_not_modified",
+      "tests/test_raw_input_loader.py::test_manifest_records_all_required_file_keys",
+      "tests/test_raw_input_loader.py::test_manifest_includes_tool_report_files",
+      "tests/test_raw_input_loader.py::test_loader_has_no_gate_decision_attribute",
+      "tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback",
+      "tests/test_raw_input_loader.py::test_self_governance_rules_contract"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/raw_input_loader.py"
+    ],
+    "test_refs": [
+      "tests/test_raw_input_loader.py"
+    ],
+    "timestamp": "2026-05-29T09:45:00Z"
+  },
+  {
+    "claim_id": "CLAIM-VT-030",
+    "related_task": "TASK-VT-030",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_raw_input_loader.py::test_self_governance_rules_contract"
+    ],
+    "code_refs": [
+      "docs/prd.md",
+      "docs/architecture_constraints.json",
+      "docs/task_list.json",
+      "docs/task_execution_rules.md"
+    ],
+    "test_refs": [
+      "tests/test_raw_input_loader.py"
+    ],
+    "timestamp": "2026-05-29T09:45:00Z"
+  },
+  {
+    "claim_id": "CLAIM-VT-031",
+    "related_task": "TASK-VT-031",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/raw_input_loader.py"
+    ],
+    "test_refs": [
+      "tests/test_raw_input_loader.py"
+    ],
+    "timestamp": "2026-05-29T09:45:00Z"
+  },
+  {
+    "claim_id": "CLAIM-VT-033",
+    "related_task": "TASK-VT-033",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_claim_evidence_analyzer.py::test_claim_lookup_multi_matching_and_fail_fast"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
+    ],
+    "test_refs": [
+      "tests/test_claim_evidence_analyzer.py"
+    ],
+    "timestamp": "2026-05-29T10:35:00Z"
+  },
+  {
+    "claim_id": "CLAIM-VT-034",
+    "related_task": "TASK-VT-034",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_dashboard_renderer.py::test_dashboard_renderer_svg_no_emojis"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/dashboard_renderer.py"
+    ],
+    "test_refs": [
+      "tests/test_dashboard_renderer.py"
+    ],
+    "timestamp": "2026-05-31T09:30:00Z"
+  },
+  {
+    "claim_id": "CLAIM-VT-035",
+    "related_task": "TASK-VT-035",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_scaffolding.py::test_run_init_creates_scaffolding",
+      "tests/test_dynamic_hints.py::test_claims_schema_validation_error_with_dynamic_hints",
+      "tests/test_dynamic_hints.py::test_tasks_schema_validation_error_with_dynamic_hints",
+      "tests/test_dynamic_hints.py::test_task_loader_logical_validation_error_with_dynamic_hints",
+      "tests/test_dynamic_hints.py::test_claim_loader_logical_validation_error_with_dynamic_hints",
+      "tests/test_dynamic_hints.py::test_silent_filtering_of_template_records"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/schema_validator.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_scaffolding.py",
+      "tests/test_dynamic_hints.py"
+    ],
+    "timestamp": "2026-05-31T11:00:00Z"
+  },
+  {
+    "claim_id": "CLAIM-VT-9999",
+    "related_task": "TASK-VT-9999",
+    "claimed_status": "unclear",
+    "evidence_refs": [],
+    "timestamp": "2026-05-31T10:00:00Z",
+    "__field_hints__": {
+      "claim_id": "申索ID，必须符合正则格式 `CLAIM-VT-\\d+`，例如 `CLAIM-VT-001`，代表一个AI agent做出的具体实现申索。",
+      "related_task": "关联任务ID，必须符合正则格式 `TASK-VT-\\d+`，例如 `TASK-VT-001`，必须存在于任务列表中。",
+      "claimed_status": "申索状态，必须是 'covered', 'partial', 'missing', 'unclear', 'low_confidence', 'blocked', 'compliant', 'violated' 之一。",
+      "timestamp": "ISO 8601格式的时间戳，例如 `2026-05-31T10:00:00Z`。",
+      "evidence_refs": "证据参考列表，指向支撑本申索的测试、代码或工具报告等。"
+    }
+  }
+]

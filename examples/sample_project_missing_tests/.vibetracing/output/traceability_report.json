@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-248b18a0-25e4-4984-b524-1d9e5e03b404",
+  "run_id": "RUN-716785f0-c913-439a-9e8d-6e782fe8d221",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-05-24T11:19:10.963386Z",
+  "scan_time": "2026-05-31T08:21:36.032963Z",
   "gate_decision": "blocked",
   "requirement_coverage": [
     {

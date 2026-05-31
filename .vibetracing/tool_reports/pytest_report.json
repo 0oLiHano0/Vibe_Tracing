@@ -1,0 +1,1227 @@
+{
+  "tool": "pytest",
+  "command": "pytest",
+  "exit_code": 0,
+  "tests": [
+    {
+      "nodeid": "tests/test_ac_test_analyzer.py::test_successful_test_coverage",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ac_test_analyzer.py::test_failed_test_non_coverage",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ac_test_analyzer.py::test_no_covers_tag_non_coverage",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ac_test_analyzer.py::test_missing_test_with_gap",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ac_test_analyzer.py::test_missing_test_no_gap_not_must_req",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ac_test_analyzer.py::test_missing_test_no_gap_testing_not_required",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_change_proposal.py::test_valid_no_drift",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_change_proposal.py::test_drift_missing_change_log",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_change_proposal.py::test_drift_undocumented",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_change_proposal.py::test_drift_documented",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_init_and_missing_constraints",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_invalid_json_constraints",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_clean_workspace",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_database_import_violation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_agent_runtime_import_violation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_forbidden_module_import_violation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_allowed_module_import_violation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_dashboard_compliance_and_violation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_missing_required_files",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_architecture_compliance_checker.py::test_gate_compliance_logic",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_successful_claim_validation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_self_referential_or_empty_evidence",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_references_non_existent_evidence",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_references_non_compliant_evidence_status",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_task_not_completed",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_task_non_existent",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_ac_test_missing",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_ac_test_failed",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_code_ref_non_existent",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_code_ref_outdated",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_claim_lookup_by_nodeid_and_source_path",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_evidence_analyzer.py::test_claim_lookup_multi_matching_and_fail_fast",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_loader.py::test_valid_claims_list_passes",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_loader.py::test_invalid_schema_structure_fails",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_loader.py::test_duplicate_claim_ids",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_loader.py::test_missing_required_fields_fails_validation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_loader.py::test_references_non_existent_task_forms_gap",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_loader.py::test_completed_claim_without_external_evidence_fails",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claim_loader.py::test_validate_real_files_load",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_adapter.py::test_valid_bootstrap_load",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_adapter.py::test_missing_manifest",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_adapter.py::test_manifest_schema_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_adapter.py::test_missing_subagent_file",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_adapter.py::test_subagent_schema_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_adapter.py::test_skill_not_in_manifest",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_adapter.py::test_governance_risk_researcher_edit",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_missing_file",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_corrupt_or_text_file",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_unstructured_dialogue_json",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_valid_structured_run",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_failed_actions_run",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_quality_gates.py::test_e2e_claude_bootstrap_good",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_quality_gates.py::test_e2e_claude_bootstrap_missing_config",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_quality_gates.py::test_e2e_claude_bootstrap_bad_arch_change",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_valid_manifest",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_missing_required_fields",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_invalid_runtime_pattern",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_invalid_subagent_id_pattern",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_valid_definition",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_missing_required_fields",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_invalid_subagent_id_pattern",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_invalid_allowed_skill_pattern",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSkillDefinitionSchema::test_valid_definition",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSkillDefinitionSchema::test_missing_required_fields",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSkillDefinitionSchema::test_invalid_skill_id_pattern",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_pass",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_blocked",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_fail_conditional",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_missing_required_file",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_invalid_schema",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_custom_output_dir",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_cli_stub.py::test_cli_version",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_cli_stub.py::test_cli_help",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_dashboard_renderer.py::test_dashboard_renderer_success",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_dashboard_renderer.py::test_dashboard_renderer_missing_fields",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_dashboard_renderer.py::test_cli_analyze_generates_dashboard",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_dashboard_renderer.py::test_dashboard_renderer_svg_no_emojis",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_dynamic_hints.py::test_claims_schema_validation_error_with_dynamic_hints",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_dynamic_hints.py::test_tasks_schema_validation_error_with_dynamic_hints",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_dynamic_hints.py::test_task_loader_logical_validation_error_with_dynamic_hints",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_dynamic_hints.py::test_claim_loader_logical_validation_error_with_dynamic_hints",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_dynamic_hints.py::test_silent_filtering_of_template_records",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_e2e_samples.py::test_e2e_good_project",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_e2e_samples.py::test_e2e_missing_tests",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_e2e_samples.py::test_e2e_bad_claim",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_e2e_samples.py::test_e2e_arch_unclear",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_evidence_index_builder.py::test_build_successful_evidence_index",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_evidence_index_builder.py::test_build_missing_required_files_raises_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_evidence_index_builder.py::test_build_invalid_raw_content_raises_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_evidence_index_builder.py::test_no_untraced_evidence_generated",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_req_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_ac_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_task_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_dod_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_mod_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_gate_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_forbid_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_principle_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_phase_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_project_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_evidence_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_risk_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_claim_id_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_empty_string_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_blank_string_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_unknown_prefix_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_wrong_separator_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_missing_vt_segment_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_req_with_two_digit_groups_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_ac_with_one_digit_group_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_project_vt_with_suffix_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_lowercase_prefix_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_trailing_letters_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_non_string_type_returns_false",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_dod_with_one_digit_group_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_forbid_with_two_digit_groups_invalid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_req_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_ac_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_task_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_dod_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_mod_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_gate_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_forbid_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_principle_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_phase_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_project_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_evidence_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_risk_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_claim_type",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_unknown_raises_value_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_non_string_raises_value_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_all_coverage_status_values_exist",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_is_str_enum",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_count",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[covered]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[partial]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[missing]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[unclear]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[low_confidence]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[blocked]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[compliant]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[violated]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_all_severity_values_exist",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_is_str_enum",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_count",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_lookup_by_value[must]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_lookup_by_value[should]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_lookup_by_value[could]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_all_error_code_values_exist",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_is_str_enum",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_count",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[missing_input]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[invalid_input]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[schema_violation]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[invalid_id]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[invalid_status]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[tool_execution_failed]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[missing_evidence]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[self_attestation]",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_merge_gate_engine.py::test_missing_ac_test_blocks",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_merge_gate_engine.py::test_claim_missing_external_evidence_blocks",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_merge_gate_engine.py::test_high_risk_lacking_details_blocks",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_merge_gate_engine.py::test_must_constraint_violated_blocks",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_merge_gate_engine.py::test_unclear_constraints_fails",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_merge_gate_engine.py::test_should_level_issues_fails",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_merge_gate_engine.py::test_pass_decision",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_merge_gate_engine.py::test_separate_gate_and_human_decisions",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_parse_real_prd",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_duplicate_requirement_id",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_duplicate_ac_id",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_heading_level_mismatch_req",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_heading_level_mismatch_ac",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_missing_parent_requirement",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_nesting_mismatch",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_invalid_priority_value",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_missing_priority_heading",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_missing_testing_required_field",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_prd_parser.py::test_malformed_testing_required_field",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_001_missing_required_files",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_002_schema_validation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_003_must_req_no_tasks",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_004_must_ac_no_tests",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_005_claim_no_external_evidence",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_006_must_architecture_violation_db",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_007_must_architecture_unclear",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_008_high_risk_missing_details",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_009_dashboard_cdn_dependency",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_010_traceability_report_invalid_evidence",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_011_tool_failures",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_012_human_decision_separation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_013_bootstrap_config",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_quality_gates.py::test_gate_vt_014_architecture_change_log",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_load_all_valid_files_returns_ok_manifest",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_required_files_have_content",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_missing_required_file_sets_has_required_errors",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_missing_required_file_record_has_error_code",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_missing_optional_file_does_not_set_has_required_errors",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_invalid_json_file_sets_parse_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_raw_files_not_modified",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_manifest_records_all_required_file_keys",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_manifest_includes_tool_report_files",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_loader_has_no_gate_decision_attribute",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_raw_input_loader.py::test_self_governance_rules_contract",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_requirement_task_analyzer.py::test_full_coverage",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_requirement_task_analyzer.py::test_partial_coverage",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_requirement_task_analyzer.py::test_missing_coverage_with_gap",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_requirement_task_analyzer.py::test_missing_coverage_no_gap",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_requirement_task_analyzer.py::test_unclear_priority_or_status",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_risk_advisor.py::test_enrich_claim_risks",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_risk_advisor.py::test_process_gaps_to_risks",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_risk_advisor.py::test_counter_sequential_continuity",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_risk_advisor.py::test_compliance_results_to_risks",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_risk_advisor.py::test_compliance_deduplication",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_scaffolding.py::test_run_init_creates_scaffolding",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_valid_minimal_document",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_schema_version_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_project_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_tasks_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_project_id_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_task_required_field_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_priority_enum_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_status_enum_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_project_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_task_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_phase_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_related_requirement_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_ac_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_dod_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_dod_description_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_valid_minimal_document",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_valid_document_with_optional_fields",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_claim_id_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_related_task_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_claimed_status_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_evidence_refs_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_timestamp_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_invalid_claimed_status_enum_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_invalid_claim_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_invalid_related_task_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_top_level_must_be_array_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_valid_minimal_document",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_run_id_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_project_id_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_scan_time_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_evidences_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_evidence_id_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_source_type_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_source_type_enum_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_evidence_status_enum_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_project_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_evidence_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_empty_evidences_array_is_valid",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_valid_minimal_document",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_run_id_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_project_id_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_scan_time_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_gate_decision_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_requirement_coverage_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_gaps_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_risks_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_gate_decision_enum_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_requirement_status_enum_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_risk_severity_enum_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_project_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_req_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_risk_id_pattern_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_gap_required_field_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_risk_required_field_raises",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_valid_task_list_dict_passes",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_valid_agent_claims_empty_array_passes",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_valid_evidence_index_dict_passes",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_valid_traceability_report_dict_passes",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_unknown_schema_name_returns_invalid_input",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_missing_file_returns_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_invalid_json_file_returns_invalid_input",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_schema_violation_returns_schema_violation_code",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_schema_violation_includes_field_path",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_schema_violation_includes_hint",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_validate_file_valid_raw_task_list",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_validate_file_valid_raw_agent_claims",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_schema_validator.py::test_validator_does_not_import_analysis_modules",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_task_loader.py::test_valid_task_list_passes",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_task_loader.py::test_invalid_schema_structure_fails",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_task_loader.py::test_duplicate_task_ids",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_task_loader.py::test_isolated_task_fails",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_task_loader.py::test_references_non_existent_requirement_forms_gap",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_task_loader.py::test_references_non_existent_acceptance_criterion_forms_gap",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_task_loader.py::test_inverse_relationship_mismatch_forms_gap",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_task_loader.py::test_validate_real_files_load",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_pytest_report_success",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_pytest_report_execution_failed",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_pytest_ast_fallback",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_coverage_report_success",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_coverage_report_failed",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_ruff_report_success",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_ruff_report_failed",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_bandit_report_success",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_bandit_report_failed",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_tool_type_detection",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_missing_report_file_returns_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_tool_evidence_adapter.py::test_invalid_json_report_file_returns_error",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_traceability_report_builder.py::test_builder_successful_compilation",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_traceability_report_builder.py::test_builder_gaps_and_risks_merging",
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_traceability_report_builder.py::test_builder_schema_validation_failure",
+      "outcome": "passed"
+    }
+  ]
+}

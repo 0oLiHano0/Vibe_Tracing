@@ -21,7 +21,7 @@ def temp_proposal_workspace(tmp_path):
 
     # Create schemas directory and copy schemas
     (proj / "schemas").mkdir()
-    real_schemas = Path(__file__).parent.parent / "schemas"
+    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
     for schema_file in real_schemas.glob("*.json"):
         (proj / "schemas" / schema_file.name).write_text(
             schema_file.read_text(encoding="utf-8"), encoding="utf-8"

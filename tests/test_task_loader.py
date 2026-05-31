@@ -10,7 +10,7 @@ import pytest
 from vibe_tracing.prd_parser import PrdParseResult, Requirement, AcceptanceCriteria
 from vibe_tracing.task_loader import TaskLoader
 
-SCHEMAS_DIR = Path(__file__).parent.parent / "schemas"
+SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
 DOCS_DIR = Path(__file__).parent.parent / "docs"
 
 

@@ -1,4 +1,10 @@
 {
+  "schema_version": "1.0.0",
+  "project": {
+    "project_id": "PROJECT-VT",
+    "name": "Sample Project",
+    "stage": "mvp"
+  },
   "module_boundaries": [],
   "architecture_principles": [
     {

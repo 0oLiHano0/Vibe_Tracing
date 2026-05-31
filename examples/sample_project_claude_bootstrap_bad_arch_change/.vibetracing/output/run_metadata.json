@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-8a6e0bd3-ffd9-468f-8d83-06e4736abdd7",
+  "run_id": "RUN-3c772132-f0c1-4dd9-85b0-297d5194c0f2",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-05-24T11:19:10.795129Z",
+  "scan_time": "2026-05-31T08:21:35.778224Z",
   "input_files": {
     "prd": "docs/prd.md",
     "architecture_constraints": "docs/architecture_constraints.json",

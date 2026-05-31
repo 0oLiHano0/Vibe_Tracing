@@ -12,7 +12,7 @@ import pytest
 from vibe_tracing.core.enums import ErrorCode
 from vibe_tracing.schema_validator import SchemaValidator
 
-SCHEMAS_DIR = Path(__file__).parent.parent / "schemas"
+SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
 DOCS_DIR = Path(__file__).parent.parent / "docs"
 VIBETRACING_DIR = Path(__file__).parent.parent / ".vibetracing"
 

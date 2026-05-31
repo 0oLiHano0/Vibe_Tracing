@@ -30,7 +30,7 @@ def test_builder_successful_compilation(temp_project_dir) -> None:
     covers: AC-VT-001-01, AC-VT-001-02, AC-VT-001-03, AC-VT-001-04, AC-VT-002-01, AC-VT-006-01
     """
     # Create schemas dir dummy layout so SchemaValidator can work
-    schemas_src = Path(__file__).parent.parent / "schemas"
+    schemas_src = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
     schemas_dest = temp_project_dir / "schemas"
     shutil.copytree(schemas_src, schemas_dest)
 
@@ -140,7 +140,7 @@ def test_builder_gaps_and_risks_merging(temp_project_dir) -> None:
     covers: AC-VT-001-01, AC-VT-001-02, AC-VT-001-03, AC-VT-001-04, AC-VT-002-01, AC-VT-006-01
     """
     # Create schemas dir dummy layout so SchemaValidator can work
-    schemas_src = Path(__file__).parent.parent / "schemas"
+    schemas_src = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
     schemas_dest = temp_project_dir / "schemas"
     shutil.copytree(schemas_src, schemas_dest)
 
@@ -244,7 +244,7 @@ def test_builder_schema_validation_failure(temp_project_dir) -> None:
     covers: AC-VT-001-03, AC-VT-006-01
     """
     # Create schemas dir dummy layout so SchemaValidator can work
-    schemas_src = Path(__file__).parent.parent / "schemas"
+    schemas_src = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
     schemas_dest = temp_project_dir / "schemas"
     shutil.copytree(schemas_src, schemas_dest)
 

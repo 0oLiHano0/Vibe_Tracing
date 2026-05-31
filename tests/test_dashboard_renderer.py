@@ -160,3 +160,43 @@ def test_cli_analyze_generates_dashboard(tmp_path: Path):
     meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
     assert "dashboard" in meta["output_files"]
     assert meta["output_files"]["dashboard"] == ".vibetracing/output/dashboard.html"
+
+
+def test_dashboard_renderer_svg_no_emojis(tmp_path: Path):
+    """
+    covers: AC-VT-006-04
+    Verify that the rendered dashboard completely uses inline SVGs and contains no emojis
+    in the navigation menus, dynamic statuses, and warnings.
+    """
+    renderer = DashboardRenderer(tmp_path)
+    output_html = tmp_path / ".vibetracing" / "output" / "dashboard.html"
+
+    renderer.render(
+        evidence_index={
+            "run_id": "RUN-TEST",
+            "project_id": "PROJECT-VT",
+            "scan_time": "2026-05-22T12:00:00Z",
+            "evidences": [],
+        },
+        traceability_report={
+            "run_id": "RUN-TEST",
+            "project_id": "PROJECT-VT",
+            "scan_time": "2026-05-22T12:00:00Z",
+            "gate_decision": "pass",
+            "requirement_coverage": [],
+            "gaps": [],
+            "risks": [],
+            "architecture_violations": [],
+        },
+        output_path=output_html,
+        prd_requirements=[],
+    )
+
+    assert output_html.exists()
+    html_content = output_html.read_text(encoding="utf-8")
+
+    # The sidebar nav-items should contain SVG icons and no emojis
+    assert "<svg" in html_content
+    # Emojis from original navigation sidebar should be removed
+    for emoji in ["📊", "📋", "🧱", "⚙️"]:
+        assert emoji not in html_content

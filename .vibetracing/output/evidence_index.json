@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-2c459be2-2a61-46a8-beb8-779cb400552a",
+  "run_id": "RUN-1a42de41-5dc2-4fbf-99f8-09fa34835ec5",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-05-24T04:40:39.225388Z",
+  "scan_time": "2026-05-31T08:21:51.447474Z",
   "evidences": [
     {
       "evidence_id": "EVIDENCE-VT-001",
@@ -101,7 +101,7 @@
         "REQ-VT-001",
         "REQ-VT-002"
       ],
-      "status": "missing",
+      "status": "covered",
       "details": {
         "task_id": "TASK-VT-005",
         "title": "实现 Raw Input Loader",
@@ -641,6 +641,4922 @@
         "title": "目录标准规范化与兼容性清理",
         "phase_id": "PHASE-VT-008",
         "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-032",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-002-04",
+        "REQ-VT-002"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-033",
+        "title": "实现证据多重匹配与安全收敛",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-033",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-006-04",
+        "REQ-VT-006"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-034",
+        "title": "实现 Dashboard 图标 Emoji 到 SVG 矢量图迁移",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-034",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-035",
+        "title": "实现基于模版字段提示的零提示词 AI 引导与项目脚手架",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-035",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-005",
+        "related_task": "TASK-VT-005",
+        "timestamp": "2026-05-29T09:45:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-036",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/raw_input_loader.py",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-005",
+        "related_task": "TASK-VT-005"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-037",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030",
+        "timestamp": "2026-05-29T09:45:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-038",
+      "source_type": "code",
+      "source_path": "docs/prd.md",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-039",
+      "source_type": "code",
+      "source_path": "docs/architecture_constraints.json",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-040",
+      "source_type": "code",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-041",
+      "source_type": "code",
+      "source_path": "docs/task_execution_rules.md",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-042",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-009-05",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-031",
+        "related_task": "TASK-VT-031",
+        "timestamp": "2026-05-29T09:45:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-043",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/raw_input_loader.py",
+      "covers": [
+        "AC-VT-009-05",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-031",
+        "related_task": "TASK-VT-031"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-044",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-002-04",
+        "REQ-VT-002"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-033",
+        "related_task": "TASK-VT-033",
+        "timestamp": "2026-05-29T10:35:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-045",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "covers": [
+        "AC-VT-002-04",
+        "REQ-VT-002"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-033",
+        "related_task": "TASK-VT-033"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-046",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-006-04",
+        "REQ-VT-006"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-034",
+        "related_task": "TASK-VT-034",
+        "timestamp": "2026-05-31T09:30:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-047",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/dashboard_renderer.py",
+      "covers": [
+        "AC-VT-006-04",
+        "REQ-VT-006"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-034",
+        "related_task": "TASK-VT-034"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-048",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035",
+        "timestamp": "2026-05-31T11:00:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-049",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/schema_validator.py",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-050",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/task_loader.py",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-051",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/claim_loader.py",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-052",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/cli.py",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-053",
+      "source_type": "test",
+      "source_path": "tests/test_ac_test_analyzer.py::test_successful_test_coverage",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ac_test_analyzer.py::test_successful_test_coverage",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-054",
+      "source_type": "test",
+      "source_path": "tests/test_ac_test_analyzer.py::test_failed_test_non_coverage",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ac_test_analyzer.py::test_failed_test_non_coverage",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-055",
+      "source_type": "test",
+      "source_path": "tests/test_ac_test_analyzer.py::test_no_covers_tag_non_coverage",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ac_test_analyzer.py::test_no_covers_tag_non_coverage",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-056",
+      "source_type": "test",
+      "source_path": "tests/test_ac_test_analyzer.py::test_missing_test_with_gap",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ac_test_analyzer.py::test_missing_test_with_gap",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-057",
+      "source_type": "test",
+      "source_path": "tests/test_ac_test_analyzer.py::test_missing_test_no_gap_not_must_req",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ac_test_analyzer.py::test_missing_test_no_gap_not_must_req",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-058",
+      "source_type": "test",
+      "source_path": "tests/test_ac_test_analyzer.py::test_missing_test_no_gap_testing_not_required",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ac_test_analyzer.py::test_missing_test_no_gap_testing_not_required",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-059",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_change_proposal.py::test_valid_no_drift",
+      "covers": [
+        "AC-VT-009-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_change_proposal.py::test_valid_no_drift",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-060",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_change_proposal.py::test_drift_missing_change_log",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_change_proposal.py::test_drift_missing_change_log",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-061",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_change_proposal.py::test_drift_undocumented",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_change_proposal.py::test_drift_undocumented",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-062",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_change_proposal.py::test_drift_documented",
+      "covers": [
+        "AC-VT-009-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_change_proposal.py::test_drift_documented",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-063",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_init_and_missing_constraints",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_init_and_missing_constraints",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-064",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_invalid_json_constraints",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_invalid_json_constraints",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-065",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_clean_workspace",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_clean_workspace",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-066",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_database_import_violation",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_database_import_violation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-067",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_agent_runtime_import_violation",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_agent_runtime_import_violation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-068",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_forbidden_module_import_violation",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_forbidden_module_import_violation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-069",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_allowed_module_import_violation",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_allowed_module_import_violation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-070",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_dashboard_compliance_and_violation",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_dashboard_compliance_and_violation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-071",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_missing_required_files",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_missing_required_files",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-072",
+      "source_type": "test",
+      "source_path": "tests/test_architecture_compliance_checker.py::test_gate_compliance_logic",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_architecture_compliance_checker.py::test_gate_compliance_logic",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-073",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_successful_claim_validation",
+      "covers": [
+        "AC-VT-002-01",
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_successful_claim_validation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-074",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_self_referential_or_empty_evidence",
+      "covers": [
+        "AC-VT-002-01",
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_self_referential_or_empty_evidence",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-075",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_references_non_existent_evidence",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_references_non_existent_evidence",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-076",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_references_non_compliant_evidence_status",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_references_non_compliant_evidence_status",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-077",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_task_not_completed",
+      "covers": [
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_task_not_completed",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-078",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_task_non_existent",
+      "covers": [
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_task_non_existent",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-079",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_ac_test_missing",
+      "covers": [
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_ac_test_missing",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-080",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_ac_test_failed",
+      "covers": [
+        "AC-VT-002-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_ac_test_failed",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-081",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_code_ref_non_existent",
+      "covers": [
+        "AC-VT-002-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_code_ref_non_existent",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-082",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_code_ref_outdated",
+      "covers": [
+        "AC-VT-002-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_code_ref_outdated",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-083",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_claim_lookup_by_nodeid_and_source_path",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_claim_lookup_by_nodeid_and_source_path",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-084",
+      "source_type": "test",
+      "source_path": "tests/test_claim_evidence_analyzer.py::test_claim_lookup_multi_matching_and_fail_fast",
+      "covers": [
+        "AC-VT-002-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_evidence_analyzer.py::test_claim_lookup_multi_matching_and_fail_fast",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-085",
+      "source_type": "test",
+      "source_path": "tests/test_claim_loader.py::test_valid_claims_list_passes",
+      "covers": [
+        "AC-VT-002-01",
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_loader.py::test_valid_claims_list_passes",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-086",
+      "source_type": "test",
+      "source_path": "tests/test_claim_loader.py::test_invalid_schema_structure_fails",
+      "covers": [
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_loader.py::test_invalid_schema_structure_fails",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-087",
+      "source_type": "test",
+      "source_path": "tests/test_claim_loader.py::test_duplicate_claim_ids",
+      "covers": [
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_loader.py::test_duplicate_claim_ids",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-088",
+      "source_type": "test",
+      "source_path": "tests/test_claim_loader.py::test_missing_required_fields_fails_validation",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_loader.py::test_missing_required_fields_fails_validation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-089",
+      "source_type": "test",
+      "source_path": "tests/test_claim_loader.py::test_references_non_existent_task_forms_gap",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_loader.py::test_references_non_existent_task_forms_gap",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-090",
+      "source_type": "test",
+      "source_path": "tests/test_claim_loader.py::test_completed_claim_without_external_evidence_fails",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_loader.py::test_completed_claim_without_external_evidence_fails",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-091",
+      "source_type": "test",
+      "source_path": "tests/test_claim_loader.py::test_validate_real_files_load",
+      "covers": [
+        "AC-VT-002-01",
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claim_loader.py::test_validate_real_files_load",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-092",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_adapter.py::test_valid_bootstrap_load",
+      "covers": [
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_adapter.py::test_valid_bootstrap_load",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-093",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_adapter.py::test_missing_manifest",
+      "covers": [
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_adapter.py::test_missing_manifest",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-094",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_adapter.py::test_manifest_schema_error",
+      "covers": [
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_adapter.py::test_manifest_schema_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-095",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_adapter.py::test_missing_subagent_file",
+      "covers": [
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_adapter.py::test_missing_subagent_file",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-096",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_adapter.py::test_subagent_schema_error",
+      "covers": [
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_adapter.py::test_subagent_schema_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-097",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_adapter.py::test_skill_not_in_manifest",
+      "covers": [
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_adapter.py::test_skill_not_in_manifest",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-098",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_adapter.py::test_governance_risk_researcher_edit",
+      "covers": [
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_adapter.py::test_governance_risk_researcher_edit",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-099",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_missing_file",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_missing_file",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-100",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_corrupt_or_text_file",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_corrupt_or_text_file",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-101",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_unstructured_dialogue_json",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_unstructured_dialogue_json",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-102",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_valid_structured_run",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_valid_structured_run",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-103",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_failed_actions_run",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_evidence_adapter.py::test_parse_failed_actions_run",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-104",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_quality_gates.py::test_e2e_claude_bootstrap_good",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_quality_gates.py::test_e2e_claude_bootstrap_good",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-105",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_quality_gates.py::test_e2e_claude_bootstrap_missing_config",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_quality_gates.py::test_e2e_claude_bootstrap_missing_config",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-106",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_quality_gates.py::test_e2e_claude_bootstrap_bad_arch_change",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_quality_gates.py::test_e2e_claude_bootstrap_bad_arch_change",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-107",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_valid_manifest",
+      "covers": [
+        "AC-VT-009-02",
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_valid_manifest",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-108",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_missing_required_fields",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_missing_required_fields",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-109",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_invalid_runtime_pattern",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_invalid_runtime_pattern",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-110",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_invalid_subagent_id_pattern",
+      "covers": [
+        "AC-VT-009-02",
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeBootstrapManifestSchema::test_invalid_subagent_id_pattern",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-111",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_valid_definition",
+      "covers": [
+        "AC-VT-009-02",
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_valid_definition",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-112",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_missing_required_fields",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_missing_required_fields",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-113",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_invalid_subagent_id_pattern",
+      "covers": [
+        "AC-VT-009-02",
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_invalid_subagent_id_pattern",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-114",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_invalid_allowed_skill_pattern",
+      "covers": [
+        "AC-VT-009-02",
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSubagentDefinitionSchema::test_invalid_allowed_skill_pattern",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-115",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeSkillDefinitionSchema::test_valid_definition",
+      "covers": [
+        "AC-VT-009-02",
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSkillDefinitionSchema::test_valid_definition",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-116",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeSkillDefinitionSchema::test_missing_required_fields",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSkillDefinitionSchema::test_missing_required_fields",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-117",
+      "source_type": "test",
+      "source_path": "tests/test_claude_bootstrap_schemas.py::TestClaudeSkillDefinitionSchema::test_invalid_skill_id_pattern",
+      "covers": [
+        "AC-VT-009-02",
+        "AC-VT-009-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_claude_bootstrap_schemas.py::TestClaudeSkillDefinitionSchema::test_invalid_skill_id_pattern",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-118",
+      "source_type": "test",
+      "source_path": "tests/test_cli_analyze.py::test_cli_analyze_pass",
+      "covers": [
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_pass",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-119",
+      "source_type": "test",
+      "source_path": "tests/test_cli_analyze.py::test_cli_analyze_blocked",
+      "covers": [
+        "AC-VT-008-01",
+        "AC-VT-008-02",
+        "AC-VT-009-02",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_blocked",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-120",
+      "source_type": "test",
+      "source_path": "tests/test_cli_analyze.py::test_cli_analyze_fail_conditional",
+      "covers": [
+        "AC-VT-008-03",
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_fail_conditional",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-121",
+      "source_type": "test",
+      "source_path": "tests/test_cli_analyze.py::test_cli_analyze_missing_required_file",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_missing_required_file",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-122",
+      "source_type": "test",
+      "source_path": "tests/test_cli_analyze.py::test_cli_analyze_invalid_schema",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_invalid_schema",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-123",
+      "source_type": "test",
+      "source_path": "tests/test_cli_analyze.py::test_cli_analyze_custom_output_dir",
+      "covers": [
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_cli_analyze.py::test_cli_analyze_custom_output_dir",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-124",
+      "source_type": "test",
+      "source_path": "tests/test_cli_stub.py::test_cli_version",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_cli_stub.py::test_cli_version",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-125",
+      "source_type": "test",
+      "source_path": "tests/test_cli_stub.py::test_cli_help",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_cli_stub.py::test_cli_help",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-126",
+      "source_type": "test",
+      "source_path": "tests/test_dashboard_renderer.py::test_dashboard_renderer_success",
+      "covers": [
+        "AC-VT-006-01",
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_dashboard_renderer.py::test_dashboard_renderer_success",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-127",
+      "source_type": "test",
+      "source_path": "tests/test_dashboard_renderer.py::test_dashboard_renderer_missing_fields",
+      "covers": [
+        "AC-VT-006-01",
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_dashboard_renderer.py::test_dashboard_renderer_missing_fields",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-128",
+      "source_type": "test",
+      "source_path": "tests/test_dashboard_renderer.py::test_cli_analyze_generates_dashboard",
+      "covers": [
+        "AC-VT-006-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_dashboard_renderer.py::test_cli_analyze_generates_dashboard",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-129",
+      "source_type": "test",
+      "source_path": "tests/test_dashboard_renderer.py::test_dashboard_renderer_svg_no_emojis",
+      "covers": [
+        "AC-VT-006-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_dashboard_renderer.py::test_dashboard_renderer_svg_no_emojis",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-130",
+      "source_type": "test",
+      "source_path": "tests/test_dynamic_hints.py::test_claims_schema_validation_error_with_dynamic_hints",
+      "covers": [
+        "AC-VT-009-07"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_dynamic_hints.py::test_claims_schema_validation_error_with_dynamic_hints",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-131",
+      "source_type": "test",
+      "source_path": "tests/test_dynamic_hints.py::test_tasks_schema_validation_error_with_dynamic_hints",
+      "covers": [
+        "AC-VT-009-07"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_dynamic_hints.py::test_tasks_schema_validation_error_with_dynamic_hints",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-132",
+      "source_type": "test",
+      "source_path": "tests/test_dynamic_hints.py::test_task_loader_logical_validation_error_with_dynamic_hints",
+      "covers": [
+        "AC-VT-009-07"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_dynamic_hints.py::test_task_loader_logical_validation_error_with_dynamic_hints",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-133",
+      "source_type": "test",
+      "source_path": "tests/test_dynamic_hints.py::test_claim_loader_logical_validation_error_with_dynamic_hints",
+      "covers": [
+        "AC-VT-009-07"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_dynamic_hints.py::test_claim_loader_logical_validation_error_with_dynamic_hints",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-134",
+      "source_type": "test",
+      "source_path": "tests/test_dynamic_hints.py::test_silent_filtering_of_template_records",
+      "covers": [
+        "AC-VT-009-07"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_dynamic_hints.py::test_silent_filtering_of_template_records",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-135",
+      "source_type": "test",
+      "source_path": "tests/test_e2e_samples.py::test_e2e_good_project",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "AC-VT-002-03",
+        "AC-VT-006-01",
+        "AC-VT-006-02",
+        "AC-VT-008-03",
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
+        "AC-VT-009-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_e2e_samples.py::test_e2e_good_project",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-136",
+      "source_type": "test",
+      "source_path": "tests/test_e2e_samples.py::test_e2e_missing_tests",
+      "covers": [
+        "AC-VT-008-01",
+        "AC-VT-008-03",
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_e2e_samples.py::test_e2e_missing_tests",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-137",
+      "source_type": "test",
+      "source_path": "tests/test_e2e_samples.py::test_e2e_bad_claim",
+      "covers": [
+        "AC-VT-002-01",
+        "AC-VT-002-02",
+        "AC-VT-002-03",
+        "AC-VT-008-02",
+        "AC-VT-008-03",
+        "AC-VT-009-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_e2e_samples.py::test_e2e_bad_claim",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-138",
+      "source_type": "test",
+      "source_path": "tests/test_e2e_samples.py::test_e2e_arch_unclear",
+      "covers": [
+        "AC-VT-008-03",
+        "AC-VT-009-02",
+        "AC-VT-009-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_e2e_samples.py::test_e2e_arch_unclear",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-139",
+      "source_type": "test",
+      "source_path": "tests/test_evidence_index_builder.py::test_build_successful_evidence_index",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_evidence_index_builder.py::test_build_successful_evidence_index",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-140",
+      "source_type": "test",
+      "source_path": "tests/test_evidence_index_builder.py::test_build_missing_required_files_raises_error",
+      "covers": [
+        "AC-VT-001-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_evidence_index_builder.py::test_build_missing_required_files_raises_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-141",
+      "source_type": "test",
+      "source_path": "tests/test_evidence_index_builder.py::test_build_invalid_raw_content_raises_error",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_evidence_index_builder.py::test_build_invalid_raw_content_raises_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-142",
+      "source_type": "test",
+      "source_path": "tests/test_evidence_index_builder.py::test_no_untraced_evidence_generated",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-002-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_evidence_index_builder.py::test_no_untraced_evidence_generated",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-143",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_req_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_req_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-144",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_ac_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_ac_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-145",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_task_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_task_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-146",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_dod_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_dod_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-147",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_mod_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_mod_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-148",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_gate_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_gate_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-149",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_forbid_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_forbid_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-150",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_principle_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_principle_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-151",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_phase_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_phase_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-152",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_project_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_project_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-153",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_evidence_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_evidence_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-154",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_risk_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_risk_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-155",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestValidIds::test_claim_id_valid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestValidIds::test_claim_id_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-156",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_empty_string_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_empty_string_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-157",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_blank_string_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_blank_string_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-158",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_unknown_prefix_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_unknown_prefix_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-159",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_wrong_separator_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_wrong_separator_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-160",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_missing_vt_segment_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_missing_vt_segment_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-161",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_req_with_two_digit_groups_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_req_with_two_digit_groups_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-162",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_ac_with_one_digit_group_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_ac_with_one_digit_group_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-163",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_project_vt_with_suffix_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_project_vt_with_suffix_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-164",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_lowercase_prefix_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_lowercase_prefix_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-165",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_trailing_letters_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_trailing_letters_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-166",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_non_string_type_returns_false",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_non_string_type_returns_false",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-167",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_dod_with_one_digit_group_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_dod_with_one_digit_group_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-168",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestInvalidIds::test_forbid_with_two_digit_groups_invalid",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestInvalidIds::test_forbid_with_two_digit_groups_invalid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-169",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_req_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_req_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-170",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_ac_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_ac_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-171",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_task_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_task_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-172",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_dod_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_dod_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-173",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_mod_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_mod_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-174",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_gate_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_gate_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-175",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_forbid_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_forbid_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-176",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_principle_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_principle_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-177",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_phase_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_phase_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-178",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_project_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_project_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-179",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_evidence_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_evidence_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-180",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_risk_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_risk_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-181",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_claim_type",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_claim_type",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-182",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_unknown_raises_value_error",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_unknown_raises_value_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-183",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestGetIdType::test_non_string_raises_value_error",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestGetIdType::test_non_string_raises_value_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-184",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_all_coverage_status_values_exist",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_all_coverage_status_values_exist",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-185",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_is_str_enum",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_is_str_enum",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-186",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_count",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_count",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-187",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[covered]",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[covered]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-188",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[partial]",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[partial]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-189",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[missing]",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[missing]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-190",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[unclear]",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[unclear]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-191",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[low_confidence]",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[low_confidence]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-192",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[blocked]",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[blocked]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-193",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[compliant]",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[compliant]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-194",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[violated]",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestCoverageStatus::test_coverage_status_lookup_by_value[violated]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-195",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestSeverity::test_all_severity_values_exist",
+      "covers": [
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_all_severity_values_exist",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-196",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestSeverity::test_severity_is_str_enum",
+      "covers": [
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_is_str_enum",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-197",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestSeverity::test_severity_count",
+      "covers": [
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_count",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-198",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestSeverity::test_severity_lookup_by_value[must]",
+      "covers": [
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_lookup_by_value[must]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-199",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestSeverity::test_severity_lookup_by_value[should]",
+      "covers": [
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_lookup_by_value[should]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-200",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestSeverity::test_severity_lookup_by_value[could]",
+      "covers": [
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestSeverity::test_severity_lookup_by_value[could]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-201",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_all_error_code_values_exist",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_all_error_code_values_exist",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-202",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_is_str_enum",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_is_str_enum",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-203",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_count",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_count",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-204",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[missing_input]",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[missing_input]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-205",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[invalid_input]",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[invalid_input]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-206",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[schema_violation]",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[schema_violation]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-207",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[invalid_id]",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[invalid_id]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-208",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[invalid_status]",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[invalid_status]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-209",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[tool_execution_failed]",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[tool_execution_failed]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-210",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[missing_evidence]",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[missing_evidence]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-211",
+      "source_type": "test",
+      "source_path": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[self_attestation]",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_ids_and_enums.py::TestErrorCode::test_error_code_lookup_by_value[self_attestation]",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-212",
+      "source_type": "test",
+      "source_path": "tests/test_merge_gate_engine.py::test_missing_ac_test_blocks",
+      "covers": [
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_merge_gate_engine.py::test_missing_ac_test_blocks",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-213",
+      "source_type": "test",
+      "source_path": "tests/test_merge_gate_engine.py::test_claim_missing_external_evidence_blocks",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-002-02",
+        "AC-VT-008-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_merge_gate_engine.py::test_claim_missing_external_evidence_blocks",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-214",
+      "source_type": "test",
+      "source_path": "tests/test_merge_gate_engine.py::test_high_risk_lacking_details_blocks",
+      "covers": [
+        "AC-VT-008-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_merge_gate_engine.py::test_high_risk_lacking_details_blocks",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-215",
+      "source_type": "test",
+      "source_path": "tests/test_merge_gate_engine.py::test_must_constraint_violated_blocks",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_merge_gate_engine.py::test_must_constraint_violated_blocks",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-216",
+      "source_type": "test",
+      "source_path": "tests/test_merge_gate_engine.py::test_unclear_constraints_fails",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_merge_gate_engine.py::test_unclear_constraints_fails",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-217",
+      "source_type": "test",
+      "source_path": "tests/test_merge_gate_engine.py::test_should_level_issues_fails",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_merge_gate_engine.py::test_should_level_issues_fails",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-218",
+      "source_type": "test",
+      "source_path": "tests/test_merge_gate_engine.py::test_pass_decision",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_merge_gate_engine.py::test_pass_decision",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-219",
+      "source_type": "test",
+      "source_path": "tests/test_merge_gate_engine.py::test_separate_gate_and_human_decisions",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_merge_gate_engine.py::test_separate_gate_and_human_decisions",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-220",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_parse_real_prd",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_parse_real_prd",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-221",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_duplicate_requirement_id",
+      "covers": [
+        "AC-VT-001-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_duplicate_requirement_id",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-222",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_duplicate_ac_id",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_duplicate_ac_id",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-223",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_heading_level_mismatch_req",
+      "covers": [
+        "AC-VT-001-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_heading_level_mismatch_req",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-224",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_heading_level_mismatch_ac",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_heading_level_mismatch_ac",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-225",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_missing_parent_requirement",
+      "covers": [
+        "AC-VT-001-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_missing_parent_requirement",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-226",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_nesting_mismatch",
+      "covers": [
+        "AC-VT-001-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_nesting_mismatch",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-227",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_invalid_priority_value",
+      "covers": [
+        "AC-VT-001-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_invalid_priority_value",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-228",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_missing_priority_heading",
+      "covers": [
+        "AC-VT-001-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_missing_priority_heading",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-229",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_missing_testing_required_field",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_missing_testing_required_field",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-230",
+      "source_type": "test",
+      "source_path": "tests/test_prd_parser.py::test_malformed_testing_required_field",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_prd_parser.py::test_malformed_testing_required_field",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-231",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_001_missing_required_files",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_001_missing_required_files",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-232",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_002_schema_validation",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_002_schema_validation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-233",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_003_must_req_no_tasks",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_003_must_req_no_tasks",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-234",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_004_must_ac_no_tests",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_004_must_ac_no_tests",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-235",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_005_claim_no_external_evidence",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_005_claim_no_external_evidence",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-236",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_006_must_architecture_violation_db",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_006_must_architecture_violation_db",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-237",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_007_must_architecture_unclear",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_007_must_architecture_unclear",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-238",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_008_high_risk_missing_details",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_008_high_risk_missing_details",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-239",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_009_dashboard_cdn_dependency",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_009_dashboard_cdn_dependency",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-240",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_010_traceability_report_invalid_evidence",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_010_traceability_report_invalid_evidence",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-241",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_011_tool_failures",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_011_tool_failures",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-242",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_012_human_decision_separation",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_012_human_decision_separation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-243",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_013_bootstrap_config",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_013_bootstrap_config",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-244",
+      "source_type": "test",
+      "source_path": "tests/test_quality_gates.py::test_gate_vt_014_architecture_change_log",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_quality_gates.py::test_gate_vt_014_architecture_change_log",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-245",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_load_all_valid_files_returns_ok_manifest",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_load_all_valid_files_returns_ok_manifest",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-246",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_required_files_have_content",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_required_files_have_content",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-247",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_missing_required_file_sets_has_required_errors",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_missing_required_file_sets_has_required_errors",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-248",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_missing_required_file_record_has_error_code",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_missing_required_file_record_has_error_code",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-249",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_missing_optional_file_does_not_set_has_required_errors",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_missing_optional_file_does_not_set_has_required_errors",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-250",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_invalid_json_file_sets_parse_error",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_invalid_json_file_sets_parse_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-251",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_raw_files_not_modified",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_raw_files_not_modified",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-252",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_manifest_records_all_required_file_keys",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_manifest_records_all_required_file_keys",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-253",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_manifest_includes_tool_report_files",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_manifest_includes_tool_report_files",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-254",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_loader_has_no_gate_decision_attribute",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_loader_has_no_gate_decision_attribute",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-255",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback",
+      "covers": [
+        "AC-VT-009-05"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-256",
+      "source_type": "test",
+      "source_path": "tests/test_raw_input_loader.py::test_self_governance_rules_contract",
+      "covers": [
+        "AC-VT-009-06"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_raw_input_loader.py::test_self_governance_rules_contract",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-257",
+      "source_type": "test",
+      "source_path": "tests/test_requirement_task_analyzer.py::test_full_coverage",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_requirement_task_analyzer.py::test_full_coverage",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-258",
+      "source_type": "test",
+      "source_path": "tests/test_requirement_task_analyzer.py::test_partial_coverage",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_requirement_task_analyzer.py::test_partial_coverage",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-259",
+      "source_type": "test",
+      "source_path": "tests/test_requirement_task_analyzer.py::test_missing_coverage_with_gap",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_requirement_task_analyzer.py::test_missing_coverage_with_gap",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-260",
+      "source_type": "test",
+      "source_path": "tests/test_requirement_task_analyzer.py::test_missing_coverage_no_gap",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_requirement_task_analyzer.py::test_missing_coverage_no_gap",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-261",
+      "source_type": "test",
+      "source_path": "tests/test_requirement_task_analyzer.py::test_unclear_priority_or_status",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_requirement_task_analyzer.py::test_unclear_priority_or_status",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-262",
+      "source_type": "test",
+      "source_path": "tests/test_risk_advisor.py::test_enrich_claim_risks",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-007-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_risk_advisor.py::test_enrich_claim_risks",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-263",
+      "source_type": "test",
+      "source_path": "tests/test_risk_advisor.py::test_process_gaps_to_risks",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-007-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_risk_advisor.py::test_process_gaps_to_risks",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-264",
+      "source_type": "test",
+      "source_path": "tests/test_risk_advisor.py::test_counter_sequential_continuity",
+      "covers": [
+        "AC-VT-007-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_risk_advisor.py::test_counter_sequential_continuity",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-265",
+      "source_type": "test",
+      "source_path": "tests/test_risk_advisor.py::test_compliance_results_to_risks",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-007-03",
+        "AC-VT-008-02",
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_risk_advisor.py::test_compliance_results_to_risks",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-266",
+      "source_type": "test",
+      "source_path": "tests/test_risk_advisor.py::test_compliance_deduplication",
+      "covers": [
+        "AC-VT-007-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_risk_advisor.py::test_compliance_deduplication",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-267",
+      "source_type": "test",
+      "source_path": "tests/test_scaffolding.py::test_run_init_creates_scaffolding",
+      "covers": [
+        "AC-VT-009-07"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_scaffolding.py::test_run_init_creates_scaffolding",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-268",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_valid_minimal_document",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_valid_minimal_document",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-269",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_schema_version_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_schema_version_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-270",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_project_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_project_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-271",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_tasks_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_tasks_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-272",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_project_id_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_project_id_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-273",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_task_required_field_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_task_required_field_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-274",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_priority_enum_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_priority_enum_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-275",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_status_enum_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_status_enum_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-276",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_project_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_project_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-277",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_task_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_task_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-278",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_phase_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_phase_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-279",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_related_requirement_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_related_requirement_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-280",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_ac_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_ac_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-281",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_dod_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_invalid_dod_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-282",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_dod_description_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTaskListSchema::test_missing_dod_description_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-283",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_valid_minimal_document",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_valid_minimal_document",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-284",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_valid_document_with_optional_fields",
+      "covers": [
+        "AC-VT-001-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_valid_document_with_optional_fields",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-285",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_claim_id_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_claim_id_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-286",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_related_task_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_related_task_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-287",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_claimed_status_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_claimed_status_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-288",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_evidence_refs_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_evidence_refs_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-289",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_timestamp_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_missing_timestamp_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-290",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_invalid_claimed_status_enum_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_invalid_claimed_status_enum_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-291",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_invalid_claim_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_invalid_claim_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-292",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_invalid_related_task_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_invalid_related_task_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-293",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_top_level_must_be_array_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestAgentClaimsSchema::test_top_level_must_be_array_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-294",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_valid_minimal_document",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_valid_minimal_document",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-295",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_run_id_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_run_id_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-296",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_project_id_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_project_id_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-297",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_scan_time_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_scan_time_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-298",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_evidences_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_evidences_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-299",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_evidence_id_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_evidence_id_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-300",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_source_type_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_missing_source_type_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-301",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_source_type_enum_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_source_type_enum_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-302",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_evidence_status_enum_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_evidence_status_enum_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-303",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_project_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_project_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-304",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_evidence_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_invalid_evidence_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-305",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_empty_evidences_array_is_valid",
+      "covers": [
+        "AC-VT-001-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestEvidenceIndexSchema::test_empty_evidences_array_is_valid",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-306",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_valid_minimal_document",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_valid_minimal_document",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-307",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_run_id_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_run_id_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-308",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_project_id_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_project_id_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-309",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_scan_time_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_scan_time_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-310",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_gate_decision_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_gate_decision_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-311",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_requirement_coverage_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_requirement_coverage_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-312",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_gaps_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_gaps_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-313",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_risks_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_risks_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-314",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_gate_decision_enum_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_gate_decision_enum_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-315",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_requirement_status_enum_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_requirement_status_enum_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-316",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_risk_severity_enum_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_risk_severity_enum_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-317",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_project_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_project_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-318",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_req_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_req_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-319",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_risk_id_pattern_raises",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_invalid_risk_id_pattern_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-320",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_gap_required_field_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_gap_required_field_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-321",
+      "source_type": "test",
+      "source_path": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_risk_required_field_raises",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_contracts.py::TestTraceabilityReportSchema::test_missing_risk_required_field_raises",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-322",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_valid_task_list_dict_passes",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_valid_task_list_dict_passes",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-323",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_valid_agent_claims_empty_array_passes",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_valid_agent_claims_empty_array_passes",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-324",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_valid_evidence_index_dict_passes",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_valid_evidence_index_dict_passes",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-325",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_valid_traceability_report_dict_passes",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_valid_traceability_report_dict_passes",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-326",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_unknown_schema_name_returns_invalid_input",
+      "covers": [
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_unknown_schema_name_returns_invalid_input",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-327",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_missing_file_returns_error",
+      "covers": [
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_missing_file_returns_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-328",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_invalid_json_file_returns_invalid_input",
+      "covers": [
+        "AC-VT-006-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_invalid_json_file_returns_invalid_input",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-329",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_schema_violation_returns_schema_violation_code",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_schema_violation_returns_schema_violation_code",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-330",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_schema_violation_includes_field_path",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_schema_violation_includes_field_path",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-331",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_schema_violation_includes_hint",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_schema_violation_includes_hint",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-332",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_validate_file_valid_raw_task_list",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_validate_file_valid_raw_task_list",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-333",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_validate_file_valid_raw_agent_claims",
+      "covers": [
+        "AC-VT-001-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_validate_file_valid_raw_agent_claims",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-334",
+      "source_type": "test",
+      "source_path": "tests/test_schema_validator.py::test_validator_does_not_import_analysis_modules",
+      "covers": [
+        "AC-VT-008-03"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_schema_validator.py::test_validator_does_not_import_analysis_modules",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-335",
+      "source_type": "test",
+      "source_path": "tests/test_task_loader.py::test_valid_task_list_passes",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_task_loader.py::test_valid_task_list_passes",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-336",
+      "source_type": "test",
+      "source_path": "tests/test_task_loader.py::test_invalid_schema_structure_fails",
+      "covers": [
+        "AC-VT-001-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_task_loader.py::test_invalid_schema_structure_fails",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-337",
+      "source_type": "test",
+      "source_path": "tests/test_task_loader.py::test_duplicate_task_ids",
+      "covers": [
+        "AC-VT-001-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_task_loader.py::test_duplicate_task_ids",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-338",
+      "source_type": "test",
+      "source_path": "tests/test_task_loader.py::test_isolated_task_fails",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_task_loader.py::test_isolated_task_fails",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-339",
+      "source_type": "test",
+      "source_path": "tests/test_task_loader.py::test_references_non_existent_requirement_forms_gap",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_task_loader.py::test_references_non_existent_requirement_forms_gap",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-340",
+      "source_type": "test",
+      "source_path": "tests/test_task_loader.py::test_references_non_existent_acceptance_criterion_forms_gap",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_task_loader.py::test_references_non_existent_acceptance_criterion_forms_gap",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-341",
+      "source_type": "test",
+      "source_path": "tests/test_task_loader.py::test_inverse_relationship_mismatch_forms_gap",
+      "covers": [],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_task_loader.py::test_inverse_relationship_mismatch_forms_gap",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-342",
+      "source_type": "test",
+      "source_path": "tests/test_task_loader.py::test_validate_real_files_load",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_task_loader.py::test_validate_real_files_load",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-343",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_pytest_report_success",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_pytest_report_success",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-344",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_pytest_report_execution_failed",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_pytest_report_execution_failed",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-345",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_pytest_ast_fallback",
+      "covers": [
+        "AC-VT-001-02"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_pytest_ast_fallback",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-346",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_coverage_report_success",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_coverage_report_success",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-347",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_coverage_report_failed",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_coverage_report_failed",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-348",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_ruff_report_success",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_ruff_report_success",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-349",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_ruff_report_failed",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_ruff_report_failed",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-350",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_bandit_report_success",
+      "covers": [
+        "AC-VT-001-02",
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_bandit_report_success",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-351",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_bandit_report_failed",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_bandit_report_failed",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-352",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_tool_type_detection",
+      "covers": [
+        "AC-VT-002-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_tool_type_detection",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-353",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_missing_report_file_returns_error",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_missing_report_file_returns_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-354",
+      "source_type": "test",
+      "source_path": "tests/test_tool_evidence_adapter.py::test_invalid_json_report_file_returns_error",
+      "covers": [
+        "AC-VT-007-01",
+        "AC-VT-008-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_tool_evidence_adapter.py::test_invalid_json_report_file_returns_error",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-355",
+      "source_type": "test",
+      "source_path": "tests/test_traceability_report_builder.py::test_builder_successful_compilation",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "AC-VT-006-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_traceability_report_builder.py::test_builder_successful_compilation",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-356",
+      "source_type": "test",
+      "source_path": "tests/test_traceability_report_builder.py::test_builder_gaps_and_risks_merging",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-02",
+        "AC-VT-001-03",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "AC-VT-006-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_traceability_report_builder.py::test_builder_gaps_and_risks_merging",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-357",
+      "source_type": "test",
+      "source_path": "tests/test_traceability_report_builder.py::test_builder_schema_validation_failure",
+      "covers": [
+        "AC-VT-001-03",
+        "AC-VT-006-01"
+      ],
+      "status": "covered",
+      "details": {
+        "nodeid": "tests/test_traceability_report_builder.py::test_builder_schema_validation_failure",
+        "outcome": "passed",
+        "command": "pytest",
+        "exit_code": 0
       }
     }
   ]

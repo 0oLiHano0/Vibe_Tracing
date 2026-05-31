@@ -1,0 +1,9 @@
+{
+  "project_id": "PROJECT-VT",
+  "prd_path": "docs/prd.md",
+  "architecture_constraints_path": "docs/architecture_constraints.json",
+  "task_list_path": "docs/task_list.json",
+  "agent_claims_path": ".vibetracing/agent_claims.json",
+  "output_dir": ".vibetracing/output",
+  "claude_bootstrap_dir": ".vibetracing/claude_bootstrap"
+}

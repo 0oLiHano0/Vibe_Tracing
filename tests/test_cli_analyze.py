@@ -30,7 +30,7 @@ def setup_mock_project(
     (base / "dashboard.html").write_text("<html></html>", encoding="utf-8")
 
     # Copy real schemas to mock project so schema validator can load them
-    real_schemas = Path(__file__).parent.parent / "schemas"
+    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
     for schema_file in real_schemas.glob("*.json"):
         (base / "schemas" / schema_file.name).write_text(
             schema_file.read_text(encoding="utf-8")
@@ -59,6 +59,20 @@ must
     )
 
     # Write Architecture Constraints
+    try:
+        data = json.loads(architecture_constraints)
+        if isinstance(data, dict):
+            if "schema_version" not in data:
+                data["schema_version"] = "1.0.0"
+            if "project" not in data:
+                data["project"] = {
+                    "project_id": "PROJECT-VT",
+                    "name": "Vibe Tracing",
+                    "stage": "mvp"
+                }
+            architecture_constraints = json.dumps(data)
+    except Exception:
+        pass
     (base / "docs" / "architecture_constraints.json").write_text(
         architecture_constraints, encoding="utf-8"
     )
@@ -170,7 +184,7 @@ def test_cli_analyze_pass(tmp_path, capsys):
     assert run_metadata_path.exists()
 
     # Validate schema compliance
-    validator = SchemaValidator(tmp_path / "schemas")
+    validator = SchemaValidator()
     val_ev = validator.validate_file(evidence_index_path, "evidence_index")
     assert val_ev.is_valid is True, val_ev.message
 

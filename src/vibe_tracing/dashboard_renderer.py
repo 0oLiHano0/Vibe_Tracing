@@ -104,10 +104,7 @@ class DashboardRenderer:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vibe Tracing 治理 Dashboard</title>
-    <!-- Embedded Font link, falls back gracefully to system sans-serif offline -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Embedded font loading removed to comply with DEP-VT-002 (no external CDN references) -->
     <style>
         :root {{
             --bg-primary: #0b0f19;
@@ -249,7 +246,37 @@ class DashboardRenderer:
 
         .nav-icon {{
             margin-right: 12px;
-            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }}
+
+        .nav-icon svg {{
+            width: 100%;
+            height: 100%;
+            stroke: currentColor;
+            fill: none;
+        }}
+
+        .inline-icon {{
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            vertical-align: middle;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }}
+
+        .inline-icon svg {{
+            width: 100%;
+            height: 100%;
+            stroke: currentColor;
+            fill: none;
         }}
 
         .sidebar-footer {{
@@ -445,9 +472,20 @@ class DashboardRenderer:
         }}
 
         .gate-panel-status .status-icon {{
-            font-size: 48px;
             margin-bottom: 16px;
             color: var(--status-color);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+        }}
+
+        .gate-panel-status .status-icon svg {{
+            width: 100%;
+            height: 100%;
+            stroke: currentColor;
+            fill: none;
         }}
 
         .gate-panel-status .status-title {{
@@ -836,6 +874,33 @@ class DashboardRenderer:
             color: var(--text-muted);
             font-style: italic;
         }}
+
+        .btn-action {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+        }}
+
+        .btn-action:hover {{
+            color: var(--text-primary);
+            background-color: var(--bg-card-hover);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 8px var(--accent-blue-glow);
+        }}
+
+        .btn-action:focus {{
+            outline: none;
+            border-color: var(--accent-blue);
+        }}
     </style>
 </head>
 <body>
@@ -847,27 +912,27 @@ class DashboardRenderer:
         </div>
         <ul class="nav-menu">
             <a class="nav-item active" onclick="switchTab('overview')">
-                <span class="nav-icon">📊</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
                 <span>概览 / Overview</span>
             </a>
             <a class="nav-item" onclick="switchTab('requirements')">
-                <span class="nav-icon">📋</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line></svg></span>
                 <span>需求覆盖 / Requirements</span>
             </a>
             <a class="nav-item" onclick="switchTab('risks')">
-                <span class="nav-icon">⚠️</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                 <span>缺口与风险 / Risks & Gaps</span>
             </a>
             <a class="nav-item" onclick="switchTab('architecture')">
-                <span class="nav-icon">🧱</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>
                 <span>架构合规 / Architecture</span>
             </a>
             <a class="nav-item" onclick="switchTab('bootstrap')">
-                <span class="nav-icon">⚙️</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
                 <span>自举状态 / Bootstrap</span>
             </a>
             <a class="nav-item" onclick="switchTab('evidence')">
-                <span class="nav-icon">🔍</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
                 <span>证据索引 / Evidences</span>
             </a>
         </ul>
@@ -891,7 +956,7 @@ class DashboardRenderer:
         <div class="tab-content active" id="tab-overview">
             <div class="gate-panel">
                 <div class="gate-panel-status" id="gate-panel-status">
-                    <div class="status-icon" id="gate-panel-icon">❓</div>
+                    <div class="status-icon" id="gate-panel-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
                     <div class="status-title" id="gate-panel-title">UNKNOWN</div>
                     <div class="status-desc" id="gate-panel-desc">未完成加载</div>
                 </div>
@@ -1275,22 +1340,36 @@ class DashboardRenderer:
         const gatePanelTitle = document.getElementById('gate-panel-title');
         const gatePanelDesc = document.getElementById('gate-panel-desc');
 
+        const SVG_ICONS = {{
+            pass: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+            fail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`,
+            blocked: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+            unknown: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`
+        }};
+
+        const SVG_INLINE = {{
+            check: `<span class="inline-icon" style="color: var(--status-pass)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`,
+            alert: `<span class="inline-icon" style="color: var(--status-fail)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></span>`,
+            warning: `<span class="inline-icon" style="color: var(--status-blocked)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>`,
+            search: `<span class="inline-icon" style="color: var(--text-secondary)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`
+        }};
+
         if (gateDecision === 'pass') {{
             gatePanel.style.setProperty('--status-color', 'var(--status-pass)');
             gatePanel.style.setProperty('--status-color-glow', 'var(--status-pass-glow)');
-            gatePanelIcon.textContent = '✅';
+            gatePanelIcon.innerHTML = SVG_ICONS.pass;
             gatePanelTitle.textContent = 'PASS';
             gatePanelDesc.textContent = '项目已满足所有质量门禁规则，符合合并要求。';
         }} else if (gateDecision === 'fail') {{
             gatePanel.style.setProperty('--status-color', 'var(--status-fail)');
             gatePanel.style.setProperty('--status-color-glow', 'var(--status-fail-glow)');
-            gatePanelIcon.textContent = '❌';
+            gatePanelIcon.innerHTML = SVG_ICONS.fail;
             gatePanelTitle.textContent = 'FAIL';
             gatePanelDesc.textContent = '项目未通过质量门禁校验，存在违规项或严重缺失。';
         }} else {{
             gatePanel.style.setProperty('--status-color', 'var(--status-blocked)');
             gatePanel.style.setProperty('--status-color-glow', 'var(--status-blocked-glow)');
-            gatePanelIcon.textContent = '⚠️';
+            gatePanelIcon.innerHTML = SVG_ICONS.blocked;
             gatePanelTitle.textContent = 'BLOCKED';
             gatePanelDesc.textContent = '项目门禁由于关键信息（例如测试覆盖）缺失被阻断。';
         }}
@@ -1303,7 +1382,7 @@ class DashboardRenderer:
         // Populate reasons directly from the report's gaps and violations if gate is not pass
         let reasonsHtml = '';
         if (gaps.length === 0 && risks.length === 0 && (!report.architecture_violations || report.architecture_violations.length === 0)) {{
-            reasonsHtml = '<li class="empty-state">✅ 项目状态健康，无阻塞原因。</li>';
+            reasonsHtml = `<li class="empty-state">${{SVG_INLINE.check}} 项目状态健康，无阻塞原因。</li>`;
         }} else {{
             // Add risks if any
             risks.filter(r => r.severity === 'must').forEach(r => {{
@@ -1650,7 +1729,7 @@ class DashboardRenderer:
             const gapsBody = document.getElementById('gaps-table-body');
             gapsBody.innerHTML = '';
             if (gaps.length === 0) {{
-                gapsBody.innerHTML = '<tr><td colspan="3" class="empty-state">✅ 没有任何跟踪缺口 / No coverage gaps identified</td></tr>';
+                gapsBody.innerHTML = `<tr><td colspan="3" class="empty-state">${{SVG_INLINE.check}} 没有任何跟踪缺口 / No coverage gaps identified</td></tr>`;
             }} else {{
                 gaps.forEach(g => {{
                     const row = document.createElement('tr');
@@ -1724,7 +1803,7 @@ class DashboardRenderer:
                     }}
 
                     box.innerHTML = `
-                        <div class="alert-title">🚨 规约违背: ${{escapeHtml(v.rule_id)}}</div>
+                        <div class="alert-title">${{SVG_INLINE.alert}} 规约违背: ${{escapeHtml(v.rule_id)}}</div>
                         <div>${{escapeHtml(v.message)}}</div>
                         ${{evLink}}
                     `;
@@ -1745,7 +1824,7 @@ class DashboardRenderer:
                     const box = document.createElement('div');
                     box.className = 'alert-box unclear';
                     box.innerHTML = `
-                        <div class="alert-title">🔍 需要人工核验: ${{escapeHtml(uc.rule_id)}}</div>
+                        <div class="alert-title">${{SVG_INLINE.search}} 需要人工核验: ${{escapeHtml(uc.rule_id)}}</div>
                         <div>${{escapeHtml(uc.reason || '该约束无法静态或自动化验证，请人工核查是否合规。')}}</div>
                     `;
                     unclearList.appendChild(box);
@@ -1815,7 +1894,7 @@ class DashboardRenderer:
                     <td><span class="badge badge-status-${{e.status}}">${{e.status}}</span></td>
                     <td style="max-width: 240px;">${{coversBadges}}</td>
                     <td>
-                        <button class="nav-item" style="padding: 6px 12px; font-size: 11px; margin: 0;" onclick="toggleDetailsRow(this)">
+                        <button class="btn-action" onclick="toggleDetailsRow(this)">
                             展开 / Details
                         </button>
                     </td>
@@ -1960,13 +2039,13 @@ class DashboardRenderer:
                 allErrors.forEach(err => {{
                     const box = document.createElement('div');
                     box.className = 'alert-box violation';
-                    box.innerHTML = `<div class="alert-title">🚨 治理错误 / Error</div><div>${{escapeHtml(err)}}</div>`;
+                    box.innerHTML = `<div class="alert-title">${{SVG_INLINE.alert}} 治理错误 / Error</div><div>${{escapeHtml(err)}}</div>`;
                     warningsList.appendChild(box);
                 }});
                 allWarnings.forEach(warn => {{
                     const box = document.createElement('div');
                     box.className = 'alert-box unclear';
-                    box.innerHTML = `<div class="alert-title">⚠️ 安全警告 / Warning</div><div>${{escapeHtml(warn)}}</div>`;
+                    box.innerHTML = `<div class="alert-title">${{SVG_INLINE.warning}} 安全警告 / Warning</div><div>${{escapeHtml(warn)}}</div>`;
                     warningsList.appendChild(box);
                 }});
             }}

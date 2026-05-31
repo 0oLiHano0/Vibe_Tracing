@@ -10,6 +10,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+import importlib.resources as pkg_resources
 
 from vibe_tracing import __version__
 from vibe_tracing.raw_input_loader import RawInputLoader
@@ -17,6 +18,62 @@ from vibe_tracing.schema_validator import SchemaValidator
 from vibe_tracing.prd_parser import PrdParser
 from vibe_tracing.task_loader import TaskLoader
 from vibe_tracing.claim_loader import ClaimLoader
+
+
+def run_init(project_root: Path) -> int:
+    """Initialize a Vibe Tracing project by creating directories and template files."""
+    try:
+        print(f"Initializing Vibe Tracing project at: {project_root}")
+
+        # Directories to create
+        dirs = [
+            project_root / ".vibetracing",
+            project_root / "docs",
+            project_root / "output",
+        ]
+        for d in dirs:
+            if not d.exists():
+                d.mkdir(parents=True, exist_ok=True)
+                print(
+                    f"Created directory: {d.relative_to(project_root) if project_root in d.parents else d}"
+                )
+
+        from vibe_tracing import templates
+
+        # Load templates from package resources
+        config_content = json.loads(pkg_resources.read_text(templates, "config.template.json"))
+        claims_content = json.loads(pkg_resources.read_text(templates, "agent_claims.template.json"))
+        task_list_content = json.loads(pkg_resources.read_text(templates, "task_list.template.json"))
+        arch_content = json.loads(pkg_resources.read_text(templates, "architecture_constraints.template.json"))
+        prd_content = pkg_resources.read_text(templates, "prd.template.md")
+
+        files = {
+            ".vibetracing/config.json": config_content,
+            ".vibetracing/agent_claims.json": claims_content,
+            "docs/task_list.json": task_list_content,
+            "docs/architecture_constraints.json": arch_content,
+            "docs/prd.md": prd_content,
+        }
+
+        for rel_path, content in files.items():
+            file_path = project_root / rel_path
+            if file_path.exists():
+                print(f"Skipped existing file: {rel_path}")
+            else:
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                if rel_path.endswith(".json"):
+                    with file_path.open("w", encoding="utf-8") as f:
+                        json.dump(content, f, indent=2, ensure_ascii=False)
+                else:
+                    with file_path.open("w", encoding="utf-8") as f:
+                        f.write(content)
+                print(f"Created file: {rel_path}")
+
+        print("Vibe Tracing initialization completed successfully.")
+        return 0
+    except Exception as exc:
+        print(f"Error during initialization: {exc}", file=sys.stderr)
+        return 1
 
 
 def run_analyze(project_root: Path, output_dir: Path) -> int:
@@ -60,6 +117,8 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
         RiskAdvisor = importlib.import_module("vibe_tracing.risk_advisor").RiskAdvisor
 
         schemas_dir = project_root / "schemas"
+        if not schemas_dir.is_dir():
+            schemas_dir = Path(__file__).parent / "schemas"
         validator = SchemaValidator(schemas_dir)
 
         # 1. Load raw inputs
@@ -73,6 +132,8 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
                         file=sys.stderr,
                     )
             return 1
+
+        constraints_path = raw_loader.get_path("architecture_constraints")
 
         # Check records
         records_dict = {r.file_key: r for r in manifest.inputs_used}
@@ -95,6 +156,8 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
                 f"Schema validation failed for task list: {val_task.message} at {val_task.field_path}",
                 file=sys.stderr,
             )
+            if val_task.hint:
+                print(val_task.hint, file=sys.stderr)
             return 1
 
         # Validate agent claims schema if it exists
@@ -109,6 +172,20 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
                     f"Schema validation failed for agent claims: {val_claims.message} at {val_claims.field_path}",
                     file=sys.stderr,
                 )
+                if val_claims.hint:
+                    print(val_claims.hint, file=sys.stderr)
+                return 1
+
+        # Validate architecture constraints schema
+        if constraints_path.exists():
+            val_constraints = validator.validate_file(constraints_path, "architecture_constraints")
+            if not val_constraints.is_valid:
+                print(
+                    f"Schema validation failed for architecture constraints: {val_constraints.message} at {val_constraints.field_path}",
+                    file=sys.stderr,
+                )
+                if val_constraints.hint:
+                    print(val_constraints.hint, file=sys.stderr)
                 return 1
 
         # Validate Claude Code bootstrap configuration if bootstrap folder/manifest exists or GATE-VT-013 is in quality gates
@@ -388,6 +465,15 @@ def main(argv=None):
         "--out", help="Path to the output directory (default: <project-root>/output)"
     )
 
+    init_parser = subparsers.add_parser(
+        "init", help="Initialize a new Vibe Tracing project with template files"
+    )
+    init_parser.add_argument(
+        "--project-root",
+        default=".",
+        help="Path to the project workspace root (default: current working directory)",
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "analyze":
@@ -401,6 +487,9 @@ def main(argv=None):
             output_dir = raw_loader.get_path("output_dir").resolve()
 
         return run_analyze(project_root, output_dir)
+    elif args.command == "init":
+        project_root = Path(args.project_root).resolve()
+        return run_init(project_root)
     else:
         parser.print_help()
         return 0

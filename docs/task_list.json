@@ -1,5 +1,10 @@
 {
   "schema_version": "0.1",
+  "__field_hints__": {
+    "schema_version": "指明当前模式的版本，例如 '1.0.0'。",
+    "project": "项目元数据对象，包含项目基本信息。",
+    "tasks": "任务列表数组，每个元素代表一个具体的开发任务。"
+  },
   "project": {
     "project_id": "PROJECT-VT",
     "name": "Vibe Tracing",
@@ -9,7 +14,12 @@
       "PRD_final.md",
       "architecture_constraints.json"
     ],
-    "generated_for": "AI Coding atomic task execution"
+    "generated_for": "AI Coding atomic task execution",
+    "__field_hints__": {
+      "project_id": "项目ID，必须为 'PROJECT-VT'。",
+      "name": "项目名称，人类可读字符串。",
+      "stage": "项目当前所处的阶段。"
+    }
   },
   "id_rules": {
     "task_id_format": "TASK-VT-序号",
@@ -350,7 +360,7 @@
       "title": "实现 Raw Input Loader",
       "phase_id": "PHASE-VT-002",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "owner_role": "AI Coding Agent",
       "objective": "读取必需输入和可选输入，并生成 raw_input_manifest。",
       "atomic_scope": "读取 prd.md、architecture_constraints.json、task_list.json、agent_claims.json、tool_reports、代码路径清单；只加载文件，不做治理判定。",
@@ -2143,6 +2153,203 @@
       "ai_coding_guidance": [
         "确保没有漏掉任何对旧路径的逻辑检查或测试断言。"
       ]
+    },
+    {
+      "task_id": "TASK-VT-033",
+      "title": "实现证据多重匹配与安全收敛",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "处理同一个 NodeID/路径在多份测试报告或运行中存在多重匹配证据的判定，支持 fail-fast 状态合并与冲突暴露。",
+      "atomic_scope": "修改 claim_evidence_analyzer.py 逻辑，将 ev_map 对应 NodeID 映射修改为 List 聚合匹配；对匹配到的多个 Evidence 对象执行 fail-fast 合并，若任一失败则 Claim 状态定为 violated，若多重结果状态不一致则生成冲突 mismatch 报警。",
+      "out_of_scope": [
+        "不改变 Claim 数据的原始 Schema 定义",
+        "不引入非必要的第三方依赖"
+      ],
+      "related_requirements": [
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-002-04"
+      ],
+      "related_modules": [
+        "MOD-VT-009"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-001"
+      ],
+      "depends_on": [
+        "TASK-VT-031"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+        "tests/test_claim_evidence_analyzer.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-033-01",
+          "description": "支持同一个 NodeID 映射多重证据，并将所有关联的 evidence_id 写入 Claim 判定输出。"
+        },
+        {
+          "dod_id": "DOD-VT-033-02",
+          "description": "多重匹配证据中存在失败项时，Claim 状态判定为 violated（一票否决）。"
+        },
+        {
+          "dod_id": "DOD-VT-033-03",
+          "description": "多重匹配证据出现状态不一致（例如单测过、集测挂）时，在 mismatches 列表中暴露详细冲突警告。"
+        },
+        {
+          "dod_id": "DOD-VT-033-04",
+          "description": "新增单元测试覆盖以上多重匹配、Fail-Fast 聚合 and 冲突警告场景，所有测试 100% 通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "仔细处理 Python 字典的多值覆盖问题，改用 dict[str, list] 结构承载 NodeID 映射。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-034",
+      "title": "实现 Dashboard 图标 Emoji 到 SVG 矢量图迁移",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 HTML Dashboard 界面中所有的 Emoji 表情全部替换为离线自包含的内联 SVG 矢量图标，确保界面高度美观与完全离线运行兼容。",
+      "atomic_scope": "修改 dashboard_renderer.py，升级 nav-icon 与 status-icon 的 CSS 样式，用内联 SVG 替换左侧导航菜单的 6 个 Emoji 图标，重构 JS 动态生成 Gate Status 的 ❓/✅/❌/⚠️ 图标为 SVG 图标，并替换所有内联文本的 Emoji 为 SVG 图标。",
+      "out_of_scope": [
+        "不改变报告核心 JSON schema 契约",
+        "不使用外部 CDN 图片或字体依赖"
+      ],
+      "related_requirements": [
+        "REQ-VT-006"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-006-04"
+      ],
+      "related_modules": [
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-010",
+        "DEP-VT-002"
+      ],
+      "depends_on": [
+        "TASK-VT-033"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/dashboard_renderer.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-034-01",
+          "description": "侧边栏 6 个导航菜单 Emoji 均替换为符合美感、语义相近的内联 SVG 图标。"
+        },
+        {
+          "dod_id": "DOD-VT-034-02",
+          "description": "门禁判定状态（PASS/FAIL/BLOCKED/UNKNOWN）的动态 Emoji 替换为内联 SVG 图标渲染。"
+        },
+        {
+          "dod_id": "DOD-VT-034-03",
+          "description": "所有的警告框、提示文本与理由列表中的内联 Emoji 统一替换为统一包装的 SVG 矢量图标。"
+        },
+        {
+          "dod_id": "DOD-VT-034-04",
+          "description": "运行 Pytest 测试，确保原有的单元测试和集成测试仍然 100% 通过且无语法/路径错误。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "注意 Python f-string 模板的大括号 escape 规则，即 JS 与 CSS 中所有大括号 {} 必须双写成 {{}}。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-035",
+      "title": "实现基于模版字段提示的零提示词 AI 引导与项目脚手架",
+      "phase_id": "PHASE-VT-008",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "设计并开发 vt init 脚手架命令，并为所有 JSON 配置文件各字段配备中文 refs/hints 说明，支持在任一阶段校验出错时动态提取并拼接 【修复指南】。",
+      "atomic_scope": "修改 schema_validator.py 实现 resolve_field_hint 提示查找器；修改 task_loader.py 与 claim_loader.py 忽略以 -9999 结尾的样例并在逻辑错误时附带中文修复指南；修改 cli.py 支持 init 脚手架命令，并打印中文修复指南。",
+      "out_of_scope": [
+        "不改变报告核心 JSON schema 契约",
+        "不引入非必要的第三方依赖"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-07"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-002",
+        "MOD-VT-003"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-001"
+      ],
+      "depends_on": [
+        "TASK-VT-034"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/schema_validator.py",
+        "src/vibe_tracing/task_loader.py",
+        "src/vibe_tracing/claim_loader.py",
+        "src/vibe_tracing/cli.py",
+        "tests/test_scaffolding.py",
+        "tests/test_dynamic_hints.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-035-01",
+          "description": "vt init 命令正常生成携带 __field_hints__ 中文提示的模板文件。"
+        },
+        {
+          "dod_id": "DOD-VT-035-02",
+          "description": "vt analyze 或是底层 loader 发生 Schema 校验/一致性校验出错时，输出带有 【修复指南】 的中文引导说明。"
+        },
+        {
+          "dod_id": "DOD-VT-035-03",
+          "description": "所有数据分析与自检逻辑静默过滤掉以 -9999 结尾的模板项目，不引发虚警。"
+        },
+        {
+          "dod_id": "DOD-VT-035-04",
+          "description": "新增单元测试覆盖以上场景，且全量 305+ 测试 100% 通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "字段修复指南必须用清晰、通俗的中文编写，突出正则匹配格式或命名要求。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-9999",
+      "title": "样例任务标题",
+      "phase_id": "PHASE-VT-9999",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Developer",
+      "objective": "样例任务目标，用于演示字段填写规范。",
+      "related_requirements": ["REQ-VT-9999"],
+      "related_acceptance_criteria": ["AC-VT-9999-99"],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-9999-99",
+          "description": "样例DoD描述"
+        }
+      ],
+      "__field_hints__": {
+        "task_id": "任务ID，必须符合正则格式 `TASK-VT-\\d+`，例如 `TASK-VT-001`。",
+        "title": "任务标题，简短描述开发任务内容。",
+        "phase_id": "阶段ID，必须符合正则格式 `PHASE-VT-\\d+`，例如 `PHASE-VT-001`。",
+        "priority": "任务优先级，必须是 'must'、'should' 或 'could' 之一。",
+        "status": "任务当前状态，必须是 'todo'、'in_progress'、'blocked' 或 'done' 之一。",
+        "owner_role": "负责人角色，例如 'AI Developer'。",
+        "objective": "开发目标，详述此任务要达成的目的。",
+        "related_requirements": "关联需求ID列表，每个ID必须符合 `REQ-VT-\\d+` 格式。",
+        "related_acceptance_criteria": "关联验收标准ID列表，每个ID必须符合 `AC-VT-\\d+-\\d+` 格式。",
+        "definition_of_done": "完成定义（DoD）的检查项列表，每项需包含 `dod_id` 与 `description`。"
+      }
     }
   ]
 }

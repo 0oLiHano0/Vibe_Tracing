@@ -226,3 +226,106 @@ def test_loader_has_no_gate_decision_attribute():
     assert not hasattr(manifest, "coverage_decision"), (
         "RawInputManifest must not have a 'coverage_decision' attribute"
     )
+
+
+def test_config_json_path_overrides_and_safe_fallback(tmp_path):
+    """
+    covers: AC-VT-009-05
+    Verify that RawInputLoader loads custom paths from .vibetracing/config.json,
+    and falls back to standard paths when config is missing.
+    """
+    import json
+
+    # 1. Test fallback when config is missing
+    # Create default structure
+    (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "docs" / "prd.md").write_text("# Default PRD", encoding="utf-8")
+    (tmp_path / "docs" / "architecture_constraints.json").write_text(
+        '{"constraints": []}', encoding="utf-8"
+    )
+    (tmp_path / "docs" / "task_list.json").write_text('{"tasks": []}', encoding="utf-8")
+
+    loader = RawInputLoader(tmp_path)
+    manifest = loader.load()
+    assert manifest.has_required_errors is False
+    records = {r.file_key: r for r in manifest.inputs_used}
+    assert records["prd"].content == "# Default PRD"
+
+    # 2. Test custom config paths override
+    config_dir = tmp_path / ".vibetracing"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_file = config_dir / "config.json"
+
+    config_data = {
+        "schema_version": "1.0.0",
+        "project_id": "PROJECT-VT",
+        "paths": {
+            "prd": "custom_dir/custom_prd.md",
+            "architecture_constraints": "docs/architecture_constraints.json",
+            "task_list": "docs/task_list.json",
+        },
+    }
+    config_file.write_text(json.dumps(config_data), encoding="utf-8")
+
+    # Create custom PRD file
+    (tmp_path / "custom_dir").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "custom_dir" / "custom_prd.md").write_text(
+        "# Custom PRD", encoding="utf-8"
+    )
+
+    loader_custom = RawInputLoader(tmp_path)
+    manifest_custom = loader_custom.load()
+    assert manifest_custom.has_required_errors is False
+    records_custom = {r.file_key: r for r in manifest_custom.inputs_used}
+    assert records_custom["prd"].content == "# Custom PRD"
+
+
+def test_self_governance_rules_contract(tmp_path):
+    """
+    covers: AC-VT-009-06
+    Verify that architecture constraints change requires docs/architecture_change_log.md
+    declaration, or it triggers blocking errors.
+    """
+    import json
+    from vibe_tracing.architecture_change_proposal import (
+        ArchitectureChangeProposalEngine,
+    )
+
+    # Set up basic required files
+    (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
+
+    base_constraints = {"schema_version": "1.0.0", "quality_gates": []}
+    modified_constraints = {
+        "schema_version": "1.0.0",
+        "quality_gates": [{"gate_id": "GATE-VT-099", "severity": "must"}],
+    }
+
+    (tmp_path / ".vibetracing" / "architecture_constraints.base.json").write_text(
+        json.dumps(base_constraints), encoding="utf-8"
+    )
+    (tmp_path / "docs" / "architecture_constraints.json").write_text(
+        json.dumps(modified_constraints), encoding="utf-8"
+    )
+    (tmp_path / "docs" / "prd.md").write_text("# PRD", encoding="utf-8")
+    (tmp_path / "docs" / "task_list.json").write_text('{"tasks": []}', encoding="utf-8")
+
+    # Run check without log -> should error (must risk)
+    proposal = ArchitectureChangeProposalEngine(tmp_path)
+    res = proposal.check_governance()
+    assert len(res["errors"]) > 0
+    assert any("GATE-VT-099" in err for err in res["errors"])
+
+    # Run check with log containing GATE-VT-099 -> should warn, no error
+    change_log = (
+        "# Architecture Change Log\n\n"
+        "## [2026-05-27]\n"
+        "* **Rule**: GATE-VT-099 modified\n"
+    )
+    (tmp_path / "docs" / "architecture_change_log.md").write_text(
+        change_log, encoding="utf-8"
+    )
+
+    res_logged = proposal.check_governance()
+    assert len(res_logged["errors"]) == 0
+    assert len(res_logged["warnings"]) > 0

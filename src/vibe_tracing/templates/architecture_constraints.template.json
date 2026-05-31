@@ -1,0 +1,375 @@
+{
+  "schema_version": "1.0.0",
+  "project": {
+    "project_id": "PROJECT-VT",
+    "name": "Project Name",
+    "description": "Project Description",
+    "stage": "mvp",
+    "__field_hints__": {
+      "project_id": "项目标识ID，必须与项目标识一致。",
+      "name": "项目名称，人类可读字符串。",
+      "description": "项目详细说明。",
+      "stage": "项目当前阶段（如 mvp、alpha、beta、production）。"
+    }
+  },
+  "__field_hints__": {
+    "schema_version": "架构约束格式的版本号，如 '1.0.0'。",
+    "project": "项目基本信息。",
+    "architecture_principles": "全局架构设计原则，所有开发行为的最高指导方针。",
+    "module_boundaries": "模块职责与调用边界规则。",
+    "dependency_rules": "第三方依赖包引入规则与限制。",
+    "data_flow_rules": "敏感数据流动及安全校验规则。",
+    "storage_rules": "数据存储与数据生命周期保留规则。",
+    "error_handling_rules": "异常恢复与退避重试规则。",
+    "logging_rules": "日志脱敏与格式规范规则。",
+    "security_rules": "安全控制与数据加密规范。",
+    "technology_constraints": "技术栈及第三方框架选型白名单与黑名单。",
+    "forbidden_patterns": "严禁使用的反面开发模式或反例。",
+    "quality_gates": "合并/门禁检查点的硬性达标要求。",
+    "interface_contracts": "模块间或服务间的外部交互契约约定。",
+    "performance_constraints": "核心性能指标与吞吐量约束限制。",
+    "deployment_constraints": "基础设施依赖及网络部署策略约束。",
+    "test_constraints": "测试覆盖率及单元测试层级硬限制。"
+  },
+  "architecture_principles": [
+    {
+      "principle_id": "PRINCIPLE-VT-9999",
+      "title": "样例原则标题",
+      "description": "样例原则详细描述。",
+      "severity": "must",
+      "related_requirements": ["REQ-VT-9999"],
+      "__field_hints__": {
+        "principle_id": "原则ID，必须符合正则格式 `PRINCIPLE-VT-\\d+`。",
+        "title": "原则名称，简短陈述该原则核心。",
+        "description": "原则详细行为准则与解释。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "related_requirements": "关联的需求ID列表。"
+      }
+    }
+  ],
+  "module_boundaries": [
+    {
+      "module_id": "MOD-VT-9999",
+      "name": "sample_module",
+      "responsibility": "样例模块职责说明。",
+      "allowed_to_call": ["MOD-VT-9999"],
+      "forbidden_to_call": [],
+      "owned_data": [],
+      "must_not_own_data": [],
+      "related_requirements": ["REQ-VT-9999"],
+      "__field_hints__": {
+        "module_id": "模块边界ID，必须符合正则格式 `MOD-VT-\\d+`。",
+        "name": "模块英文名称，对应包名或类文件名称。",
+        "responsibility": "一句话说明这个模块具体做什么。",
+        "allowed_to_call": "允许该模块单向导入/调用的下游模块ID列表。",
+        "forbidden_to_call": "严禁该模块导入/调用的模块ID列表。",
+        "owned_data": "本模块独占拥有的业务数据/状态对象列表。",
+        "must_not_own_data": "本模块绝对不能越权拥有的数据/状态对象列表。",
+        "related_requirements": "本模块职责关联的需求ID列表。"
+      }
+    }
+  ],
+  "dependency_rules": [
+    {
+      "rule_id": "DEP-VT-9999",
+      "title": "样例依赖规则",
+      "description": "样例依赖描述。",
+      "severity": "must",
+      "allowed_dependencies": [],
+      "forbidden_dependencies": [],
+      "rationale": "规则选型理由或替代方案说明。",
+      "related_modules": ["MOD-VT-9999"],
+      "__field_hints__": {
+        "rule_id": "依赖规则ID，必须符合正则格式 `DEP-VT-\\d+`。",
+        "title": "依赖规则标题。",
+        "description": "详细说明哪些库被允许或禁止，版本范围是什么。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "allowed_dependencies": "允许导入的第三方库名称列表。",
+        "forbidden_dependencies": "禁止导入的第三方库名称列表。",
+        "rationale": "依赖限制的原因 and 背景设计决策。",
+        "related_modules": "受本规则约束的模块ID列表。"
+      }
+    }
+  ],
+  "data_flow_rules": [
+    {
+      "rule_id": "FLOW-VT-9999",
+      "title": "样例数据流向规则",
+      "description": "详细数据流向描述。",
+      "severity": "must",
+      "from": "source_module",
+      "to": "target_module",
+      "flow_type": "allow",
+      "transform_rules": [],
+      "validation_rules": [],
+      "rationale": "设计理由背景说明。",
+      "related_requirements": ["REQ-VT-9999"],
+      "__field_hints__": {
+        "rule_id": "数据流规则ID，必须符合正则格式 `FLOW-VT-\\d+`。",
+        "title": "数据流规则标题。",
+        "description": "数据跨边界流动时的处理与校验规则说明。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "from": "数据流出源端标识。",
+        "to": "数据流入目标端标识。",
+        "flow_type": "流向类型，例如 'allow', 'deny', 'transform', 'validate' 之一。",
+        "transform_rules": "数据转换/过滤步骤描述列表。",
+        "validation_rules": "数据校验约束（如强格式或权限检查）规则列表。",
+        "rationale": "安全或边界考量的背景理由。"
+      }
+    }
+  ],
+  "storage_rules": [
+    {
+      "rule_id": "STORE-VT-9999",
+      "title": "样例存储规则",
+      "description": "存储类型与一致性限制说明。",
+      "severity": "must",
+      "data_objects": [],
+      "storage_backend": "file",
+      "retention": "数据保留及清理周期。",
+      "access_pattern": "balanced",
+      "backup_requirement": "是否需要备份与备份频率。",
+      "consistency_requirement": "strong",
+      "rationale": "选型原因。",
+      "__field_hints__": {
+        "rule_id": "存储规则ID，必须符合正则格式 `STORE-VT-\\d+`。",
+        "title": "存储规则标题。",
+        "description": "详细的数据落盘与存储策略限制说明。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "data_objects": "受约束的数据对象或业务实体名称列表。",
+        "storage_backend": "支持的存储介质，例如 'sqlite', 'file', 'memory', 's3', 'postgresql', 'redis' 之一。",
+        "retention": "数据保留生命周期规则描述，如永久保留或30天清理。",
+        "access_pattern": "访问模式特征，例如 'read_heavy', 'write_heavy', 'balanced' 之一。",
+        "backup_requirement": "备份频率与还原保证要求描述。",
+        "consistency_requirement": "一致性级别要求，例如 'strong', 'eventual', 'none' 之一。",
+        "rationale": "存储选型的设计考虑。"
+      }
+    }
+  ],
+  "error_handling_rules": [
+    {
+      "rule_id": "ERR-VT-9999",
+      "title": "样例异常处理规则",
+      "description": "详细异常恢复和降级流程。",
+      "severity": "must",
+      "applies_to": [],
+      "expected_behavior": "正常异常处理流程表现。",
+      "forbidden_behavior": "禁止发生的异常处理行为（如静默吞掉异常）。",
+      "recovery_strategy": "none",
+      "retry_policy": "",
+      "__field_hints__": {
+        "rule_id": "异常处理规则ID，必须符合正则格式 `ERR-VT-\\d+`。",
+        "title": "异常规则标题。",
+        "description": "描述核心错误拦截及退避处理的详细规范。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "applies_to": "应用该规则的文件或模块名列表。",
+        "expected_behavior": "应当实施的正向处理逻辑描述。",
+        "forbidden_behavior": "严禁出现的负向处理行为描述，例如禁止吞掉核心异常。",
+        "recovery_strategy": "容灾策略选项，例如 'retry', 'degrade', 'abort', 'manual_intervention', 'none' 之一。",
+        "retry_policy": "若为 retry 策略，描述具体重试次数、延迟及指数退避参数。"
+      }
+    }
+  ],
+  "logging_rules": [
+    {
+      "rule_id": "LOG-VT-9999",
+      "title": "样例日志记录规范",
+      "description": "日志格式及脱敏准则说明。",
+      "severity": "should",
+      "log_level": "info",
+      "output_target": "stdout",
+      "format": "json",
+      "required_fields": [],
+      "forbidden_fields": [],
+      "rate_control": "",
+      "__field_hints__": {
+        "rule_id": "日志规则ID，必须符合正则格式 `LOG-VT-\\d+`。",
+        "title": "日志规范标题。",
+        "description": "描述需要和禁止输出的内容与场景限制。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "log_level": "日志级别限制，如 'debug', 'info', 'warn', 'error' 之一。",
+        "output_target": "输出目标端，如 'stdout', 'file', 'both', 'syslog' 之一。",
+        "format": "日志输出排版格式，如 'json' 或 'plain_text'。",
+        "required_fields": "日志元数据中必须包含的字段（如 trace_id）列表。",
+        "forbidden_fields": "日志元数据中严禁包含的字段（如 password、token）列表。",
+        "rate_control": "流量限制或频率控制限制规则说明。"
+      }
+    }
+  ],
+  "security_rules": [
+    {
+      "rule_id": "SEC-VT-9999",
+      "title": "样例安全校验规则",
+      "description": "加密及访问控制要求。",
+      "severity": "must",
+      "applies_to": [],
+      "data_classification": "internal",
+      "encryption_requirement": "none",
+      "required_behavior": "",
+      "forbidden_behavior": "",
+      "__field_hints__": {
+        "rule_id": "安全规则ID，必须符合正则格式 `SEC-VT-\\d+`。",
+        "title": "安全规则标题。",
+        "description": "针对敏感数据保护、鉴权以及防范攻击的具体规则说明。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "applies_to": "安全规则应用的数据或场景包名列表。",
+        "data_classification": "敏感级划分，如 'public', 'internal', 'confidential', 'restricted' 之一。",
+        "encryption_requirement": "加解密硬性要求，如 'none', 'at_rest', 'in_transit', 'both' 之一。",
+        "required_behavior": "系统必须实现的安全防御或审计行为。",
+        "forbidden_behavior": "系统严禁出现的负向安全行为描述。"
+      }
+    }
+  ],
+  "technology_constraints": [
+    {
+      "constraint_id": "TECH-VT-9999",
+      "title": "技术栈及框架限制",
+      "description": "第三方依赖、运行环境和编译构建限制。",
+      "severity": "must",
+      "allowed": [],
+      "forbidden": [],
+      "evaluation_criteria": [],
+      "rationale": "技术选型决策背景理由。",
+      "__field_hints__": {
+        "constraint_id": "技术约束ID，必须符合正则格式 `TECH-VT-\\d+`。",
+        "title": "技术选型规则标题。",
+        "description": "团队允许与禁止的技术栈白名单/黑名单描述。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "allowed": "项目获准使用的技术栈组件、基础语言或库白名单列表。",
+        "forbidden": "项目明令禁止使用的依赖组件黑名单列表。",
+        "evaluation_criteria": "引入新框架或依赖时应考量的权衡标准优先级列表。",
+        "rationale": "该限制的设计考虑与背景陈述。"
+      }
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern_id": "FORBID-VT-9999",
+      "title": "样例反面开发模式规则",
+      "description": "严禁采用的反模式做法描述与示例。",
+      "severity": "must",
+      "examples": [],
+      "detection_method": "code_review",
+      "reason": "反面模式会造成的坏处或风险说明。",
+      "__field_hints__": {
+        "pattern_id": "反面模式规则ID，必须符合正则格式 `FORBID-VT-\\d+`。",
+        "title": "反面模式规则标题。",
+        "description": "详细描述该模式是什么以及具体的反面场景特征。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "examples": "该反模式的代表性伪代码或文件写法案例列表。",
+        "detection_method": "如何对该反例实施筛查阻断，如 'code_review', 'static_analysis', 'runtime_monitoring', 'manual_test' 之一。",
+        "reason": "禁止该模式的核心架构与设计理由。"
+      }
+    }
+  ],
+  "quality_gates": [
+    {
+      "gate_id": "GATE-VT-9999",
+      "title": "样例质量门禁规则",
+      "description": "自动化卡点及门禁准入条件约束。",
+      "severity": "must",
+      "check_type": "automated",
+      "pass_condition": "ValidationResult.is_valid == true",
+      "fail_condition": "ValidationResult.is_valid == false",
+      "blocks_merge": true,
+      "scope_modules": [],
+      "scope_task_types": [],
+      "__field_hints__": {
+        "gate_id": "质量门禁ID，必须符合正则格式 `GATE-VT-\\d+`。",
+        "title": "质量门禁规则标题。",
+        "description": "达标校验行为详述。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "check_type": "检测类型，如 'manual', 'automated', 'agent_review' 之一。",
+        "pass_condition": "通过该检查点应满足的逻辑布尔表达式。",
+        "fail_condition": "未通过该检查点且应当报错阻断的条件表达式。",
+        "blocks_merge": "当发生不达标时，是否强制卡住流程并阻断分支合并（布尔值）。"
+      }
+    }
+  ],
+  "interface_contracts": [
+    {
+      "contract_id": "IFC-VT-9999",
+      "title": "跨模块/跨服务接口契约",
+      "description": "核心接口或方法入参回参约定。",
+      "from_module": "caller_module",
+      "to_module": "callee_module",
+      "interface_type": "function_call",
+      "method_name": "API_PATH",
+      "request_format": "{}",
+      "response_format": "{}",
+      "error_response_format": "{}",
+      "__field_hints__": {
+        "contract_id": "接口契约ID，必须符合正则格式 `IFC-VT-\\d+`。",
+        "title": "接口契约标题。",
+        "description": "该契约规范约束的方法签名或接口交互形式的详述。",
+        "from_module": "调用契约的发起方/消费方模块名称或包名标识。",
+        "to_module": "契约的实际接收方/暴露方模块名称或包名标识。",
+        "interface_type": "接口协议或交互模式，如 'function_call', 'api_endpoint', 'event', 'message_queue' 之一。",
+        "method_name": "核心交互函数方法名或API路由端点名称路径。",
+        "request_format": "入参请求体 JSON 或数据结构契约文本。",
+        "response_format": "出参响应体 JSON 或数据结构契约文本。",
+        "error_response_format": "发生业务错误或失败时的异常响应数据结构契约。"
+      }
+    }
+  ],
+  "performance_constraints": [
+    {
+      "constraint_id": "PERF-VT-9999",
+      "title": "核心服务性能阈值约束",
+      "description": "高负载高并发核心性能水位红线限制。",
+      "severity": "must",
+      "metric": "response_time_p95",
+      "threshold_value": "200ms",
+      "measurement_condition": "在什么场景或压测条件负载下度量说明。",
+      "__field_hints__": {
+        "constraint_id": "性能约束ID，必须符合正则格式 `PERF-VT-\\d+`。",
+        "title": "性能约束标题。",
+        "description": "描述对特定系统接口或处理逻辑的性能开销限制。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "metric": "受控的度量指标，如 'response_time_p95', 'response_time_p99', 'throughput', 'concurrent_users', 'batch_duration', 'storage_growth_rate' 之一。",
+        "threshold_value": "指标不可逾越的边界红线设定值，如 200ms 或 1000qps。",
+        "measurement_condition": "本性能测量实施的先决运行条件、环境硬件与并发压测条件。"
+      }
+    }
+  ],
+  "deployment_constraints": [
+    {
+      "constraint_id": "DEPLOY-VT-9999",
+      "title": "物理部署和环境配置依赖约束",
+      "description": "基础设施依赖或发布校验限制。",
+      "severity": "must",
+      "category": "infrastructure",
+      "requirement": "特定部署环境规范条件描述。",
+      "__field_hints__": {
+        "constraint_id": "部署约束ID，必须符合正则格式 `DEPLOY-VT-\\d+`。",
+        "title": "部署约束标题。",
+        "description": "约束系统在特定物理硬件、云资源、操作系统、网络拓扑等环境下的运行限制说明。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "category": "部署约束子类别，如 'infrastructure', 'environment', 'ci_cd', 'rollback', 'configuration', 'networking' 之一。",
+        "requirement": "硬性达标部署需求或规范标准描述。"
+      }
+    }
+  ],
+  "test_constraints": [
+    {
+      "constraint_id": "TEST-VT-9999",
+      "title": "测试策略与覆盖度门槛限制",
+      "description": "单测、集成测试硬性百分比或必备覆盖用例规范约束。",
+      "severity": "must",
+      "test_level": "unit",
+      "required_coverage": "80%",
+      "required_cases": [],
+      "forbidden_patterns": [],
+      "__field_hints__": {
+        "constraint_id": "测试约束ID，必须符合正则格式 `TEST-VT-\\d+`。",
+        "title": "测试约束标题。",
+        "description": "定义核心模块质量保证活动所需的深度、形式与方法约束限制。",
+        "severity": "强度级别，必须为 'must'、'should' 或 'could' 之一。",
+        "test_level": "所要求的测试层级阶段，如 'unit', 'integration', 'e2e', 'all' 之一。",
+        "required_coverage": "单测或分支覆盖率门槛，如 >=80% 核心模块覆盖率指标。",
+        "required_cases": "必须实现的特殊场景用例（如边界溢出用例、并发冲突用例）描述列表。",
+        "forbidden_patterns": "测试 code 编写中严禁出现的反面操作特征（如禁止使用 sleep 等待异步）列表。"
+      }
+    }
+  ]
+}

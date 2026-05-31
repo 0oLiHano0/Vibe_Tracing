@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vibe Tracing 治理 Dashboard</title>
-    <!-- Embedded Font link, falls back gracefully to system sans-serif offline -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Embedded font loading removed to comply with DEP-VT-002 (no external CDN references) -->
     <style>
         :root {
             --bg-primary: #0b0f19;
@@ -149,7 +146,37 @@
 
         .nav-icon {
             margin-right: 12px;
-            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .nav-icon svg {
+            width: 100%;
+            height: 100%;
+            stroke: currentColor;
+            fill: none;
+        }
+
+        .inline-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            vertical-align: middle;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .inline-icon svg {
+            width: 100%;
+            height: 100%;
+            stroke: currentColor;
+            fill: none;
         }
 
         .sidebar-footer {
@@ -345,9 +372,20 @@
         }
 
         .gate-panel-status .status-icon {
-            font-size: 48px;
             margin-bottom: 16px;
             color: var(--status-color);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+        }
+
+        .gate-panel-status .status-icon svg {
+            width: 100%;
+            height: 100%;
+            stroke: currentColor;
+            fill: none;
         }
 
         .gate-panel-status .status-title {
@@ -736,6 +774,33 @@
             color: var(--text-muted);
             font-style: italic;
         }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .btn-action:hover {
+            color: var(--text-primary);
+            background-color: var(--bg-card-hover);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 8px var(--accent-blue-glow);
+        }
+
+        .btn-action:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
     </style>
 </head>
 <body>
@@ -747,27 +812,27 @@
         </div>
         <ul class="nav-menu">
             <a class="nav-item active" onclick="switchTab('overview')">
-                <span class="nav-icon">📊</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
                 <span>概览 / Overview</span>
             </a>
             <a class="nav-item" onclick="switchTab('requirements')">
-                <span class="nav-icon">📋</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line></svg></span>
                 <span>需求覆盖 / Requirements</span>
             </a>
             <a class="nav-item" onclick="switchTab('risks')">
-                <span class="nav-icon">⚠️</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                 <span>缺口与风险 / Risks & Gaps</span>
             </a>
             <a class="nav-item" onclick="switchTab('architecture')">
-                <span class="nav-icon">🧱</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>
                 <span>架构合规 / Architecture</span>
             </a>
             <a class="nav-item" onclick="switchTab('bootstrap')">
-                <span class="nav-icon">⚙️</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
                 <span>自举状态 / Bootstrap</span>
             </a>
             <a class="nav-item" onclick="switchTab('evidence')">
-                <span class="nav-icon">🔍</span>
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
                 <span>证据索引 / Evidences</span>
             </a>
         </ul>
@@ -791,7 +856,7 @@
         <div class="tab-content active" id="tab-overview">
             <div class="gate-panel">
                 <div class="gate-panel-status" id="gate-panel-status">
-                    <div class="status-icon" id="gate-panel-icon">❓</div>
+                    <div class="status-icon" id="gate-panel-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
                     <div class="status-title" id="gate-panel-title">UNKNOWN</div>
                     <div class="status-desc" id="gate-panel-desc">未完成加载</div>
                 </div>
@@ -1077,8 +1142,8 @@
 
     <!-- DATA EMBEDDED SCRIPTS -->
     <script id="prd-reqs-json" type="application/json">[{"req_id": "REQ-VT-001", "title": "全链路需求追踪", "priority": "must", "acceptance_criteria": [{"ac_id": "AC-VT-001-01", "title": "需求必须能关联任务", "is_testing_required": true}]}]</script>
-    <script id="evidence-idx-json" type="application/json">{"run_id": "RUN-df98c91a-9f35-4bcc-a6f7-de82a64373bb", "project_id": "PROJECT-VT", "scan_time": "2026-05-24T11:19:10.762938Z", "evidences": [{"evidence_id": "EVIDENCE-VT-001", "source_type": "task", "source_path": "docs/task_list.json", "covers": ["AC-VT-001-01", "REQ-VT-001"], "status": "covered", "details": {"task_id": "TASK-VT-001", "title": "Implement Feature", "phase_id": "PHASE-VT-001", "priority": "must"}}, {"evidence_id": "EVIDENCE-VT-002", "source_type": "claim", "source_path": ".vibetracing/agent_claims.json", "covers": ["AC-VT-001-01", "REQ-VT-001"], "status": "covered", "details": {"claim_id": "CLAIM-VT-001", "related_task": "TASK-VT-001", "timestamp": "2030-05-22T12:00:00Z", "notes": ""}}, {"evidence_id": "EVIDENCE-VT-003", "source_type": "test", "source_path": "tests/test_feature.py::test_feature_works", "covers": ["AC-VT-001-01"], "status": "covered", "details": {"nodeid": "tests/test_feature.py::test_feature_works", "outcome": "passed", "command": "pytest --json-report", "exit_code": 0}}]}</script>
-    <script id="trace-report-json" type="application/json">{"run_id": "RUN-df98c91a-9f35-4bcc-a6f7-de82a64373bb", "project_id": "PROJECT-VT", "scan_time": "2026-05-24T11:19:10.762938Z", "gate_decision": "pass", "requirement_coverage": [{"req_id": "REQ-VT-001", "status": "covered", "evidence_ids": ["EVIDENCE-VT-001"]}], "gaps": [], "risks": [], "architecture_compliance_status": [{"rule_id": "DEP-VT-001", "status": "compliant", "severity": "must", "title": "Core 不得依赖特定 Agent Runtime", "description": "Vibe Tracing Core 必须能够在不依赖 Claude Code、Hermes、DeepSeek TUI 或任何特定 Agent Runtime 的情况下被调用。"}, {"rule_id": "DEP-VT-002", "status": "compliant", "severity": "must", "title": "Dashboard 不得依赖外部前端资源", "description": "dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。"}, {"rule_id": "STORE-VT-001", "status": "compliant", "severity": "must", "title": "MVP 不使用数据库", "description": "MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。"}, {"rule_id": "GATE-VT-001", "status": "compliant", "severity": "must", "title": "必需输入文件必须存在", "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。"}, {"rule_id": "GATE-VT-006", "status": "compliant", "severity": "must", "title": "Must 级架构约束不得被违反", "description": "Must 级架构约束不得存在已确认违反项。"}, {"rule_id": "GATE-VT-007", "status": "compliant", "severity": "must", "title": "不明确的 Must 级架构约束必须导致保守门禁", "description": "如果 Must 级架构约束无法被检查，系统不得输出完全 allow 的合并结论。"}, {"rule_id": "FORBID-VT-007", "status": "compliant", "severity": "must", "title": "静默处理不明确架构约束", "description": "当某条架构约束无法自动检查时，系统必须将其标记为 unclear，而不是忽略它。"}, {"rule_id": "GATE-VT-013", "status": "compliant", "severity": "must", "title": "Claude Code 自举配置必须可审查", "description": "Claude Code 自举配置必须存在、格式正确，且符合安全审查原则。"}, {"rule_id": "GATE-VT-014", "status": "compliant", "severity": "must", "title": "架构约束变更建议必须显式记录", "description": "检测到架构约束漂移/变更比对通过，且所有修改均有合法的已接受提案。"}], "architecture_violations": [], "unclear_constraints": []}</script>
+    <script id="evidence-idx-json" type="application/json">{"run_id": "RUN-3ca66e9a-de8f-46c7-aae0-a19f5263a5b0", "project_id": "PROJECT-VT", "scan_time": "2026-05-31T08:21:35.725997Z", "evidences": [{"evidence_id": "EVIDENCE-VT-001", "source_type": "task", "source_path": "docs/task_list.json", "covers": ["AC-VT-001-01", "REQ-VT-001"], "status": "covered", "details": {"task_id": "TASK-VT-001", "title": "Implement Feature", "phase_id": "PHASE-VT-001", "priority": "must"}}, {"evidence_id": "EVIDENCE-VT-002", "source_type": "claim", "source_path": ".vibetracing/agent_claims.json", "covers": ["AC-VT-001-01", "REQ-VT-001"], "status": "covered", "details": {"claim_id": "CLAIM-VT-001", "related_task": "TASK-VT-001", "timestamp": "2030-05-22T12:00:00Z", "notes": ""}}, {"evidence_id": "EVIDENCE-VT-003", "source_type": "test", "source_path": "tests/test_feature.py::test_feature_works", "covers": ["AC-VT-001-01"], "status": "covered", "details": {"nodeid": "tests/test_feature.py::test_feature_works", "outcome": "passed", "command": "pytest --json-report", "exit_code": 0}}]}</script>
+    <script id="trace-report-json" type="application/json">{"run_id": "RUN-3ca66e9a-de8f-46c7-aae0-a19f5263a5b0", "project_id": "PROJECT-VT", "scan_time": "2026-05-31T08:21:35.725997Z", "gate_decision": "pass", "requirement_coverage": [{"req_id": "REQ-VT-001", "status": "covered", "evidence_ids": ["EVIDENCE-VT-001"]}], "gaps": [], "risks": [], "architecture_compliance_status": [{"rule_id": "DEP-VT-001", "status": "compliant", "severity": "must", "title": "Core 不得依赖特定 Agent Runtime", "description": "Vibe Tracing Core 必须能够在不依赖 Claude Code、Hermes、DeepSeek TUI 或任何特定 Agent Runtime 的情况下被调用。"}, {"rule_id": "DEP-VT-002", "status": "compliant", "severity": "must", "title": "Dashboard 不得依赖外部前端资源", "description": "dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。"}, {"rule_id": "STORE-VT-001", "status": "compliant", "severity": "must", "title": "MVP 不使用数据库", "description": "MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。"}, {"rule_id": "GATE-VT-001", "status": "compliant", "severity": "must", "title": "必需输入文件必须存在", "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。"}, {"rule_id": "GATE-VT-006", "status": "compliant", "severity": "must", "title": "Must 级架构约束不得被违反", "description": "Must 级架构约束不得存在已确认违反项。"}, {"rule_id": "GATE-VT-007", "status": "compliant", "severity": "must", "title": "不明确的 Must 级架构约束必须导致保守门禁", "description": "如果 Must 级架构约束无法被检查，系统不得输出完全 allow 的合并结论。"}, {"rule_id": "FORBID-VT-007", "status": "compliant", "severity": "must", "title": "静默处理不明确架构约束", "description": "当某条架构约束无法自动检查时，系统必须将其标记为 unclear，而不是忽略它。"}, {"rule_id": "GATE-VT-013", "status": "compliant", "severity": "must", "title": "Claude Code 自举配置必须可审查", "description": "Claude Code 自举配置必须存在、格式正确，且符合安全审查原则。"}, {"rule_id": "GATE-VT-014", "status": "compliant", "severity": "must", "title": "架构约束变更建议必须显式记录", "description": "检测到架构约束漂移/变更比对通过，且所有修改均有合法的已接受提案。"}], "architecture_violations": [], "unclear_constraints": []}</script>
     <script id="boot-data-json" type="application/json">{"is_valid": true, "errors": [], "warnings": [], "manifest": {"schema_version": "1.0.0", "runtime": "claude-code", "subagents": [{"id": "SUBAGENT-VT-001", "name": "Researcher", "definition_file": ".vibetracing/claude_bootstrap/subagents/researcher.json", "role": "researcher"}], "skills": [{"id": "SKILL-VT-001", "name": "View File", "definition_file": ".vibetracing/claude_bootstrap/skills/view_file.json", "purpose": "Read file"}], "forbidden_actions": ["modify_architecture_without_proposal"], "structured_governance_outputs": ["architecture_change_proposal"]}, "subagents": {"SUBAGENT-VT-001": {"subagent_id": "SUBAGENT-VT-001", "role": "Codebase Researcher", "responsibilities": ["Read files"], "allowed_skills": ["SKILL-VT-001"], "forbidden_behaviors": ["Write code files"], "required_outputs": ["research_notes.md"]}}, "skills": {"SKILL-VT-001": {"skill_id": "SKILL-VT-001", "name": "view_file", "purpose": "Read files", "inputs": [{"name": "path", "type": "string"}], "outputs": [{"name": "content", "type": "string"}], "boundaries": ["Only workspace root"], "constraints": ["must not override factual evidence fields"]}}}</script>
     <script id="prop-data-json" type="application/json">{"is_valid": true, "errors": [], "warnings": [], "risks": [], "gaps": [], "proposals": []}</script>
 
@@ -1175,22 +1240,36 @@
         const gatePanelTitle = document.getElementById('gate-panel-title');
         const gatePanelDesc = document.getElementById('gate-panel-desc');
 
+        const SVG_ICONS = {
+            pass: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+            fail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`,
+            blocked: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+            unknown: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`
+        };
+
+        const SVG_INLINE = {
+            check: `<span class="inline-icon" style="color: var(--status-pass)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`,
+            alert: `<span class="inline-icon" style="color: var(--status-fail)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></span>`,
+            warning: `<span class="inline-icon" style="color: var(--status-blocked)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>`,
+            search: `<span class="inline-icon" style="color: var(--text-secondary)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`
+        };
+
         if (gateDecision === 'pass') {
             gatePanel.style.setProperty('--status-color', 'var(--status-pass)');
             gatePanel.style.setProperty('--status-color-glow', 'var(--status-pass-glow)');
-            gatePanelIcon.textContent = '✅';
+            gatePanelIcon.innerHTML = SVG_ICONS.pass;
             gatePanelTitle.textContent = 'PASS';
             gatePanelDesc.textContent = '项目已满足所有质量门禁规则，符合合并要求。';
         } else if (gateDecision === 'fail') {
             gatePanel.style.setProperty('--status-color', 'var(--status-fail)');
             gatePanel.style.setProperty('--status-color-glow', 'var(--status-fail-glow)');
-            gatePanelIcon.textContent = '❌';
+            gatePanelIcon.innerHTML = SVG_ICONS.fail;
             gatePanelTitle.textContent = 'FAIL';
             gatePanelDesc.textContent = '项目未通过质量门禁校验，存在违规项或严重缺失。';
         } else {
             gatePanel.style.setProperty('--status-color', 'var(--status-blocked)');
             gatePanel.style.setProperty('--status-color-glow', 'var(--status-blocked-glow)');
-            gatePanelIcon.textContent = '⚠️';
+            gatePanelIcon.innerHTML = SVG_ICONS.blocked;
             gatePanelTitle.textContent = 'BLOCKED';
             gatePanelDesc.textContent = '项目门禁由于关键信息（例如测试覆盖）缺失被阻断。';
         }
@@ -1203,7 +1282,7 @@
         // Populate reasons directly from the report's gaps and violations if gate is not pass
         let reasonsHtml = '';
         if (gaps.length === 0 && risks.length === 0 && (!report.architecture_violations || report.architecture_violations.length === 0)) {
-            reasonsHtml = '<li class="empty-state">✅ 项目状态健康，无阻塞原因。</li>';
+            reasonsHtml = `<li class="empty-state">${SVG_INLINE.check} 项目状态健康，无阻塞原因。</li>`;
         } else {
             // Add risks if any
             risks.filter(r => r.severity === 'must').forEach(r => {
@@ -1550,7 +1629,7 @@
             const gapsBody = document.getElementById('gaps-table-body');
             gapsBody.innerHTML = '';
             if (gaps.length === 0) {
-                gapsBody.innerHTML = '<tr><td colspan="3" class="empty-state">✅ 没有任何跟踪缺口 / No coverage gaps identified</td></tr>';
+                gapsBody.innerHTML = `<tr><td colspan="3" class="empty-state">${SVG_INLINE.check} 没有任何跟踪缺口 / No coverage gaps identified</td></tr>`;
             } else {
                 gaps.forEach(g => {
                     const row = document.createElement('tr');
@@ -1624,7 +1703,7 @@
                     }
 
                     box.innerHTML = `
-                        <div class="alert-title">🚨 规约违背: ${escapeHtml(v.rule_id)}</div>
+                        <div class="alert-title">${SVG_INLINE.alert} 规约违背: ${escapeHtml(v.rule_id)}</div>
                         <div>${escapeHtml(v.message)}</div>
                         ${evLink}
                     `;
@@ -1645,7 +1724,7 @@
                     const box = document.createElement('div');
                     box.className = 'alert-box unclear';
                     box.innerHTML = `
-                        <div class="alert-title">🔍 需要人工核验: ${escapeHtml(uc.rule_id)}</div>
+                        <div class="alert-title">${SVG_INLINE.search} 需要人工核验: ${escapeHtml(uc.rule_id)}</div>
                         <div>${escapeHtml(uc.reason || '该约束无法静态或自动化验证，请人工核查是否合规。')}</div>
                     `;
                     unclearList.appendChild(box);
@@ -1715,7 +1794,7 @@
                     <td><span class="badge badge-status-${e.status}">${e.status}</span></td>
                     <td style="max-width: 240px;">${coversBadges}</td>
                     <td>
-                        <button class="nav-item" style="padding: 6px 12px; font-size: 11px; margin: 0;" onclick="toggleDetailsRow(this)">
+                        <button class="btn-action" onclick="toggleDetailsRow(this)">
                             展开 / Details
                         </button>
                     </td>
@@ -1860,13 +1939,13 @@
                 allErrors.forEach(err => {
                     const box = document.createElement('div');
                     box.className = 'alert-box violation';
-                    box.innerHTML = `<div class="alert-title">🚨 治理错误 / Error</div><div>${escapeHtml(err)}</div>`;
+                    box.innerHTML = `<div class="alert-title">${SVG_INLINE.alert} 治理错误 / Error</div><div>${escapeHtml(err)}</div>`;
                     warningsList.appendChild(box);
                 });
                 allWarnings.forEach(warn => {
                     const box = document.createElement('div');
                     box.className = 'alert-box unclear';
-                    box.innerHTML = `<div class="alert-title">⚠️ 安全警告 / Warning</div><div>${escapeHtml(warn)}</div>`;
+                    box.innerHTML = `<div class="alert-title">${SVG_INLINE.warning} 安全警告 / Warning</div><div>${escapeHtml(warn)}</div>`;
                     warningsList.appendChild(box);
                 });
             }

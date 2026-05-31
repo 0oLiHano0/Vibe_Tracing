@@ -10,7 +10,7 @@ import pytest
 from vibe_tracing.claim_loader import ClaimLoader
 from vibe_tracing.task_loader import TaskListLoadResult, Task
 
-SCHEMAS_DIR = Path(__file__).parent.parent / "schemas"
+SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
 DOCS_DIR = Path(__file__).parent.parent / "docs"
 VIBETRACING_DIR = Path(__file__).parent.parent / ".vibetracing"
 

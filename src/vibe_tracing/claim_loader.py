@@ -53,7 +53,7 @@ class ClaimListLoadResult:
 class ClaimLoader:
     """Loads and validates agent claims, cross-referencing with the task list."""
 
-    def __init__(self, schemas_dir: Path) -> None:
+    def __init__(self, schemas_dir: Optional[Path] = None) -> None:
         self.schema_validator = SchemaValidator(schemas_dir)
 
     def load_and_validate(
@@ -127,12 +127,25 @@ class ClaimLoader:
         gaps: List[ClaimGap] = []
         is_valid = True
 
-        # Check for duplicate claim IDs
+        # Extract template field hints if they exist
+        template_hints = {}
+        for c in data:
+            if isinstance(c, dict) and c.get("claim_id", "").endswith("-9999"):
+                template_hints = c.get("__field_hints__", {})
+                break
+
+        def get_err_msg(field_key: str, base_msg: str) -> str:
+            hint = template_hints.get(field_key)
+            if hint:
+                return f"{base_msg}【修复指南】{hint}"
+            return base_msg
+
+        # Check for duplicate claim IDs (ignoring template claims)
         claim_ids_seen = set()
         duplicate_claim_ids = set()
         for claim_dict in data:
             claim_id = claim_dict.get("claim_id")
-            if claim_id:
+            if claim_id and not claim_id.endswith("-9999"):
                 if claim_id in claim_ids_seen:
                     duplicate_claim_ids.add(claim_id)
                 claim_ids_seen.add(claim_id)
@@ -150,6 +163,11 @@ class ClaimLoader:
 
         for claim_dict in data:
             claim_id = claim_dict.get("claim_id", "")
+
+            # Silently ignore template records ending in -9999
+            if claim_id.endswith("-9999"):
+                continue
+
             related_task = claim_dict.get("related_task", "")
             claimed_status = claim_dict.get("claimed_status", "")
             evidence_refs = claim_dict.get("evidence_refs", [])
@@ -173,17 +191,33 @@ class ClaimLoader:
             id_ok, id_err = validate_id(claim_id)
             if not id_ok:
                 claim_obj.is_valid = False
-                claim_obj.errors.append(f"Invalid claim ID format: {id_err}")
-                errors.append(f"Claim {claim_id} has invalid ID format: {id_err}")
+                base_msg = f"Invalid claim ID format: {id_err}."
+                full_msg = get_err_msg("claim_id", f"{base_msg} ")
+                claim_obj.errors.append(full_msg)
+                errors.append(
+                    f"Claim {claim_id} has invalid ID format: {id_err}."
+                    + (
+                        f" 【修复指南】{template_hints.get('claim_id')}"
+                        if template_hints.get("claim_id")
+                        else ""
+                    )
+                )
                 is_valid = False
 
             # Validate related task ID format
             task_ok, task_err = validate_id(related_task)
             if not task_ok:
                 claim_obj.is_valid = False
-                claim_obj.errors.append(f"Invalid related task ID format: {task_err}")
+                base_msg = f"Invalid related task ID format: {task_err}."
+                full_msg = get_err_msg("related_task", f"{base_msg} ")
+                claim_obj.errors.append(full_msg)
                 errors.append(
-                    f"Claim {claim_id} references invalid task ID {related_task!r}: {task_err}"
+                    f"Claim {claim_id} references invalid task ID {related_task!r}: {task_err}."
+                    + (
+                        f" 【修复指南】{template_hints.get('related_task')}"
+                        if template_hints.get("related_task")
+                        else ""
+                    )
                 )
                 is_valid = False
 
@@ -191,12 +225,21 @@ class ClaimLoader:
             if task_result and task_ok:
                 if related_task not in valid_task_ids:
                     claim_obj.is_valid = False
-                    err_msg = f"References non-existent task: {related_task}"
-                    claim_obj.errors.append(err_msg)
+                    base_msg = f"References non-existent task: {related_task}."
+                    full_msg = get_err_msg("related_task", f"{base_msg} ")
+                    claim_obj.errors.append(full_msg)
+                    errors.append(
+                        f"Claim {claim_id} references non-existent task {related_task}."
+                        + (
+                            f" 【修复指南】{template_hints.get('related_task')}"
+                            if template_hints.get("related_task")
+                            else ""
+                        )
+                    )
                     gaps.append(
                         ClaimGap(
                             item_id=claim_id,
-                            reason=err_msg,
+                            reason=full_msg,
                         )
                     )
 
@@ -206,13 +249,14 @@ class ClaimLoader:
                 external_evidences = [ref for ref in evidence_refs if ref != claim_id]
                 if not external_evidences:
                     claim_obj.is_valid = False
-                    err_msg = f"Completed claim {claim_id} has no external evidence (self-referential or empty)"
-                    claim_obj.errors.append(err_msg)
-                    errors.append(err_msg)
+                    base_msg = f"Completed claim {claim_id} has no external evidence (self-referential or empty)."
+                    full_msg = get_err_msg("evidence_refs", f"{base_msg} ")
+                    claim_obj.errors.append(full_msg)
+                    errors.append(full_msg)
                     gaps.append(
                         ClaimGap(
                             item_id=claim_id,
-                            reason="Completed claim has no external evidence",
+                            reason=full_msg,
                         )
                     )
 

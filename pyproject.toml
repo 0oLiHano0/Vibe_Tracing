@@ -29,3 +29,6 @@ path = "src/vibe_tracing/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/vibe_tracing"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

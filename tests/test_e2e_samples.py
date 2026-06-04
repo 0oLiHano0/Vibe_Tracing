@@ -15,41 +15,6 @@ def _prepare_project(tmp_path, folder_name):
     src_dir = EXAMPLES_DIR / folder_name
     dest_dir = tmp_path / folder_name
     shutil.copytree(src_dir, dest_dir)
-
-    # Write a finalized config.json
-    config_dir = dest_dir / ".vibetracing"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    config_data = {
-        "project_id": "PROJECT-VT",
-        "project_prefix": "VT",
-        "project_name": "E2E Project",
-        "language": "python",
-        "validation_tools": ["test", "coverage", "lint", "type_check", "security"],
-        "paths": {
-            "prd": "docs/prd.md",
-            "architecture_constraints": "docs/architecture_constraints.json",
-            "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/agent_claims.json",
-            "output_dir": "output",
-        },
-    }
-    (config_dir / "config.json").write_text(
-        json.dumps(config_data, indent=2), encoding="utf-8"
-    )
-
-    # Fix evidence_refs in agent_claims.json to refer to the test report (EVIDENCE-VT-003)
-    # instead of the task (EVIDENCE-VT-001) for projects expected to pass credibility checks
-    if folder_name in ("sample_project_good", "sample_project_arch_unclear"):
-        claims_file = config_dir / "agent_claims.json"
-        if claims_file.exists():
-            claims_data = json.loads(claims_file.read_text(encoding="utf-8"))
-            for claim in claims_data:
-                if claim.get("evidence_refs") == ["EVIDENCE-VT-001"]:
-                    claim["evidence_refs"] = ["EVIDENCE-VT-003"]
-            claims_file.write_text(
-                json.dumps(claims_data, indent=2), encoding="utf-8"
-            )
-
     return dest_dir
 
 

@@ -93,6 +93,8 @@ must
                     "name": "Vibe Tracing",
                     "stage": "mvp"
                 }
+            if "language" not in data["project"]:
+                data["project"]["language"] = "python"
             if "language_tool_matrix" not in data:
                 data["language_tool_matrix"] = {
                     "python": {
@@ -111,21 +113,19 @@ must
         architecture_constraints, encoding="utf-8"
     )
 
-    import hashlib
-    computed_hash = hashlib.sha256(architecture_constraints.encode("utf-8")).hexdigest()
+    # Write base config.json (run_finalize will populate language, tools, hash)
     config_data = {
         "project_id": "PROJECT-VT",
         "project_prefix": "VT",
         "project_name": "Vibe Tracing",
-        "language": "python",
-        "validation_tools": ["test"],
-        "architecture_constraints_hash": computed_hash,
-        "finalize_git_commit": "abc123deadbeef",
-        "finalize_constraints_path": "docs/architecture_constraints.json",
     }
     (base / ".vibetracing" / "config.json").write_text(
         json.dumps(config_data, indent=2), encoding="utf-8"
     )
+
+    # Finalize to populate language, validation_tools, architecture_constraints_hash, etc.
+    from vibe_tracing.cli import run_finalize
+    run_finalize(base)
 
     # Write test_opts.json for mocked tool execution
     opts = {

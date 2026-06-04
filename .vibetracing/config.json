@@ -7,5 +7,16 @@
     "task_list": "docs/task_list.json",
     "agent_claims": ".vibetracing/agent_claims.json",
     "output_dir": ".vibetracing/output"
-  }
+  },
+  "language": "python",
+  "validation_tools": [
+    "test",
+    "coverage",
+    "lint",
+    "type_check",
+    "security"
+  ],
+  "architecture_constraints_hash": "632d8246c9ac6f380b041f30c803848a12ff78eb84d3ca8080810db7c9dca027",
+  "finalize_git_commit": "dc9decdc439e8f14801392ea0c4eb3406b329036",
+  "finalize_constraints_path": "docs/architecture_constraints.json"
 }

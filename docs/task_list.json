@@ -1220,8 +1220,7 @@
         "STORE-VT-002"
       ],
       "depends_on": [
-        "TASK-VT-017",
-        "TASK-VT-038"
+        "TASK-VT-017"
       ],
       "expected_deliverables": [
         "src/vibe_tracing/cli.py",

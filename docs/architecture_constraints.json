@@ -4,7 +4,8 @@
     "project_id": "PROJECT-VT",
     "name": "Vibe Tracing",
     "description": "面向 AI Coding 工作流的治理、追踪、证据链与合并门禁系统。v0.1 的目标是帮助非开发背景的项目经理在不阅读代码的情况下，理解需求覆盖、测试覆盖、Agent Claim 证据、架构约束状态和合并准备情况。",
-    "stage": "mvp"
+    "stage": "mvp",
+    "language": "python"
   },
   "language_tool_matrix": {
     "python": {
@@ -1252,6 +1253,26 @@
       "pass_condition": "gate_decision 与 human_decision 使用独立字段表示，或 human_decision 不存在。",
       "fail_condition": "系统将 gate_decision 等同于最终人类批准。",
       "blocks_merge": false
+    },
+    {
+      "gate_id": "GATE-VT-013",
+      "title": "Bootstrap Configuration Review",
+      "description": "Agent runtime bootstrap configuration (if present) must be reviewed and approved. Currently inactive as bootstrap modules have been removed.",
+      "severity": "should",
+      "check_type": "manual",
+      "pass_condition": "Agent runtime bootstrap configuration (if present) must be reviewed and approved",
+      "fail_condition": "Bootstrap configuration exists but has not been reviewed",
+      "blocks_merge": false
+    },
+    {
+      "gate_id": "GATE-VT-014",
+      "title": "Architecture Change Governance",
+      "description": "Architecture constraint changes must be documented in architecture_change_log.md with matching timestamps.",
+      "severity": "must",
+      "check_type": "hybrid",
+      "pass_condition": "Architecture constraint changes are documented in architecture_change_log.md with matching timestamps",
+      "fail_condition": "Architecture constraints modified without corresponding change_log update",
+      "blocks_merge": true
     }
   ]
 }

@@ -56,7 +56,7 @@ class EvidenceIndexBuilder:
             pass
         return path_str
 
-    def build(self, output_path: Optional[Path] = None) -> Dict[str, Any]:
+    def build(self, output_path: Optional[Path] = None, **kwargs) -> Dict[str, Any]:
         """
         Gathers all sources of evidence, normalizes them, writes the output,
         and validates it against the JSON Schema contract.

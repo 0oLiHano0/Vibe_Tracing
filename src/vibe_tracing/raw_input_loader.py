@@ -34,6 +34,7 @@ class RawInputManifest:
     inputs_used: List[InputFileRecord] = field(default_factory=list)
     has_required_errors: bool = False  # True if any required file failed
     error_count: int = 0
+    tool_report_files: List[str] = field(default_factory=list)
 
 
 class RawInputLoader:
@@ -106,6 +107,12 @@ class RawInputLoader:
             manifest.inputs_used.append(record)
             if record.status not in ("ok", "missing"):
                 manifest.error_count += 1
+
+        # Populate tool report files
+        tool_reports_dir = self.project_root / ".vibetracing" / "tool_reports"
+        if tool_reports_dir.is_dir():
+            for f in sorted(tool_reports_dir.glob("*.json")):
+                manifest.tool_report_files.append(str(f))
 
         return manifest
 

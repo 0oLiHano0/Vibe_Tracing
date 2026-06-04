@@ -1,9 +1,10 @@
 ---
 project_name: "Vibe Tracing"
-Version: v0.1
+version: v0.1
 created: 2026-05-16
-updated: 2026-05-18
-tags: [prd, draft]
+updated: 2026-06-04
+status: active
+tags: [prd]
 sources: [raw/prd/PRD_final.md]
 ---
 

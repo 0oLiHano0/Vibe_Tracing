@@ -111,12 +111,5 @@
       "tests/test_dynamic_hints.py"
     ],
     "timestamp": "2026-05-31T11:00:00Z"
-  },
-  {
-    "claim_id": "CLAIM-VT-9999",
-    "related_task": "TASK-VT-9999",
-    "claimed_status": "unclear",
-    "evidence_refs": [],
-    "timestamp": "2026-05-31T10:00:00Z"
   }
 ]

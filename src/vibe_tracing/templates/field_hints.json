@@ -1,0 +1,21 @@
+{
+  "_comment": "运行时修复指南。校验失败时拼入错误消息，引导 AI Agent 修正输入。修改此处即可调整提示文本，不影响 schema 验证规则。",
+  "task_list": {
+    "task_id": "格式为 TASK-{PROJECT_PREFIX}-NNN，NNN 为三位数字",
+    "title": "简洁描述任务内容，不超过 200 字符",
+    "phase_id": "格式为 PHASE-{PROJECT_PREFIX}-NNN",
+    "priority": "必须为 must / should / could 之一",
+    "status": "必须为 todo / in_progress / blocked / done 之一",
+    "related_requirements": "每个 ID 格式为 REQ-{PROJECT_PREFIX}-NNN",
+    "related_acceptance_criteria": "每个 ID 格式为 AC-{PROJECT_PREFIX}-NNN-NN",
+    "project_id": "格式为 PROJECT-{PROJECT_PREFIX}",
+    "dod_id": "格式为 DOD-{PROJECT_PREFIX}-NNN-NN"
+  },
+  "agent_claims": {
+    "claim_id": "格式为 CLAIM-{PROJECT_PREFIX}-NNN，NNN 为三位数字",
+    "related_task": "格式为 TASK-{PROJECT_PREFIX}-NNN，必须已存在于任务列表"
+  },
+  "architecture_constraints": {
+    "project_id": "格式为 PROJECT-{PROJECT_PREFIX}"
+  }
+}

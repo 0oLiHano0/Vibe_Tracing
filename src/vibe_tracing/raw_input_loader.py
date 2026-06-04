@@ -33,9 +33,6 @@ class RawInputManifest:
 
     inputs_used: List[InputFileRecord] = field(default_factory=list)
     has_required_errors: bool = False  # True if any required file failed
-    tool_report_files: List[str] = field(
-        default_factory=list
-    )  # list of paths in tool_reports/
     error_count: int = 0
 
 
@@ -48,12 +45,6 @@ class RawInputLoader:
 
     REQUIRED_FILES = {
         "prd": "docs/prd.md",
-        "architecture_constraints": "docs/architecture_constraints.json",
-        "task_list": "docs/task_list.json",
-    }
-
-    OPTIONAL_FILES = {
-        "agent_claims": ".vibetracing/agent_claims.json",
     }
 
     def __init__(self, project_root: Path) -> None:
@@ -83,9 +74,7 @@ class RawInputLoader:
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
             "agent_claims": ".vibetracing/agent_claims.json",
-            "tool_reports": ".vibetracing/tool_reports",
-            "output_dir": ".vibetracing/output",
-            "claude_bootstrap": ".vibetracing/claude_bootstrap",
+            "output_dir": "output",
         }
         fallback_rel = defaults.get(key)
         if not fallback_rel:
@@ -101,31 +90,25 @@ class RawInputLoader:
         """
         manifest = RawInputManifest()
 
-        required_keys = ["prd", "architecture_constraints", "task_list"]
-        optional_keys = ["agent_claims"]
+        # Load PRD (always required at loader level)
+        prd_path = self.get_path("prd")
+        prd_record = self._load_file("prd", prd_path, is_required=True)
+        manifest.inputs_used.append(prd_record)
+        if prd_record.status != "ok":
+            manifest.has_required_errors = True
+            manifest.error_count += 1
 
-        # Load required files
-        for file_key in required_keys:
-            resolved_path = self.get_path(file_key)
-            record = self._load_file(file_key, resolved_path, is_required=True)
-            manifest.inputs_used.append(record)
-            if record.status != "ok":
-                manifest.has_required_errors = True
-                manifest.error_count += 1
-
-        # Load optional files
+        # Load other governance files (always optional at loader level)
+        optional_keys = ["architecture_constraints", "task_list", "agent_claims"]
         for file_key in optional_keys:
             resolved_path = self.get_path(file_key)
             record = self._load_file(file_key, resolved_path, is_required=False)
             manifest.inputs_used.append(record)
-            # Optional missing files are not errors, but other failures still count
             if record.status not in ("ok", "missing"):
                 manifest.error_count += 1
 
-        # List tool report files
-        manifest.tool_report_files = self._load_tool_reports()
-
         return manifest
+
 
     def _load_file(
         self, file_key: str, abs_path: Path, is_required: bool
@@ -185,22 +168,3 @@ class RawInputLoader:
             content=content,
         )
 
-    def _load_tool_reports(self) -> List[str]:
-        """
-        List all files in tool_reports/ directory.
-        Returns empty list if directory doesn't exist or is empty.
-        """
-        tool_reports_dir = self.get_path("tool_reports")
-        if not tool_reports_dir.is_dir():
-            return []
-
-        files: List[str] = []
-        try:
-            for entry in sorted(tool_reports_dir.iterdir()):
-                if entry.is_file():
-                    files.append(str(entry))
-        except Exception:
-            # If we can't read the directory, return what we have so far
-            pass
-
-        return files

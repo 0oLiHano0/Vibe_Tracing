@@ -1,10 +1,5 @@
 {
   "schema_version": "0.1",
-  "__field_hints__": {
-    "schema_version": "指明当前模式的版本，例如 '1.0.0'。",
-    "project": "项目元数据对象，包含项目基本信息。",
-    "tasks": "任务列表数组，每个元素代表一个具体的开发任务。"
-  },
   "project": {
     "project_id": "PROJECT-VT",
     "name": "Vibe Tracing",
@@ -14,12 +9,7 @@
       "PRD_final.md",
       "architecture_constraints.json"
     ],
-    "generated_for": "AI Coding atomic task execution",
-    "__field_hints__": {
-      "project_id": "项目ID，必须为 'PROJECT-VT'。",
-      "name": "项目名称，人类可读字符串。",
-      "stage": "项目当前所处的阶段。"
-    }
+    "generated_for": "AI Coding atomic task execution"
   },
   "id_rules": {
     "task_id_format": "TASK-VT-序号",
@@ -27,17 +17,6 @@
     "all_tasks_must_link_requirements_and_acceptance_criteria": true,
     "all_positive_status_must_reference_evidence": true
   },
-  "status_enum": [
-    "todo",
-    "in_progress",
-    "blocked",
-    "done"
-  ],
-  "priority_enum": [
-    "must",
-    "should",
-    "could"
-  ],
   "phases": [
     {
       "phase_id": "PHASE-VT-001",
@@ -78,6 +57,11 @@
       "phase_id": "PHASE-VT-008",
       "name": "Claude Code 自举与治理配置",
       "goal": "在保持 Core 独立的前提下，建立 Claude Code 作为 MVP 首选 Agent Runtime 的自举配置、产物追踪和架构变更治理能力。"
+    },
+    {
+      "phase_id": "PHASE-VT-009",
+      "name": "边界收敛与工具执行验证",
+      "goal": "移除 Claude Code Bootstrap 模块，引入 VT 工具自主执行和项目配置定型机制。"
     }
   ],
   "tasks": [
@@ -599,12 +583,12 @@
     },
     {
       "task_id": "TASK-VT-009",
-      "title": "实现工具输出规范化适配器",
+      "title": "实现 VT 工具执行与输出规范化适配器",
       "phase_id": "PHASE-VT-003",
       "priority": "must",
       "status": "todo",
       "owner_role": "AI Coding Agent",
-      "objective": "将 pytest、coverage、ruff、bandit 摘要规范化为工具证据候选项。",
+      "objective": "VT 自主执行工具并捕获输出，同时解析输出为结构化证据候选项。",
       "atomic_scope": "支持读取结构化 JSON 摘要或简单约定格式；记录命令、退出码、结果、covers AC ID；不直接做门禁判定。",
       "out_of_scope": [
         "不实现未列出的扩展能力",
@@ -625,7 +609,8 @@
       ],
       "related_modules": [
         "MOD-VT-004",
-        "MOD-VT-005"
+        "MOD-VT-005",
+        "MOD-VT-012"
       ],
       "related_architecture_constraints": [
         "TECH-VT-002",
@@ -1192,12 +1177,12 @@
     },
     {
       "task_id": "TASK-VT-018",
-      "title": "实现 CLI analyze 命令",
+      "title": "实现 CLI analyze 命令（含工具执行阶段）",
       "phase_id": "PHASE-VT-006",
       "priority": "must",
       "status": "todo",
       "owner_role": "AI Coding Agent",
-      "objective": "串联加载、校验、证据索引、追踪报告、架构检查、风险、门禁输出。",
+      "objective": "串联加载、校验、证据索引、追踪报告、架构检查、风险、门禁输出。新增 finalize 前置检查和工具执行验证阶段。",
       "atomic_scope": "提供 vibe-tracing analyze --project-root ... --out ...；输出 evidence_index.json、traceability_report.json、run_metadata.json。",
       "out_of_scope": [
         "不实现未列出的扩展能力",
@@ -1224,7 +1209,8 @@
         "MOD-VT-005",
         "MOD-VT-006",
         "MOD-VT-007",
-        "MOD-VT-009"
+        "MOD-VT-009",
+        "MOD-VT-012"
       ],
       "related_architecture_constraints": [
         "TECH-VT-005",
@@ -1234,7 +1220,8 @@
         "STORE-VT-002"
       ],
       "depends_on": [
-        "TASK-VT-017"
+        "TASK-VT-017",
+        "TASK-VT-038"
       ],
       "expected_deliverables": [
         "src/vibe_tracing/cli.py",
@@ -1584,7 +1571,7 @@
       "title": "定义 Claude Code 自举配置 Schema 与治理契约",
       "phase_id": "PHASE-VT-008",
       "priority": "must",
-      "status": "todo",
+      "status": "cancelled",
       "owner_role": "AI Coding Agent",
       "objective": "为 Claude Code 自举配置、subagent/skill 审查信息和架构约束变更建议定义机器可校验契约。",
       "atomic_scope": "新增 Claude Code bootstrap manifest、subagent definition、skill definition、architecture change proposal 等 JSON Schema；不实现 Claude Code 执行逻辑。",
@@ -1660,7 +1647,7 @@
       "title": "创建 Claude Code 自举 subagent 与 skill 配置初版",
       "phase_id": "PHASE-VT-008",
       "priority": "must",
-      "status": "todo",
+      "status": "cancelled",
       "owner_role": "AI Coding Agent",
       "objective": "建立可审查的 Claude Code 自举配置，使 VT MVP 自身开发过程具备清晰 subagent 职责、skill 声明和治理输出要求。",
       "atomic_scope": "创建文件化 Claude Code 自举配置，包括 subagent 定义、skill 定义、bootstrap manifest 和自举说明；subagent 可显式声明可用或适用的 skill。",
@@ -1731,7 +1718,7 @@
       "title": "实现 Claude Code Bootstrap Adapter 配置读取与校验",
       "phase_id": "PHASE-VT-008",
       "priority": "must",
-      "status": "todo",
+      "status": "cancelled",
       "owner_role": "AI Coding Agent",
       "objective": "实现 MOD-VT-011 的最小读取与校验能力，判断 Claude Code 自举配置是否存在、可审查且未越权。",
       "atomic_scope": "读取 bootstrap manifest、subagent 定义和 skill 定义，执行 Schema 校验、职责边界检查、skill 声明检查和 Core 独立性检查；不执行 Claude Code。",
@@ -1800,7 +1787,7 @@
       "title": "实现 Claude Code 自举产物证据规范化",
       "phase_id": "PHASE-VT-008",
       "priority": "must",
-      "status": "todo",
+      "status": "cancelled",
       "owner_role": "AI Coding Agent",
       "objective": "将 Claude Code subagent 在自举过程中产生的治理相关产物转为可进入 evidence_index.json 的结构化 evidence candidate。",
       "atomic_scope": "支持读取 subagent 产生的任务、Claim、Review、测试摘要、工具摘要和自举运行元数据候选文件，并规范化为 evidence candidate；自然语言对话不得作为唯一证据。",
@@ -1872,7 +1859,7 @@
       "title": "实现架构约束变更建议治理记录",
       "phase_id": "PHASE-VT-008",
       "priority": "must",
-      "status": "todo",
+      "status": "cancelled",
       "owner_role": "AI Coding Agent",
       "objective": "确保 subagent 对架构约束的新增、修改或废弃建议只能以显式治理记录进入流程，不能静默修改最终约束。",
       "atomic_scope": "实现 architecture_change_proposal 读取、校验、状态标记和风险输出；检测 architecture_constraints.json 变更是否缺少对应建议记录。",
@@ -1940,7 +1927,7 @@
       "title": "将 Claude Code 自举状态纳入报告、Dashboard 与质量门禁",
       "phase_id": "PHASE-VT-008",
       "priority": "must",
-      "status": "todo",
+      "status": "cancelled",
       "owner_role": "AI Coding Agent",
       "objective": "让用户在 traceability_report.json、dashboard.html 和质量门禁中看到 Claude Code 自举是否可追踪、可审查、未越权。",
       "atomic_scope": "扩展 traceability_report、Dashboard、E2E 样例和 quality gate 回归测试，展示自举配置状态、subagent/skill 审查状态、结构化产物状态和架构变更建议状态。",
@@ -2264,13 +2251,13 @@
     },
     {
       "task_id": "TASK-VT-035",
-      "title": "实现基于模版字段提示的零提示词 AI 引导与项目脚手架",
+      "title": "实现基于 Schema Description 的零提示词 AI 引导与项目脚手架",
       "phase_id": "PHASE-VT-008",
       "priority": "must",
       "status": "done",
       "owner_role": "AI Coding Agent",
-      "objective": "设计并开发 vt init 脚手架命令，并为所有 JSON 配置文件各字段配备中文 refs/hints 说明，支持在任一阶段校验出错时动态提取并拼接 【修复指南】。",
-      "atomic_scope": "修改 schema_validator.py 实现 resolve_field_hint 提示查找器；修改 task_loader.py 与 claim_loader.py 忽略以 -9999 结尾的样例并在逻辑错误时附带中文修复指南；修改 cli.py 支持 init 脚手架命令，并打印中文修复指南。",
+      "objective": "设计并开发 vt init 脚手架命令，利用 JSON Schema 的 description 字段作为中文修复指南来源，支持在任一阶段校验出错时动态提取并拼接 【修复指南】。",
+      "atomic_scope": "修改 schema_validator.py 实现 resolve_field_hint 从 Schema description 提取修复指南；修改 task_loader.py 与 claim_loader.py 在逻辑错误时附带中文修复指南；修改 cli.py 支持 init 脚手架命令，并打印中文修复指南。",
       "out_of_scope": [
         "不改变报告核心 JSON schema 契约",
         "不引入非必要的第三方依赖"
@@ -2303,7 +2290,7 @@
       "definition_of_done": [
         {
           "dod_id": "DOD-VT-035-01",
-          "description": "vt init 命令正常生成携带 __field_hints__ 中文提示的模板文件。"
+          "description": "vt init 命令正常生成标准模板文件，修复指南来源为 JSON Schema 的 description 字段。"
         },
         {
           "dod_id": "DOD-VT-035-02",
@@ -2330,26 +2317,403 @@
       "status": "todo",
       "owner_role": "AI Developer",
       "objective": "样例任务目标，用于演示字段填写规范。",
-      "related_requirements": ["REQ-VT-9999"],
-      "related_acceptance_criteria": ["AC-VT-9999-99"],
+      "related_requirements": [
+        "REQ-VT-9999"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-9999-99"
+      ],
       "definition_of_done": [
         {
           "dod_id": "DOD-VT-9999-99",
           "description": "样例DoD描述"
         }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-036",
+      "title": "移除 Claude Code Bootstrap 模块及所有架构约束引用",
+      "phase_id": "PHASE-VT-009",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "移除 claude_code_bootstrap_adapter.py、claude_bootstrap_validator.py、claude_bootstrap_evidence_adapter.py、相关 Schema 文件、.vibetracing/claude_bootstrap/ 目录，以及架构约束和代码中所有对 MOD-VT-011 的引用。",
+      "atomic_scope": "删除 bootstrap 相关 Python 文件、Schema 文件、配置目录；清理 cli.py 中 bootstrap 条件加载逻辑；清理 raw_input_loader.py 中 claude_bootstrap 文件键；移除测试文件中 bootstrap 相关测试用例。",
+      "out_of_scope": [
+        "不修改核心分析管线逻辑",
+        "不修改证据模型"
       ],
-      "__field_hints__": {
-        "task_id": "任务ID，必须符合正则格式 `TASK-VT-\\d+`，例如 `TASK-VT-001`。",
-        "title": "任务标题，简短描述开发任务内容。",
-        "phase_id": "阶段ID，必须符合正则格式 `PHASE-VT-\\d+`，例如 `PHASE-VT-001`。",
-        "priority": "任务优先级，必须是 'must'、'should' 或 'could' 之一。",
-        "status": "任务当前状态，必须是 'todo'、'in_progress'、'blocked' 或 'done' 之一。",
-        "owner_role": "负责人角色，例如 'AI Developer'。",
-        "objective": "开发目标，详述此任务要达成的目的。",
-        "related_requirements": "关联需求ID列表，每个ID必须符合 `REQ-VT-\\d+` 格式。",
-        "related_acceptance_criteria": "关联验收标准ID列表，每个ID必须符合 `AC-VT-\\d+-\\d+` 格式。",
-        "definition_of_done": "完成定义（DoD）的检查项列表，每项需包含 `dod_id` 与 `description`。"
-      }
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [],
+      "related_modules": [
+        "MOD-VT-011"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/claude_code_bootstrap_adapter.py (deleted)",
+        "src/vibe_tracing/claude_bootstrap_validator.py (deleted)",
+        "src/vibe_tracing/claude_bootstrap_evidence_adapter.py (deleted)",
+        "src/vibe_tracing/schemas/claude_bootstrap_manifest.schema.json (deleted)",
+        "src/vibe_tracing/schemas/claude_subagent_definition.schema.json (deleted)",
+        "src/vibe_tracing/schemas/claude_skill_definition.schema.json (deleted)",
+        ".vibetracing/claude_bootstrap/ (deleted)"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-036-01",
+          "description": "所有 bootstrap 相关 Python 文件、Schema 文件和配置目录已删除。"
+        },
+        {
+          "dod_id": "DOD-VT-036-02",
+          "description": "cli.py 和 raw_input_loader.py 中不再引用 bootstrap 相关模块或路径。"
+        },
+        {
+          "dod_id": "DOD-VT-036-03",
+          "description": "全量测试通过，无 import 错误。"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-037",
+      "title": "在架构约束中新增 language_tool_matrix 及相关 Schema",
+      "phase_id": "PHASE-VT-009",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "在架构约束 Schema 和架构约束数据文件中新增 language_tool_matrix 顶层字段定义，支持多语言工具声明。",
+      "atomic_scope": "修改 architecture_constraints.schema.json 新增 language_tool_matrix 字段定义；在 docs/architecture_constraints.json 中新增 python 语言的工具矩阵示例。",
+      "out_of_scope": [
+        "不实现工具执行逻辑",
+        "不修改 config.json 模板"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-04"
+      ],
+      "related_modules": [
+        "MOD-VT-013"
+      ],
+      "related_architecture_constraints": [
+        "TECH-VT-007"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/schemas/architecture_constraints.schema.json",
+        "docs/architecture_constraints.json"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-037-01",
+          "description": "architecture_constraints.schema.json 中包含 language_tool_matrix 字段的 JSON Schema 定义。"
+        },
+        {
+          "dod_id": "DOD-VT-037-02",
+          "description": "docs/architecture_constraints.json 中包含 python 语言的工具矩阵，至少覆盖 test 和 lint 两类工具。"
+        },
+        {
+          "dod_id": "DOD-VT-037-03",
+          "description": "两份架构约束文件通过 Schema 校验。"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-038",
+      "title": "实现 vt finalize 命令",
+      "phase_id": "PHASE-VT-009",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "实现 vibe-tracing finalize CLI 命令，从架构约束读取 project.language 和 language_tool_matrix，写入 config.json。",
+      "atomic_scope": "在 cli.py 中新增 run_finalize 函数和 CLI 子命令；读取架构约束提取语言和工具配置；写入 config.json；处理已 finalize 的一致性校验。",
+      "out_of_scope": [
+        "不修改 analyze 命令逻辑",
+        "不实现工具执行"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-08"
+      ],
+      "related_modules": [
+        "MOD-VT-013"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-037"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli.py",
+        "tests/test_finalize.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-038-01",
+          "description": "vibe-tracing finalize 命令从架构约束读取 language 和 validation_tools 并写入 config.json。"
+        },
+        {
+          "dod_id": "DOD-VT-038-02",
+          "description": "架构约束中无 language 时 stderr 报错并返回非零退出码。"
+        },
+        {
+          "dod_id": "DOD-VT-038-03",
+          "description": "已 finalize 且 language 一致时输出 Already finalized 并跳过。"
+        },
+        {
+          "dod_id": "DOD-VT-038-04",
+          "description": "新增测试覆盖所有 finalize 场景。"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-039",
+      "title": "实现 VT 工具执行引擎",
+      "phase_id": "PHASE-VT-009",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "实现 VT 自主执行验证工具的能力。根据 config.json 的 validation_tools 和架构约束的 language_tool_matrix，执行白名单工具并捕获输出。",
+      "atomic_scope": "重写 tool_evidence_adapter.py 从解析已有报告改为执行命令；实现白名单校验、命令模板替换、超时控制、输出解析；在 cli.py 的 analyze 流程中集成工具执行阶段。",
+      "out_of_scope": [
+        "不实现 finalize 命令",
+        "不修改门禁逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-09",
+        "AC-VT-009-10"
+      ],
+      "related_modules": [
+        "MOD-VT-012",
+        "MOD-VT-004"
+      ],
+      "related_architecture_constraints": [
+        "DEP-VT-008",
+        "TECH-VT-007"
+      ],
+      "depends_on": [
+        "TASK-VT-038"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/tool_evidence_adapter.py",
+        "src/vibe_tracing/cli.py",
+        "tests/test_tool_execution.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-039-01",
+          "description": "VT 能根据 language_tool_matrix 中的命令模板执行 pytest 并解析 JSON 输出。"
+        },
+        {
+          "dod_id": "DOD-VT-039-02",
+          "description": "不在白名单中的命令被拒绝执行，stderr 输出明确错误。"
+        },
+        {
+          "dod_id": "DOD-VT-039-03",
+          "description": "工具未安装、路径不存在、执行超时等场景均有精确 stderr 反馈。"
+        },
+        {
+          "dod_id": "DOD-VT-039-04",
+          "description": "执行结果直接作为证据写入 evidence_index.json，不依赖 .vibetracing/tool_reports/ 目录。"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-040",
+      "title": "实现 Claim 可信度判定与 low_confidence 标记",
+      "phase_id": "PHASE-VT-009",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 Claim 验证逻辑中引入可信度分级：有 VT 工具证据为高可信度，仅有 Agent 自报为 low_confidence。",
+      "atomic_scope": "修改 claim_loader.py 增加证据来源检查；修改 risk_advisor.py 新增无工具证据的风险类型；修改 merge_gate_engine.py 对 low_confidence Claim 阻塞通过。",
+      "out_of_scope": [
+        "不修改工具执行逻辑",
+        "不修改证据索引结构"
+      ],
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-11"
+      ],
+      "related_modules": [
+        "MOD-VT-005",
+        "MOD-VT-006"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-018"
+      ],
+      "depends_on": [
+        "TASK-VT-039"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/claim_loader.py",
+        "src/vibe_tracing/risk_advisor.py",
+        "src/vibe_tracing/merge_gate_engine.py",
+        "tests/test_claim_credibility.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-040-01",
+          "description": "无 VT 工具证据的 Claim 被标记为 low_confidence。"
+        },
+        {
+          "dod_id": "DOD-VT-040-02",
+          "description": "low_confidence Claim 阻塞门禁通过。"
+        },
+        {
+          "dod_id": "DOD-VT-040-03",
+          "description": "risk_advisor 为无工具证据的 Claim 生成风险条目。"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-041",
+      "title": "实现工具执行 stderr 反馈机制",
+      "phase_id": "PHASE-VT-009",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "确保 VT 工具执行过程中所有错误场景都有精确的 stderr 反馈，包含具体原因和修复建议。",
+      "atomic_scope": "在工具执行引擎中实现分场景 stderr 输出：工具未安装、路径不存在、执行超时、配置缺失等。",
+      "out_of_scope": [
+        "不修改工具执行核心逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-10"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-039"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/tool_evidence_adapter.py",
+        "tests/test_tool_execution.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-041-01",
+          "description": "每种错误场景的 stderr 输出包含具体原因和修复建议。"
+        },
+        {
+          "dod_id": "DOD-VT-041-02",
+          "description": "测试覆盖所有 stderr 反馈场景。"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-042",
+      "title": "更新 evidence_index_builder 移除 tool_reports 目录依赖",
+      "phase_id": "PHASE-VT-009",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "移除 evidence_index_builder 中读取 .vibetracing/tool_reports/ 目录的逻辑，改为接收工具执行引擎的直接输出。",
+      "atomic_scope": "修改 evidence_index_builder.py 移除 tool_report_files 遍历逻辑；修改 raw_input_loader.py 移除 tool_reports 文件键；可选移除 .vibetracing/tool_reports/ 目录。",
+      "out_of_scope": [
+        "不修改证据索引 Schema"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [],
+      "related_modules": [
+        "MOD-VT-005"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-039"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/evidence_index_builder.py",
+        "src/vibe_tracing/raw_input_loader.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-042-01",
+          "description": "evidence_index_builder 不再读取 .vibetracing/tool_reports/ 目录。"
+        },
+        {
+          "dod_id": "DOD-VT-042-02",
+          "description": "raw_input_loader 中不再有 tool_reports 文件键。"
+        },
+        {
+          "dod_id": "DOD-VT-042-03",
+          "description": "全量测试通过。"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-043",
+      "title": "端到端测试：finalize → analyze → 工具执行 → 证据生成",
+      "phase_id": "PHASE-VT-009",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "编写端到端测试覆盖完整的边界收敛工作流：finalize 定型配置 → analyze 执行工具 → 证据生成 → 门禁判定。",
+      "atomic_scope": "创建端到端测试用例，模拟完整的 finalize → analyze 流程，验证工具执行、证据生成、Claim 可信度判定和门禁结论。",
+      "out_of_scope": [
+        "不测试 Dashboard 渲染"
+      ],
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-002",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-08",
+        "AC-VT-009-09",
+        "AC-VT-009-11"
+      ],
+      "related_modules": [
+        "MOD-VT-012",
+        "MOD-VT-013"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-009",
+        "PRINCIPLE-VT-018"
+      ],
+      "depends_on": [
+        "TASK-VT-038",
+        "TASK-VT-039",
+        "TASK-VT-040",
+        "TASK-VT-042"
+      ],
+      "expected_deliverables": [
+        "tests/test_e2e_finalize_analyze.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-043-01",
+          "description": "端到端测试覆盖 finalize → analyze 完整流程。"
+        },
+        {
+          "dod_id": "DOD-VT-043-02",
+          "description": "验证工具执行结果正确写入证据索引。"
+        },
+        {
+          "dod_id": "DOD-VT-043-03",
+          "description": "验证无工具证据的 Claim 被标记为 low_confidence 并阻塞门禁。"
+        }
+      ]
     }
   ]
 }

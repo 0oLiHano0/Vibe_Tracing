@@ -1,5 +1,5 @@
 """
-Tests for dynamic Chinese guidance reflection mechanism based on template field hints (TASK-VT-035).
+Tests for dynamic Chinese guidance reflection mechanism based on schema descriptions (TASK-VT-035).
 """
 
 import json
@@ -18,21 +18,8 @@ def validator():
 
 
 def test_claims_schema_validation_error_with_dynamic_hints(validator):
-    """Test that a schema validation error in agent_claims successfully extracts the dynamic hint.
-    Covers: AC-VT-009-07
-    """
+    """Test that a schema validation error in agent_claims successfully extracts the dynamic hint from schema description."""
     data = [
-        {
-            "claim_id": "CLAIM-VT-9999",
-            "related_task": "TASK-VT-9999",
-            "claimed_status": "unclear",
-            "evidence_refs": [],
-            "timestamp": "2026-05-31T10:00:00Z",
-            "__field_hints__": {
-                "claim_id": "申索ID，必须符合正则格式 CLAIM-VT-\\d+。",
-                "timestamp": "ISO 8601格式的时间戳。",
-            },
-        },
         {
             "claim_id": "CLAIM-VT-001",
             "related_task": "TASK-VT-001",
@@ -46,36 +33,19 @@ def test_claims_schema_validation_error_with_dynamic_hints(validator):
     assert res.is_valid is False
     assert "timestamp" in res.message
     # Check that custom hint is resolved and wrapped with 【修复指南】
-    assert "【修复指南】ISO 8601格式的时间戳。" in res.hint
+    assert "【修复指南】ISO 8601格式的时间戳" in res.hint
 
 
 def test_tasks_schema_validation_error_with_dynamic_hints(validator):
-    """Test that a schema validation error in task_list successfully extracts the dynamic hint.
-    Covers: AC-VT-009-07
-    """
+    """Test that a schema validation error in task_list successfully extracts the dynamic hint from schema description."""
     data = {
         "schema_version": "1.0.0",
         "project": {
             "project_id": "PROJECT-VT",
             "name": "Sample Project",
             "stage": "Development",
-            "__field_hints__": {"project_id": "项目ID，必须为 PROJECT-VT。"},
         },
-        "__field_hints__": {"schema_version": "指明当前模式的版本。"},
         "tasks": [
-            {
-                "task_id": "TASK-VT-9999",
-                "title": "样例任务标题",
-                "phase_id": "PHASE-VT-9999",
-                "priority": "must",
-                "status": "todo",
-                "owner_role": "AI Developer",
-                "objective": "目标",
-                "related_requirements": [],
-                "related_acceptance_criteria": [],
-                "definition_of_done": [],
-                "__field_hints__": {"title": "任务标题，简短描述开发任务内容。"},
-            },
             {
                 "task_id": "TASK-VT-001",
                 # title is missing
@@ -97,10 +67,26 @@ def test_tasks_schema_validation_error_with_dynamic_hints(validator):
     assert "【修复指南】任务标题，简短描述开发任务内容。" in res.hint
 
 
+def test_root_level_non_required_error_with_dynamic_hints(validator):
+    """Test that a non-required schema validation error at the root level successfully extracts the dynamic hint."""
+    data = {
+        "schema_version": 12345,  # Invalid type (should be string)
+        "project": {
+            "project_id": "PROJECT-VT",
+            "name": "Sample Project",
+            "stage": "Development",
+        },
+        "tasks": []
+    }
+
+    res = validator.validate_dict(data, "task_list")
+    assert res.is_valid is False
+    assert res.field_path == "schema_version"
+    assert "【修复指南】指明当前模式的版本" in res.hint
+
+
 def test_task_loader_logical_validation_error_with_dynamic_hints(tmp_path):
-    """Test that consistency validation error in TaskLoader dynamically appends Chinese hint.
-    Covers: AC-VT-009-07
-    """
+    """Test that consistency validation error in TaskLoader dynamically appends Chinese hint."""
     data = {
         "schema_version": "1.0.0",
         "project": {
@@ -109,21 +95,6 @@ def test_task_loader_logical_validation_error_with_dynamic_hints(tmp_path):
             "stage": "Development",
         },
         "tasks": [
-            {
-                "task_id": "TASK-VT-9999",
-                "title": "样例任务标题",
-                "phase_id": "PHASE-VT-9999",
-                "priority": "must",
-                "status": "todo",
-                "owner_role": "AI Developer",
-                "objective": "目标",
-                "related_requirements": [],
-                "related_acceptance_criteria": [],
-                "definition_of_done": [],
-                "__field_hints__": {
-                    "task_id": "任务ID，必须符合正则格式 `TASK-VT-\\d+`。"
-                },
-            },
             {
                 # Invalid format for task_id
                 "task_id": "TASK-VT-invalid",
@@ -151,24 +122,12 @@ def test_task_loader_logical_validation_error_with_dynamic_hints(tmp_path):
     # Check that error contains dynamic guide
     error_msg = "; ".join(res.errors)
     assert "TASK-VT-invalid" in error_msg
-    assert "【修复指南】任务ID，必须符合正则格式 `TASK-VT-\\d+`。" in error_msg
+    assert "【修复指南】任务ID，必须符合正则格式" in error_msg
 
 
 def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
-    """Test that consistency validation error in ClaimLoader dynamically appends Chinese hint.
-    Covers: AC-VT-009-07
-    """
+    """Test that consistency validation error in ClaimLoader dynamically appends Chinese hint."""
     data = [
-        {
-            "claim_id": "CLAIM-VT-9999",
-            "related_task": "TASK-VT-9999",
-            "claimed_status": "unclear",
-            "evidence_refs": [],
-            "timestamp": "2026-05-31T10:00:00Z",
-            "__field_hints__": {
-                "related_task": "关联任务ID，必须符合正则格式 `TASK-VT-\\d+`。"
-            },
-        },
         {
             "claim_id": "CLAIM-VT-001",
             # Invalid format for related_task
@@ -190,13 +149,11 @@ def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
     # Check that error contains dynamic guide
     error_msg = "; ".join(res.errors)
     assert "TASK-VT-invalid" in error_msg
-    assert "【修复指南】关联任务ID，必须符合正则格式 `TASK-VT-\\d+`。" in error_msg
+    assert "【修复指南】关联任务ID，必须符合正则格式" in error_msg
 
 
 def test_silent_filtering_of_template_records(tmp_path):
-    """Test that template records ending with -9999 are silently ignored and do not cause errors.
-    Covers: AC-VT-009-07
-    """
+    """Test that template records ending with -9999 are silently ignored and do not cause errors."""
     task_data = {
         "schema_version": "1.0.0",
         "project": {
@@ -216,7 +173,6 @@ def test_silent_filtering_of_template_records(tmp_path):
                 "related_requirements": [],
                 "related_acceptance_criteria": [],
                 "definition_of_done": [],
-                "__field_hints__": {},
             },
             {
                 "task_id": "TASK-VT-001",
@@ -253,7 +209,6 @@ def test_silent_filtering_of_template_records(tmp_path):
             "claimed_status": "unclear",
             "evidence_refs": [],
             "timestamp": "2026-05-31T10:00:00Z",
-            "__field_hints__": {},
         },
         {
             "claim_id": "CLAIM-VT-001",
@@ -276,9 +231,7 @@ def test_silent_filtering_of_template_records(tmp_path):
 
 
 def test_architecture_constraints_schema_validation_error_with_dynamic_hints(validator):
-    """Test that a schema validation error in architecture_constraints successfully extracts the dynamic hint.
-    Covers: AC-VT-009-07
-    """
+    """Test that a schema validation error in architecture_constraints successfully extracts the dynamic hint."""
     data = {
         "schema_version": "1.0.0",
         "project": {
@@ -286,19 +239,7 @@ def test_architecture_constraints_schema_validation_error_with_dynamic_hints(val
             "name": "Sample Project",
             "stage": "Development",
         },
-        "__field_hints__": {
-            "schema_version": "指明架构约束规范的版本号。",
-        },
         "architecture_principles": [
-            {
-                "principle_id": "PRINCIPLE-VT-9999",
-                "title": "样例原则",
-                "description": "原则描述",
-                "severity": "must",
-                "__field_hints__": {
-                    "severity": "强度级别必须为 must、should 或 could。"
-                }
-            },
             {
                 "principle_id": "PRINCIPLE-VT-001",
                 "title": "Real Principle",
@@ -311,5 +252,4 @@ def test_architecture_constraints_schema_validation_error_with_dynamic_hints(val
     res = validator.validate_dict(data, "architecture_constraints")
     assert res.is_valid is False
     assert "severity" in res.message
-    assert "【修复指南】强度级别必须为 must、should 或 could。" in res.hint
-
+    assert "【修复指南】强度级别" in res.hint

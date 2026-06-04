@@ -5,10 +5,12 @@ Validates that agent claims are backed by external evidence, checks for mismatch
 with task completeness or test results, and flags nonexistent or outdated file references.
 """
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from vibe_tracing.core import ids
 from vibe_tracing.core.enums import CoverageStatus
 
 
@@ -116,9 +118,10 @@ class ClaimEvidenceAnalyzer:
                     )
                     risks.append(
                         {
-                            "risk_id": f"RISK-VT-{risk_counter:03d}",
+                            "risk_id": ids.make_risk_id(risk_counter),
                             "description": reason,
                             "severity": "must",
+                            "risk_category": "self_referential_claim",
                         }
                     )
                     risk_counter += 1
@@ -168,9 +171,10 @@ class ClaimEvidenceAnalyzer:
                                 mismatches.append(conflict_msg)
                                 risks.append(
                                     {
-                                        "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                        "risk_id": ids.make_risk_id(risk_counter),
                                         "description": conflict_msg,
                                         "severity": "should",
+                                        "risk_category": "conflicting_statuses",
                                     }
                                 )
                                 risk_counter += 1
@@ -182,9 +186,10 @@ class ClaimEvidenceAnalyzer:
                                 mismatches.append(reason)
                                 risks.append(
                                     {
-                                        "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                        "risk_id": ids.make_risk_id(risk_counter),
                                         "description": reason,
                                         "severity": "must",
+                                        "risk_category": "violated_evidence",
                                     }
                                 )
                                 risk_counter += 1
@@ -194,9 +199,10 @@ class ClaimEvidenceAnalyzer:
                                 mismatches.append(reason)
                                 risks.append(
                                     {
-                                        "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                        "risk_id": ids.make_risk_id(risk_counter),
                                         "description": reason,
                                         "severity": "must",
+                                        "risk_category": "unclear_evidence_status",
                                     }
                                 )
                                 risk_counter += 1
@@ -206,7 +212,7 @@ class ClaimEvidenceAnalyzer:
                             mismatches.append(reason)
                             risks.append(
                                 {
-                                    "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                    "risk_id": ids.make_risk_id(risk_counter),
                                     "description": reason,
                                     "severity": "must",
                                 }
@@ -226,18 +232,20 @@ class ClaimEvidenceAnalyzer:
                         mismatches.append(reason)
                         risks.append(
                             {
-                                "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                "risk_id": ids.make_risk_id(risk_counter),
                                 "description": reason,
                                 "severity": "must",
+                                "risk_category": "task_not_completed",
                             }
                         )
                         risk_counter += 1
 
                     # 3. AC test coverage checks for the task
+                    _ac_prefix = f"AC-{ids.get_project_prefix()}-"
                     related_acs = [
                         item
                         for item in task_ev.get("covers", [])
-                        if item.startswith("AC-VT-")
+                        if item.startswith(_ac_prefix)
                     ]
                     for ac_id in related_acs:
                         ac_tests = [t for t in test_evs if ac_id in t.get("covers", [])]
@@ -247,9 +255,10 @@ class ClaimEvidenceAnalyzer:
                             mismatches.append(reason)
                             risks.append(
                                 {
-                                    "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                    "risk_id": ids.make_risk_id(risk_counter),
                                     "description": reason,
                                     "severity": "must",
+                                    "risk_category": "no_test_coverage",
                                 }
                             )
                             risk_counter += 1
@@ -262,9 +271,10 @@ class ClaimEvidenceAnalyzer:
                                     mismatches.append(reason)
                                     risks.append(
                                         {
-                                            "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                            "risk_id": ids.make_risk_id(risk_counter),
                                             "description": reason,
                                             "severity": "must",
+                                            "risk_category": "failed_tests",
                                         }
                                     )
                                     risk_counter += 1
@@ -276,9 +286,10 @@ class ClaimEvidenceAnalyzer:
                     mismatches.append(reason)
                     risks.append(
                         {
-                            "risk_id": f"RISK-VT-{risk_counter:03d}",
+                            "risk_id": ids.make_risk_id(risk_counter),
                             "description": reason,
                             "severity": "must",
+                            "risk_category": "non_existent_task",
                         }
                     )
                     risk_counter += 1
@@ -300,34 +311,37 @@ class ClaimEvidenceAnalyzer:
                         mismatches.append(reason)
                         risks.append(
                             {
-                                "risk_id": f"RISK-VT-{risk_counter:03d}",
+                                "risk_id": ids.make_risk_id(risk_counter),
                                 "description": reason,
                                 "severity": "must",
+                                "risk_category": f"non_existent_{ref_type}_ref",
                             }
                         )
                         risk_counter += 1
                     elif claim_ts:
-                        # Check modification time
-                        try:
-                            mtime = ref_path.stat().st_mtime
-                            file_dt = datetime.fromtimestamp(mtime, timezone.utc)
-                            if file_dt > claim_ts:
-                                has_other_mismatch = True
-                                reason = (
-                                    f"Claim {claim_id} references {ref_type} file {ref} "
-                                    "which was modified after the claim timestamp."
-                                )
-                                mismatches.append(reason)
-                                risks.append(
-                                    {
-                                        "risk_id": f"RISK-VT-{risk_counter:03d}",
-                                        "description": reason,
-                                        "severity": "should",
-                                    }
-                                )
-                                risk_counter += 1
-                        except Exception:
-                            pass
+                        # Check modification time (skip in CI environment to prevent Git checkout timestamp false positives)
+                        if os.getenv("CI") != "true":
+                            try:
+                                mtime = ref_path.stat().st_mtime
+                                file_dt = datetime.fromtimestamp(mtime, timezone.utc)
+                                if file_dt > claim_ts:
+                                    has_other_mismatch = True
+                                    reason = (
+                                        f"Claim {claim_id} references {ref_type} file {ref} "
+                                        "which was modified after the claim timestamp."
+                                    )
+                                    mismatches.append(reason)
+                                    risks.append(
+                                        {
+                                            "risk_id": ids.make_risk_id(risk_counter),
+                                            "description": reason,
+                                            "severity": "should",
+                                            "risk_category": "stale_file",
+                                        }
+                                    )
+                                    risk_counter += 1
+                            except Exception:
+                                pass
 
             # Determine final status for claims_analysis
             final_status = claimed_status

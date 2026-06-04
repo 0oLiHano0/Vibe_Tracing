@@ -23,6 +23,7 @@ def base_constraints_data():
                 "responsibility": "Adapter module",
                 "allowed_to_call": ["MOD-VT-002"],
                 "forbidden_to_call": ["MOD-VT-007"],
+                "owned_files": ["cli.py", "agent_runtime_adapter.py"],
             },
             {
                 "module_id": "MOD-VT-002",
@@ -30,6 +31,12 @@ def base_constraints_data():
                 "responsibility": "Raw loader",
                 "allowed_to_call": [],
                 "forbidden_to_call": ["MOD-VT-006"],
+                "owned_files": [
+                    "raw_input_loader.py",
+                    "prd_parser.py",
+                    "task_loader.py",
+                    "claim_loader.py",
+                ],
             },
             {
                 "module_id": "MOD-VT-003",
@@ -37,6 +44,7 @@ def base_constraints_data():
                 "responsibility": "Validator",
                 "allowed_to_call": [],
                 "forbidden_to_call": [],
+                "owned_files": ["schema_validator.py"],
             },
         ],
         "dependency_rules": [

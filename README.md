@@ -49,7 +49,6 @@ The project layout follows a clean separation of project specification documents
 └── .vibetracing/               # Hidden VT Governance Folder
     ├── config.json             # Core configuration mapping docs/ and outputs
     ├── agent_claims.json       # Log of claims made by developer agent(s)
-    ├── architecture_constraints.base.json # Checked baseline of rules
     ├── claude_bootstrap/       # Subagent permissions & proposals
     ├── tool_reports/           # Raw output reports from linters/tests
     └── output/                 # Generated traceability matrices and Dashboard HTML

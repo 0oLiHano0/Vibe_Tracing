@@ -7,7 +7,6 @@ NOT perform business analysis, gate decisions, or dashboard generation.
 """
 
 import json
-import re
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -59,9 +58,36 @@ def _build_hint(error: ValidationError) -> str:
     path_str = _deque_path_to_string(error.absolute_path)
     field_label = f"Field '{path_str}'" if path_str else "Value"
 
+    # Try to extract dynamic Chinese hint from the schema description first
+    if validator == "pattern":
+        if path_str.endswith("task_id"):
+            return "【修复指南】任务ID，必须符合正则格式"
+        elif path_str.endswith("related_task"):
+            return "【修复指南】关联任务ID，必须符合正则格式"
+
+    desc = None
+    if isinstance(error.schema, dict):
+        desc = error.schema.get("description")
+    
+    if not desc and validator == "required" and isinstance(error.schema, dict):
+        # For required errors, the error.schema points to the parent object.
+        # Check which required field is missing from error.instance
+        if isinstance(error.instance, dict):
+            for field_name in error.validator_value:
+                if field_name not in error.instance:
+                    prop_schema = error.schema.get("properties", {}).get(field_name, {})
+                    desc = prop_schema.get("description")
+                    if desc:
+                        break
+
+    if desc:
+        from vibe_tracing.core import ids
+        desc_resolved = desc.replace("{PROJECT_PREFIX}", ids.get_project_prefix())
+        return f"【修复指南】{desc_resolved}"
+
+    # Default fallback English hints
     if validator == "required":
         missing = error.validator_value
-        # jsonschema puts the missing property name in the message; extract it
         return f"Add the required field(s): {missing}."
     elif validator == "type":
         expected = error.validator_value
@@ -94,10 +120,6 @@ class SchemaValidator:
         "agent_claims": "agent_claims.schema.json",
         "evidence_index": "evidence_index.schema.json",
         "traceability_report": "traceability_report.schema.json",
-        "claude_bootstrap_manifest": "claude_bootstrap_manifest.schema.json",
-        "claude_subagent_definition": "claude_subagent_definition.schema.json",
-        "claude_skill_definition": "claude_skill_definition.schema.json",
-        "architecture_change_proposal": "architecture_change_proposal.schema.json",
         "architecture_constraints": "architecture_constraints.schema.json",
     }
 
@@ -243,15 +265,6 @@ class SchemaValidator:
         except ValidationError as exc:
             field_path = _deque_path_to_string(exc.absolute_path)
             hint = _build_hint(exc)
-            custom_hint = self.resolve_field_hint(
-                data=data,
-                schema_name=schema_name,
-                absolute_path=list(exc.absolute_path),
-                validator=exc.validator,
-                message=exc.message,
-            )
-            if custom_hint:
-                hint = f"【修复指南】{custom_hint}"
             return ValidationResult(
                 is_valid=False,
                 error_code=ErrorCode.SCHEMA_VIOLATION,
@@ -262,93 +275,4 @@ class SchemaValidator:
             )
 
         return ValidationResult(is_valid=True, file_path=source_label)
-
-    def resolve_field_hint(
-        self,
-        data: Union[dict, list],
-        schema_name: str,
-        absolute_path: list,
-        validator: str,
-        message: str = "",
-    ) -> Optional[str]:
-        """Extract dynamic field hint from the template data in the JSON structure."""
-        field_name = None
-        if validator == "required":
-            match = re.search(r"'([^']+)' is a required property", message)
-            if match:
-                field_name = match.group(1)
-        else:
-            if absolute_path:
-                field_name = str(absolute_path[-1])
-
-        if not field_name:
-            return None
-
-        # 1. Special case: data itself is a list and absolute_path is empty or points to a list element
-        if isinstance(data, list):
-            for item in data:
-                if isinstance(item, dict) and "__field_hints__" in item:
-                    hint = item["__field_hints__"].get(field_name)
-                    if hint:
-                        return hint
-
-        # 2. Determine container path where the field is expected to live
-        if validator == "required":
-            container_path = absolute_path
-        else:
-            container_path = absolute_path[:-1] if absolute_path else []
-
-        # 3. Helper to walk up the ancestor chain of container paths
-        curr_path = list(container_path)
-        while True:
-            # Resolve the container at the current path level
-            curr_container = data
-            valid_path = True
-            for p in curr_path:
-                try:
-                    if isinstance(curr_container, list) and isinstance(p, int):
-                        curr_container = curr_container[p]
-                    elif isinstance(curr_container, dict):
-                        curr_container = curr_container[p]
-                    else:
-                        valid_path = False
-                        break
-                except (IndexError, KeyError):
-                    valid_path = False
-                    break
-
-            if valid_path:
-                # Case A: If container is a dict, check its __field_hints__
-                if isinstance(curr_container, dict):
-                    hints = curr_container.get("__field_hints__", {})
-                    if isinstance(hints, dict) and field_name in hints:
-                        return hints[field_name]
-
-                # Case B: If container's parent is a list, check sibling items in that list (homogeneous array items)
-                if curr_path:
-                    parent_path = curr_path[:-1]
-                    parent = data
-                    for p in parent_path:
-                        try:
-                            if isinstance(parent, list) and isinstance(p, int):
-                                parent = parent[p]
-                            elif isinstance(parent, dict):
-                                parent = parent[p]
-                            else:
-                                break
-                        except (IndexError, KeyError):
-                            break
-
-                    if isinstance(parent, list):
-                        for item in parent:
-                            if isinstance(item, dict) and "__field_hints__" in item:
-                                hints = item["__field_hints__"]
-                                if isinstance(hints, dict) and field_name in hints:
-                                    return hints[field_name]
-
-            if not curr_path:
-                break
-            curr_path.pop()
-
-        return None
 

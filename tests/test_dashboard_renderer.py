@@ -7,7 +7,32 @@ from pathlib import Path
 from vibe_tracing.dashboard_renderer import DashboardRenderer
 from vibe_tracing.cli import main
 from test_cli_analyze import setup_mock_project
+import pytest
 
+@pytest.fixture(autouse=True)
+def mock_tool_execution(monkeypatch):
+    from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
+    from vibe_tracing.core.enums import CoverageStatus
+    import json
+
+    def mock_execute_all(self, execution_paths):
+        opts_path = self.project_root / "test_opts.json"
+        if not opts_path.exists():
+            return []
+        opts = json.loads(opts_path.read_text(encoding="utf-8"))
+        docstring = opts.get("test_docstring", "")
+        import re
+        covers = re.findall(r"\b(AC-VT-\d+-\d+|REQ-VT-\d+)\b", docstring)
+        return [
+            ToolEvidenceCandidate(
+                source_type="test",
+                source_path="tests/test_ids_and_enums.py::test_req_id_valid",
+                covers=covers,
+                status=CoverageStatus.COVERED.value if opts.get("test_outcome") == "passed" else CoverageStatus.VIOLATED.value,
+            )
+        ]
+
+    monkeypatch.setattr(ToolExecutionEngine, "execute_all", mock_execute_all)
 
 def test_dashboard_renderer_success(tmp_path: Path):
     """
@@ -16,7 +41,7 @@ def test_dashboard_renderer_success(tmp_path: Path):
     properly embedding the provided JSON structures and containing the required script/style blocks.
     """
     renderer = DashboardRenderer(tmp_path)
-    output_html = tmp_path / ".vibetracing" / "output" / "dashboard.html"
+    output_html = tmp_path / "output" / "dashboard.html"
 
     evidence_index = {
         "run_id": "RUN-TEST-001",
@@ -100,7 +125,7 @@ def test_dashboard_renderer_missing_fields(tmp_path: Path):
     report are empty or missing (e.g. empty lists of risks, gaps, or compliance statuses).
     """
     renderer = DashboardRenderer(tmp_path)
-    output_html = tmp_path / ".vibetracing" / "output" / "dashboard.html"
+    output_html = tmp_path / "output" / "dashboard.html"
 
     # Minimal dictionaries with empty lists
     evidence_index = {
@@ -151,15 +176,15 @@ def test_cli_analyze_generates_dashboard(tmp_path: Path):
     assert exit_code == 0
 
     # Check generated files
-    dashboard_file = tmp_path / ".vibetracing" / "output" / "dashboard.html"
+    dashboard_file = tmp_path / "output" / "dashboard.html"
     assert dashboard_file.exists()
 
-    run_metadata_path = tmp_path / ".vibetracing" / "output" / "run_metadata.json"
+    run_metadata_path = tmp_path / "output" / "run_metadata.json"
     assert run_metadata_path.exists()
 
     meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
     assert "dashboard" in meta["output_files"]
-    assert meta["output_files"]["dashboard"] == ".vibetracing/output/dashboard.html"
+    assert meta["output_files"]["dashboard"] == "output/dashboard.html"
 
 
 def test_dashboard_renderer_svg_no_emojis(tmp_path: Path):
@@ -169,7 +194,7 @@ def test_dashboard_renderer_svg_no_emojis(tmp_path: Path):
     in the navigation menus, dynamic statuses, and warnings.
     """
     renderer = DashboardRenderer(tmp_path)
-    output_html = tmp_path / ".vibetracing" / "output" / "dashboard.html"
+    output_html = tmp_path / "output" / "dashboard.html"
 
     renderer.render(
         evidence_index={

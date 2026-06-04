@@ -21,7 +21,7 @@
     },
     "project_id": {
       "type": "string",
-      "pattern": "^PROJECT-VT$",
+      "pattern": "^PROJECT-[a-zA-Z0-9_-]+$",
       "description": "Project identifier."
     },
     "scan_time": {
@@ -30,7 +30,7 @@
     },
     "gate_decision": {
       "type": "string",
-      "enum": ["pass", "fail", "blocked"],
+      "enum": ["pass", "fail", "blocked", "draft_approved"],
       "description": "Overall quality gate decision for this run."
     },
     "requirement_coverage": {
@@ -43,7 +43,7 @@
         "properties": {
           "req_id": {
             "type": "string",
-            "pattern": "^REQ-VT-\\d+$",
+            "pattern": "^REQ-[a-zA-Z0-9_-]+-\\d+$",
             "description": "Requirement identifier."
           },
           "status": {
@@ -103,7 +103,7 @@
         "properties": {
           "risk_id": {
             "type": "string",
-            "pattern": "^RISK-VT-\\d+$",
+            "pattern": "^RISK-[a-zA-Z0-9_-]+-\\d+$",
             "description": "Unique risk identifier."
           },
           "description": {

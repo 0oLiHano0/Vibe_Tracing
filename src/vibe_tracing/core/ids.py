@@ -20,25 +20,61 @@ Supports the following ID formats:
 import re
 from typing import Tuple
 
+active_prefix = "VT"
+
 # Each entry: (prefix, compiled_pattern)
 # Order matters: more specific patterns (two-segment digits) before simpler ones.
-_ID_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
-    ("AC", re.compile(r"^AC-VT-\d+-\d+$")),
-    ("DOD", re.compile(r"^DOD-VT-\d+-\d+$")),
-    ("REQ", re.compile(r"^REQ-VT-\d+$")),
-    ("TASK", re.compile(r"^TASK-VT-\d+$")),
-    ("MOD", re.compile(r"^MOD-VT-\d+$")),
-    ("GATE", re.compile(r"^GATE-VT-\d+$")),
-    ("FORBID", re.compile(r"^FORBID-VT-\d+$")),
-    ("PRINCIPLE", re.compile(r"^PRINCIPLE-VT-\d+$")),
-    ("PHASE", re.compile(r"^PHASE-VT-\d+$")),
-    ("PROJECT", re.compile(r"^PROJECT-VT$")),
-    ("EVIDENCE", re.compile(r"^EVIDENCE-VT-\d+$")),
-    ("RISK", re.compile(r"^RISK-VT-\d+$")),
-    ("CLAIM", re.compile(r"^CLAIM-VT-\d+$")),
-]
+_ID_PATTERNS: list[tuple[str, re.Pattern[str]]] = []
+_VALID_PREFIXES: list[str] = []
 
-_VALID_PREFIXES = [prefix for prefix, _ in _ID_PATTERNS]
+def _rebuild_patterns(prefix: str):
+    global _ID_PATTERNS, _VALID_PREFIXES
+    _ID_PATTERNS.clear()
+    _ID_PATTERNS.extend([
+        ("AC", re.compile(rf"^AC-{prefix}-\d+-\d+$")),
+        ("DOD", re.compile(rf"^DOD-{prefix}-\d+-\d+$")),
+        ("REQ", re.compile(rf"^REQ-{prefix}-\d+$")),
+        ("TASK", re.compile(rf"^TASK-{prefix}-\d+$")),
+        ("MOD", re.compile(rf"^MOD-{prefix}-\d+$")),
+        ("GATE", re.compile(rf"^GATE-{prefix}-\d+$")),
+        ("FORBID", re.compile(rf"^FORBID-{prefix}-\d+$")),
+        ("PRINCIPLE", re.compile(rf"^PRINCIPLE-{prefix}-\d+$")),
+        ("PHASE", re.compile(rf"^PHASE-{prefix}-\d+$")),
+        ("PROJECT", re.compile(rf"^PROJECT-{prefix}$")),
+        ("EVIDENCE", re.compile(rf"^EVIDENCE-{prefix}-\d+$")),
+        ("RISK", re.compile(rf"^RISK-{prefix}-\d+$")),
+        ("CLAIM", re.compile(rf"^CLAIM-{prefix}-\d+$")),
+    ])
+    _VALID_PREFIXES.clear()
+    _VALID_PREFIXES.extend([prefix for prefix, _ in _ID_PATTERNS])
+
+_rebuild_patterns(active_prefix)
+
+def set_project_prefix(prefix: str):
+    """Set the active project prefix and rebuild regex patterns."""
+    global active_prefix
+    active_prefix = prefix
+    _rebuild_patterns(prefix)
+
+
+def get_project_prefix() -> str:
+    """Return the active project prefix."""
+    return active_prefix
+
+
+def make_risk_id(counter: int) -> str:
+    """Generate a risk ID using the active prefix."""
+    return f"RISK-{get_project_prefix()}-{counter:03d}"
+
+
+def make_evidence_id(counter: int) -> str:
+    """Generate an evidence ID using the active prefix."""
+    return f"EVIDENCE-{get_project_prefix()}-{counter:03d}"
+
+
+def sentinel_evidence_id() -> str:
+    """Return the sentinel evidence ID for 'no real evidence' cases."""
+    return f"EVIDENCE-{get_project_prefix()}-999"
 
 
 def validate_id(id_str: str) -> Tuple[bool, str]:

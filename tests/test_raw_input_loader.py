@@ -188,28 +188,6 @@ def test_manifest_records_all_required_file_keys():
         )
 
 
-def test_manifest_includes_tool_report_files(tmp_path):
-    """
-    AC-VT-002-01: When a file exists in tool_reports/, it must appear in
-    manifest.tool_report_files.
-    """
-    _make_required_files(tmp_path)
-
-    # Create a dummy tool_reports file
-    tool_reports_dir = tmp_path / ".vibetracing" / "tool_reports"
-    tool_reports_dir.mkdir(parents=True, exist_ok=True)
-    dummy_report = tool_reports_dir / "dummy_report.json"
-    dummy_report.write_text('{"tool": "dummy"}', encoding="utf-8")
-
-    loader = RawInputLoader(tmp_path)
-    manifest = loader.load()
-
-    assert str(dummy_report) in manifest.tool_report_files, (
-        f"Expected '{dummy_report}' in manifest.tool_report_files, "
-        f"got: {manifest.tool_report_files}"
-    )
-
-
 def test_loader_has_no_gate_decision_attribute():
     """
     AC-VT-001-04: RawInputManifest must not have gate_decision, risk_decision,
@@ -283,10 +261,14 @@ def test_config_json_path_overrides_and_safe_fallback(tmp_path):
 def test_self_governance_rules_contract(tmp_path):
     """
     covers: AC-VT-009-06
-    Verify that architecture constraints change requires docs/architecture_change_log.md
-    declaration, or it triggers blocking errors.
+    Verify that architecture constraints drift is detected via hash comparison
+    and reported as warnings (read-only). check_governance always returns
+    is_valid=True — it never blocks, only exposes drift for human review.
     """
+    import hashlib
     import json
+    from unittest.mock import patch
+
     from vibe_tracing.architecture_change_proposal import (
         ArchitectureChangeProposalEngine,
     )
@@ -301,31 +283,44 @@ def test_self_governance_rules_contract(tmp_path):
         "quality_gates": [{"gate_id": "GATE-VT-099", "severity": "must"}],
     }
 
-    (tmp_path / ".vibetracing" / "architecture_constraints.base.json").write_text(
-        json.dumps(base_constraints), encoding="utf-8"
-    )
+    # Write modified constraints (current state)
     (tmp_path / "docs" / "architecture_constraints.json").write_text(
         json.dumps(modified_constraints), encoding="utf-8"
     )
     (tmp_path / "docs" / "prd.md").write_text("# PRD", encoding="utf-8")
     (tmp_path / "docs" / "task_list.json").write_text('{"tasks": []}', encoding="utf-8")
 
-    # Run check without log -> should error (must risk)
+    # 1. No stored hash -> check_governance skips, is_valid=True, no warnings
+    config = {"project_id": "PROJECT-VT", "paths": {}}
+    (tmp_path / ".vibetracing" / "config.json").write_text(
+        json.dumps(config), encoding="utf-8"
+    )
+
     proposal = ArchitectureChangeProposalEngine(tmp_path)
     res = proposal.check_governance()
-    assert len(res["errors"]) > 0
-    assert any("GATE-VT-099" in err for err in res["errors"])
+    assert res["is_valid"] is True
+    assert len(res["warnings"]) == 0
+    assert len(res["errors"]) == 0
 
-    # Run check with log containing GATE-VT-099 -> should warn, no error
-    change_log = (
-        "# Architecture Change Log\n\n"
-        "## [2026-05-27]\n"
-        "* **Rule**: GATE-VT-099 modified\n"
-    )
-    (tmp_path / "docs" / "architecture_change_log.md").write_text(
-        change_log, encoding="utf-8"
+    # 2. Hash mismatch (drift detected) + git_show reveals rule change
+    #    -> is_valid=True, warnings with diff details
+    config["architecture_constraints_hash"] = "old_stored_hash"
+    config["finalize_git_commit"] = "abc123"
+    config["finalize_constraints_path"] = "docs/architecture_constraints.json"
+    (tmp_path / ".vibetracing" / "config.json").write_text(
+        json.dumps(config), encoding="utf-8"
     )
 
-    res_logged = proposal.check_governance()
-    assert len(res_logged["errors"]) == 0
-    assert len(res_logged["warnings"]) > 0
+    with patch(
+        "vibe_tracing.architecture_change_proposal.git_show",
+        return_value=json.dumps(base_constraints),
+    ):
+        proposal = ArchitectureChangeProposalEngine(tmp_path)
+        res = proposal.check_governance()
+
+    # check_governance is read-only: always is_valid=True
+    assert res["is_valid"] is True
+    assert len(res["errors"]) == 0
+    assert len(res["warnings"]) > 0
+    # Diff details should mention GATE-VT-099
+    assert any("GATE-VT-099" in w for w in res["warnings"])

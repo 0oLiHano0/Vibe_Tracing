@@ -1,11 +1,34 @@
-"""
-Unit and integration tests for the CLI analyze command (TASK-VT-018).
-"""
-
 import json
 from pathlib import Path
+import pytest
 from vibe_tracing.cli import main
 from vibe_tracing.schema_validator import SchemaValidator
+
+
+@pytest.fixture(autouse=True)
+def mock_tool_execution(monkeypatch):
+    from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
+    from vibe_tracing.core.enums import CoverageStatus
+    import json
+
+    def mock_execute_all(self, execution_paths):
+        opts_path = self.project_root / "test_opts.json"
+        if not opts_path.exists():
+            return []
+        opts = json.loads(opts_path.read_text(encoding="utf-8"))
+        docstring = opts.get("test_docstring", "")
+        import re
+        covers = re.findall(r"\b(AC-VT-\d+-\d+|REQ-VT-\d+)\b", docstring)
+        return [
+            ToolEvidenceCandidate(
+                source_type="test",
+                source_path="tests/test_ids_and_enums.py::test_req_id_valid",
+                covers=covers,
+                status=CoverageStatus.COVERED.value if opts.get("test_outcome") == "passed" else CoverageStatus.VIOLATED.value,
+            )
+        ]
+
+    monkeypatch.setattr(ToolExecutionEngine, "execute_all", mock_execute_all)
 
 
 def setup_mock_project(
@@ -15,15 +38,15 @@ def setup_mock_project(
     test_docstring: str = "covers: AC-VT-001-01, AC-VT-001-02",
     include_claims: bool = True,
     claim_has_evidence: bool = True,
-    architecture_constraints: str = '{"constraints": []}',
+    architecture_constraints: str = "{}",
     claim_timestamp: str = "2030-05-22T12:00:00Z",
 ) -> None:
     """Helper to set up a mock project structure with valid inputs."""
     # Create directories
     (base / "docs").mkdir(parents=True, exist_ok=True)
-    (base / ".vibetracing" / "tool_reports").mkdir(parents=True, exist_ok=True)
-    (base / ".vibetracing" / "output").mkdir(parents=True, exist_ok=True)
+    (base / "output").mkdir(parents=True, exist_ok=True)
     (base / "schemas").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
     (base / "src" / "vibe_tracing" / "core").mkdir(parents=True, exist_ok=True)
 
     # Write a dummy dashboard.html to prevent DEP-VT-002 from being unclear/violated
@@ -70,12 +93,46 @@ must
                     "name": "Vibe Tracing",
                     "stage": "mvp"
                 }
+            if "language_tool_matrix" not in data:
+                data["language_tool_matrix"] = {
+                    "python": {
+                        "test": {
+                            "tool": "pytest",
+                            "default_command": "pytest",
+                            "output_format": "pytest_json",
+                            "pass_condition": "exit_code == 0"
+                        }
+                    }
+                }
             architecture_constraints = json.dumps(data)
     except Exception:
         pass
     (base / "docs" / "architecture_constraints.json").write_text(
         architecture_constraints, encoding="utf-8"
     )
+
+    import hashlib
+    computed_hash = hashlib.sha256(architecture_constraints.encode("utf-8")).hexdigest()
+    config_data = {
+        "project_id": "PROJECT-VT",
+        "project_prefix": "VT",
+        "project_name": "Vibe Tracing",
+        "language": "python",
+        "validation_tools": ["test"],
+        "architecture_constraints_hash": computed_hash,
+        "finalize_git_commit": "abc123deadbeef",
+        "finalize_constraints_path": "docs/architecture_constraints.json",
+    }
+    (base / ".vibetracing" / "config.json").write_text(
+        json.dumps(config_data, indent=2), encoding="utf-8"
+    )
+
+    # Write test_opts.json for mocked tool execution
+    opts = {
+        "test_outcome": test_outcome,
+        "test_docstring": test_docstring,
+    }
+    (base / "test_opts.json").write_text(json.dumps(opts), encoding="utf-8")
 
     # Write Task List
     task_list = {
@@ -114,7 +171,7 @@ must
 
     # Write Agent Claims
     if include_claims:
-        evidence_refs = ["EVIDENCE-VT-001"] if claim_has_evidence else []
+        evidence_refs = ["EVIDENCE-VT-005"] if claim_has_evidence else []
         agent_claims = [
             {
                 "claim_id": "CLAIM-VT-001",
@@ -133,22 +190,6 @@ must
     else:
         (base / ".vibetracing" / "agent_claims.json").write_text("[]", encoding="utf-8")
 
-    # Write Pytest Report
-    pytest_report = {
-        "tool": "pytest",
-        "command": "pytest --json-report",
-        "exit_code": 0,
-        "tests": [
-            {
-                "nodeid": "tests/test_ids_and_enums.py::test_req_id_valid",
-                "outcome": test_outcome,
-                "docstring": test_docstring,
-            }
-        ],
-    }
-    (base / ".vibetracing" / "tool_reports" / "pytest_report.json").write_text(
-        json.dumps(pytest_report), encoding="utf-8"
-    )
 
 
 def test_cli_analyze_pass(tmp_path, capsys):
@@ -173,11 +214,11 @@ def test_cli_analyze_pass(tmp_path, capsys):
     assert "Analysis complete. Gate decision: PASS" in captured.out
 
     # Check generated files
-    evidence_index_path = tmp_path / ".vibetracing" / "output" / "evidence_index.json"
+    evidence_index_path = tmp_path / "output" / "evidence_index.json"
     traceability_report_path = (
-        tmp_path / ".vibetracing" / "output" / "traceability_report.json"
+        tmp_path / "output" / "traceability_report.json"
     )
-    run_metadata_path = tmp_path / ".vibetracing" / "output" / "run_metadata.json"
+    run_metadata_path = tmp_path / "output" / "run_metadata.json"
 
     assert evidence_index_path.exists()
     assert traceability_report_path.exists()
@@ -227,9 +268,9 @@ def test_cli_analyze_blocked(tmp_path, capsys):
 
     # Files should still be generated
     traceability_report_path = (
-        tmp_path / ".vibetracing" / "output" / "traceability_report.json"
+        tmp_path / "output" / "traceability_report.json"
     )
-    run_metadata_path = tmp_path / ".vibetracing" / "output" / "run_metadata.json"
+    run_metadata_path = tmp_path / "output" / "run_metadata.json"
 
     assert traceability_report_path.exists()
     assert run_metadata_path.exists()
@@ -266,9 +307,9 @@ def test_cli_analyze_fail_conditional(tmp_path, capsys):
 
     # Files should still be generated
     traceability_report_path = (
-        tmp_path / ".vibetracing" / "output" / "traceability_report.json"
+        tmp_path / "output" / "traceability_report.json"
     )
-    run_metadata_path = tmp_path / ".vibetracing" / "output" / "run_metadata.json"
+    run_metadata_path = tmp_path / "output" / "run_metadata.json"
 
     assert traceability_report_path.exists()
     assert run_metadata_path.exists()

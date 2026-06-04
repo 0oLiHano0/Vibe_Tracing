@@ -6,6 +6,40 @@
     "description": "面向 AI Coding 工作流的治理、追踪、证据链与合并门禁系统。v0.1 的目标是帮助非开发背景的项目经理在不阅读代码的情况下，理解需求覆盖、测试覆盖、Agent Claim 证据、架构约束状态和合并准备情况。",
     "stage": "mvp"
   },
+  "language_tool_matrix": {
+    "python": {
+      "test": {
+        "tool": "pytest",
+        "default_command": "pytest {test_path} --tb=short -q --json-report --json-report-file={output_path}",
+        "output_format": "pytest_json",
+        "pass_condition": "exit_code == 0"
+      },
+      "coverage": {
+        "tool": "coverage",
+        "default_command": "coverage run -m pytest {test_path} && coverage json -o {output_path}",
+        "output_format": "coverage_json",
+        "pass_condition": "percent_covered >= 80"
+      },
+      "lint": {
+        "tool": "ruff",
+        "default_command": "ruff check {source_path} --output-format=json",
+        "output_format": "ruff_json",
+        "pass_condition": "violations == 0"
+      },
+      "type_check": {
+        "tool": "mypy",
+        "default_command": "mypy {source_path} --json-report {output_path}",
+        "output_format": "mypy_json",
+        "pass_condition": "exit_code == 0"
+      },
+      "security": {
+        "tool": "bandit",
+        "default_command": "bandit -r {source_path} -f json -o {output_path}",
+        "output_format": "bandit_json",
+        "pass_condition": "results == 0"
+      }
+    }
+  },
   "architecture_principles": [
     {
       "principle_id": "PRINCIPLE-VT-001",
@@ -98,15 +132,9 @@
       "severity": "must"
     },
     {
-      "principle_id": "PRINCIPLE-VT-016",
-      "title": "MVP 默认以 Claude Code 作为首选 Agent Runtime",
-      "description": "MVP 阶段默认使用 Claude Code 作为 Vibe Tracing 自身开发的首选 AI Coding Agent Runtime，用于组织 subagent、skill、提示词和自举工作流。但 Claude Code 只能位于 Runtime Adapter 层，Vibe Tracing Core 的规则、Schema、证据模型、报告生成和门禁判定能力必须保持独立可运行。",
-      "severity": "must"
-    },
-    {
-      "principle_id": "PRINCIPLE-VT-017",
-      "title": "自举产物必须可追踪",
-      "description": "Claude Code 自举过程中产生的任务、Agent Claim、测试、Review、证据和报告相关产物必须进入结构化治理文件。自然语言对话、聊天记录或未结构化总结不得作为唯一事实源。",
+      "principle_id": "PRINCIPLE-VT-018",
+      "title": "工具执行主权",
+      "description": "VT 只采信自己执行的工具结果作为高可信度证据。Agent 自报的完成状态、自行放置的报告文件，不得作为门禁判定的充分依据。",
       "severity": "must"
     }
   ],
@@ -122,8 +150,7 @@
         "MOD-VT-006",
         "MOD-VT-007",
         "MOD-VT-008",
-        "MOD-VT-009",
-        "MOD-VT-011"
+        "MOD-VT-009"
       ],
       "forbidden_to_call": [],
       "owned_data": [],
@@ -137,6 +164,10 @@
         "REQ-VT-002",
         "REQ-VT-006",
         "REQ-VT-008"
+      ],
+      "owned_files": [
+        "cli.py",
+        "agent_runtime_adapter.py"
       ]
     },
     {
@@ -161,6 +192,12 @@
       "related_requirements": [
         "REQ-VT-001",
         "REQ-VT-002"
+      ],
+      "owned_files": [
+        "raw_input_loader.py",
+        "prd_parser.py",
+        "task_loader.py",
+        "claim_loader.py"
       ]
     },
     {
@@ -183,6 +220,9 @@
         "REQ-VT-001",
         "REQ-VT-006",
         "REQ-VT-008"
+      ],
+      "owned_files": [
+        "schema_validator.py"
       ]
     },
     {
@@ -207,6 +247,9 @@
         "REQ-VT-002",
         "REQ-VT-007",
         "REQ-VT-008"
+      ],
+      "owned_files": [
+        "tool_evidence_adapter.py"
       ]
     },
     {
@@ -229,6 +272,9 @@
       "related_requirements": [
         "REQ-VT-001",
         "REQ-VT-002"
+      ],
+      "owned_files": [
+        "evidence_index_builder.py"
       ]
     },
     {
@@ -255,6 +301,9 @@
       "related_requirements": [
         "REQ-VT-001",
         "REQ-VT-002"
+      ],
+      "owned_files": [
+        "traceability_report_builder.py"
       ]
     },
     {
@@ -279,6 +328,9 @@
       ],
       "related_requirements": [
         "REQ-VT-008"
+      ],
+      "owned_files": [
+        "merge_gate_engine.py"
       ]
     },
     {
@@ -300,6 +352,9 @@
       ],
       "related_requirements": [
         "REQ-VT-006"
+      ],
+      "owned_files": [
+        "dashboard_renderer.py"
       ]
     },
     {
@@ -309,8 +364,7 @@
       "allowed_to_call": [
         "MOD-VT-002",
         "MOD-VT-003",
-        "MOD-VT-005",
-        "MOD-VT-011"
+        "MOD-VT-005"
       ],
       "forbidden_to_call": [
         "MOD-VT-008"
@@ -326,6 +380,9 @@
       "related_requirements": [
         "REQ-VT-001",
         "REQ-VT-008"
+      ],
+      "owned_files": [
+        "architecture_compliance_checker.py"
       ]
     },
     {
@@ -352,42 +409,48 @@
       "related_requirements": [
         "REQ-VT-006",
         "REQ-VT-007"
+      ],
+      "owned_files": [
+        "llm_semantic_inspector.py"
       ]
     },
     {
-      "module_id": "MOD-VT-011",
-      "name": "claude_code_bootstrap_adapter",
-      "responsibility": "为 MVP 自举提供 Claude Code subagent、skill、提示词和运行约束的配置入口。该模块负责组织 Claude Code 工作流并调用 Vibe Tracing Core，但不得拥有治理事实、门禁判定或架构约束最终修改权。",
+      "module_id": "MOD-VT-012",
+      "name": "tool_execution_engine",
+      "responsibility": "根据 config.json 中的 validation_tools 和架构约束中的 language_tool_matrix，执行验证工具并捕获输出。只能执行白名单中的工具，命令参数从模板替换生成，不接受任意命令。",
       "allowed_to_call": [
-        "MOD-VT-001",
-        "MOD-VT-002",
-        "MOD-VT-003",
-        "MOD-VT-005",
-        "MOD-VT-006"
+        "MOD-VT-005"
       ],
       "forbidden_to_call": [
-        "MOD-VT-007",
-        "MOD-VT-008"
+        "MOD-VT-007"
       ],
       "owned_data": [
-        "claude_code_bootstrap_manifest",
-        "subagent_definitions",
-        "skill_definitions",
-        "subagent_skill_bindings"
+        "tool_execution_result"
       ],
       "must_not_own_data": [
         "gate_decision",
-        "traceability_status",
-        "evidence_truth",
-        "architecture_constraint_final_change",
-        "human_decision"
+        "evidence_truth"
       ],
       "related_requirements": [
         "REQ-VT-009",
-        "REQ-VT-001",
-        "REQ-VT-002",
-        "REQ-VT-006",
-        "REQ-VT-008"
+        "REQ-VT-002"
+      ]
+    },
+    {
+      "module_id": "MOD-VT-013",
+      "name": "project_finalizer",
+      "responsibility": "从架构约束中读取 project.language 和 language_tool_matrix，写入 config.json。一次性命令，执行前校验架构约束完整性，执行后 config.json 不再被修改。",
+      "allowed_to_call": [],
+      "forbidden_to_call": [
+        "MOD-VT-007"
+      ],
+      "owned_data": [],
+      "must_not_own_data": [
+        "gate_decision",
+        "evidence_truth"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
       ]
     }
   ],
@@ -498,29 +561,39 @@
       ]
     },
     {
-      "rule_id": "DEP-VT-006",
-      "title": "Claude Code 是首选 Runtime，不是 Core 强依赖",
-      "description": "MVP 自举必须提供 Claude Code 适配能力，但 Vibe Tracing Core 不得只能在 Claude Code 中运行。Core 必须继续支持独立 CLI 调用和文件化输入输出。",
-      "severity": "must",
+      "rule_id": "DEP-VT-007",
+      "title": "Markdown 解析必须使用 mistune AST",
+      "description": "PRD 等 Markdown 文件的解析必须通过 mistune 的 AST 模式进行结构化解析，不得使用正则表达式或字符串分割方式提取标题、列表和层级关系。",
+      "severity": "should",
       "allowed_dependencies": [
-        "claude_code_runtime_adapter",
-        "claude_code_subagent_config",
-        "claude_code_skill_config",
-        "standard_cli",
-        "local_filesystem"
+        "mistune"
       ],
       "forbidden_dependencies": [
-        "claude_code_required_for_core",
-        "core_logic_only_in_subagent_prompt",
-        "merge_gate_only_in_claude_prompt"
+        "regex_based_markdown_parsing",
+        "string_split_markdown_parsing"
       ],
-      "rationale": "MVP 需要利用 Claude Code 完成自举，但治理权威必须留在独立 Core 与结构化规则中。",
+      "rationale": "mistune 提供稳定的 AST 输出，可保证 Markdown 结构提取的准确性和可维护性，避免正则表达式的脆弱性。",
       "related_modules": [
-        "MOD-VT-001",
-        "MOD-VT-011",
-        "MOD-VT-005",
-        "MOD-VT-006",
-        "MOD-VT-007"
+        "MOD-VT-002"
+      ]
+    },
+    {
+      "rule_id": "DEP-VT-008",
+      "title": "工具执行白名单",
+      "description": "VT 执行验证工具时，命令必须从 language_tool_matrix 的模板生成，只替换路径占位符。不得执行模板之外的任意命令，不得使用管道、链式命令或 shell 特殊字符。",
+      "severity": "must",
+      "allowed_dependencies": [
+        "language_tool_matrix_command_template",
+        "path_placeholder_substitution"
+      ],
+      "forbidden_dependencies": [
+        "arbitrary_shell_command",
+        "pipe_or_chain_command",
+        "shell_special_characters"
+      ],
+      "rationale": "防止 Agent 通过工具执行注入任意命令，保证 VT 执行安全性。",
+      "related_modules": [
+        "MOD-VT-012"
       ]
     }
   ],
@@ -611,29 +684,14 @@
       ]
     },
     {
-      "rule_id": "FLOW-VT-007",
-      "title": "Claude Code 自举输出必须进入治理文件",
-      "description": "Claude Code subagent 在自举过程中产生的任务、Claim、测试、Review、证据候选和架构变更建议，必须先写入对应结构化治理文件或候选文件，再被 Evidence Index、Traceability Report 或治理流程消费。",
+      "rule_id": "FLOW-VT-009",
+      "title": "项目配置定型单向流",
+      "description": "架构约束 → finalize → config.json → analyze。config.json 只在 init 和 finalize 时写入，analyze 只读不写。数据流单向，无环路。",
       "severity": "must",
-      "from": "claude_code_bootstrap_adapter",
-      "to": "raw_layer_or_evidence_index_builder",
+      "from": "architecture_constraints",
+      "to": "config_json_via_finalize",
       "allowed": true,
-      "rationale": "自举过程只有进入结构化文件，才能被 Vibe Tracing 追踪、审查和复核。",
-      "related_requirements": [
-        "REQ-VT-009",
-        "REQ-VT-001",
-        "REQ-VT-002"
-      ]
-    },
-    {
-      "rule_id": "FLOW-VT-008",
-      "title": "Subagent 不得直接覆盖架构约束",
-      "description": "Claude Code subagent 可以提出 architecture_constraints.json 的变更建议，但不得直接绕过治理流程修改、删除、降级或静默覆盖既有架构约束。",
-      "severity": "must",
-      "from": "claude_code_subagent",
-      "to": "architecture_constraints.json",
-      "allowed": false,
-      "rationale": "架构约束是治理边界，变更必须显式、可审查、可追踪。",
+      "rationale": "保证配置来源单一化，避免多源写入导致的数据不一致。",
       "related_requirements": [
         "REQ-VT-009"
       ]
@@ -691,19 +749,6 @@
         ".vibetracing/tool_reports"
       ],
       "rationale": "Raw Layer 是审计事实源，必须在一次运行中保持稳定。"
-    },
-    {
-      "rule_id": "STORE-VT-005",
-      "title": "Claude Code 自举配置必须文件化",
-      "description": "MVP 中 Claude Code 的 subagent、skill、提示词边界和自举说明必须以可检查的项目文件保存，不得只存在于一次性聊天上下文中。具体路径和文件格式由架构实现约束定义。",
-      "severity": "must",
-      "data_objects": [
-        "claude_code_bootstrap_manifest",
-        "subagent_definitions",
-        "skill_definitions",
-        "subagent_skill_bindings"
-      ],
-      "rationale": "自举配置文件化后，才能被审查、版本化和纳入治理链路。"
     }
   ],
   "error_handling_rules": [
@@ -777,19 +822,6 @@
       ],
       "expected_behavior": "记录命令、退出码、stderr 摘要和受影响的 evidence 状态。",
       "forbidden_behavior": "将缺失或失败的工具输出视为干净证据。"
-    },
-    {
-      "rule_id": "ERR-VT-006",
-      "title": "Claude Code 自举配置缺失必须降级",
-      "description": "如果 MVP 声明使用 Claude Code 自举，但缺少 subagent、skill、提示词边界或治理输出要求等配置，系统必须将自举状态标记为 missing 或 unclear。",
-      "severity": "must",
-      "applies_to": [
-        "claude_code_bootstrap_manifest",
-        "subagent_definitions",
-        "skill_definitions"
-      ],
-      "expected_behavior": "报告缺失配置和影响范围，并阻止相关自举能力被标记为完成。",
-      "forbidden_behavior": "把 Claude Code 对话上下文或默认行为视为已配置的自举治理能力。"
     }
   ],
   "logging_rules": [
@@ -843,28 +875,6 @@
       "forbidden_fields": [
         "raw_secret",
         "full_sensitive_prompt"
-      ]
-    },
-    {
-      "rule_id": "LOG-VT-004",
-      "title": "Claude Code 自举运行必须记录关键元数据",
-      "description": "当通过 Claude Code 自举工作流执行任务时，应记录参与的 subagent、使用的 skill、输入文件、输出文件、关联任务和生成的 Claim 或 evidence ID。",
-      "severity": "must",
-      "required_fields": [
-        "run_id",
-        "subagent_id",
-        "skill_ids",
-        "inputs_used",
-        "outputs_generated",
-        "related_task_ids",
-        "claim_ids",
-        "evidence_ids"
-      ],
-      "forbidden_fields": [
-        "api_key",
-        "secret_token",
-        "password",
-        "raw_sensitive_prompt"
       ]
     }
   ],
@@ -939,26 +949,6 @@
         "agent_self_proving",
         "hallucinated_completion",
         "missing_test_evidence"
-      ]
-    },
-    {
-      "rule_id": "SEC-VT-005",
-      "title": "Subagent 不得越权修改治理边界",
-      "description": "Claude Code subagent 不得自行修改、绕过或降低架构约束、门禁规则、Schema 或证据规则。其发现的问题必须作为变更建议或风险项进入治理流程。",
-      "severity": "must",
-      "applies_to": [
-        "claude_code_subagents",
-        "claude_code_skills",
-        "architecture_constraints.json",
-        "merge_gate_rules",
-        "schemas"
-      ],
-      "required_behavior": "将规则变更作为显式建议记录，并等待人类确认或后续治理流程处理。",
-      "forbidden_behavior": "在没有显式变更记录的情况下直接修改、删除或弱化约束。",
-      "related_risks": [
-        "agent_overreach",
-        "silent_constraint_bypass",
-        "ungoverned_rule_change"
       ]
     }
   ],
@@ -1047,24 +1037,20 @@
       "rationale": "独立 Core 可以提升可测试性、可移植性，并为后续 CI 集成预留空间。"
     },
     {
-      "constraint_id": "TECH-VT-006",
-      "title": "MVP 提供 Claude Code 自举配置",
-      "description": "MVP 必须提供 Claude Code 自举所需的 subagent、skill、提示词边界和治理输出约束配置。subagent 可在定义中声明可用或适用的 skill，避免另设与 Claude Code 机制冲突的动态匹配规则。",
+      "constraint_id": "TECH-VT-007",
+      "title": "语言工具矩阵",
+      "description": "架构约束必须包含 language_tool_matrix 顶层字段，定义每种编程语言可用的验证工具、默认命令模板、输出格式和通过条件。VT 只能执行矩阵中定义的工具。",
       "severity": "must",
       "allowed": [
-        "claude_code_subagents",
-        "claude_code_skills",
-        "explicit_skill_declaration_in_subagent",
-        "file_based_bootstrap_config",
-        "json_governance_outputs"
+        "language_tool_matrix_in_architecture_constraints",
+        "whitelisted_tool_execution",
+        "command_template_substitution"
       ],
       "forbidden": [
-        "bootstrap_only_in_chat_history",
-        "implicit_skill_selection_without_reviewable_config",
-        "core_logic_only_in_claude_prompt",
-        "subagent_direct_architecture_constraint_override"
+        "arbitrary_command_execution",
+        "tool_execution_outside_matrix"
       ],
-      "rationale": "该约束支持 MVP 自举，同时保持 Core 独立和治理产物可追踪。"
+      "rationale": "通过白名单机制保证 VT 执行安全性，同时支持多语言扩展。"
     }
   ],
   "forbidden_patterns": [
@@ -1144,28 +1130,6 @@
         "没有发现违规证据，就把约束标记为 compliant。"
       ],
       "reason": "没有违规证据，不等于存在合规证据。"
-    },
-    {
-      "pattern_id": "FORBID-VT-008",
-      "title": "Claude Code 自举不可追踪",
-      "description": "不得只依赖 Claude Code 对话、自然语言总结或临时上下文证明自举过程已经完成。",
-      "severity": "must",
-      "examples": [
-        "subagent 声称已完成任务拆解，但没有 task_list.json 或等价结构化记录。",
-        "Review 结论只存在于聊天记录，没有进入 Review 结果摘要或 evidence_index.json。"
-      ],
-      "reason": "这违反自举产物必须可追踪和机器契约 JSON 化原则。"
-    },
-    {
-      "pattern_id": "FORBID-VT-009",
-      "title": "Subagent 静默修改架构约束",
-      "description": "Claude Code subagent 不得在没有显式变更记录、人类确认或治理流程的情况下修改、删除、绕过或降低架构约束。",
-      "severity": "must",
-      "examples": [
-        "subagent 直接删除 architecture_constraints.json 中的 must 级约束。",
-        "subagent 为了让任务通过，把违反项改成 unclear 或 compliant。"
-      ],
-      "reason": "架构约束是治理边界，不能由执行 Agent 静默改变。"
     }
   ],
   "quality_gates": [
@@ -1288,26 +1252,6 @@
       "pass_condition": "gate_decision 与 human_decision 使用独立字段表示，或 human_decision 不存在。",
       "fail_condition": "系统将 gate_decision 等同于最终人类批准。",
       "blocks_merge": false
-    },
-    {
-      "gate_id": "GATE-VT-013",
-      "title": "Claude Code 自举配置必须可审查",
-      "description": "MVP 如果声明使用 Claude Code 自举，则必须存在可检查的 subagent、skill、提示词边界和治理输出要求配置。",
-      "severity": "must",
-      "check_type": "automated_or_manual",
-      "pass_condition": "Claude Code 自举配置存在，且能说明 subagent 职责、skill 声明、禁止行为和结构化治理输出要求。",
-      "fail_condition": "自举配置缺失、只存在于聊天上下文、职责不清、skill 使用边界不明，或没有结构化治理输出要求。",
-      "blocks_merge": true
-    },
-    {
-      "gate_id": "GATE-VT-014",
-      "title": "架构约束变更建议必须显式记录",
-      "description": "任何由 Claude Code subagent 提出的架构约束变更都必须以显式记录进入治理流程，不得直接静默修改最终约束文件。",
-      "severity": "must",
-      "check_type": "automated_or_manual",
-      "pass_condition": "架构约束变更建议包含提出者、理由、影响范围、相关 evidence 和人类确认状态，或没有发生相关变更。",
-      "fail_condition": "发现架构约束被修改但没有变更记录、理由、证据或确认状态。",
-      "blocks_merge": true
     }
   ]
 }

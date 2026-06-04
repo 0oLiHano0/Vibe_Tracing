@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-1a42de41-5dc2-4fbf-99f8-09fa34835ec5",
+  "run_id": "RUN-09b6bd8e-c7d5-4a16-94ff-8cf942c7d430",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-05-31T08:21:51.447474Z",
+  "scan_time": "2026-06-03T09:36:18.336928Z",
   "evidences": [
     {
       "evidence_id": "EVIDENCE-VT-001",
@@ -2135,9 +2135,7 @@
       "evidence_id": "EVIDENCE-VT-130",
       "source_type": "test",
       "source_path": "tests/test_dynamic_hints.py::test_claims_schema_validation_error_with_dynamic_hints",
-      "covers": [
-        "AC-VT-009-07"
-      ],
+      "covers": [],
       "status": "covered",
       "details": {
         "nodeid": "tests/test_dynamic_hints.py::test_claims_schema_validation_error_with_dynamic_hints",
@@ -2150,9 +2148,7 @@
       "evidence_id": "EVIDENCE-VT-131",
       "source_type": "test",
       "source_path": "tests/test_dynamic_hints.py::test_tasks_schema_validation_error_with_dynamic_hints",
-      "covers": [
-        "AC-VT-009-07"
-      ],
+      "covers": [],
       "status": "covered",
       "details": {
         "nodeid": "tests/test_dynamic_hints.py::test_tasks_schema_validation_error_with_dynamic_hints",
@@ -2165,9 +2161,7 @@
       "evidence_id": "EVIDENCE-VT-132",
       "source_type": "test",
       "source_path": "tests/test_dynamic_hints.py::test_task_loader_logical_validation_error_with_dynamic_hints",
-      "covers": [
-        "AC-VT-009-07"
-      ],
+      "covers": [],
       "status": "covered",
       "details": {
         "nodeid": "tests/test_dynamic_hints.py::test_task_loader_logical_validation_error_with_dynamic_hints",
@@ -2180,9 +2174,7 @@
       "evidence_id": "EVIDENCE-VT-133",
       "source_type": "test",
       "source_path": "tests/test_dynamic_hints.py::test_claim_loader_logical_validation_error_with_dynamic_hints",
-      "covers": [
-        "AC-VT-009-07"
-      ],
+      "covers": [],
       "status": "covered",
       "details": {
         "nodeid": "tests/test_dynamic_hints.py::test_claim_loader_logical_validation_error_with_dynamic_hints",
@@ -2195,9 +2187,7 @@
       "evidence_id": "EVIDENCE-VT-134",
       "source_type": "test",
       "source_path": "tests/test_dynamic_hints.py::test_silent_filtering_of_template_records",
-      "covers": [
-        "AC-VT-009-07"
-      ],
+      "covers": [],
       "status": "covered",
       "details": {
         "nodeid": "tests/test_dynamic_hints.py::test_silent_filtering_of_template_records",

@@ -56,7 +56,6 @@ def test_pytest_report_success(tmp_path: Path, adapter: ToolEvidenceAdapter) -> 
 
     # First candidate (passed, has covers)
     c1 = candidates[0]
-    assert c1.evidence_id == "EVIDENCE-VT-001"
     assert c1.source_type == "test"
     assert c1.source_path == "tests/test_ids_and_enums.py::test_req_id_valid"
     assert c1.covers == ["AC-VT-001-03"]
@@ -65,7 +64,6 @@ def test_pytest_report_success(tmp_path: Path, adapter: ToolEvidenceAdapter) -> 
 
     # Second candidate (failed, has covers)
     c2 = candidates[1]
-    assert c2.evidence_id == "EVIDENCE-VT-002"
     assert c2.source_type == "test"
     assert c2.source_path == "tests/test_cli_stub.py::test_cli_version"
     assert c2.covers == ["AC-VT-001-01"]

@@ -83,8 +83,6 @@ class EvidenceIndexBuilder:
 
         if not prd_record or prd_record.status != "ok":
             raise ValueError("PRD failed to load successfully.")
-        if not task_list_record or task_list_record.status != "ok":
-            raise ValueError("Task list failed to load successfully.")
 
         # Step 2: Parse components
         prd_path = Path(prd_record.file_path)
@@ -92,12 +90,22 @@ class EvidenceIndexBuilder:
         if not prd_res.is_valid:
             raise ValueError(f"PRD parsing errors: {'; '.join(prd_res.errors)}")
 
-        task_list_path = Path(task_list_record.file_path)
-        task_res = self.task_loader.load_and_validate(task_list_path, prd_res)
-        if not task_res.is_valid:
-            raise ValueError(
-                f"Task list validation errors: {'; '.join(task_res.errors)}"
-            )
+        is_draft = (prd_res.status == "draft")
+
+        if task_list_record and task_list_record.status == "ok":
+            task_list_path = Path(task_list_record.file_path)
+            task_res = self.task_loader.load_and_validate(task_list_path, prd_res)
+            if not task_res.is_valid:
+                raise ValueError(
+                    f"Task list validation errors: {'; '.join(task_res.errors)}"
+                )
+        else:
+            if not is_draft:
+                if task_list_record and task_list_record.status == "parse_error":
+                    raise ValueError(f"Task list parsing errors: {task_list_record.error_message}")
+                raise ValueError("Task list failed to load successfully.")
+            from vibe_tracing.task_loader import TaskListLoadResult
+            task_res = TaskListLoadResult(tasks=[], is_valid=True, errors=[])
 
         claims_list = []
         if claims_record and claims_record.status == "ok":
@@ -123,7 +131,11 @@ class EvidenceIndexBuilder:
         task_covers_map: Dict[str, List[str]] = {}
 
         # 1. Process Tasks
-        task_list_rel = self._to_relative_path(task_list_record.file_path)
+        task_list_rel = (
+            self._to_relative_path(task_list_record.file_path)
+            if task_list_record
+            else self._to_relative_path(str(self.raw_loader.get_path("task_list")))
+        )
         for task in task_res.tasks:
             ev_id = get_next_id()
             covers = sorted(
@@ -233,9 +245,10 @@ class EvidenceIndexBuilder:
         run_id = f"RUN-{uuid.uuid4()}"
         scan_time = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
+        config_prefix = self.raw_loader.config_data.get("project_prefix", "VT")
         index_doc = {
             "run_id": run_id,
-            "project_id": "PROJECT-VT",
+            "project_id": f"PROJECT-{config_prefix}",
             "scan_time": scan_time,
             "evidences": evidences,
         }

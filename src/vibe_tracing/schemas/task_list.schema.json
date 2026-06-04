@@ -5,36 +5,98 @@
   "description": "Schema for the Vibe Tracing task_list.json file.",
   "type": "object",
   "required": ["schema_version", "project", "tasks"],
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
     "schema_version": {
       "type": "string",
-      "description": "Version of this schema."
+      "description": "指明当前模式的版本，例如 '1.0.0'。"
+    },
+    "id_rules": {
+      "type": "object",
+      "description": "ID生成规则以及其他验证规则约束配置说明。",
+      "additionalProperties": false,
+      "properties": {
+        "task_id_format": {
+          "type": "string",
+          "description": "Task ID的命名格式。"
+        },
+        "dod_id_format": {
+          "type": "string",
+          "description": "DoD ID的命名格式。"
+        },
+        "all_tasks_must_link_requirements_and_acceptance_criteria": {
+          "type": "boolean",
+          "description": "是否所有任务必须关联需求与验收标准。"
+        },
+        "all_positive_status_must_reference_evidence": {
+          "type": "boolean",
+          "description": "是否所有非 todo 状态必须引用证据。"
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "项目开发阶段的定义列表。",
+      "items": {
+        "type": "object",
+        "required": ["phase_id", "name", "goal"],
+        "additionalProperties": false,
+        "properties": {
+          "phase_id": {
+            "type": "string",
+            "pattern": "^PHASE-[a-zA-Z0-9_-]+-\\d+$",
+            "description": "阶段唯一标识符"
+          },
+          "name": {
+            "type": "string",
+            "description": "阶段名称。"
+          },
+          "goal": {
+            "type": "string",
+            "description": "该阶段的目标与交付期望。"
+          }
+        }
+      }
     },
     "project": {
       "type": "object",
-      "description": "Top-level project metadata.",
+      "description": "项目元数据对象，包含项目基本信息。",
       "required": ["project_id", "name", "stage"],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "project_id": {
           "type": "string",
-          "pattern": "^PROJECT-VT$",
-          "description": "Unique project identifier."
+          "pattern": "^PROJECT-[a-zA-Z0-9_-]+$",
+          "description": "项目唯一标识符"
         },
         "name": {
           "type": "string",
-          "description": "Human-readable project name."
+          "description": "项目名称，人类可读字符串。"
         },
         "stage": {
           "type": "string",
-          "description": "Current project stage."
+          "description": "项目当前所处的阶段。"
+        },
+        "task_list_id": {
+          "type": "string",
+          "description": "任务列表ID。"
+        },
+        "source_files": {
+          "type": "array",
+          "description": "源文件列表。",
+          "items": {
+            "type": "string"
+          }
+        },
+        "generated_for": {
+          "type": "string",
+          "description": "生成的用途说明。"
         }
       }
     },
     "tasks": {
       "type": "array",
-      "description": "List of all task objects.",
+      "description": "任务列表数组，每个元素代表一个具体的开发任务。",
       "items": {
         "type": "object",
         "required": [
@@ -49,72 +111,120 @@
           "related_acceptance_criteria",
           "definition_of_done"
         ],
-        "additionalProperties": true,
+        "additionalProperties": false,
         "properties": {
           "task_id": {
             "type": "string",
-            "pattern": "^TASK-VT-\\d+$",
-            "description": "Unique task identifier."
+            "pattern": "^TASK-[a-zA-Z0-9_-]+-\\d+$",
+            "description": "任务唯一标识符"
           },
           "title": {
             "type": "string",
-            "description": "Short task title."
+            "description": "任务标题，简短描述开发任务内容。"
           },
           "phase_id": {
             "type": "string",
-            "pattern": "^PHASE-VT-\\d+$",
-            "description": "Phase this task belongs to."
+            "pattern": "^PHASE-[a-zA-Z0-9_-]+-\\d+$",
+            "description": "所属阶段标识符"
           },
           "priority": {
             "type": "string",
             "enum": ["must", "should", "could"],
-            "description": "MoSCoW priority level."
+            "description": "任务优先级，必须是 'must'、'should' 或 'could' 之一。"
           },
           "status": {
             "type": "string",
-            "enum": ["todo", "in_progress", "blocked", "done"],
-            "description": "Current task status."
+            "enum": ["todo", "in_progress", "blocked", "done", "cancelled"],
+            "description": "任务当前状态，必须是 'todo'、'in_progress'、'blocked' 或 'done' 之一。"
           },
           "owner_role": {
             "type": "string",
-            "description": "Role responsible for this task."
+            "description": "负责人角色，例如 'AI Developer'。"
           },
           "objective": {
             "type": "string",
-            "description": "What this task aims to achieve."
+            "description": "开发目标，详述此任务要达成的目的。"
+          },
+          "atomic_scope": {
+            "type": "string",
+            "description": "任务的具体原子化实现范围。"
+          },
+          "out_of_scope": {
+            "type": "array",
+            "description": "非此任务的实现范围，用于防范过度设计。",
+            "items": {
+              "type": "string"
+            }
+          },
+          "related_modules": {
+            "type": "array",
+            "description": "关联的代码模块标识符列表",
+            "items": {
+              "type": "string",
+              "pattern": "^MOD-[a-zA-Z0-9_-]+-\\d+$"
+            }
+          },
+          "related_architecture_constraints": {
+            "type": "array",
+            "description": "关联的架构约束标识符列表",
+            "items": {
+              "type": "string"
+            }
+          },
+          "depends_on": {
+            "type": "array",
+            "description": "依赖的前置任务标识符列表",
+            "items": {
+              "type": "string",
+              "pattern": "^TASK-[a-zA-Z0-9_-]+-\\d+$"
+            }
+          },
+          "expected_deliverables": {
+            "type": "array",
+            "description": "任务预期交付产物（如文件路径或模块）。",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ai_coding_guidance": {
+            "type": "array",
+            "description": "对AI Coding Agent的定制修复/实现指南。",
+            "items": {
+              "type": "string"
+            }
           },
           "related_requirements": {
             "type": "array",
-            "description": "Requirement IDs this task addresses.",
+            "description": "关联需求标识符列表",
             "items": {
               "type": "string",
-              "pattern": "^REQ-VT-\\d+$"
+              "pattern": "^REQ-[a-zA-Z0-9_-]+-\\d+$"
             }
           },
           "related_acceptance_criteria": {
             "type": "array",
-            "description": "Acceptance criteria IDs this task addresses.",
+            "description": "关联验收标准标识符列表",
             "items": {
               "type": "string",
-              "pattern": "^AC-VT-\\d+-\\d+$"
+              "pattern": "^AC-[a-zA-Z0-9_-]+-\\d+-\\d+$"
             }
           },
           "definition_of_done": {
             "type": "array",
-            "description": "Checklist items that define completion.",
+            "description": "完成定义（DoD）的检查项列表，每项需包含 `dod_id` 与 `description`。",
             "items": {
               "type": "object",
               "required": ["dod_id", "description"],
-              "additionalProperties": true,
+              "additionalProperties": false,
               "properties": {
                 "dod_id": {
                   "type": "string",
-                  "pattern": "^DOD-VT-\\d+-\\d+$",
-                  "description": "Unique DoD item identifier."
+                  "pattern": "^DOD-[a-zA-Z0-9_-]+-\\d+-\\d+$",
+                  "description": "完成定义项标识符"
                 },
                 "description": {
                   "type": "string",
-                  "description": "What must be true for this DoD item to be satisfied."
+                  "description": "DoD项说明，描述任务完成的条件。"
                 }
               }
             }

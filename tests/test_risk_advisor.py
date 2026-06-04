@@ -19,36 +19,43 @@ def test_enrich_claim_risks():
             "risk_id": "RISK-VT-001",
             "description": "Completed claim CLAIM-VT-001 has only self-referential or empty evidence.",
             "severity": "must",
+            "risk_category": "self_referential_claim",
         },
         {
             "risk_id": "RISK-VT-002",
             "description": "Claim CLAIM-VT-002 references non-existent evidence.",
             "severity": "must",
+            "risk_category": "non_existent_evidence",
         },
         {
             "risk_id": "RISK-VT-003",
             "description": "Claim CLAIM-VT-003 modified after claim timestamp.",
             "severity": "should",
+            "risk_category": "stale_file",
         },
         {
             "risk_id": "RISK-VT-004",
             "description": "Claim CLAIM-VT-004 references non-existent task.",
             "severity": "should",
+            "risk_category": "non_existent_task",
         },
         {
             "risk_id": "RISK-VT-005",
             "description": "Claim CLAIM-VT-005 references non-existent code file.",
             "severity": "should",
+            "risk_category": "non_existent_code_ref",
         },
         {
             "risk_id": "RISK-VT-006",
             "description": "Claim CLAIM-VT-006 has no test coverage.",
             "severity": "must",
+            "risk_category": "no_test_coverage",
         },
         {
             "risk_id": "RISK-VT-007",
             "description": "Claim CLAIM-VT-007 has failed tests.",
             "severity": "must",
+            "risk_category": "failed_tests",
         },
         {
             "risk_id": "RISK-VT-008",

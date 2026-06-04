@@ -1,9 +1,12 @@
 {
-  "project_id": "PROJECT-VT",
-  "prd_path": "docs/prd.md",
-  "architecture_constraints_path": "docs/architecture_constraints.json",
-  "task_list_path": "docs/task_list.json",
-  "agent_claims_path": ".vibetracing/agent_claims.json",
-  "output_dir": ".vibetracing/output",
-  "claude_bootstrap_dir": ".vibetracing/claude_bootstrap"
+  "project_id": "PROJECT-{{PROJECT_PREFIX}}",
+  "project_prefix": "{{PROJECT_PREFIX}}",
+  "project_name": "{{PROJECT_NAME}}",
+  "paths": {
+    "prd": "docs/prd.md",
+    "architecture_constraints": "docs/architecture_constraints.json",
+    "task_list": "docs/task_list.json",
+    "agent_claims": ".vibetracing/agent_claims.json",
+    "output_dir": "output"
+  }
 }

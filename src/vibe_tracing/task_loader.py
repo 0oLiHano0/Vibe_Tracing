@@ -14,6 +14,16 @@ from vibe_tracing.core.ids import validate_id
 from vibe_tracing.prd_parser import PrdParseResult, get_parent_req_id
 from vibe_tracing.schema_validator import SchemaValidator
 
+_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
+
+
+def _load_field_hints(schema_name: str) -> Dict[str, str]:
+    with _HINTS_PATH.open("r", encoding="utf-8") as f:
+        return json.load(f).get(schema_name, {})
+
+
+_task_field_hints = _load_field_hints("task_list")
+
 
 @dataclass
 class DodItem:
@@ -70,12 +80,19 @@ class TaskLoader:
         self,
         task_list_path: Path,
         prd_result: Optional[PrdParseResult] = None,
+        content: Optional[dict] = None,
     ) -> TaskListLoadResult:
         """
         Load a task list file, validate it against the JSON schema, and cross-reference with the PRD.
         """
-        # Step 1: Validate file using SchemaValidator
-        val_res = self.schema_validator.validate_file(task_list_path, "task_list")
+        # Step 1: Validate file/dict using SchemaValidator
+        if content is not None:
+            val_res = self.schema_validator.validate_dict(
+                content, "task_list", source_label=str(task_list_path)
+            )
+        else:
+            val_res = self.schema_validator.validate_file(task_list_path, "task_list")
+
         if not val_res.is_valid:
             error_msg = f"Schema validation failed for {task_list_path}"
             if val_res.message:
@@ -91,15 +108,18 @@ class TaskLoader:
             )
 
         # Step 2: Parse the file content
-        try:
-            with task_list_path.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as exc:
-            return TaskListLoadResult(
-                tasks=[],
-                is_valid=False,
-                errors=[f"Failed to read/parse file {task_list_path}: {exc}"],
-            )
+        if content is not None:
+            data = content
+        else:
+            try:
+                with task_list_path.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception as exc:
+                return TaskListLoadResult(
+                    tasks=[],
+                    is_valid=False,
+                    errors=[f"Failed to read/parse file {task_list_path}: {exc}"],
+                )
 
         return self.validate_data(data, prd_result, source_label=str(task_list_path))
 
@@ -136,16 +156,12 @@ class TaskLoader:
         gaps: List[TaskGap] = []
         is_valid = True
 
-        # Extract template field hints if they exist
-        template_hints = {}
-        for t in tasks_list:
-            if isinstance(t, dict) and t.get("task_id", "").endswith("-9999"):
-                template_hints = t.get("__field_hints__", {})
-                break
 
         def get_err_msg(field_key: str, base_msg: str) -> str:
-            hint = template_hints.get(field_key)
+            hint = _task_field_hints.get(field_key)
             if hint:
+                from vibe_tracing.core import ids
+                hint = hint.replace("{PROJECT_PREFIX}", ids.get_project_prefix())
                 return f"{base_msg}【修复指南】{hint}"
             return base_msg
 
@@ -222,25 +238,14 @@ class TaskLoader:
                 base_msg = f"Invalid task ID format: {id_err}."
                 full_msg = get_err_msg("task_id", f"{base_msg} ")
                 task_obj.errors.append(full_msg)
-                errors.append(
-                    f"Task {task_id} has invalid ID format: {id_err}."
-                    + (
-                        f" 【修复指南】{template_hints.get('task_id')}"
-                        if template_hints.get("task_id")
-                        else ""
-                    )
-                )
+                errors.append(full_msg)
                 is_valid = False
 
             # Check isolated task condition: DOD-VT-007-01
             if not related_requirements and not related_acceptance_criteria:
                 task_obj.is_valid = False
                 base_msg = f"Task {task_id} is isolated (no related requirements or acceptance criteria)."
-                hint = template_hints.get("related_requirements") or template_hints.get(
-                    "related_acceptance_criteria"
-                )
-                hint_str = f" 【修复指南】{hint}" if hint else ""
-                full_msg = f"{base_msg}{hint_str}".strip()
+                full_msg = get_err_msg("related_requirements", base_msg)
                 task_obj.errors.append(full_msg)
                 errors.append(full_msg)
                 gaps.append(TaskGap(item_id=task_id, reason="Task is isolated"))
@@ -254,14 +259,7 @@ class TaskLoader:
                         base_msg = f"References non-existent requirement: {req_id}."
                         full_msg = get_err_msg("related_requirements", f"{base_msg} ")
                         task_obj.errors.append(full_msg)
-                        errors.append(
-                            f"Task {task_id} references non-existent requirement {req_id}."
-                            + (
-                                f" 【修复指南】{template_hints.get('related_requirements')}"
-                                if template_hints.get("related_requirements")
-                                else ""
-                            )
-                        )
+                        errors.append(full_msg)
                         gaps.append(
                             TaskGap(
                                 item_id=task_id,
@@ -280,14 +278,7 @@ class TaskLoader:
                             "related_acceptance_criteria", f"{base_msg} "
                         )
                         task_obj.errors.append(full_msg)
-                        errors.append(
-                            f"Task {task_id} references non-existent acceptance criterion {ac_id}."
-                            + (
-                                f" 【修复指南】{template_hints.get('related_acceptance_criteria')}"
-                                if template_hints.get("related_acceptance_criteria")
-                                else ""
-                            )
-                        )
+                        errors.append(full_msg)
                         gaps.append(
                             TaskGap(
                                 item_id=task_id,
@@ -305,14 +296,7 @@ class TaskLoader:
                                     "related_requirements", f"{base_msg} "
                                 )
                                 task_obj.errors.append(full_msg)
-                                errors.append(
-                                    f"Task {task_id} references AC {ac_id} but misses parent REQ {parent_req_id} in related_requirements."
-                                    + (
-                                        f" 【修复指南】{template_hints.get('related_requirements')}"
-                                        if template_hints.get("related_requirements")
-                                        else ""
-                                    )
-                                )
+                                errors.append(full_msg)
                                 gaps.append(
                                     TaskGap(
                                         item_id=task_id,

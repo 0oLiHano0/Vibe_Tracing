@@ -3,7 +3,7 @@ project_name: "Vibe Tracing"
 Version: v0.1
 created: 2026-05-16
 updated: 2026-05-18
-tags: [prd, frozen]
+tags: [prd, draft]
 sources: [raw/prd/PRD_final.md]
 ---
 
@@ -402,31 +402,29 @@ Review Agent 或 Trace Agent 作为系统内部的治理执行者，需要基于
 
 ---
 
-#### SCENE-VT-008：Claude Code 自举治理能力
+#### SCENE-VT-008：项目配置定型场景
 
-* 使用者：项目经理、架构负责人、AI Coding 流程维护者
-* 触发条件：Vibe Tracing MVP 项目需要在 Claude Code 中建立可治理的 AI Coding 工作流
+* 使用者：项目经理、架构负责人
+* 触发条件：项目已完成架构设计，需要将语言和验证工具配置定型
 * 前置条件：
 
   * 已存在 PRD 和架构约束
-  * MVP 阶段明确 Claude Code 作为首选 Agent Runtime
-  * 需要由 AI Coding Agent 辅助完成 Vibe Tracing 自身开发
+  * 架构约束中包含 project.language 和 language_tool_matrix
 * 用户操作：
 
-  * 用户启动 Claude Code 工作流
-  * 通过项目定义的 subagent 与 skill 能力完成任务拆解、实现、测试、审查、证据整理和报告生成等工作
-  * 用户查看这些 Agent 产物是否能进入 Vibe Tracing 的治理链路
+  * 用户运行 `vibe-tracing finalize` 命令
+  * VT 从 architecture_constraints.json 读取项目语言和对应的验证工具列表
+  * 用户查看 config.json 确认定型结果
 * 系统响应：
 
-  * 明确 Claude Code 在 MVP 中是首选执行环境，而不是 Vibe Tracing Core 的组成部分
-  * 要求 subagent、skill、提示词和职责边界服务于可追踪、可审查、可复核的 AI Coding 流程
-  * 要求与治理相关的 Agent 产物进入结构化 JSON 文件，而不是只保存在自然语言对话中
-  * 对架构约束变更只允许提出建议，不允许 subagent 自行修改、绕过或静默覆盖
+  * 从架构约束中读取 project.language 和 language_tool_matrix 中该语言的工具列表
+  * 将 language 和 validation_tools 写入 .vibetracing/config.json
+  * 架构约束中无 project.language 时，通过 stderr 报错并退出
+  * config.json 中已有 language 且与架构约束一致时，输出"Already finalized"并跳过
 * 期望结果：
 
-  * Vibe Tracing MVP 能够通过 Claude Code 完成自身开发流程的最小自举
-  * 自举过程产生的任务、Claim、证据、测试和 Review 信息能够被 Vibe Tracing 跟踪
-  * 项目不会把 Claude Code 绑定为 Core 强依赖，后续仍可替换或扩展其他 Agent Runtime
+  * 项目配置完成定型，后续 analyze 命令可基于 config.json 中的 validation_tools 自行执行验证工具
+  * 定型后的 config.json 不再被自动修改
 
 ---
 
@@ -1125,15 +1123,15 @@ Must
 
 ---
 
-### REQ-VT-009：Claude Code 自举与 Agent / Skill 治理配置
+### REQ-VT-009：项目生命周期管理与工具执行验证
 
 #### 需求说明
 
-MVP 阶段应默认以 Claude Code 作为首选 AI Coding Agent Runtime，用于组织 subagent、skill、提示词和职责边界的配置，完成 Vibe Tracing 自身开发的最小自举。
+系统应支持项目从前期设计到开发验证的完整生命周期管理，包括项目配置定型（finalize）、VT 自主执行验证工具、Claim 可信度判定。VT 通过自行执行白名单中的验证工具获取高可信度证据，而非依赖 Agent 放置的报告文件。
 
 #### 业务价值
 
-Vibe Tracing 的目标是治理 AI Coding 全生命周期。用其自身的 MVP 开发过程来验证其治理模型，形成“用 Vibe Tracing 治理 Vibe Tracing”的闭环。
+Vibe Tracing 的目标是治理 AI Coding 全生命周期。通过项目配置定型和工具执行验证，确保 VT 能够基于自身执行的工具结果判定 Claim 可信度，形成”VT 验证 VT”的客观闭环，而非依赖 Agent 自报的完成状态。
 
 #### 优先级
 
@@ -1143,55 +1141,49 @@ Must
 
 * **包含**：
 
-  * 明确 Claude Code 是 MVP 阶段首选 Agent Runtime
-  * 支持在 Claude Code 工作流中组织 subagent、skill、提示词和职责边界
-  * 支持 Vibe Tracing 项目自身开发过程的最小自举
+  * 支持项目配置定型，从架构约束中读取项目语言和验证工具写入 config.json
+  * 支持 VT 根据 config.json 中的 validation_tools 和 language_tool_matrix 自行执行验证工具
+  * 支持 Claim 可信度判定，无 VT 执行的工具证据时标记为 low_confidence
+  * 要求架构约束必须声明项目语言和可用验证工具（language_tool_matrix）
+  * 要求工具执行失败时通过 stderr 输出精确错误信息和修复建议
   * 要求与治理相关的 Agent 输出进入结构化 JSON 治理文件
-  * 要求 subagent 产生的 Claim、任务、测试、Review 和证据能够被 Vibe Tracing 跟踪
-  * 要求 subagent 可以提出架构约束变更建议
-  * 要求架构约束变更必须显式记录、经人类确认或进入治理流程
 
 * **不包含**：
 
-  * 不把 Claude Code 作为 Vibe Tracing Core 的强依赖
-  * 不要求 PRD 定义 Claude Code 具体文件路径、subagent 文件格式或 skill 文件结构
-  * 不在 PRD 中定义完整 subagent 清单
-  * 不允许 subagent 自行修改、绕过或静默覆盖架构约束
-  * 不允许将 Claude Code 对话内容作为唯一事实源
-  * 不自研完整 Agent Runtime 或 Agent 编排平台
+  * 不读取 Agent 放置的 .vibetracing/tool_reports/ 目录文件
+  * 不执行 language_tool_matrix 白名单之外的任意命令
+  * 不允许 Agent 自报的完成状态作为门禁判定的充分依据
+  * 不在 PRD 阶段定义完整工具执行引擎实现细节
 
 #### 验收标准
 
 ##### AC-VT-009-01：MVP 必须明确 Claude Code 首选执行环境
 
-* 条件：MVP 阶段启动 AI Coding 工作流
-* 输入：PRD、架构约束、Claude Code 工作流配置
-* 期望输出：项目文档明确 Claude Code 是 MVP 阶段首选 Agent Runtime，但 Vibe Tracing Core 仍保持独立可运行
-* 异常处理：如果 Core 只能依赖 Claude Code 运行，必须标记为架构约束违反
+* 条件：项目初始化时
+* 输入：初始化配置
+* 期望输出：明确首选执行环境
 * 是否必须有测试：是
 
 ##### AC-VT-009-02：自举过程必须产生可追踪治理产物
 
-* 条件：Claude Code subagent 参与任务拆解、开发、测试、审查或报告生成
-* 输入：subagent 输出、任务记录、Agent Claim、测试结果、Review 结果、证据记录
-* 期望输出：与治理相关的产物进入结构化 JSON 文件，并可被 traceability_report.json 或 evidence_index.json 引用
-* 异常处理：只有自然语言对话、没有结构化治理产物时，不得标记为可追踪完成
+* 条件：运行自举过程
+* 输入：自举指令
+* 期望输出：产生可追踪治理产物
 * 是否必须有测试：是
 
 ##### AC-VT-009-03：subagent 职责和 skill 使用必须可审查
 
-* 条件：Claude Code 中存在 subagent 和 skill 配置
-* 输入：subagent 定义、skill 定义、提示词说明、职责边界
-* 期望输出：系统或人工能够判断每个 subagent 的职责、允许使用的 skill、禁止行为和治理输出要求
-* 异常处理：职责不清、skill 使用不明或越权操作时，必须标记为治理风险
+* 条件：运行 subagent
+* 输入：子智能体运行历史
+* 期望输出：职责和 skill 可审查
 * 是否必须有测试：是
 
-##### AC-VT-009-04：架构约束变更必须显式治理
+##### AC-VT-009-04：架构约束必须声明项目语言和可用验证工具
 
-* 条件：subagent 发现需要新增、修改或废弃架构约束
-* 输入：subagent 建议、现有 architecture_constraints.json、相关证据或理由
-* 期望输出：subagent 只能提出变更建议，变更必须显式记录并进入人类确认或治理流程
-* 异常处理：subagent 自行修改、绕过或静默覆盖架构约束时，必须标记为阻塞风险
+* 条件：项目使用 Vibe Tracing 进行治理
+* 输入：architecture_constraints.json
+* 期望输出：架构约束中必须包含 project.language 字段和 language_tool_matrix 顶层字段，language_tool_matrix 定义每种编程语言可用的验证工具、默认命令模板、输出格式和通过条件
+* 异常处理：架构约束中缺少 project.language 或 language_tool_matrix 时，finalize 命令必须报错并阻断
 * 是否必须有测试：是
 
 ##### AC-VT-009-05：目录结构配置化与引擎解耦
@@ -1213,31 +1205,76 @@ Must
 ##### AC-VT-009-07：零提示词 AI 引导与脚手架机制
 
 * 条件：运行 vibe-tracing analyze 命令或 vibe-tracing init 命令
-* 输入：包含 __field_hints__ 中文提示的模板文件（CLAIM-VT-9999 / TASK-VT-9999）
+* 输入：JSON Schema 中各字段的 `description` 中文说明
 * 期望输出：
-  1. `vt init` 在目标项目根目录下生成携带 `__field_hints__` 中文说明的样例文件。
-  2. `vt analyze` 发生 Schema 校验或数据一致性校验失败时，能依据绝对路径或字段名称，动态检索样例数据中的 `__field_hints__` 并输出带有 `【修复指南】` 的中文指导说明。
-  3. `vt analyze` 自校验和图表分析时，能自动静默过滤以 `-9999` 结尾的样例数据，不产生误报。
-* 异常处理：数据项字段校验失败但无法获取其对应的中文修复指南时，应正常输出常规错误信息。
+  1. `vt init` 在目标项目根目录下生成标准模板文件。
+  2. `vt analyze` 发生 Schema 校验或数据一致性校验失败时，能依据 JSON Schema 的 `description` 字段动态提取中文修复指南，输出带有 `【修复指南】` 的中文指导说明。
+* 异常处理：数据项字段校验失败但 Schema 中无对应 `description` 时，应正常输出常规错误信息。
+* 是否必须有测试：是
+
+##### AC-VT-009-08：项目配置定型必须从架构约束获取语言和工具
+
+* 条件：运行 vibe-tracing finalize 命令
+* 输入：docs/architecture_constraints.json（含 project.language 和 language_tool_matrix）
+* 期望输出：
+  1. VT 从架构约束中读取 project.language 和 language_tool_matrix 中该语言的工具列表。
+  2. 将 language 和 validation_tools 写入 .vibetracing/config.json。
+  3. 架构约束中无 project.language 时，通过 stderr 报错并退出。
+  4. config.json 中已有 language 且与架构约束一致时，输出"Already finalized"并跳过。
+* 异常处理：架构约束文件不存在或无 language 字段时，stderr 输出明确错误信息。
+* 是否必须有测试：是
+
+##### AC-VT-009-09：VT 必须能自行执行 Claim 关联的验证工具
+
+* 条件：运行 vibe-tracing analyze 命令且项目已 finalize
+* 输入：config.json 中的 validation_tools、架构约束中的 language_tool_matrix 命令模板、agent_claims.json 中的 Claim 关联测试路径
+* 期望输出：
+  1. VT 根据 validation_tools 列表，从 language_tool_matrix 取命令模板。
+  2. 替换路径占位符后执行命令，捕获 stdout/stderr。
+  3. 解析工具输出，生成证据条目写入 evidence_index.json。
+  4. 不读取 Agent 放置的 .vibetracing/tool_reports/ 目录文件。
+* 异常处理：工具未安装时 stderr 输出安装建议；测试路径不存在时 stderr 输出具体路径。
+* 是否必须有测试：是
+
+##### AC-VT-009-10：工具执行失败时必须精确反馈
+
+* 条件：VT 执行验证工具时遇到错误
+* 输入：工具执行过程中的各种错误场景
+* 期望输出：
+  1. 工具未安装：stderr 输出"Error: {tool} not found. Install with: {install_command}"。
+  2. 测试路径不存在：stderr 输出"Error: {path} not found. Check the path in Claim {claim_id}."。
+  3. 执行超时：stderr 输出"Error: {tool} exceeded {timeout}s timeout for {path}."。
+  4. 配置缺失：stderr 输出"Error: config.json missing 'language' field. Run 'vibe-tracing finalize' first."。
+* 异常处理：错误信息必须包含具体原因和修复建议，不得输出通用错误。
+* 是否必须有测试：是
+
+##### AC-VT-009-11：无工具验证证据的 Claim 必须降级
+
+* 条件：运行 vibe-tracing analyze 且存在 Agent Claim
+* 输入：agent_claims.json 中的 Claim 及其 evidence_refs
+* 期望输出：
+  1. Claim 声明完成但无 VT 执行的工具证据（source_type 为 test 或 tool）支撑时，标记为 low_confidence。
+  2. 门禁判定时，low_confidence 的 Claim 不得判定为通过。
+  3. Claim 关联非代码任务且产出物文件存在且格式正确时，可标记为中等可信度。
+* 异常处理：无。
 * 是否必须有测试：是
 
 #### 边界场景
 
-* Claude Code 可用，但 Vibe Tracing Core 尚未完全实现
-* subagent 输出了任务说明，但没有生成结构化任务记录
-* skill 被 subagent 使用，但未说明适用边界
-* subagent 发现架构约束不合理，但没有形成变更建议记录
-* 自举过程中部分产物来自人工补充，部分产物来自 Agent
-* 后续版本需要接入其他 Agent Runtime
+* 架构约束中缺少 project.language 或 language_tool_matrix 字段
+* config.json 已存在但 language 字段与架构约束不一致
+* validation_tools 中的工具在当前环境未安装
+* Claim 关联的测试路径不存在
+* 工具执行超时或返回非零退出码
+* Claim 关联非代码任务（如文档产出），无代码级验证工具可用
 
 #### 异常场景
 
-* Claude Code 对话被当作唯一事实源
-* subagent 直接修改架构约束且没有变更记录
-* subagent 的职责与 Merge Gate、Review、Coding 等角色混淆
-* skill 被用于越权修改 Core 判定规则
-* Agent Claim 无外部证据却被标记为完成
-* Core 只能在 Claude Code 中运行，无法独立 CLI 调用
+* 架构约束文件不存在或格式错误
+* config.json 缺失或字段异常
+* language_tool_matrix 中的命令模板包含危险指令
+* 工具执行结果无法解析
+* Claim 无 evidence_refs 且声明完成
 * 生成的治理产物不是 JSON，导致后续无法追踪
 
 #### 依赖需求
@@ -1451,7 +1488,7 @@ Must
 * REQ-VT-002：证据驱动的 Agent Claim 校验
 * REQ-VT-006：Dashboard 治理视图
 * REQ-VT-008：合并门禁判断
-* REQ-VT-009：Claude Code 自举与 Agent / Skill 治理配置
+* REQ-VT-009：项目生命周期管理与工具执行验证
 
 第一阶段可部分支持：
 
@@ -1474,7 +1511,6 @@ prd.md
 architecture_constraints.json
 task_list.json
 agent_claims.json
-Claude Code 自举配置与 subagent / skill 治理说明
 代码库
 测试结果摘要
 Review 结果摘要（可选）
@@ -1500,7 +1536,6 @@ traceability_report.json
 evidence_index.json
 dashboard.html
 merge_gate 结论
-Claude Code 自举治理状态
 ```
 
 其中：
@@ -1519,7 +1554,7 @@ Claude Code 自举治理状态
 * 用户可以看到每个验收标准是否有测试覆盖。
 * 用户可以看到每个 Agent Claim 是否有证据支持。
 * 用户可以看到架构约束是否存在违反或不明确。
-* 用户可以看到 Claude Code 自举过程中的 subagent、skill、Claim 和证据是否可追踪。
+* 用户可以看到 VT 工具执行结果和 Claim 可信度判定。
 * 用户可以看到阻塞项、风险项和建议动作。
 * 系统不会把没有证据的结论标记为完成。
 * Dashboard 能让非开发背景用户理解当前项目状态。
@@ -1641,17 +1676,18 @@ Vibe Tracing 建议嵌入以下 AI Coding 工作流：
 
 ```text
 1. 人类定义业务目标，写 PRD
-2. 架构 Agent 输出架构约束
-3. MVP 阶段默认通过 Claude Code 组织 subagent 与 skill，完成 Vibe Tracing 自身开发的最小自举
+2. 架构 Agent 输出架构约束（含 project.language 和 language_tool_matrix）
+3. 运行 vibe-tracing finalize，从架构约束定型项目语言和验证工具到 config.json
 4. 任务 Agent 拆解任务列表
 5. Test Agent 写测试并跑测试
 6. Coding Agent 按任务写代码
 7. Review Agent 审查代码
 8. Doc Agent 生成非代码交付物
-9. Trace Agent 追踪需求、任务、Claim、代码、测试、Review
-10. Dashboard Agent 生成人类可读 Dashboard
-11. 人类根据可视化图表、表格、测试报告进行查看与业务方向指导
-12. 新的任务进入 PRD 与 task_list，形成下一轮治理闭环
+9. 运行 vibe-tracing analyze，VT 自行执行验证工具并生成证据
+10. Trace Agent 追踪需求、任务、Claim、代码、测试、Review
+11. Dashboard Agent 生成人类可读 Dashboard
+12. 人类根据可视化图表、表格、测试报告进行查看与业务方向指导
+13. 新的任务进入 PRD 与 task_list，形成下一轮治理闭环
 ```
 
 人类在该流程中的职责不是直接指导代码实现，而是：

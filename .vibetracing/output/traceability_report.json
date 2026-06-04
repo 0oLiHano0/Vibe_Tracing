@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-1a42de41-5dc2-4fbf-99f8-09fa34835ec5",
+  "run_id": "RUN-09b6bd8e-c7d5-4a16-94ff-8cf942c7d430",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-05-31T08:21:51.447474Z",
+  "scan_time": "2026-06-03T09:36:18.336928Z",
   "gate_decision": "fail",
   "requirement_coverage": [
     {
@@ -139,7 +139,7 @@
   "risks": [
     {
       "risk_id": "RISK-VT-001",
-      "description": "Claim CLAIM-VT-030 references code file docs/prd.md which was modified after the claim timestamp.",
+      "description": "Claim CLAIM-VT-005 references code file src/vibe_tracing/raw_input_loader.py which was modified after the claim timestamp.",
       "severity": "should",
       "confidence": "low_confidence",
       "type": "suggestion",
@@ -149,7 +149,7 @@
     },
     {
       "risk_id": "RISK-VT-002",
-      "description": "Claim CLAIM-VT-030 references code file docs/task_list.json which was modified after the claim timestamp.",
+      "description": "Claim CLAIM-VT-030 references code file docs/prd.md which was modified after the claim timestamp.",
       "severity": "should",
       "confidence": "low_confidence",
       "type": "suggestion",
@@ -159,6 +159,116 @@
     },
     {
       "risk_id": "RISK-VT-003",
+      "description": "Claim CLAIM-VT-030 references code file docs/task_list.json which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-004",
+      "description": "Claim CLAIM-VT-031 references code file src/vibe_tracing/raw_input_loader.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-005",
+      "description": "Claim CLAIM-VT-033 references code file src/vibe_tracing/traceability/claim_evidence_analyzer.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-006",
+      "description": "Claim CLAIM-VT-033 references test file tests/test_claim_evidence_analyzer.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-007",
+      "description": "Claim CLAIM-VT-034 references code file src/vibe_tracing/dashboard_renderer.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-008",
+      "description": "Claim CLAIM-VT-035 references code file src/vibe_tracing/schema_validator.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-009",
+      "description": "Claim CLAIM-VT-035 references code file src/vibe_tracing/task_loader.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-010",
+      "description": "Claim CLAIM-VT-035 references code file src/vibe_tracing/claim_loader.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-011",
+      "description": "Claim CLAIM-VT-035 references code file src/vibe_tracing/cli.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-012",
+      "description": "Claim CLAIM-VT-035 references test file tests/test_scaffolding.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-013",
+      "description": "Claim CLAIM-VT-035 references test file tests/test_dynamic_hints.py which was modified after the claim timestamp.",
+      "severity": "should",
+      "confidence": "low_confidence",
+      "type": "suggestion",
+      "business_impact": "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。",
+      "suggested_action": "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-014",
       "description": "架构约束 PRINCIPLE-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -170,7 +280,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-004",
+      "risk_id": "RISK-VT-015",
       "description": "架构约束 PRINCIPLE-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -182,7 +292,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-005",
+      "risk_id": "RISK-VT-016",
       "description": "架构约束 PRINCIPLE-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -194,7 +304,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-006",
+      "risk_id": "RISK-VT-017",
       "description": "架构约束 PRINCIPLE-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -206,7 +316,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-007",
+      "risk_id": "RISK-VT-018",
       "description": "架构约束 PRINCIPLE-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -218,7 +328,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-008",
+      "risk_id": "RISK-VT-019",
       "description": "架构约束 PRINCIPLE-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -230,7 +340,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-009",
+      "risk_id": "RISK-VT-020",
       "description": "架构约束 PRINCIPLE-VT-007 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -242,7 +352,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-010",
+      "risk_id": "RISK-VT-021",
       "description": "架构约束 PRINCIPLE-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -254,7 +364,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-011",
+      "risk_id": "RISK-VT-022",
       "description": "架构约束 PRINCIPLE-VT-009 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -266,7 +376,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-012",
+      "risk_id": "RISK-VT-023",
       "description": "架构约束 PRINCIPLE-VT-010 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -278,7 +388,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-013",
+      "risk_id": "RISK-VT-024",
       "description": "架构约束 PRINCIPLE-VT-011 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -290,7 +400,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-014",
+      "risk_id": "RISK-VT-025",
       "description": "架构约束 PRINCIPLE-VT-012 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -302,7 +412,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-015",
+      "risk_id": "RISK-VT-026",
       "description": "架构约束 PRINCIPLE-VT-013 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -314,7 +424,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-016",
+      "risk_id": "RISK-VT-027",
       "description": "架构约束 PRINCIPLE-VT-014 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -326,7 +436,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-017",
+      "risk_id": "RISK-VT-028",
       "description": "架构约束 PRINCIPLE-VT-015 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -338,7 +448,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-018",
+      "risk_id": "RISK-VT-029",
       "description": "架构约束 PRINCIPLE-VT-016 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -350,7 +460,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-019",
+      "risk_id": "RISK-VT-030",
       "description": "架构约束 PRINCIPLE-VT-017 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -362,7 +472,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-020",
+      "risk_id": "RISK-VT-031",
       "description": "架构约束 DEP-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -374,7 +484,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-021",
+      "risk_id": "RISK-VT-032",
       "description": "架构约束 DEP-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -386,7 +496,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-022",
+      "risk_id": "RISK-VT-033",
       "description": "架构约束 DEP-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -398,7 +508,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-023",
+      "risk_id": "RISK-VT-034",
       "description": "架构约束 DEP-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -410,7 +520,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-024",
+      "risk_id": "RISK-VT-035",
       "description": "架构约束 FLOW-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -422,7 +532,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-025",
+      "risk_id": "RISK-VT-036",
       "description": "架构约束 FLOW-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -434,7 +544,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-026",
+      "risk_id": "RISK-VT-037",
       "description": "架构约束 FLOW-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -446,7 +556,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-027",
+      "risk_id": "RISK-VT-038",
       "description": "架构约束 FLOW-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -458,7 +568,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-028",
+      "risk_id": "RISK-VT-039",
       "description": "架构约束 FLOW-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -470,7 +580,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-029",
+      "risk_id": "RISK-VT-040",
       "description": "架构约束 FLOW-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -482,7 +592,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-030",
+      "risk_id": "RISK-VT-041",
       "description": "架构约束 FLOW-VT-007 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -494,7 +604,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-031",
+      "risk_id": "RISK-VT-042",
       "description": "架构约束 FLOW-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -506,7 +616,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-032",
+      "risk_id": "RISK-VT-043",
       "description": "架构约束 STORE-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -518,7 +628,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-033",
+      "risk_id": "RISK-VT-044",
       "description": "架构约束 STORE-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -530,7 +640,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-034",
+      "risk_id": "RISK-VT-045",
       "description": "架构约束 STORE-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -542,7 +652,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-035",
+      "risk_id": "RISK-VT-046",
       "description": "架构约束 STORE-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -554,7 +664,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-036",
+      "risk_id": "RISK-VT-047",
       "description": "架构约束 ERR-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -566,7 +676,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-037",
+      "risk_id": "RISK-VT-048",
       "description": "架构约束 ERR-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -578,7 +688,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-038",
+      "risk_id": "RISK-VT-049",
       "description": "架构约束 ERR-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -590,7 +700,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-039",
+      "risk_id": "RISK-VT-050",
       "description": "架构约束 ERR-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -602,7 +712,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-040",
+      "risk_id": "RISK-VT-051",
       "description": "架构约束 ERR-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -614,7 +724,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-041",
+      "risk_id": "RISK-VT-052",
       "description": "架构约束 ERR-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -626,7 +736,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-042",
+      "risk_id": "RISK-VT-053",
       "description": "架构约束 LOG-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -638,7 +748,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-043",
+      "risk_id": "RISK-VT-054",
       "description": "架构约束 LOG-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -650,7 +760,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-044",
+      "risk_id": "RISK-VT-055",
       "description": "架构约束 LOG-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -662,7 +772,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-045",
+      "risk_id": "RISK-VT-056",
       "description": "架构约束 SEC-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -674,7 +784,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-046",
+      "risk_id": "RISK-VT-057",
       "description": "架构约束 SEC-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -686,7 +796,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-047",
+      "risk_id": "RISK-VT-058",
       "description": "架构约束 SEC-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -698,7 +808,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-048",
+      "risk_id": "RISK-VT-059",
       "description": "架构约束 SEC-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -710,7 +820,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-049",
+      "risk_id": "RISK-VT-060",
       "description": "架构约束 SEC-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -722,7 +832,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-050",
+      "risk_id": "RISK-VT-061",
       "description": "架构约束 TECH-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -734,7 +844,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-051",
+      "risk_id": "RISK-VT-062",
       "description": "架构约束 TECH-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -746,7 +856,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-052",
+      "risk_id": "RISK-VT-063",
       "description": "架构约束 TECH-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -758,7 +868,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-053",
+      "risk_id": "RISK-VT-064",
       "description": "架构约束 TECH-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -770,7 +880,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-054",
+      "risk_id": "RISK-VT-065",
       "description": "架构约束 FORBID-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -782,7 +892,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-055",
+      "risk_id": "RISK-VT-066",
       "description": "架构约束 FORBID-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -794,7 +904,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-056",
+      "risk_id": "RISK-VT-067",
       "description": "架构约束 FORBID-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -806,7 +916,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-057",
+      "risk_id": "RISK-VT-068",
       "description": "架构约束 FORBID-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -818,7 +928,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-058",
+      "risk_id": "RISK-VT-069",
       "description": "架构约束 FORBID-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -830,7 +940,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-059",
+      "risk_id": "RISK-VT-070",
       "description": "架构约束 FORBID-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -842,7 +952,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-060",
+      "risk_id": "RISK-VT-071",
       "description": "架构约束 FORBID-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -854,7 +964,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-061",
+      "risk_id": "RISK-VT-072",
       "description": "架构约束 FORBID-VT-009 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -866,7 +976,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-062",
+      "risk_id": "RISK-VT-073",
       "description": "架构约束 GATE-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -878,7 +988,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-063",
+      "risk_id": "RISK-VT-074",
       "description": "架构约束 GATE-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -890,7 +1000,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-064",
+      "risk_id": "RISK-VT-075",
       "description": "架构约束 GATE-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -902,7 +1012,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-065",
+      "risk_id": "RISK-VT-076",
       "description": "架构约束 GATE-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -914,7 +1024,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-066",
+      "risk_id": "RISK-VT-077",
       "description": "架构约束 GATE-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -926,7 +1036,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-067",
+      "risk_id": "RISK-VT-078",
       "description": "架构约束 GATE-VT-009 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -938,7 +1048,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-068",
+      "risk_id": "RISK-VT-079",
       "description": "架构约束 GATE-VT-010 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -950,7 +1060,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-069",
+      "risk_id": "RISK-VT-080",
       "description": "架构约束 GATE-VT-011 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -962,7 +1072,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-070",
+      "risk_id": "RISK-VT-081",
       "description": "架构约束 GATE-VT-012 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",

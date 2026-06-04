@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import List, Optional
 from collections import Counter
 
+import mistune
+
 
 @dataclass
 class AcceptanceCriteria:
@@ -25,15 +27,55 @@ class PrdParseResult:
     requirements: List[Requirement] = field(default_factory=list)
     is_valid: bool = True
     errors: List[str] = field(default_factory=list)
+    status: str = "active"
+    project_name: Optional[str] = None
+    project_id: Optional[str] = None
 
 
-# Patterns
-REQ_ID_PATTERN = re.compile(r"REQ-VT-\d+")
-AC_ID_PATTERN = re.compile(r"AC-VT-\d+-\d+")
-HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.*)$")
-TEST_REQ_PATTERN = re.compile(r"是否必须有测试[：:]\s*(是|否)")
-TEST_REQ_LINE_PATTERN = re.compile(r"是否必须有测试")
-PRIORITY_HEADING_PATTERN = re.compile(r"^####\s+优先级")
+# Module-level mistune AST parser (reusable, stateless)
+_md = mistune.create_markdown(renderer="ast")
+
+
+def parse_front_matter(text: str) -> dict:
+    """Parse YAML-like front matter from the top of the markdown text."""
+    metadata = {}
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return metadata
+
+    end_idx = -1
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            end_idx = i
+            break
+
+    if end_idx == -1:
+        return metadata
+
+    for i in range(1, end_idx):
+        line = lines[i].strip()
+        if not line or line.startswith("#"):
+            continue
+        if ":" in line:
+            key, val = line.split(":", 1)
+            key = key.strip()
+            val = val.strip()
+            # Remove quotes
+            if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                val = val[1:-1]
+            metadata[key] = val
+    return metadata
+
+
+def _strip_front_matter(text: str) -> str:
+    """Remove the YAML front matter block so mistune receives clean Markdown."""
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return text
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            return "\n".join(lines[i + 1:])
+    return text
 
 
 def clean_title(title: str) -> str:
@@ -46,10 +88,52 @@ def clean_title(title: str) -> str:
 
 
 def get_parent_req_id(ac_id: str) -> str:
-    match = re.match(r"^AC-VT-(\d+)-(\d+)$", ac_id)
+    match = re.match(r"^AC-([a-zA-Z0-9_-]+)-(\d+)-(\d+)$", ac_id)
     if match:
-        return f"REQ-VT-{match.group(1)}"
+        return f"REQ-{match.group(1)}-{match.group(2)}"
     raise ValueError(f"Invalid AC ID format: {ac_id}")
+
+
+def _extract_text(token: dict) -> str:
+    """Recursively extract plain text from a mistune AST token."""
+    if token.get("type") in ("text", "codespan", "raw_html"):
+        return token.get("raw", "")
+    children = token.get("children") or []
+    return "".join(_extract_text(c) for c in children)
+
+
+def _list_item_texts(list_token: dict) -> List[str]:
+    """Return the plain text of each direct list_item in a list token."""
+    return [
+        _extract_text(item).strip()
+        for item in (list_token.get("children") or [])
+        if item.get("type") == "list_item"
+    ]
+
+
+def _apply_test_req(
+    lines: List[str],
+    ac: "AcceptanceCriteria",
+    ac_test_found: set,
+    errors: List[str],
+) -> bool:
+    """Check a sequence of text lines for '是否必须有测试'. Returns True if the
+    field was found (valid or invalid), False if the field was absent."""
+    for line in lines:
+        if "是否必须有测试" not in line:
+            continue
+        ac_test_found.add(id(ac))
+        if re.search(r"是否必须有测试[：:]\s*是", line):
+            ac.is_testing_required = True
+        elif re.search(r"是否必须有测试[：:]\s*否", line):
+            ac.is_testing_required = False
+        else:
+            errors.append(
+                f"AC {ac.ac_id} has invalid or different value "
+                f"for testing requirement in line: {line}"
+            )
+        return True
+    return False
 
 
 class PrdParser:
@@ -67,183 +151,178 @@ class PrdParser:
         return self.parse_text(text)
 
     def parse_text(self, text: str) -> PrdParseResult:
-        lines = text.splitlines()
+        metadata = parse_front_matter(text)
+        prd_prefix = metadata.get("project_abbreviation") or metadata.get("project_prefix") or "VT"
+        status = metadata.get("status") or "active"
+
+        from vibe_tracing.core import ids
+        prefix = ids.get_project_prefix()
+
+        # Domain-specific ID patterns (not generic Markdown structure)
+        req_id_pattern = re.compile(rf"REQ-{prefix}-\d+")
+        ac_id_pattern = re.compile(rf"AC-{prefix}-\d+-\d+")
+
+        # Build AST from body (front matter stripped so mistune won't misparse ---)
+        body_text = _strip_front_matter(text)
+        tokens = _md(body_text) or []
 
         requirements: List[Requirement] = []
         errors: List[str] = []
         is_valid = True
 
-        # Track all ID occurrences in headings to check for duplicates
-        all_req_ids_in_headings = []
-        all_ac_ids_in_headings = []
+        # Tracking sets / lists for post-parse validation
+        all_req_ids_seen: List[str] = []
+        all_ac_ids_seen: List[str] = []
+        all_parsed_ac_ids: set = set()
+        priorities_processed: set = set()
+        ac_test_found: set = set()  # set of id(AcceptanceCriteria) objects
 
-        # First pass to check duplicate IDs and heading level mismatches
-        for line in lines:
-            heading_match = HEADING_PATTERN.match(line)
-            if heading_match:
-                level = len(heading_match.group(1))
-                heading_text = heading_match.group(2).strip()
+        # State machine context (single pass)
+        current_req: Optional[Requirement] = None
+        expect_priority: bool = False
+        current_ac: Optional[AcceptanceCriteria] = None
 
-                req_ids = REQ_ID_PATTERN.findall(heading_text)
-                ac_ids = AC_ID_PATTERN.findall(heading_text)
+        for token in tokens:
+            ttype = token.get("type")
 
-                all_req_ids_in_headings.extend(req_ids)
-                all_ac_ids_in_headings.extend(ac_ids)
+            # ── HEADING ──────────────────────────────────────────────────────
+            if ttype == "heading":
+                level: int = token["attrs"]["level"]
+                heading_text: str = _extract_text(token).strip()
 
+                # A new heading always resets expect_priority; missing priority
+                # value (if any) is caught in the post-parse check below.
+                expect_priority = False
+
+                req_ids = req_id_pattern.findall(heading_text)
+                ac_ids = ac_id_pattern.findall(heading_text)
+
+                # Level-mismatch structural validation
                 if req_ids and level != 3:
                     errors.append(
-                        f"Requirement ID pattern found in heading of level {level}: {line.strip()}"
+                        f"Requirement ID pattern found in heading of level {level}: "
+                        f"{'#' * level} {heading_text}"
                     )
                     is_valid = False
                 if ac_ids and level != 5:
                     errors.append(
-                        f"AC ID pattern found in heading of level {level}: {line.strip()}"
+                        f"AC ID pattern found in heading of level {level}: "
+                        f"{'#' * level} {heading_text}"
                     )
                     is_valid = False
 
-        # Duplicate ID check
-        req_counts = Counter(all_req_ids_in_headings)
-        for rid, count in req_counts.items():
-            if count > 1:
-                errors.append(f"Duplicate requirement ID: {rid}")
-                is_valid = False
+                all_req_ids_seen.extend(req_ids)
+                all_ac_ids_seen.extend(ac_ids)
 
-        ac_counts = Counter(all_ac_ids_in_headings)
-        for aid, count in ac_counts.items():
-            if count > 1:
-                errors.append(f"Duplicate AC ID: {aid}")
-                is_valid = False
+                if level == 3 and req_ids:
+                    req_id = req_ids[0]
+                    title_part = heading_text[heading_text.index(req_id) + len(req_id):]
+                    current_req = Requirement(
+                        req_id=req_id,
+                        title=clean_title(title_part),
+                        priority="unclear",
+                        acceptance_criteria=[],
+                    )
+                    requirements.append(current_req)
+                    current_ac = None
 
-        current_req: Optional[Requirement] = None
-        priorities_processed = set()
-        all_parsed_ac_ids = set()
+                elif level == 4 and "优先级" in heading_text and current_req:
+                    expect_priority = True
+                    current_ac = None
 
-        for i, line in enumerate(lines):
-            heading_match = HEADING_PATTERN.match(line)
-            if heading_match:
-                level = len(heading_match.group(1))
-                heading_text = heading_match.group(2).strip()
+                elif level == 5 and ac_ids:
+                    ac_id = ac_ids[0]
+                    title_part = heading_text[heading_text.index(ac_id) + len(ac_id):]
 
-                # Check if it's a valid requirement heading
-                if level == 3:
-                    req_match = REQ_ID_PATTERN.search(heading_text)
-                    if req_match:
-                        req_id = req_match.group(0)
-                        title_part = heading_text[req_match.end() :]
-                        title = clean_title(title_part)
+                    all_parsed_ac_ids.add(ac_id)
 
-                        # Create requirement
-                        current_req = Requirement(
-                            req_id=req_id,
-                            title=title,
-                            priority="unclear",
-                            acceptance_criteria=[],
+                    # Parent-child relationship check
+                    expected_parent_id = get_parent_req_id(ac_id)
+                    if current_req is None or current_req.req_id != expected_parent_id:
+                        active_req_id = current_req.req_id if current_req else None
+                        errors.append(
+                            f"AC {ac_id} is defined under incorrect requirement section "
+                            f"(expected parent {expected_parent_id}, active requirement is {active_req_id})"
                         )
-                        requirements.append(current_req)
+                        is_valid = False
 
-                # Check if it's a valid AC heading
-                elif level == 5:
-                    ac_match = AC_ID_PATTERN.search(heading_text)
-                    if ac_match:
-                        ac_id = ac_match.group(0)
-                        title_part = heading_text[ac_match.end() :]
-                        title = clean_title(title_part)
-
-                        all_parsed_ac_ids.add(ac_id)
-
-                        # Parent-child mismatch check
-                        expected_parent_id = get_parent_req_id(ac_id)
-                        if (
-                            current_req is None
-                            or current_req.req_id != expected_parent_id
-                        ):
-                            active_req_id = current_req.req_id if current_req else None
-                            errors.append(
-                                f"AC {ac_id} is defined under incorrect requirement section "
-                                f"(expected parent {expected_parent_id}, active requirement is {active_req_id})"
-                            )
-                            is_valid = False
-
-                        # Parse testing requirement
-                        # Search subsequent lines until next heading of any level
-                        ac_lines = []
-                        for j in range(i + 1, len(lines)):
-                            nxt_line = lines[j]
-                            if HEADING_PATTERN.match(nxt_line):
-                                break
-                            ac_lines.append(nxt_line)
-
-                        is_testing_required = False
-                        test_req_line_found = False
-                        for ac_line in ac_lines:
-                            if TEST_REQ_LINE_PATTERN.search(ac_line):
-                                test_req_line_found = True
-                                test_match = TEST_REQ_PATTERN.search(ac_line)
-                                if test_match:
-                                    is_testing_required = test_match.group(1) == "是"
-                                else:
-                                    errors.append(
-                                        f"AC {ac_id} has invalid or different value for testing requirement in line: {ac_line.strip()}"
-                                    )
-                                    is_valid = False
-                                break
-
-                        if not test_req_line_found:
-                            errors.append(
-                                f"AC {ac_id} is missing '是否必须有测试' line"
-                            )
-                            is_valid = False
-
-                        ac_obj = AcceptanceCriteria(
-                            ac_id=ac_id,
-                            title=title,
-                            is_testing_required=is_testing_required,
-                        )
-
-                        if current_req:
-                            current_req.acceptance_criteria.append(ac_obj)
-
-                # Check for priority heading under the active requirement
-                elif level == 4 and PRIORITY_HEADING_PATTERN.match(line):
+                    current_ac = AcceptanceCriteria(
+                        ac_id=ac_id,
+                        title=clean_title(title_part),
+                        is_testing_required=False,
+                    )
                     if current_req:
-                        priorities_processed.add(current_req.req_id)
-                        # Find first non-blank line
-                        priority_val = None
-                        for j in range(i + 1, len(lines)):
-                            nxt_line = lines[j]
-                            stripped_nxt = nxt_line.strip()
-                            if not stripped_nxt:
-                                continue
-                            if HEADING_PATTERN.match(nxt_line):
-                                break
-                            priority_val = stripped_nxt
-                            break
+                        current_req.acceptance_criteria.append(current_ac)
 
-                        if priority_val:
-                            val_lower = priority_val.lower()
-                            if val_lower in ("must", "should", "could"):
-                                current_req.priority = val_lower
-                            else:
-                                errors.append(
-                                    f"Invalid priority '{priority_val}' for requirement {current_req.req_id}"
-                                )
-                                current_req.priority = "unclear"
-                                is_valid = False
-                        else:
-                            errors.append(
-                                f"Priority not found for requirement {current_req.req_id}"
-                            )
-                            current_req.priority = "unclear"
-                            is_valid = False
+                elif level <= 2:
+                    # Top-level heading resets all section state
+                    current_req = None
+                    current_ac = None
 
-        # Post-parse checks: check if any requirement's priority heading is missing
+                elif level in (3, 4) and not req_ids and not ac_ids:
+                    # Non-REQ/AC heading: exit current AC scope
+                    if level == 3:
+                        current_req = None
+                    current_ac = None
+
+            # ── PARAGRAPH (priority value) ────────────────────────────────────
+            elif ttype == "paragraph" and expect_priority and current_req:
+                priority_val = _extract_text(token).strip()
+                val_lower = priority_val.lower()
+                expect_priority = False
+                priorities_processed.add(current_req.req_id)
+
+                if val_lower in ("must", "should", "could"):
+                    current_req.priority = val_lower
+                else:
+                    errors.append(
+                        f"Invalid priority '{priority_val}' for requirement {current_req.req_id}"
+                    )
+                    current_req.priority = "unclear"
+                    is_valid = False
+
+            # ── LIST or PARAGRAPH (AC body: 是否必须有测试) ─────────────────
+            # Both list items (*/-) and bare paragraph lines are accepted;
+            # the old regex engine matched any line regardless of list syntax.
+            elif ttype in ("list", "paragraph") and current_ac is not None:
+                if ttype == "list":
+                    candidates = _list_item_texts(token)
+                else:
+                    candidates = [_extract_text(token).strip()]
+                found = _apply_test_req(candidates, current_ac, ac_test_found, errors)
+                if found and id(current_ac) not in ac_test_found:
+                    # _apply_test_req added an error for an invalid value
+                    is_valid = False
+
+        # ── POST-PARSE CHECKS ─────────────────────────────────────────────────
+
+        # Missing 是否必须有测试 field in any AC
+        for req in requirements:
+            for ac in req.acceptance_criteria:
+                if id(ac) not in ac_test_found:
+                    errors.append(f"AC {ac.ac_id} is missing '是否必须有测试' line")
+                    is_valid = False
+
+        # Missing priority section for any requirement
         for req in requirements:
             if req.req_id not in priorities_processed:
                 errors.append(f"Priority not found for requirement {req.req_id}")
                 req.priority = "unclear"
                 is_valid = False
 
-        # Missing parent requirement check
+        # Duplicate requirement IDs
+        for rid, count in Counter(all_req_ids_seen).items():
+            if count > 1:
+                errors.append(f"Duplicate requirement ID: {rid}")
+                is_valid = False
+
+        # Duplicate AC IDs
+        for aid, count in Counter(all_ac_ids_seen).items():
+            if count > 1:
+                errors.append(f"Duplicate AC ID: {aid}")
+                is_valid = False
+
+        # AC references a parent requirement that doesn't exist in this document
         parsed_req_ids = {req.req_id for req in requirements}
         for ac_id in all_parsed_ac_ids:
             parent_id = get_parent_req_id(ac_id)
@@ -253,10 +332,14 @@ class PrdParser:
                 )
                 is_valid = False
 
-        # Double check in case any errors were added but is_valid was not set to False
         if errors:
             is_valid = False
 
         return PrdParseResult(
-            requirements=requirements, is_valid=is_valid, errors=errors
+            requirements=requirements,
+            is_valid=is_valid,
+            errors=errors,
+            status=status,
+            project_name=metadata.get("project_name"),
+            project_id=f"PROJECT-{prd_prefix}",
         )

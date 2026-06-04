@@ -4,10 +4,13 @@ Architecture Change Proposal Engine for Vibe Tracing.
 Manages loading, drift detection, and documentation auditing for architecture constraints changes.
 """
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from vibe_tracing.core import ids
+from vibe_tracing.git_utils import git_show
 from vibe_tracing.raw_input_loader import RawInputLoader
 
 
@@ -141,133 +144,136 @@ class ArchitectureChangeProposalEngine:
 
     def check_governance(
         self,
-        baseline_path: Optional[Path] = None,
         start_counter: int = 1,
     ) -> Dict[str, Any]:
-        """Check for constraints drift, verify change logs, and report findings."""
-        errors: List[str] = []
+        """Read-only detection of architecture constraints drift.
+
+        Never determines pass/fail — always returns ``is_valid=True``.
+        Only produces warnings with diff details and fix guidance.
+        """
         warnings: List[str] = []
         risks: List[Dict[str, Any]] = []
         gaps: List[Dict[str, Any]] = []
         counter = start_counter
 
-        # Resolve baseline path
-        base_path = baseline_path
-        if not base_path:
-            paths = self.raw_loader.config_data.get("paths", {})
-            if "architecture_constraints_base" in paths:
-                base_path = self.project_root / paths["architecture_constraints_base"]
-            else:
-                base_path = (
-                    self.project_root
-                    / ".vibetracing/architecture_constraints.base.json"
-                )
+        def _empty_result() -> Dict[str, Any]:
+            return {
+                "is_valid": True,
+                "errors": [],
+                "warnings": warnings,
+                "risks": risks,
+                "gaps": gaps,
+                "proposals": [],
+            }
 
-        if base_path.exists() and self.constraints_path.exists():
-            try:
-                with base_path.open("r", encoding="utf-8") as f:
-                    base_data = json.load(f)
-                with self.constraints_path.open("r", encoding="utf-8") as f:
-                    curr_data = json.load(f)
+        # Step 1: Read stored hash from config. If missing, not finalized — skip.
+        stored_hash = self.raw_loader.config_data.get("architecture_constraints_hash")
+        if not stored_hash:
+            return _empty_result()
 
-                diffs = self._find_differences(base_data, curr_data)
+        # Step 2: Compute current SHA256 of constraints file.
+        current_hash = hashlib.sha256(
+            self.constraints_path.read_bytes()
+        ).hexdigest()
+        if current_hash == stored_hash:
+            # No drift — fast path.
+            return _empty_result()
 
-                if diffs:
-                    # Load change log
-                    log_content = ""
-                    log_exists = self.change_log_path.exists()
-                    if log_exists:
-                        try:
-                            log_content = self.change_log_path.read_text(
-                                encoding="utf-8"
-                            )
-                        except Exception:
-                            pass
+        # Step 3: Hash mismatch — check for finalize metadata.
+        finalize_commit = self.raw_loader.config_data.get("finalize_git_commit")
+        finalize_constraints_path = self.raw_loader.config_data.get(
+            "finalize_constraints_path"
+        )
+        if not finalize_commit or not finalize_constraints_path:
+            warn = "请运行 vt finalize"
+            warnings.append(warn)
+            risks.append(
+                {
+                    "risk_id": ids.make_risk_id(counter),
+                    "description": "架构约束文件已变更，但无定稿记录（finalize 信息缺失）。",
+                    "severity": "should",
+                    "business_impact": "无法重建基线内容以进行逐条规则比对，漂移详情不可知。",
+                    "suggested_action": warn,
+                    "evidence_ids": [ids.sentinel_evidence_id()],
+                }
+            )
+            counter += 1
+            return _empty_result()
 
-                    for diff in diffs:
-                        ch_path = diff["path"]
-                        ch_action = diff["action"]
-                        # Extract rule ID or path segment
-                        rule_id = diff.get("rule_id") or ch_path.split(".")[-1]
+        # Step 4: Reconstruct baseline via git show, parse both as JSON.
+        base_content = git_show(
+            finalize_commit, finalize_constraints_path, self.project_root
+        )
+        if base_content is None:
+            warn = "请运行 vt finalize"
+            warnings.append(warn)
+            risks.append(
+                {
+                    "risk_id": ids.make_risk_id(counter),
+                    "description": f"无法通过 git show 还原定稿基线 ({finalize_commit}:{finalize_constraints_path})。",
+                    "severity": "should",
+                    "business_impact": "基线内容不可达，无法完成逐条规则比对。",
+                    "suggested_action": warn,
+                    "evidence_ids": [ids.sentinel_evidence_id()],
+                }
+            )
+            counter += 1
+            return _empty_result()
 
-                        if not log_exists:
-                            err = f"检测到架构约束被修改 ({ch_action} '{ch_path}')，但缺失 docs/architecture_change_log.md 变更日志。"
-                            errors.append(err)
-                            risks.append(
-                                {
-                                    "risk_id": f"RISK-VT-{counter:03d}",
-                                    "description": err,
-                                    "severity": "must",
-                                    "business_impact": "违反架构规则修改记录准则，导致约束演进过程无法被审计追溯。",
-                                    "suggested_action": "请在 docs/ 目录下创建 architecture_change_log.md 说明该变更合理性，或者撤销对架构文件的修改。",
-                                    "evidence_ids": ["EVIDENCE-VT-999"],
-                                }
-                            )
-                            counter += 1
-                            gaps.append(
-                                {
-                                    "item_id": "architecture_constraints.json",
-                                    "item_type": "missing_change_log",
-                                    "reason": err,
-                                }
-                            )
-                        elif rule_id not in log_content:
-                            err = f"检测到架构规则 '{rule_id}' 发生变更 ({ch_action})，但在 docs/architecture_change_log.md 中未找到对应的变更说明。"
-                            errors.append(err)
-                            risks.append(
-                                {
-                                    "risk_id": f"RISK-VT-{counter:03d}",
-                                    "description": err,
-                                    "severity": "must",
-                                    "business_impact": "架构变更未经记录与合理化阐述，可能隐藏未审计的技术债或规则降级风险。",
-                                    "suggested_action": "请在 docs/architecture_change_log.md 中新增一条记录，阐述修改规则 '{rule_id}' 的原因与影响。",
-                                    "evidence_ids": ["EVIDENCE-VT-999"],
-                                }
-                            )
-                            counter += 1
-                            gaps.append(
-                                {
-                                    "item_id": "architecture_constraints.json",
-                                    "item_type": "undocumented_change",
-                                    "reason": err,
-                                }
-                            )
-                        else:
-                            # Rule is change-logged! Approved but warn to show on dashboard
-                            warn = f"检测到架构约束中 '{rule_id}' 的合理化变更 ({ch_action}) 已记录在 docs/architecture_change_log.md 中。"
-                            warnings.append(warn)
-                            risks.append(
-                                {
-                                    "risk_id": f"RISK-VT-{counter:03d}",
-                                    "description": warn,
-                                    "severity": "should",
-                                    "business_impact": "架构约束发生演进，相关联的任务或代码可能需要同步审查以避免架构腐化。",
-                                    "suggested_action": "项目经理应在 Dashboard 中审查此架构演进记录，并核对 docs/architecture_change_log.md 描述。",
-                                    "evidence_ids": ["EVIDENCE-VT-999"],
-                                }
-                            )
-                            counter += 1
-            except Exception as exc:
-                err = f"在进行架构约束漂移/变更比对时发生异常: {exc}"
-                errors.append(err)
-                risks.append(
-                    {
-                        "risk_id": f"RISK-VT-{counter:03d}",
-                        "description": err,
-                        "severity": "must",
-                        "business_impact": "漂移校验中断，无法核实最终架构约束是否被静默篡改。",
-                        "suggested_action": "请核对 architecture_constraints.json 及其 base 文件的可读性与完整性。",
-                        "evidence_ids": ["EVIDENCE-VT-999"],
-                    }
-                )
-                counter += 1
+        base_data = json.loads(base_content)
+        curr_data = json.loads(
+            self.constraints_path.read_text(encoding="utf-8")
+        )
 
-        is_valid = len(errors) == 0
-        return {
-            "is_valid": is_valid,
-            "errors": errors,
-            "warnings": warnings,
-            "risks": risks,
-            "gaps": gaps,
-            "proposals": [],  # Deprecated list
-        }
+        # Step 5: Diff baseline vs current.
+        diffs = self._find_differences(base_data, curr_data)
+        if not diffs:
+            # Format changed but no rule changes.
+            warn = "格式已变更（无规则变化），请运行 vt finalize 更新检查点"
+            warnings.append(warn)
+            risks.append(
+                {
+                    "risk_id": ids.make_risk_id(counter),
+                    "description": "架构约束文件格式发生变更，但未检测到规则内容变化。",
+                    "severity": "should",
+                    "business_impact": "检查点哈希与当前文件不一致，可能干扰后续漂移检测。",
+                    "suggested_action": warn,
+                    "evidence_ids": [ids.sentinel_evidence_id()],
+                }
+            )
+            counter += 1
+            return _empty_result()
+
+        # Step 6: Diffs exist — build summary and warning.
+        changed_rules = [
+            f"  - {d['action'].upper()}: {d.get('rule_id') or d['path']}"
+            for d in diffs
+        ]
+        diff_summary = "\n".join(changed_rules)
+
+        warn = (
+            f"检测到架构约束文件自定稿后发生以下变更：\n{diff_summary}\n\n"
+            "请在 docs/architecture_change_log.md 中记录变更原因，"
+            "然后运行 vt finalize 锁定新状态"
+        )
+        warnings.append(warn)
+        risks.append(
+            {
+                "risk_id": ids.make_risk_id(counter),
+                "description": "架构约束文件自定稿后发生变更，需人工审查并记录。",
+                "severity": "should",
+                "business_impact": "架构约束发生演进，相关联的任务或代码可能需要同步审查以避免架构腐化。",
+                "suggested_action": "请在 docs/architecture_change_log.md 中记录变更原因，然后运行 vt finalize 锁定新状态。",
+                "evidence_ids": [ids.sentinel_evidence_id()],
+            }
+        )
+        counter += 1
+        gaps.append(
+            {
+                "item_id": "architecture_constraints.json",
+                "item_type": "architecture_constraints_changed",
+                "reason": warn,
+            }
+        )
+
+        return _empty_result()

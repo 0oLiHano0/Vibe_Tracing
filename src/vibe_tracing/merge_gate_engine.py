@@ -23,6 +23,7 @@ class MergeGateEngine:
         gaps: List[Dict[str, Any]],
         risks: List[Dict[str, Any]],
         compliance_result: Optional[Dict[str, Any]] = None,
+        prd_status: str = "active",
     ) -> Dict[str, Any]:
         """
         Evaluate merge gate criteria based on gaps, risks, and compliance checker results.
@@ -31,6 +32,7 @@ class MergeGateEngine:
             gaps: Identified gaps from analyzers.
             risks: Enriched risks from RiskAdvisor.
             compliance_result: Result from ArchitectureComplianceChecker.
+            prd_status: Current PRD status ('draft', 'active', 'frozen', 'deprecated').
 
         Returns:
             A dict containing:
@@ -41,6 +43,13 @@ class MergeGateEngine:
         gate_decision = "pass"
         reasons: List[str] = []
         blocked_items: List[str] = []
+
+        if prd_status == "draft":
+            return {
+                "gate_decision": "draft_approved",
+                "reasons": ["项目处于需求草稿阶段（draft），跳过强阻塞门禁规则校验。"],
+                "blocked_items": [],
+            }
 
         # ----------------------------------------------------
         # 1. Evaluate 'blocked' conditions (MUST/critical issues)
@@ -65,6 +74,7 @@ class MergeGateEngine:
             risk_id = risk.get("risk_id", "")
             suggested_action = risk.get("suggested_action", "")
             business_impact = risk.get("business_impact", "")
+            item_type = risk.get("item_type", "")
 
             # Check if it is a completed claim without external evidence (often MUST severity)
             is_self_ref = "only self-referential" in desc or "self-referential" in desc
@@ -83,6 +93,13 @@ class MergeGateEngine:
                     msg_missing = f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
                     blocked_items.append(msg_missing)
                     reasons.append(msg_missing)
+
+                # Add specific reason for low-confidence claims
+                if item_type == "claim_credibility":
+                    msg_credibility = "存在低可信度 Claim（无工具验证证据）"
+                    if msg_credibility not in blocked_items:
+                        blocked_items.append(msg_credibility)
+                        reasons.append(msg_credibility)
 
         # 1.3 Check Must architecture violations
         if compliance_result:

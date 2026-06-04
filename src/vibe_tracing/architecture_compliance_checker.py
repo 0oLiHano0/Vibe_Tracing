@@ -11,6 +11,8 @@ from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from vibe_tracing.core import ids
+
 
 class ArchitectureComplianceChecker:
     """Statically verifies architectural constraints in the Vibe Tracing project."""
@@ -23,10 +25,9 @@ class ArchitectureComplianceChecker:
         if constraints_path:
             self.constraints_path = Path(constraints_path)
         else:
-            from vibe_tracing.raw_input_loader import RawInputLoader
-
-            raw_loader = RawInputLoader(self.project_root)
-            self.constraints_path = raw_loader.get_path("architecture_constraints")
+            self.constraints_path = (
+                self.project_root / "docs" / "architecture_constraints.json"
+            )
 
     def _load_constraints(self) -> Dict[str, Any]:
         """Load architecture constraints JSON file."""
@@ -60,7 +61,12 @@ class ArchitectureComplianceChecker:
     def _get_module_for_path(
         self, file_path: Path, src_dir: Path
     ) -> Tuple[Optional[str], Optional[str]]:
-        """Maps a Python file path to its architectural module ID and module name."""
+        """Maps a Python file path to its architectural module ID and module name.
+
+        Uses ``owned_files`` from the loaded architecture constraints as the
+        single source of truth.  Files inside the ``traceability/`` directory
+        are still mapped to MOD-VT-006 as a special case.
+        """
         try:
             rel_path = file_path.relative_to(src_dir)
             parts = rel_path.parts
@@ -73,33 +79,9 @@ class ArchitectureComplianceChecker:
             if "traceability" in parts:
                 return "MOD-VT-006", "traceability_analyzer"
 
-            if filename in ("cli.py", "agent_runtime_adapter.py"):
-                return "MOD-VT-001", "agent_runtime_adapter"
-            elif filename in (
-                "raw_input_loader.py",
-                "prd_parser.py",
-                "task_loader.py",
-                "claim_loader.py",
-            ):
-                return "MOD-VT-002", "raw_input_loader"
-            elif filename == "schema_validator.py":
-                return "MOD-VT-003", "schema_validator"
-            elif filename == "tool_evidence_adapter.py":
-                return "MOD-VT-004", "tool_evidence_adapter"
-            elif filename == "evidence_index_builder.py":
-                return "MOD-VT-005", "evidence_index_builder"
-            elif filename == "traceability_report_builder.py":
-                return "MOD-VT-006", "traceability_analyzer"
-            elif filename == "merge_gate_engine.py":
-                return "MOD-VT-007", "merge_gate_engine"
-            elif filename == "dashboard_renderer.py":
-                return "MOD-VT-008", "dashboard_renderer"
-            elif filename == "architecture_compliance_checker.py":
-                return "MOD-VT-009", "architecture_compliance_checker"
-            elif filename == "llm_semantic_inspector.py":
-                return "MOD-VT-010", "llm_semantic_inspector"
-            elif filename == "claude_code_bootstrap_adapter.py":
-                return "MOD-VT-011", "claude_code_bootstrap_adapter"
+            for boundary in self.constraints.get("module_boundaries", []):
+                if filename in boundary.get("owned_files", []):
+                    return boundary["module_id"], boundary["name"]
         except Exception:
             pass
         return None, None
@@ -107,7 +89,14 @@ class ArchitectureComplianceChecker:
     def _get_module_for_import(
         self, imported_module: str
     ) -> Tuple[Optional[str], Optional[str]]:
-        """Maps an imported Python module name to its architectural module ID and module name."""
+        """Maps an imported Python module name to its architectural module ID and module name.
+
+        Derives the mapping from ``owned_files`` in the loaded architecture
+        constraints: the import's submodule name is matched against each
+        module's owned filenames with the ``.py`` suffix stripped.  The
+        ``traceability`` subpackage is treated as a special case mapped to
+        MOD-VT-006.
+        """
         if not imported_module.startswith("vibe_tracing"):
             return None, None
         parts = imported_module.split(".")
@@ -117,28 +106,15 @@ class ArchitectureComplianceChecker:
             return None, None
 
         sub = parts[1]
-        if sub == "schema_validator":
-            return "MOD-VT-003", "schema_validator"
-        elif sub in ("raw_input_loader", "prd_parser", "task_loader", "claim_loader"):
-            return "MOD-VT-002", "raw_input_loader"
-        elif sub == "tool_evidence_adapter":
-            return "MOD-VT-004", "tool_evidence_adapter"
-        elif sub == "evidence_index_builder":
-            return "MOD-VT-005", "evidence_index_builder"
-        elif sub in ("traceability", "traceability_report_builder"):
+
+        # Special case: the traceability subpackage
+        if sub == "traceability":
             return "MOD-VT-006", "traceability_analyzer"
-        elif sub == "merge_gate_engine":
-            return "MOD-VT-007", "merge_gate_engine"
-        elif sub == "dashboard_renderer":
-            return "MOD-VT-008", "dashboard_renderer"
-        elif sub == "architecture_compliance_checker":
-            return "MOD-VT-009", "architecture_compliance_checker"
-        elif sub == "llm_semantic_inspector":
-            return "MOD-VT-010", "llm_semantic_inspector"
-        elif sub == "claude_code_bootstrap_adapter":
-            return "MOD-VT-011", "claude_code_bootstrap_adapter"
-        elif sub in ("cli", "agent_runtime_adapter"):
-            return "MOD-VT-001", "agent_runtime_adapter"
+
+        for boundary in self.constraints.get("module_boundaries", []):
+            for owned in boundary.get("owned_files", []):
+                if owned.removesuffix(".py") == sub:
+                    return boundary["module_id"], boundary["name"]
         return None, None
 
     def _find_evidence_id(self, file_path: str, evidences: List[Dict[str, Any]]) -> str:
@@ -152,7 +128,7 @@ class ArchitectureComplianceChecker:
                 or ev_path.endswith(norm_path)
             ):
                 return ev["evidence_id"]
-        return "EVIDENCE-VT-999"
+        return ids.sentinel_evidence_id()
 
     def check(self, evidences: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -168,6 +144,7 @@ class ArchitectureComplianceChecker:
                 "unclear_constraints": List of constraints marked as unclear.
         """
         constraints_data = self._load_constraints()
+        self.constraints = constraints_data
         src_dir = self.project_root / "src"
 
         # List all Python files
@@ -278,7 +255,7 @@ class ArchitectureComplianceChecker:
         for f, ims in file_imports.items():
             f_mod_id, _ = self._get_module_for_path(f, src_dir)
             # Skip adapter files
-            if f_mod_id in ("MOD-VT-001", "MOD-VT-011"):
+            if f_mod_id == "MOD-VT-001":
                 continue
 
             for imp_name, lineno in ims:
@@ -295,7 +272,7 @@ class ArchitectureComplianceChecker:
                     )
                 # Check if core imports adapter submodules
                 imp_mod_id, _ = self._get_module_for_import(imp_name)
-                if imp_mod_id in ("MOD-VT-001", "MOD-VT-011"):
+                if imp_mod_id == "MOD-VT-001":
                     dep_vt_001_violations.append(
                         (
                             f,
@@ -483,18 +460,18 @@ class ArchitectureComplianceChecker:
         # ----------------------------------------------------
         # 5. Check GATE-VT-001 (Required input files must exist)
         # ----------------------------------------------------
-        from vibe_tracing.raw_input_loader import RawInputLoader
-
-        raw_loader = RawInputLoader(self.project_root)
-        required_keys = ["prd", "architecture_constraints", "task_list"]
+        required_paths = {
+            "prd": self.project_root / "docs" / "prd.md",
+            "architecture_constraints": self.constraints_path,
+            "task_list": self.project_root / "docs" / "task_list.json",
+        }
         missing_files = []
-        for key in required_keys:
-            resolved_path = raw_loader.get_path(key)
-            if not resolved_path.exists():
+        for name, path in required_paths.items():
+            if not path.exists():
                 try:
-                    rel_p = str(resolved_path.relative_to(self.project_root))
+                    rel_p = str(path.relative_to(self.project_root))
                 except ValueError:
-                    rel_p = str(resolved_path)
+                    rel_p = str(path)
                 missing_files.append(rel_p)
 
         if missing_files:
@@ -510,7 +487,7 @@ class ArchitectureComplianceChecker:
             violations.append(
                 {
                     "rule_id": "GATE-VT-001",
-                    "evidence_id": "EVIDENCE-VT-999",
+                    "evidence_id": ids.sentinel_evidence_id(),
                     "message": f"Required input files are missing: {', '.join(missing_files)}",
                 }
             )
@@ -551,7 +528,7 @@ class ArchitectureComplianceChecker:
             violations.append(
                 {
                     "rule_id": "GATE-VT-006",
-                    "evidence_id": "EVIDENCE-VT-999",
+                    "evidence_id": ids.sentinel_evidence_id(),
                     "message": "One or more Must-level architecture constraints are violated.",
                 }
             )
@@ -606,80 +583,7 @@ class ArchitectureComplianceChecker:
         )
 
         # ----------------------------------------------------
-        # 6.1 Evaluate GATE-VT-013 (Claude Code bootstrap configuration must be reviewable)
-        # ----------------------------------------------------
-        has_gate_13 = False
-        for gate in constraints_data.get("quality_gates", []):
-            if gate.get("gate_id") == "GATE-VT-013":
-                has_gate_13 = True
-                break
-
-        bootstrap_risks = []
-        bootstrap_gaps = []
-        if has_gate_13:
-            import importlib
-
-            claude_code_bootstrap_adapter = importlib.import_module(
-                "vibe_tracing.claude_code_bootstrap_adapter"
-            )
-            ClaudeCodeBootstrapAdapter = (
-                claude_code_bootstrap_adapter.ClaudeCodeBootstrapAdapter
-            )
-
-            try:
-                bootstrap_adapter = ClaudeCodeBootstrapAdapter(self.project_root)
-                boot_res = bootstrap_adapter.check_governance_rules(start_counter=100)
-                bootstrap_risks = boot_res.get("risks", [])
-                bootstrap_gaps = boot_res.get("gaps", [])
-
-                if boot_res.get("is_valid"):
-                    status_list.append(
-                        {
-                            "rule_id": "GATE-VT-013",
-                            "status": "compliant",
-                            "severity": "must",
-                            "title": "Claude Code 自举配置必须可审查",
-                            "description": "Claude Code 自举配置必须存在、格式正确，且符合安全审查原则。",
-                        }
-                    )
-                else:
-                    status_list.append(
-                        {
-                            "rule_id": "GATE-VT-013",
-                            "status": "violated",
-                            "severity": "must",
-                            "title": "Claude Code 自举配置必须可审查",
-                            "description": "Claude Code 自举配置校验失败或不完整。",
-                        }
-                    )
-                    for err in boot_res.get("errors", []):
-                        violations.append(
-                            {
-                                "rule_id": "GATE-VT-013",
-                                "evidence_id": "EVIDENCE-VT-999",
-                                "message": err,
-                            }
-                        )
-            except Exception as e:
-                status_list.append(
-                    {
-                        "rule_id": "GATE-VT-013",
-                        "status": "violated",
-                        "severity": "must",
-                        "title": "Claude Code 自举配置必须可审查",
-                        "description": f"评估自举配置时发生异常: {e}",
-                    }
-                )
-                violations.append(
-                    {
-                        "rule_id": "GATE-VT-013",
-                        "evidence_id": "EVIDENCE-VT-999",
-                        "message": f"Evaluation error: {e}",
-                    }
-                )
-
-        # ----------------------------------------------------
-        # 6.2 Evaluate GATE-VT-014 (Architecture change proposals must be explicitly logged)
+        # 6.1 Evaluate GATE-VT-014 (Architecture change proposals must be explicitly logged)
         # ----------------------------------------------------
         has_gate_14 = False
         for gate in constraints_data.get("quality_gates", []):
@@ -699,18 +603,11 @@ class ArchitectureComplianceChecker:
                 prop_res = proposal_engine.check_governance(start_counter=200)
                 proposal_risks = prop_res.get("risks", [])
                 proposal_gaps = prop_res.get("gaps", [])
+                warnings = prop_res.get("warnings", [])
+                errors = prop_res.get("errors", [])
 
-                if prop_res.get("is_valid"):
-                    status_list.append(
-                        {
-                            "rule_id": "GATE-VT-014",
-                            "status": "compliant",
-                            "severity": "must",
-                            "title": "架构约束变更建议必须显式记录",
-                            "description": "检测到架构约束漂移/变更比对通过，且所有修改均有合法的已接受提案。",
-                        }
-                    )
-                else:
+                if errors:
+                    # Errors present - mark as violated
                     status_list.append(
                         {
                             "rule_id": "GATE-VT-014",
@@ -720,14 +617,37 @@ class ArchitectureComplianceChecker:
                             "description": "架构约束变更没有通过显式记录提案审核，或提案本身不合法/缺失签名。",
                         }
                     )
-                    for err in prop_res.get("errors", []):
+                    for err in errors:
                         violations.append(
                             {
                                 "rule_id": "GATE-VT-014",
-                                "evidence_id": "EVIDENCE-VT-999",
+                                "evidence_id": ids.sentinel_evidence_id(),
                                 "message": err,
                             }
                         )
+                elif warnings:
+                    # Warnings but no errors - mark as unclear with should severity
+                    status_list.append(
+                        {
+                            "rule_id": "GATE-VT-014",
+                            "status": "unclear",
+                            "severity": "should",
+                            "title": "架构约束变更建议必须显式记录",
+                            "description": "架构约束已发生变更，需要人工审核。检测到以下警告: "
+                            + "; ".join(warnings),
+                        }
+                    )
+                else:
+                    # No warnings and no errors - compliant
+                    status_list.append(
+                        {
+                            "rule_id": "GATE-VT-014",
+                            "status": "compliant",
+                            "severity": "must",
+                            "title": "架构约束变更建议必须显式记录",
+                            "description": "检测到架构约束漂移/变更比对通过，且所有修改均有合法的已接受提案。",
+                        }
+                    )
             except Exception as e:
                 status_list.append(
                     {
@@ -741,7 +661,7 @@ class ArchitectureComplianceChecker:
                 violations.append(
                     {
                         "rule_id": "GATE-VT-014",
-                        "evidence_id": "EVIDENCE-VT-999",
+                        "evidence_id": ids.sentinel_evidence_id(),
                         "message": f"Evaluation error: {e}",
                     }
                 )
@@ -807,8 +727,6 @@ class ArchitectureComplianceChecker:
             "architecture_compliance_status": status_list,
             "architecture_violations": violations,
             "unclear_constraints": unclear_list,
-            "bootstrap_risks": bootstrap_risks,
-            "bootstrap_gaps": bootstrap_gaps,
             "proposal_risks": proposal_risks,
             "proposal_gaps": proposal_gaps,
         }

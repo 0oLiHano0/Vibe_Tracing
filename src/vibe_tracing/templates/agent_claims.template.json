@@ -1,16 +1,1 @@
-[
-  {
-    "claim_id": "CLAIM-VT-9999",
-    "related_task": "TASK-VT-9999",
-    "claimed_status": "unclear",
-    "evidence_refs": [],
-    "timestamp": "2026-05-31T10:00:00Z",
-    "__field_hints__": {
-      "claim_id": "申索ID，必须符合正则格式 `CLAIM-VT-\\d+`，例如 `CLAIM-VT-001`，代表一个AI agent做出的具体实现申索。",
-      "related_task": "关联任务ID，必须符合正则格式 `TASK-VT-\\d+`，例如 `TASK-VT-001`，必须存在于任务列表中。",
-      "claimed_status": "申索状态，必须是 'covered', 'partial', 'missing', 'unclear', 'low_confidence', 'blocked', 'compliant', 'violated' 之一。",
-      "timestamp": "ISO 8601格式的时间戳，例如 `2026-05-31T10:00:00Z`。",
-      "evidence_refs": "证据参考列表，指向支撑本申索的测试、代码或工具报告等。"
-    }
-  }
-]
+[]

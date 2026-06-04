@@ -14,6 +14,16 @@ from vibe_tracing.core.ids import validate_id
 from vibe_tracing.schema_validator import SchemaValidator
 from vibe_tracing.task_loader import TaskListLoadResult
 
+_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
+
+
+def _load_field_hints(schema_name: str) -> Dict[str, str]:
+    with _HINTS_PATH.open("r", encoding="utf-8") as f:
+        return json.load(f).get(schema_name, {})
+
+
+_claim_field_hints = _load_field_hints("agent_claims")
+
 
 @dataclass
 class Claim:
@@ -29,6 +39,8 @@ class Claim:
     notes: str = ""
     is_valid: bool = True
     errors: List[str] = field(default_factory=list)
+    credibility: str = ""
+    credibility_warnings: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -60,12 +72,19 @@ class ClaimLoader:
         self,
         claims_path: Path,
         task_result: Optional[TaskListLoadResult] = None,
+        content: Optional[list] = None,
     ) -> ClaimListLoadResult:
         """
         Load an agent claims file, validate it against the JSON schema, and cross-reference with tasks.
         """
-        # Step 1: Validate file using SchemaValidator
-        val_res = self.schema_validator.validate_file(claims_path, "agent_claims")
+        # Step 1: Validate file/dict using SchemaValidator
+        if content is not None:
+            val_res = self.schema_validator.validate_dict(
+                content, "agent_claims", source_label=str(claims_path)
+            )
+        else:
+            val_res = self.schema_validator.validate_file(claims_path, "agent_claims")
+
         if not val_res.is_valid:
             error_msg = f"Schema validation failed for {claims_path}"
             if val_res.message:
@@ -81,15 +100,18 @@ class ClaimLoader:
             )
 
         # Step 2: Parse the file content
-        try:
-            with claims_path.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as exc:
-            return ClaimListLoadResult(
-                claims=[],
-                is_valid=False,
-                errors=[f"Failed to read/parse file {claims_path}: {exc}"],
-            )
+        if content is not None:
+            data = content
+        else:
+            try:
+                with claims_path.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception as exc:
+                return ClaimListLoadResult(
+                    claims=[],
+                    is_valid=False,
+                    errors=[f"Failed to read/parse file {claims_path}: {exc}"],
+                )
 
         return self.validate_data(data, task_result, source_label=str(claims_path))
 
@@ -127,16 +149,11 @@ class ClaimLoader:
         gaps: List[ClaimGap] = []
         is_valid = True
 
-        # Extract template field hints if they exist
-        template_hints = {}
-        for c in data:
-            if isinstance(c, dict) and c.get("claim_id", "").endswith("-9999"):
-                template_hints = c.get("__field_hints__", {})
-                break
-
         def get_err_msg(field_key: str, base_msg: str) -> str:
-            hint = template_hints.get(field_key)
+            hint = _claim_field_hints.get(field_key)
             if hint:
+                from vibe_tracing.core import ids
+                hint = hint.replace("{PROJECT_PREFIX}", ids.get_project_prefix())
                 return f"{base_msg}【修复指南】{hint}"
             return base_msg
 
@@ -194,14 +211,7 @@ class ClaimLoader:
                 base_msg = f"Invalid claim ID format: {id_err}."
                 full_msg = get_err_msg("claim_id", f"{base_msg} ")
                 claim_obj.errors.append(full_msg)
-                errors.append(
-                    f"Claim {claim_id} has invalid ID format: {id_err}."
-                    + (
-                        f" 【修复指南】{template_hints.get('claim_id')}"
-                        if template_hints.get("claim_id")
-                        else ""
-                    )
-                )
+                errors.append(full_msg)
                 is_valid = False
 
             # Validate related task ID format
@@ -211,14 +221,7 @@ class ClaimLoader:
                 base_msg = f"Invalid related task ID format: {task_err}."
                 full_msg = get_err_msg("related_task", f"{base_msg} ")
                 claim_obj.errors.append(full_msg)
-                errors.append(
-                    f"Claim {claim_id} references invalid task ID {related_task!r}: {task_err}."
-                    + (
-                        f" 【修复指南】{template_hints.get('related_task')}"
-                        if template_hints.get("related_task")
-                        else ""
-                    )
-                )
+                errors.append(full_msg)
                 is_valid = False
 
             # Check if claim references a non-existent task: DOD-VT-008-02
@@ -228,14 +231,7 @@ class ClaimLoader:
                     base_msg = f"References non-existent task: {related_task}."
                     full_msg = get_err_msg("related_task", f"{base_msg} ")
                     claim_obj.errors.append(full_msg)
-                    errors.append(
-                        f"Claim {claim_id} references non-existent task {related_task}."
-                        + (
-                            f" 【修复指南】{template_hints.get('related_task')}"
-                            if template_hints.get("related_task")
-                            else ""
-                        )
-                    )
+                    errors.append(full_msg)
                     gaps.append(
                         ClaimGap(
                             item_id=claim_id,
@@ -272,3 +268,5 @@ class ClaimLoader:
             errors=errors,
             gaps=gaps,
         )
+
+

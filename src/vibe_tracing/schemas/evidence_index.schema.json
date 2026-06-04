@@ -13,7 +13,7 @@
     },
     "project_id": {
       "type": "string",
-      "pattern": "^PROJECT-VT$",
+      "pattern": "^PROJECT-[a-zA-Z0-9_-]+$",
       "description": "Project identifier."
     },
     "scan_time": {
@@ -36,7 +36,7 @@
         "properties": {
           "evidence_id": {
             "type": "string",
-            "pattern": "^EVIDENCE-VT-\\d+$",
+            "pattern": "^EVIDENCE-[a-zA-Z0-9_-]+-\\d+$",
             "description": "Unique evidence identifier."
           },
           "source_type": {

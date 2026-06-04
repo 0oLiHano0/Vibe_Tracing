@@ -699,7 +699,7 @@ class TestTraceabilityReportSchema:
         """
         schema = load_schema(self.SCHEMA_NAME)
         doc = _minimal_traceability_report()
-        doc["project_id"] = "PROJECT-001"
+        doc["project_id"] = "PROJECT INVALID"
         with pytest.raises(ValidationError):
             validate(instance=doc, schema=schema)
 

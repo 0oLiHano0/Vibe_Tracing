@@ -617,3 +617,61 @@ def test_claim_lookup_multi_matching_and_fail_fast(temp_project_dir) -> None:
         "which has status 'violated'" in m
         for m in res2["claims_analysis"][0]["mismatches"]
     )
+
+
+def test_code_ref_outdated_skipped_in_ci(temp_project_dir, monkeypatch) -> None:
+    """
+    Validate that if the CI environment variable is set to true, the outdated file modification check is bypassed.
+    """
+    import os
+
+    # Create code ref file
+    code_file = temp_project_dir / "app.py"
+    code_file.write_text("print('outdated')")
+
+    # Set file mtime to a later time (outdated)
+    os_time_mtime = 1800000000
+    os.utime(code_file, (os_time_mtime, os_time_mtime))
+
+    claim = Claim(
+        claim_id="CLAIM-VT-001",
+        related_task="TASK-VT-001",
+        claimed_status=CoverageStatus.COVERED.value,
+        evidence_refs=["EVIDENCE-VT-002"],
+        timestamp="2026-05-22T10:00:00Z",
+        code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+    )
+
+    evidences = [
+        {
+            "evidence_id": "EVIDENCE-VT-001",
+            "source_type": "task",
+            "covers": [],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"task_id": "TASK-VT-001"},
+        },
+        {
+            "evidence_id": "EVIDENCE-VT-002",
+            "source_type": "test",
+            "covers": [],
+            "status": CoverageStatus.COVERED.value,
+        },
+    ]
+
+    analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+
+    # 1. Set CI=true -> Check should be skipped, no risks/mismatches should be produced
+    monkeypatch.setenv("CI", "true")
+    res_ci = analyzer.analyze([claim], evidences)
+    assert len(res_ci["risks"]) == 0
+    assert len(res_ci["claims_analysis"][0]["mismatches"]) == 0
+    assert res_ci["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
+
+    # 2. Set CI=false -> Check should run, should risk must be produced
+    monkeypatch.setenv("CI", "false")
+    res_no_ci = analyzer.analyze([claim], evidences)
+    assert len(res_no_ci["risks"]) == 1
+    assert res_no_ci["risks"][0]["severity"] == "should"
+    assert "was modified after the claim timestamp" in res_no_ci["risks"][0]["description"]
+    assert res_no_ci["claims_analysis"][0]["status"] == CoverageStatus.LOW_CONFIDENCE.value
+

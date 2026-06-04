@@ -8,28 +8,41 @@
     "schema_version",
     "project"
   ],
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "type": "string"
+      "type": "string",
+      "description": "指明当前架构约束模式的版本，例如 '1.0.0'。"
     },
     "project": {
       "type": "object",
-      "required": ["project_id", "name", "stage"],
-      "additionalProperties": true,
+      "required": [
+        "project_id",
+        "name",
+        "stage"
+      ],
+      "additionalProperties": false,
       "properties": {
         "project_id": {
           "type": "string",
-          "pattern": "^[A-Z0-9_-]+$"
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "项目唯一标识符"
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "项目名称，人类可读字符串。"
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "项目详细说明。"
         },
         "stage": {
-          "type": "string"
+          "type": "string",
+          "description": "项目当前阶段（如 mvp、alpha、beta、production）。"
+        },
+        "language": {
+          "type": "string",
+          "description": "项目使用的编程语言（如 python、javascript、go），由 Agent 在架构设计阶段确定。finalize 命令从此字段读取语言并同步到 config.json。"
         }
       }
     },
@@ -37,12 +50,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["principle_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "principle_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "principle_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -52,13 +70,18 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "related_requirements": {
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[A-Z0-9_-]+$"
+              "pattern": "^[a-zA-Z0-9_-]+$"
             }
           }
         }
@@ -68,12 +91,16 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["module_id", "name", "responsibility"],
-        "additionalProperties": true,
+        "required": [
+          "module_id",
+          "name",
+          "responsibility"
+        ],
+        "additionalProperties": false,
         "properties": {
           "module_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "name": {
             "type": "string"
@@ -85,14 +112,14 @@
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[A-Z0-9_-]+$"
+              "pattern": "^[a-zA-Z0-9_-]+$"
             }
           },
           "forbidden_to_call": {
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[A-Z0-9_-]+$"
+              "pattern": "^[a-zA-Z0-9_-]+$"
             }
           },
           "owned_data": {
@@ -111,7 +138,14 @@
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[A-Z0-9_-]+$"
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            }
+          },
+          "owned_files": {
+            "type": "array",
+            "description": "此模块拥有的源文件名列表",
+            "items": {
+              "type": "string"
             }
           }
         }
@@ -121,12 +155,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["rule_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "rule_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "rule_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -136,7 +175,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "allowed_dependencies": {
             "type": "array",
@@ -157,7 +201,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[A-Z0-9_-]+$"
+              "pattern": "^[a-zA-Z0-9_-]+$"
             }
           }
         }
@@ -167,12 +211,19 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["rule_id", "title", "description", "severity", "from", "to"],
-        "additionalProperties": true,
+        "required": [
+          "rule_id",
+          "title",
+          "description",
+          "severity",
+          "from",
+          "to"
+        ],
+        "additionalProperties": false,
         "properties": {
           "rule_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -182,13 +233,22 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "from": {
             "type": "string"
           },
           "to": {
             "type": "string"
+          },
+          "allowed": {
+            "type": "boolean",
+            "description": "是否允许该数据流动关系。"
           },
           "flow_type": {
             "type": "string"
@@ -212,7 +272,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[A-Z0-9_-]+$"
+              "pattern": "^[a-zA-Z0-9_-]+$"
             }
           }
         }
@@ -222,12 +282,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["rule_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "rule_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "rule_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -237,7 +302,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "data_objects": {
             "type": "array",
@@ -270,12 +340,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["rule_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "rule_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "rule_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -285,7 +360,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "applies_to": {
             "type": "array",
@@ -312,12 +392,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["rule_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "rule_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "rule_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -327,7 +412,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "log_level": {
             "type": "string"
@@ -360,12 +450,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["rule_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "rule_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "rule_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -375,7 +470,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "applies_to": {
             "type": "array",
@@ -408,12 +508,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["constraint_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "constraint_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "constraint_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -423,7 +528,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "allowed": {
             "type": "array",
@@ -453,12 +563,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["pattern_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "pattern_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "pattern_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -468,7 +583,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "examples": {
             "type": "array",
@@ -489,12 +609,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["gate_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "gate_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "gate_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -504,7 +629,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "check_type": {
             "type": "string"
@@ -537,12 +667,16 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["contract_id", "title", "description"],
-        "additionalProperties": true,
+        "required": [
+          "contract_id",
+          "title",
+          "description"
+        ],
+        "additionalProperties": false,
         "properties": {
           "contract_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -584,12 +718,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["constraint_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "constraint_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "constraint_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -599,7 +738,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "metric": {
             "type": "string"
@@ -626,12 +770,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["constraint_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "constraint_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "constraint_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -641,7 +790,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "category": {
             "type": "string"
@@ -661,16 +815,56 @@
         }
       }
     },
+    "language_tool_matrix": {
+      "type": "object",
+      "description": "定义每种编程语言可用的验证工具及其命令模板。",
+      "additionalProperties": {
+        "type": "object",
+        "description": "语言名称作为键，值为该语言的工具配置。",
+        "additionalProperties": {
+          "type": "object",
+          "required": [
+            "tool",
+            "default_command",
+            "output_format",
+            "pass_condition"
+          ],
+          "properties": {
+            "tool": {
+              "type": "string",
+              "description": "工具名称，如 pytest、coverage、ruff。"
+            },
+            "default_command": {
+              "type": "string",
+              "description": "默认命令模板，支持 {test_path}、{source_path}、{output_path} 占位符。"
+            },
+            "output_format": {
+              "type": "string",
+              "description": "输出格式，如 pytest_json、coverage_json、ruff_json。"
+            },
+            "pass_condition": {
+              "type": "string",
+              "description": "通过条件描述，如 exit_code == 0、percent_covered >= 80。"
+            }
+          }
+        }
+      }
+    },
     "test_constraints": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["constraint_id", "title", "description", "severity"],
-        "additionalProperties": true,
+        "required": [
+          "constraint_id",
+          "title",
+          "description",
+          "severity"
+        ],
+        "additionalProperties": false,
         "properties": {
           "constraint_id": {
             "type": "string",
-            "pattern": "^[A-Z0-9_-]+$"
+            "pattern": "^[a-zA-Z0-9_-]+$"
           },
           "title": {
             "type": "string"
@@ -680,7 +874,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["must", "should", "could"]
+            "enum": [
+              "must",
+              "should",
+              "could"
+            ],
+            "description": "强度级别，必须为 'must'、'should' 或 'could' 之一。"
           },
           "test_level": {
             "type": "string"

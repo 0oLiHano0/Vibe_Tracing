@@ -7,10 +7,14 @@ and output the evidence index, traceability report, and run metadata.
 """
 
 import argparse
+import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 import importlib.resources as pkg_resources
+
+from typing import List, Optional, Union
 
 from vibe_tracing import __version__
 from vibe_tracing.raw_input_loader import RawInputLoader
@@ -18,18 +22,38 @@ from vibe_tracing.schema_validator import SchemaValidator
 from vibe_tracing.prd_parser import PrdParser
 from vibe_tracing.task_loader import TaskLoader
 from vibe_tracing.claim_loader import ClaimLoader
+from vibe_tracing.traceability.claim_credibility import assess_claim_credibility
+from vibe_tracing.evidence_index_builder import EvidenceIndexBuilder
+from vibe_tracing.traceability_report_builder import TraceabilityReportBuilder
+from vibe_tracing.merge_gate_engine import MergeGateEngine
+from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
+from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
+from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+from vibe_tracing.traceability.frozen_prd_auditor import FrozenPrdAuditor
+from vibe_tracing.risk_advisor import RiskAdvisor
+from vibe_tracing.dashboard_renderer import DashboardRenderer
 
 
-def run_init(project_root: Path) -> int:
+def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[str] = None) -> int:
     """Initialize a Vibe Tracing project by creating directories and template files."""
     try:
         print(f"Initializing Vibe Tracing project at: {project_root}")
 
-        # Directories to create
+        if not name or not prefix:
+            print("Error: --name 和 --prefix 是初始化项目必需的参数。\n\n用法示例:\n  vibe-tracing init --name \"Capacity Limit\" --prefix \"CapL\"", file=sys.stderr)
+            return 1
+
+        resolved_name = name
+        resolved_prefix = prefix
+
+        print(f"项目名称: {resolved_name}")
+        print(f"项目前缀: {resolved_prefix}")
+
+        # Directories to create (output/ is dynamically created during analyze)
         dirs = [
             project_root / ".vibetracing",
             project_root / "docs",
-            project_root / "output",
         ]
         for d in dirs:
             if not d.exists():
@@ -39,40 +63,263 @@ def run_init(project_root: Path) -> int:
                 )
 
         from vibe_tracing import templates
+        import datetime
 
-        # Load templates from package resources
-        config_content = json.loads(pkg_resources.read_text(templates, "config.template.json"))
-        claims_content = json.loads(pkg_resources.read_text(templates, "agent_claims.template.json"))
-        task_list_content = json.loads(pkg_resources.read_text(templates, "task_list.template.json"))
-        arch_content = json.loads(pkg_resources.read_text(templates, "architecture_constraints.template.json"))
-        prd_content = pkg_resources.read_text(templates, "prd.template.md")
+        # Get current date
+        today_str = datetime.date.today().strftime("%Y-%m-%d")
 
-        files = {
-            ".vibetracing/config.json": config_content,
-            ".vibetracing/agent_claims.json": claims_content,
-            "docs/task_list.json": task_list_content,
-            "docs/architecture_constraints.json": arch_content,
-            "docs/prd.md": prd_content,
+        # Load templates from package resources as text
+        config_text = pkg_resources.read_text(templates, "config.template.json")
+        claims_text = pkg_resources.read_text(templates, "agent_claims.template.json")
+        task_list_text = pkg_resources.read_text(templates, "task_list.template.json")
+        arch_text = pkg_resources.read_text(templates, "architecture_constraints.template.json")
+        prd_text = pkg_resources.read_text(templates, "prd.template.md")
+        prd_analysis_text = pkg_resources.read_text(templates, "prd_analysis.template.md")
+
+        config_path = project_root / ".vibetracing" / "config.json"
+
+        # 1. Determine configuration values (Read existing config or use resolved parameters)
+        if config_path.exists():
+            print("Skipped existing file: .vibetracing/config.json")
+            try:
+                with config_path.open("r", encoding="utf-8") as f:
+                    config_data = json.load(f)
+                config_name = config_data.get("project_name", resolved_name)
+                config_prefix = config_data.get("project_prefix", resolved_prefix)
+                config_project_id = config_data.get("project_id", f"PROJECT-{config_prefix}")
+            except Exception as exc:
+                print(f"Error loading existing config.json: {exc}", file=sys.stderr)
+                return 1
+        else:
+            config_name = resolved_name
+            config_prefix = resolved_prefix
+            config_project_id = f"PROJECT-{resolved_prefix}"
+
+        # 2. Unified placeholder replacement function
+        def render_template(content: str) -> str:
+            # 1. Translate legacy hardcoded -VT- references
+            content = content.replace("PROJECT-VT", config_project_id)
+            content = content.replace("-VT-", f"-{config_prefix}-")
+            content = content.replace("-VT\\", f"-{config_prefix}\\")
+            content = content.replace("-VT\\\\", f"-{config_prefix}\\\\")
+            # 2. Replace explicit placeholders
+            content = content.replace("{{PROJECT_NAME}}", config_name)
+            content = content.replace("{{PROJECT_PREFIX}}", config_prefix)
+            content = content.replace("{{TODAY}}", today_str)
+            return content
+
+        # 3. Write config.json if not exist
+        if not config_path.exists():
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            config_content = render_template(config_text)
+            with config_path.open("w", encoding="utf-8") as f:
+                f.write(config_content)
+            print("Created file: .vibetracing/config.json")
+
+        other_files = {
+            ".vibetracing/agent_claims.json": render_template(claims_text),
+            "docs/task_list.json": render_template(task_list_text),
+            "docs/architecture_constraints.json": render_template(arch_text),
+            "docs/prd.md": render_template(prd_text),
+            ".vibetracing/prompts/prd_analysis.md": render_template(prd_analysis_text),
         }
 
-        for rel_path, content in files.items():
+        for rel_path, content in other_files.items():
             file_path = project_root / rel_path
             if file_path.exists():
                 print(f"Skipped existing file: {rel_path}")
             else:
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                if rel_path.endswith(".json"):
-                    with file_path.open("w", encoding="utf-8") as f:
-                        json.dump(content, f, indent=2, ensure_ascii=False)
-                else:
-                    with file_path.open("w", encoding="utf-8") as f:
-                        f.write(content)
+                with file_path.open("w", encoding="utf-8") as f:
+                    f.write(content)
                 print(f"Created file: {rel_path}")
 
         print("Vibe Tracing initialization completed successfully.")
         return 0
     except Exception as exc:
         print(f"Error during initialization: {exc}", file=sys.stderr)
+        return 1
+
+
+
+
+
+def _validate_constraints_change(project_root: Path, constraints_path: Path, config_data: dict) -> tuple:
+    """Validate that architecture constraint changes are documented in change_log.md.
+
+    Returns:
+        (passed: bool, message: str)
+    """
+    from vibe_tracing.git_utils import git_show, git_last_commit_touching, git_file_modified_after, git_has_uncommitted_changes
+
+    finalize_commit = config_data.get("finalize_git_commit")
+    finalize_constraints_path = config_data.get("finalize_constraints_path")
+
+    # First finalization (no stored hash) — always pass
+    if not finalize_commit or not finalize_constraints_path:
+        return True, "首次定稿"
+
+    # Get baseline via git show
+    base_content = git_show(finalize_commit, finalize_constraints_path, project_root)
+    if base_content is None:
+        return False, f"无法还原定稿版本 ({finalize_commit}:{finalize_constraints_path})"
+
+    import json
+    base_data = json.loads(base_content)
+    curr_data = json.loads(constraints_path.read_text(encoding="utf-8"))
+
+    # Import _find_differences from architecture_change_proposal
+    from vibe_tracing.architecture_change_proposal import ArchitectureChangeProposalEngine
+    engine = ArchitectureChangeProposalEngine(project_root)
+    diffs = engine._find_differences(base_data, curr_data)
+
+    # No structural diffs — format change only
+    if not diffs:
+        return True, "格式变化（无规则变更），直接更新检查点"
+
+    # Check uncommitted changes
+    if git_has_uncommitted_changes(str(constraints_path.relative_to(project_root)), project_root):
+        return False, "constraints.json 存在未提交变更，请先 git add + git commit 后再运行 vt finalize"
+
+    # Change log timeline validation
+    change_log_rel = "docs/architecture_change_log.md"
+    constraints_rel = str(constraints_path.relative_to(project_root))
+
+    last_change = git_last_commit_touching(constraints_rel, project_root)
+    if not last_change:
+        return False, "无法确定 constraints.json 的变更历史"
+
+    log_last = git_last_commit_touching(change_log_rel, project_root)
+    if log_last == last_change:
+        return True, "change_log.md 与 constraints.json 在同一 commit 中被修改"
+
+    if git_file_modified_after(change_log_rel, last_change, project_root):
+        return True, "change_log.md 在 constraints 变更之后被更新"
+
+    # Build rejection message with diff details
+    changed = [f"  - {d['action'].upper()}: {d.get('rule_id') or d['path']}" for d in diffs]
+    return False, (
+        "检测到架构约束被修改，但 change_log.md 未同步更新。\n"
+        "变更的规则：\n" + "\n".join(changed) + "\n"
+        "请在 docs/architecture_change_log.md 中记录变更原因后重新运行 vt finalize。"
+    )
+
+
+def run_finalize(project_root: Path) -> int:
+    """Finalize project configuration by reading language and tools from architecture constraints."""
+    try:
+        config_path = project_root / ".vibetracing" / "config.json"
+        constraints_path = project_root / "docs" / "architecture_constraints.json"
+
+        # 1. Check config.json exists
+        if not config_path.exists():
+            print("Error: config.json not found. Run 'vibe-tracing init' first.", file=sys.stderr)
+            return 1
+
+        # 2. Check architecture_constraints.json exists
+        if not constraints_path.exists():
+            print("Error: architecture_constraints.json not found. Agent must generate it before finalization.", file=sys.stderr)
+            return 1
+
+        # 3. Load both files
+        with config_path.open("r", encoding="utf-8") as f:
+            config_data = json.load(f)
+        with constraints_path.open("r", encoding="utf-8") as f:
+            constraints_data = json.load(f)
+
+        # 4. Extract language from architecture constraints
+        project_data = constraints_data.get("project", {})
+        language = project_data.get("language")
+        if not language:
+            print("Error: project.language not set in architecture_constraints.json.", file=sys.stderr)
+            return 1
+
+        # 5. Check language_tool_matrix
+        ltm = constraints_data.get("language_tool_matrix", {})
+        if language not in ltm:
+            print(f"Error: language \"{language}\" not found in language_tool_matrix.", file=sys.stderr)
+            return 1
+
+        tool_categories = list(ltm[language].keys())
+
+        # Compute SHA256 hash of constraints file
+        computed_hash = hashlib.sha256(constraints_path.read_bytes()).hexdigest()
+
+        # 6. Check if already finalized (language + tools + hash)
+        existing_language = config_data.get("language")
+        if existing_language:
+            if existing_language != language:
+                print(f"Error: config.json language \"{existing_language}\" conflicts with architecture_constraints language \"{language}\". Manual intervention required.", file=sys.stderr)
+                return 1
+            existing_tools = sorted(config_data.get("validation_tools", []))
+            current_tools = sorted(tool_categories)
+            stored_hash = config_data.get("architecture_constraints_hash")
+
+            if existing_tools == current_tools and stored_hash == computed_hash:
+                print(f"Already finalized: language={language}, tools={current_tools}")
+                return 0
+
+            if existing_tools == current_tools and stored_hash != computed_hash:
+                # Tools match but constraints content changed — run validation
+                passed, message = _validate_constraints_change(project_root, constraints_path, config_data)
+                if not passed:
+                    print(f"Error: {message}", file=sys.stderr)
+                    return 1
+                # Validation passed — update hash and git metadata
+                config_data["architecture_constraints_hash"] = computed_hash
+                try:
+                    git_commit = subprocess.run(
+                        ["git", "rev-parse", "HEAD"],
+                        cwd=project_root,
+                        capture_output=True,
+                        text=True,
+                    )
+                    config_data["finalize_git_commit"] = git_commit.stdout.strip() if git_commit.returncode == 0 else None
+                except Exception:
+                    config_data["finalize_git_commit"] = None
+                config_data["finalize_constraints_path"] = str(constraints_path.relative_to(project_root))
+                with config_path.open("w", encoding="utf-8") as f:
+                    json.dump(config_data, f, indent=2, ensure_ascii=False)
+                print(f"Constraints checkpoint updated (hash={computed_hash[:12]}...). {message}")
+                return 0
+
+            if existing_tools != current_tools:
+                # Language matches but tools changed — update silently
+                config_data["validation_tools"] = tool_categories
+                with config_path.open("w", encoding="utf-8") as f:
+                    json.dump(config_data, f, indent=2, ensure_ascii=False)
+                print(f"Updated validation_tools: {existing_tools} → {current_tools}")
+                return 0
+
+        # 7. First finalization or language not yet set — validate and write
+        passed, message = _validate_constraints_change(project_root, constraints_path, config_data)
+        if not passed:
+            print(f"Error: {message}", file=sys.stderr)
+            return 1
+
+        # Write language, tools, and hash metadata to config.json
+        config_data["language"] = language
+        config_data["validation_tools"] = tool_categories
+        config_data["architecture_constraints_hash"] = computed_hash
+        try:
+            git_commit = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+            )
+            config_data["finalize_git_commit"] = git_commit.stdout.strip() if git_commit.returncode == 0 else None
+        except Exception:
+            config_data["finalize_git_commit"] = None
+        config_data["finalize_constraints_path"] = str(constraints_path.relative_to(project_root))
+        with config_path.open("w", encoding="utf-8") as f:
+            json.dump(config_data, f, indent=2, ensure_ascii=False)
+
+        print(f"Project finalized: language={language}, tools={tool_categories}, hash={computed_hash[:12]}... {message}")
+        return 0
+
+    except Exception as exc:
+        print(f"Error during finalization: {exc}", file=sys.stderr)
         return 1
 
 
@@ -91,31 +338,6 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
             2: Gate decision is 'blocked'.
     """
     try:
-        import importlib
-
-        EvidenceIndexBuilder = importlib.import_module(
-            "vibe_tracing.evidence_index_builder"
-        ).EvidenceIndexBuilder
-        TraceabilityReportBuilder = importlib.import_module(
-            "vibe_tracing.traceability_report_builder"
-        ).TraceabilityReportBuilder
-        MergeGateEngine = importlib.import_module(
-            "vibe_tracing.merge_gate_engine"
-        ).MergeGateEngine
-        ArchitectureComplianceChecker = importlib.import_module(
-            "vibe_tracing.architecture_compliance_checker"
-        ).ArchitectureComplianceChecker
-        RequirementTaskAnalyzer = importlib.import_module(
-            "vibe_tracing.traceability.requirement_task_analyzer"
-        ).RequirementTaskAnalyzer
-        AcTestAnalyzer = importlib.import_module(
-            "vibe_tracing.traceability.ac_test_analyzer"
-        ).AcTestAnalyzer
-        ClaimEvidenceAnalyzer = importlib.import_module(
-            "vibe_tracing.traceability.claim_evidence_analyzer"
-        ).ClaimEvidenceAnalyzer
-        RiskAdvisor = importlib.import_module("vibe_tracing.risk_advisor").RiskAdvisor
-
         schemas_dir = project_root / "schemas"
         if not schemas_dir.is_dir():
             schemas_dir = Path(__file__).parent / "schemas"
@@ -124,6 +346,17 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
         # 1. Load raw inputs
         raw_loader = RawInputLoader(project_root)
         manifest = raw_loader.load()
+
+        # Load project metadata from config.json (Source of Truth)
+        config_prefix = raw_loader.config_data.get("project_prefix", "VT")
+        config_name = raw_loader.config_data.get("project_name", "Vibe Tracing")
+        config_project_id = raw_loader.config_data.get("project_id", f"PROJECT-{config_prefix}")
+
+        # Initialize the dynamic validation prefix using the source of truth config
+        from vibe_tracing.core import ids
+        ids.set_project_prefix(config_prefix)
+
+        # Check for missing required files at loader level (PRD is required)
         if manifest.has_required_errors:
             for record in manifest.inputs_used:
                 if record.is_required and record.status != "ok":
@@ -133,52 +366,47 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
                     )
             return 1
 
+        # Check for malformed files (syntax/read errors) across all files
+        for record in manifest.inputs_used:
+            if record.status not in ("ok", "missing"):
+                print(
+                    f"Error loading file {record.file_key} ({record.file_path}): {record.error_message}",
+                    file=sys.stderr,
+                )
+                return 1
+
         constraints_path = raw_loader.get_path("architecture_constraints")
+        task_list_path = raw_loader.get_path("task_list")
 
         # Check records
         records_dict = {r.file_key: r for r in manifest.inputs_used}
         prd_record = records_dict.get("prd")
         task_list_record = records_dict.get("task_list")
+        constraints_record = records_dict.get("architecture_constraints")
         claims_record = records_dict.get("agent_claims")
 
-        if not prd_record or prd_record.status != "ok":
-            print("Error: PRD file missing or failed to load.", file=sys.stderr)
-            return 1
-        if not task_list_record or task_list_record.status != "ok":
-            print("Error: Task list file missing or failed to load.", file=sys.stderr)
-            return 1
-
-        # Validate task list schema
-        task_list_path = Path(task_list_record.file_path)
-        val_task = validator.validate_file(task_list_path, "task_list")
-        if not val_task.is_valid:
-            print(
-                f"Schema validation failed for task list: {val_task.message} at {val_task.field_path}",
-                file=sys.stderr,
+        # 1.1 Validate Schemas of all files that loaded successfully (Upfront Schema Validation)
+        if task_list_record and task_list_record.status == "ok":
+            val_task = validator.validate_dict(
+                task_list_record.content,
+                "task_list",
+                source_label=task_list_record.file_path,
             )
-            if val_task.hint:
-                print(val_task.hint, file=sys.stderr)
-            return 1
-
-        # Validate agent claims schema if it exists
-        claims_exist = False
-        claims_path = None
-        if claims_record and claims_record.status == "ok":
-            claims_exist = True
-            claims_path = Path(claims_record.file_path)
-            val_claims = validator.validate_file(claims_path, "agent_claims")
-            if not val_claims.is_valid:
+            if not val_task.is_valid:
                 print(
-                    f"Schema validation failed for agent claims: {val_claims.message} at {val_claims.field_path}",
+                    f"Schema validation failed for task list: {val_task.message} at {val_task.field_path}",
                     file=sys.stderr,
                 )
-                if val_claims.hint:
-                    print(val_claims.hint, file=sys.stderr)
+                if val_task.hint:
+                    print(val_task.hint, file=sys.stderr)
                 return 1
 
-        # Validate architecture constraints schema
-        if constraints_path.exists():
-            val_constraints = validator.validate_file(constraints_path, "architecture_constraints")
+        if constraints_record and constraints_record.status == "ok":
+            val_constraints = validator.validate_dict(
+                constraints_record.content,
+                "architecture_constraints",
+                source_label=constraints_record.file_path,
+            )
             if not val_constraints.is_valid:
                 print(
                     f"Schema validation failed for architecture constraints: {val_constraints.message} at {val_constraints.field_path}",
@@ -188,83 +416,203 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
                     print(val_constraints.hint, file=sys.stderr)
                 return 1
 
-        # Validate Claude Code bootstrap configuration if bootstrap folder/manifest exists or GATE-VT-013 is in quality gates
-        has_gate_13 = False
-        constraints_path = raw_loader.get_path("architecture_constraints")
-
-        if constraints_path.exists():
-            try:
-                with constraints_path.open("r", encoding="utf-8") as f:
-                    constraints_data = json.load(f)
-                for gate in constraints_data.get("quality_gates", []):
-                    if gate.get("gate_id") == "GATE-VT-013":
-                        has_gate_13 = True
-                        break
-            except Exception:
-                pass
-
-        bootstrap_manifest_path = (
-            raw_loader.get_path("claude_bootstrap") / "bootstrap_manifest.json"
-        )
-
-        if bootstrap_manifest_path.exists() or has_gate_13:
-            from vibe_tracing.claude_code_bootstrap_adapter import (
-                ClaudeCodeBootstrapAdapter,
+        if claims_record and claims_record.status == "ok":
+            val_claims = validator.validate_dict(
+                claims_record.content,
+                "agent_claims",
+                source_label=claims_record.file_path,
             )
-
-            try:
-                bootstrap_adapter = ClaudeCodeBootstrapAdapter(project_root)
-                boot_res = bootstrap_adapter.check_governance_rules()
-                if boot_res.get("errors"):
-                    for err in boot_res["errors"]:
-                        print(f"Bootstrap config error: {err}", file=sys.stderr)
-                    return 1
-            except Exception as exc:
-                print(f"Error validating bootstrap config: {exc}", file=sys.stderr)
+            if not val_claims.is_valid:
+                print(
+                    f"Schema validation failed for agent claims: {val_claims.message} at {val_claims.field_path}",
+                    file=sys.stderr,
+                )
+                if val_claims.hint:
+                    print(val_claims.hint, file=sys.stderr)
                 return 1
 
-        # 2. Map/parse PRD requirements
+        if not prd_record or prd_record.status != "ok":
+            print("Error: PRD file missing or failed to load.", file=sys.stderr)
+            return 1
+
+        # 2. Map/parse PRD requirements (Do this early so we can check if it is draft status)
         prd_parser = PrdParser()
         prd_res = prd_parser.parse_file(Path(prd_record.file_path))
         if not prd_res.is_valid:
             print(f"PRD parsing error: {'; '.join(prd_res.errors)}", file=sys.stderr)
             return 1
 
-        # 3. Load tasks
-        task_loader = TaskLoader(schemas_dir)
-        task_res = task_loader.load_and_validate(task_list_path, prd_res)
-        if not task_res.is_valid:
-            print(
-                f"Task list validation error: {'; '.join(task_res.errors)}",
-                file=sys.stderr,
-            )
-            return 1
+        is_draft = (prd_res.status == "draft")
 
-        # 4. Load claims
-        claims_list = []
-        if claims_exist and claims_path:
-            claim_loader = ClaimLoader(schemas_dir)
-            claim_res = claim_loader.load_and_validate(claims_path, task_res)
-            if not claim_res.is_valid:
+        # 3. Verify that task list and architecture constraints exist if not draft
+        if not is_draft:
+            if not task_list_record or task_list_record.status != "ok":
                 print(
-                    f"Agent claims validation error: {'; '.join(claim_res.errors)}",
+                    f"Error loading required file task_list ({raw_loader.get_path('task_list')}): File not found",
                     file=sys.stderr,
                 )
                 return 1
-            claims_list = claim_res.claims
+            if not constraints_record or constraints_record.status != "ok":
+                print(
+                    f"Error loading required file architecture_constraints ({raw_loader.get_path('architecture_constraints')}): File not found",
+                    file=sys.stderr,
+                )
+                return 1
 
-        # 5. Scan tool reports (automatically handled during index building step 6)
+        # Load tasks
+        task_res = None
+        if task_list_record and task_list_record.status == "ok":
+            task_list_path = Path(task_list_record.file_path)
+            task_loader = TaskLoader(schemas_dir)
+            task_res = task_loader.load_and_validate(
+                task_list_path, prd_res, content=task_list_record.content
+            )
+            if not task_res.is_valid:
+                print(
+                    f"Task list validation error: {'; '.join(task_res.errors)}",
+                    file=sys.stderr,
+                )
+                return 1
+
+        # Load claims
+        claims_exist = False
+        claims_path = None
+        claims_list = []
+        if claims_record and claims_record.status == "ok" and task_res:
+            claims_exist = True
+            claims_path = Path(claims_record.file_path)
+            claim_loader = ClaimLoader(schemas_dir)
+            claim_res_loader = claim_loader.load_and_validate(
+                claims_path, task_res, content=claims_record.content
+            )
+            if not claim_res_loader.is_valid:
+                print(
+                    f"Agent claims validation error: {'; '.join(claim_res_loader.errors)}",
+                    file=sys.stderr,
+                )
+                return 1
+            claims_list = claim_res_loader.claims
+
+
+        # PRD, tasks and claims have been successfully parsed and validated above.
+
+        # 5. Tool Execution Phase (MOD-VT-012)
+        # Read language, validation_tools, language_tool_matrix from config/constraints
+        config_language = raw_loader.config_data.get("language")
+        config_validation_tools = raw_loader.config_data.get("validation_tools", [])
+        tool_evidence_candidates = None
+
+        if constraints_record and constraints_record.status == "ok":
+            constraints_content = constraints_record.content
+            if not config_language:
+                print(
+                    "Error: Project not finalized. Run 'vibe-tracing finalize' first.",
+                    file=sys.stderr,
+                )
+                return 1
+
+            ltm = constraints_content.get("language_tool_matrix", {})
+            if is_draft:
+                print("Skipping tool execution: project is in draft status (no tasks or claims).", file=sys.stderr)
+            elif config_language and ltm:
+                from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+
+                engine = ToolExecutionEngine(
+                    language_tool_matrix=ltm,
+                    language=config_language,
+                    validation_tools=config_validation_tools,
+                    project_root=project_root,
+                )
+
+                # Collect paths to execute tools against
+                execution_paths: List[str] = []
+
+                # From claims: test_refs and code_refs
+                for claim in claims_list:
+                    for ref in claim.test_refs:
+                        path_only = ref.split("#")[0]
+                        if path_only and path_only not in execution_paths:
+                            execution_paths.append(path_only)
+                    for ref in claim.code_refs:
+                        path_only = ref.split("#")[0]
+                        if path_only and path_only not in execution_paths:
+                            execution_paths.append(path_only)
+
+                # From tasks: collect related test paths via evidence_refs
+                if task_res:
+                    for task in task_res.tasks:
+                        for ref in task.evidence_refs if hasattr(task, 'evidence_refs') else []:
+                            path_only = ref.split("#")[0]
+                            if path_only and path_only not in execution_paths:
+                                execution_paths.append(path_only)
+
+                # Default to tests/ directory if no specific paths found
+                if not execution_paths:
+                    tests_dir = project_root / "tests"
+                    if tests_dir.is_dir():
+                        execution_paths.append("tests/")
+
+                if execution_paths:
+                    print(f"Executing validation tools for {len(execution_paths)} path(s)...")
+                    tool_evidence_candidates = engine.execute_all(execution_paths)
+                    executed_count = len(tool_evidence_candidates)
+                    blocked_count = sum(
+                        1 for c in tool_evidence_candidates
+                        if c.error_code is not None
+                    )
+                    # Print per-tool stderr feedback for blocked executions
+                    for c in tool_evidence_candidates:
+                        if c.error_code is not None:
+                            details = c.details or {}
+                            error_type = details.get("error_type", "unknown")
+                            if error_type == "timeout":
+                                print(
+                                    f"Error: {c.source_path} timed out after {details.get('timeout_seconds', '?')}s. "
+                                    f"Increase timeout or simplify the test.",
+                                    file=sys.stderr,
+                                )
+                            elif error_type == "tool_not_found":
+                                print(
+                                    f"Error: tool not found for {c.source_path}. "
+                                    f"Ensure the required tool is installed.",
+                                    file=sys.stderr,
+                                )
+                            else:
+                                print(
+                                    f"Error: {c.source_path} failed (exit code {c.exit_code}). {c.stderr}",
+                                    file=sys.stderr,
+                                )
+                    print(
+                        f"Tool execution complete: {executed_count} evidence candidates "
+                        f"({blocked_count} blocked)"
+                    )
 
         # 6. Build and save evidence index
         index_builder = EvidenceIndexBuilder(project_root)
         index_path = output_dir / "evidence_index.json"
         try:
-            evidences_index = index_builder.build(output_path=index_path)
+            evidences_index = index_builder.build(
+                output_path=index_path,
+                tool_evidence_candidates=tool_evidence_candidates,
+                prd_record=prd_res,
+                task_result=task_res,
+                claims_list=claims_list,
+                manifest=manifest,
+                config_prefix=config_prefix,
+            )
         except Exception as exc:
             print(f"Error building evidence index: {exc}", file=sys.stderr)
             return 1
 
         evidence_list = evidences_index.get("evidences", [])
+
+        # 6.5. Assess claim credibility against evidence index
+        if claims_list:
+            credibility_warnings = assess_claim_credibility(
+                claims_list, evidence_list, task_result=task_res, project_root=project_root
+            )
+            for warning in credibility_warnings:
+                print(f"Warning: {warning}", file=sys.stderr)
 
         # 7. Run compliance check and analyzers
         req_analyzer = RequirementTaskAnalyzer()
@@ -306,37 +654,60 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
             claims_analysis=claim_res.get("claims_analysis", []),
             claim_risks=claim_risks,
             compliance_result=compliance_res,
+            claims_list=claims_list,
         )
 
         if compliance_res:
-            final_risks.extend(compliance_res.get("bootstrap_risks", []))
             final_risks.extend(compliance_res.get("proposal_risks", []))
-            for gap in compliance_res.get("bootstrap_gaps", []) + compliance_res.get(
-                "proposal_gaps", []
-            ):
+            for gap in compliance_res.get("proposal_gaps", []):
                 key = (gap.get("item_id"), gap.get("item_type"))
                 if key not in seen_gaps:
                     seen_gaps.add(key)
                     merged_gaps.append(gap)
 
+        # Frozen state audit
+        frozen_auditor = FrozenPrdAuditor(project_root, prd_parser)
+        frozen_risks = frozen_auditor.audit(prd_res.status, prd_res.requirements)
+        final_risks.extend(frozen_risks)
+
         # 9. Run Merge Gate Engine
         gate_engine = MergeGateEngine(project_root)
-        gate_res = gate_engine.evaluate(merged_gaps, final_risks, compliance_res)
+        gate_res = gate_engine.evaluate(
+            merged_gaps, final_risks, compliance_res, prd_status=prd_res.status
+        )
         gate_decision = gate_res["gate_decision"]
+
+        # Assemble report document
+        report_doc = {
+            "run_id": evidences_index.get("run_id"),
+            "project_id": evidences_index.get("project_id"),
+            "scan_time": evidences_index.get("scan_time"),
+            "gate_decision": gate_decision,
+            "requirement_coverage": req_res.get("requirement_coverage", []),
+            "gaps": merged_gaps,
+            "risks": final_risks,
+            "architecture_compliance_status": compliance_res.get(
+                "architecture_compliance_status", []
+            )
+            if compliance_res
+            else [],
+            "architecture_violations": compliance_res.get(
+                "architecture_violations", []
+            )
+            if compliance_res
+            else [],
+            "unclear_constraints": compliance_res.get("unclear_constraints", [])
+            if compliance_res
+            else [],
+        }
 
         # 10. Compile and save traceability report
         report_builder = TraceabilityReportBuilder(project_root)
         report_path = output_dir / "traceability_report.json"
         try:
             report_doc = report_builder.build(
-                prd_requirements=prd_res.requirements,
-                claims=claims_list,
-                evidences=evidences_index,
-                gate_decision=gate_decision,
+                report_doc,
                 output_path=report_path,
-                run_id=evidences_index.get("run_id"),
-                project_id=evidences_index.get("project_id"),
-                scan_time=evidences_index.get("scan_time"),
             )
         except Exception as exc:
             print(f"Error building traceability report: {exc}", file=sys.stderr)
@@ -369,9 +740,6 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
 
         dashboard_path = output_dir / "dashboard.html"
         try:
-            DashboardRenderer = importlib.import_module(
-                "vibe_tracing.dashboard_renderer"
-            ).DashboardRenderer
             renderer = DashboardRenderer(project_root)
 
             prd_reqs_serialized = []
@@ -432,6 +800,9 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
         for reason in gate_res["reasons"]:
             print(f"- {reason}")
 
+        if is_draft and (not task_res or not task_res.tasks) and not claims_list:
+            print("\n【零提示词引导】当前项目处于 PRD 草稿阶段（draft），且未发现任何开发任务。请让 AI Agent 读取项目内的 .vibetracing/prompts/prd_analysis.md 并按照其中的 7 步分析法对 PRD 进行分析与补充，逐步生成对应的架构约束和任务列表。")
+
         return exit_code
 
     except Exception as exc:
@@ -473,6 +844,23 @@ def main(argv=None):
         default=".",
         help="Path to the project workspace root (default: current working directory)",
     )
+    init_parser.add_argument(
+        "--name",
+        help="Human-readable name of the project",
+    )
+    init_parser.add_argument(
+        "--prefix",
+        help="Project prefix abbreviation (e.g. CapL, VT)",
+    )
+
+    finalize_parser = subparsers.add_parser(
+        "finalize", help="Finalize project config from architecture constraints"
+    )
+    finalize_parser.add_argument(
+        "--project-root",
+        default=".",
+        help="Path to the project workspace root (default: current working directory)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -489,7 +877,10 @@ def main(argv=None):
         return run_analyze(project_root, output_dir)
     elif args.command == "init":
         project_root = Path(args.project_root).resolve()
-        return run_init(project_root)
+        return run_init(project_root, name=args.name, prefix=args.prefix)
+    elif args.command == "finalize":
+        project_root = Path(args.project_root).resolve()
+        return run_finalize(project_root)
     else:
         parser.print_help()
         return 0

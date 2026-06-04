@@ -19,9 +19,9 @@ def setup_mock_project(base: Path) -> None:
     """Helper to set up a mock project structure with valid inputs."""
     # Create directories
     (base / "docs").mkdir(parents=True, exist_ok=True)
-    (base / ".vibetracing" / "tool_reports").mkdir(parents=True, exist_ok=True)
-    (base / ".vibetracing" / "output").mkdir(parents=True, exist_ok=True)
+    (base / "output").mkdir(parents=True, exist_ok=True)
     (base / "schemas").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
 
     # Copy real schemas to mock project so schema validator can load them
     real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
@@ -104,22 +104,6 @@ must
         json.dumps(agent_claims), encoding="utf-8"
     )
 
-    # Write Pytest Report
-    pytest_report = {
-        "tool": "pytest",
-        "command": "pytest --json-report",
-        "exit_code": 0,
-        "tests": [
-            {
-                "nodeid": "tests/test_ids_and_enums.py::test_req_id_valid",
-                "outcome": "passed",
-                "docstring": "covers: AC-VT-001-02",
-            }
-        ],
-    }
-    (base / ".vibetracing" / "tool_reports" / "pytest_report.json").write_text(
-        json.dumps(pytest_report), encoding="utf-8"
-    )
 
 
 def test_build_successful_evidence_index(tmp_path: Path) -> None:
@@ -139,7 +123,7 @@ def test_build_successful_evidence_index(tmp_path: Path) -> None:
     assert "scan_time" in index
 
     # Verify output file generated
-    output_file = tmp_path / ".vibetracing" / "output" / "evidence_index.json"
+    output_file = tmp_path / "output" / "evidence_index.json"
     assert output_file.exists()
 
     # Validate output schema via SchemaValidator
@@ -148,8 +132,8 @@ def test_build_successful_evidence_index(tmp_path: Path) -> None:
     assert val_res.is_valid is True, f"Schema validation error: {val_res.message}"
 
     evidences = index["evidences"]
-    # 2 tasks + 1 claim + 1 code_ref + 1 test = 5 evidence records
-    assert len(evidences) == 5
+    # 2 tasks + 1 claim + 1 code_ref = 4 evidence records
+    assert len(evidences) == 4
 
     # Verify sequential evidence ID allocation
     for idx, ev in enumerate(evidences):
@@ -185,11 +169,6 @@ def test_build_successful_evidence_index(tmp_path: Path) -> None:
     assert code_ev["source_path"] == "src/vibe_tracing/core/ids.py#L1-L10"
     assert sorted(code_ev["covers"]) == ["AC-VT-001-01", "REQ-VT-001"]
 
-    # Verify Test mapping
-    test_ev = next(e for e in evidences if e["source_type"] == "test")
-    assert test_ev["status"] == "covered"
-    assert test_ev["source_path"] == "tests/test_ids_and_enums.py::test_req_id_valid"
-    assert test_ev["covers"] == ["AC-VT-001-02"]
 
 
 def test_build_missing_required_files_raises_error(tmp_path: Path) -> None:

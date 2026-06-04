@@ -329,6 +329,5 @@ def test_validate_real_files_load(task_loader):
     res = task_loader.load_and_validate(task_list_path, prd_result=prd_res)
 
     # Let's check if the real task list has any validation issues
-    # If the project is in bootstrap phase, it should have a valid mapping
     assert res.is_valid is True, f"Real files load failed: {res.errors}"
     assert len(res.tasks) > 0

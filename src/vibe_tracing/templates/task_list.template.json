@@ -3,7 +3,16 @@
   "project": {
     "project_id": "PROJECT-{{PROJECT_PREFIX}}",
     "name": "{{PROJECT_NAME}}",
-    "stage": "Development"
+    "stage": "Development",
+    "task_list_id": "TASKLIST-{{PROJECT_PREFIX}}-001",
+    "generated_for": "AI Coding atomic task execution"
   },
+  "id_rules": {
+    "task_id_format": "TASK-{{PROJECT_PREFIX}}-序号",
+    "dod_id_format": "DOD-{{PROJECT_PREFIX}}-任务序号-子序号",
+    "all_tasks_must_link_requirements_and_acceptance_criteria": true,
+    "all_positive_status_must_reference_evidence": true
+  },
+  "phases": [],
   "tasks": []
 }

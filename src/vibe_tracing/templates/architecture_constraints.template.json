@@ -4,7 +4,8 @@
     "project_id": "PROJECT-{{PROJECT_PREFIX}}",
     "name": "{{PROJECT_NAME}}",
     "description": "Project Description",
-    "stage": "mvp"
+    "stage": "mvp",
+    "language": "python"
   },
   "architecture_principles": [],
   "module_boundaries": [],

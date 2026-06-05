@@ -1,7 +1,13 @@
 {
+  "schema_version": "1.0.0",
   "project_id": "PROJECT-{{PROJECT_PREFIX}}",
   "project_prefix": "{{PROJECT_PREFIX}}",
   "project_name": "{{PROJECT_NAME}}",
+  "language": "",
+  "validation_tools": [],
+  "architecture_constraints_hash": "",
+  "finalize_git_commit": "",
+  "finalize_constraints_path": "",
   "paths": {
     "prd": "docs/prd.md",
     "architecture_constraints": "docs/architecture_constraints.json",

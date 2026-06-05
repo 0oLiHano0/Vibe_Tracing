@@ -268,6 +268,12 @@ def run_finalize(project_root: Path) -> int:
                     return 1
                 # Validation passed — update hash and git metadata
                 config_data["architecture_constraints_hash"] = computed_hash
+                task_list_path = project_root / "docs" / "task_list.json"
+                if task_list_path.exists():
+                    config_data["task_list_hash"] = hashlib.sha256(task_list_path.read_bytes()).hexdigest()
+                agent_claims_path = project_root / ".vibetracing" / "agent_claims.json"
+                if agent_claims_path.exists():
+                    config_data["agent_claims_hash"] = hashlib.sha256(agent_claims_path.read_bytes()).hexdigest()
                 try:
                     git_commit = subprocess.run(
                         ["git", "rev-parse", "HEAD"],
@@ -302,6 +308,12 @@ def run_finalize(project_root: Path) -> int:
         config_data["language"] = language
         config_data["validation_tools"] = tool_categories
         config_data["architecture_constraints_hash"] = computed_hash
+        task_list_path = project_root / "docs" / "task_list.json"
+        if task_list_path.exists():
+            config_data["task_list_hash"] = hashlib.sha256(task_list_path.read_bytes()).hexdigest()
+        agent_claims_path = project_root / ".vibetracing" / "agent_claims.json"
+        if agent_claims_path.exists():
+            config_data["agent_claims_hash"] = hashlib.sha256(agent_claims_path.read_bytes()).hexdigest()
         try:
             git_commit = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
@@ -511,6 +523,58 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
                     file=sys.stderr,
                 )
                 return 1
+
+            # Anti-corruption layer: verify architecture constraints hash
+            config_hash = raw_loader.config_data.get("architecture_constraints_hash")
+            finalize_commit = raw_loader.config_data.get("finalize_git_commit")
+            if config_hash:
+                if not finalize_commit:
+                    print(
+                        "Critical Error: config.json has architecture_constraints_hash "
+                        "but missing finalize_git_commit. Config may have been tampered. "
+                        "Run 'vibe-tracing finalize' to re-lock.",
+                        file=sys.stderr,
+                    )
+                    return 1
+                current_hash = hashlib.sha256(
+                    Path(constraints_record.file_path).read_bytes()
+                ).hexdigest()
+                if current_hash != config_hash:
+                    print(
+                        "Critical Error: Architecture constraints have been modified "
+                        "since the last lock! The anti-corruption layer prevents execution. "
+                        "Run 'vibe-tracing finalize' to audit and re-lock the changes.",
+                        file=sys.stderr,
+                    )
+                    return 1
+
+            # Verify task_list hash
+            task_list_hash = raw_loader.config_data.get("task_list_hash")
+            if task_list_hash and task_list_record and task_list_record.status == "ok":
+                tl_hash = hashlib.sha256(
+                    Path(task_list_record.file_path).read_bytes()
+                ).hexdigest()
+                if tl_hash != task_list_hash:
+                    print(
+                        "Critical Error: task_list.json has been modified "
+                        "since the last lock! Run 'vibe-tracing finalize' to re-lock.",
+                        file=sys.stderr,
+                    )
+                    return 1
+
+            # Verify agent_claims hash
+            claims_hash = raw_loader.config_data.get("agent_claims_hash")
+            if claims_hash and claims_record and claims_record.status == "ok":
+                cl_hash = hashlib.sha256(
+                    Path(claims_record.file_path).read_bytes()
+                ).hexdigest()
+                if cl_hash != claims_hash:
+                    print(
+                        "Critical Error: agent_claims.json has been modified "
+                        "since the last lock! Run 'vibe-tracing finalize' to re-lock.",
+                        file=sys.stderr,
+                    )
+                    return 1
 
             ltm = constraints_content.get("language_tool_matrix", {})
             if is_draft:

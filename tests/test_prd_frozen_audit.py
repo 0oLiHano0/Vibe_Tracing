@@ -17,7 +17,6 @@ def setup_mock_config(tmp_path):
         "project_name": "Vibe Tracing",
         "language": "python",
         "validation_tools": ["test"],
-        "architecture_constraints_hash": "dummy_hash",
         "finalize_git_commit": "abc123deadbeef",
         "finalize_constraints_path": "docs/architecture_constraints.json",
     }

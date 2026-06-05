@@ -70,11 +70,16 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
     assert prd_res.project_id == "PROJECT-CapL"
 
     # Update config to mock finalization
+    import hashlib
+    constraints_path = tmp_path / "docs" / "architecture_constraints.json"
     with config_path.open("r", encoding="utf-8") as f:
         config_data = json.load(f)
     config_data["language"] = "python"
     config_data["validation_tools"] = ["test"]
-    config_data["architecture_constraints_hash"] = "dummy"
+    config_data["architecture_constraints_hash"] = hashlib.sha256(
+        constraints_path.read_bytes()
+    ).hexdigest()
+    config_data["finalize_git_commit"] = "test_commit_hash"
     with config_path.open("w", encoding="utf-8") as f:
         json.dump(config_data, f)
 

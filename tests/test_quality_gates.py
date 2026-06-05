@@ -644,10 +644,9 @@ def test_gate_vt_014_architecture_change_log(tmp_path, capsys):
     )
     curr_constraints_file.write_text(json.dumps(curr_data), encoding="utf-8")
 
-    # Note: Without language in config.json, run_analyze skips tool execution
-    # but still runs compliance checks. The compliance checker detects drift
-    # via check_governance and marks GATE-VT-014 as "unclear".
+    # The anti-corruption layer now detects the hash mismatch and blocks
+    # execution before the gate engine can run.
     exit_code = main(["analyze", "--project-root", str(tmp_path)])
-    assert exit_code == 0
+    assert exit_code == 1
     captured = capsys.readouterr()
-    assert "Gate decision: FAIL" in captured.out
+    assert "Architecture constraints have been modified" in captured.err

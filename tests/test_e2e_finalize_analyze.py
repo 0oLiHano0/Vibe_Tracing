@@ -227,15 +227,27 @@ def _finalize_and_prepare_constraints(base: Path, constraints_data: dict) -> Non
     does not yet include the ``language`` property, so we strip it after
     finalization has written the language to ``config.json``.
     """
+    import hashlib
+
     exit_code = run_finalize(base)
     assert exit_code == 0, "finalize must succeed"
 
     # Remove language from project so schema validation in analyze passes
     sanitized = json.loads(json.dumps(constraints_data))
     sanitized["project"].pop("language", None)
-    (base / "docs" / "architecture_constraints.json").write_text(
-        json.dumps(sanitized, indent=2), encoding="utf-8"
-    )
+    constraints_path = base / "docs" / "architecture_constraints.json"
+    constraints_path.write_text(json.dumps(sanitized, indent=2), encoding="utf-8")
+
+    # Update config: set finalize_git_commit (tmp dirs lack a git repo) and
+    # refresh architecture_constraints_hash to match the rewritten file.
+    cfg_path = base / ".vibetracing" / "config.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    if not cfg.get("finalize_git_commit"):
+        cfg["finalize_git_commit"] = "test_commit_hash"
+    cfg["architecture_constraints_hash"] = hashlib.sha256(
+        constraints_path.read_bytes()
+    ).hexdigest()
+    cfg_path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
 
 
 def _make_pytest_report(tests):

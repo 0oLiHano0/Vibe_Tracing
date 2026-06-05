@@ -135,6 +135,14 @@ must
     from vibe_tracing.cli import run_finalize
     run_finalize(base)
 
+    # Ensure finalize_git_commit is set (tmp dirs are not git repos, so run_finalize
+    # writes null; the anti-corruption layer in run_analyze requires it when hash exists).
+    cfg_path = base / ".vibetracing" / "config.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    if not cfg.get("finalize_git_commit"):
+        cfg["finalize_git_commit"] = "test_commit_hash"
+        cfg_path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+
     # Write test_opts.json for mocked tool execution
     opts = {
         "test_outcome": test_outcome,

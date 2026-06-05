@@ -13,7 +13,7 @@ import json
 import re
 import shlex
 import subprocess
-import tempfile
+import uuid
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -651,11 +651,8 @@ class ToolExecutionEngine:
             tmp_dir = self.project_root / ".vibetracing" / "tmp"
             tmp_dir.mkdir(parents=True, exist_ok=True)
             suffix = ".json"
-            tmp_file = tempfile.NamedTemporaryFile(
-                dir=str(tmp_dir), suffix=suffix, delete=False, prefix=f"vt_{tool_category}_"
-            )
-            effective_output = tmp_file.name
-            tmp_file.close()
+            unique_id = uuid.uuid4().hex
+            effective_output = str(tmp_dir / f"vt_{tool_category}_{unique_id}{suffix}")
 
         # Build command from template
         template = tool_config.get("default_command", "")

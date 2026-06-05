@@ -8,12 +8,25 @@ requiring real tool installations.
 
 import json
 import re
+import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from vibe_tracing.cli import run_finalize, run_analyze
+
+
+@pytest.fixture(autouse=True)
+def mock_shutil_which(monkeypatch):
+    """Mock shutil.which so the pre-flight dependency check passes
+    even when tools like pytest/mypy are not installed in the test env."""
+    _real_which = shutil.which
+
+    def mock_which(cmd):
+        return _real_which(cmd) or f"/usr/bin/{cmd}"
+
+    monkeypatch.setattr(shutil, "which", mock_which)
 
 
 # ---------------------------------------------------------------------------

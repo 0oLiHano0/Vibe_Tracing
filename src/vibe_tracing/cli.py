@@ -9,6 +9,7 @@ and output the evidence index, traceability report, and run metadata.
 import argparse
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -516,6 +517,31 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
                 print("Skipping tool execution: project is in draft status (no tasks or claims).", file=sys.stderr)
             elif config_language and ltm:
                 from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+
+                # Pre-flight dependency check
+                required_binaries = set()
+                lang_tools = ltm.get(config_language, {})
+                for category in config_validation_tools:
+                    tool_cfg = lang_tools.get(category, {})
+                    tool_name = tool_cfg.get("tool")
+                    if tool_name:
+                        required_binaries.add(tool_name)
+
+                missing = sorted(t for t in required_binaries if not shutil.which(t))
+                if missing:
+                    print(
+                        f"\n[AI Agent Repair Guide]",
+                        file=sys.stderr,
+                    )
+                    print(
+                        f"VT depends on tools that are missing in the environment: {', '.join(missing)}",
+                        file=sys.stderr,
+                    )
+                    print(
+                        f"Action Required: pip install {' '.join(missing)}",
+                        file=sys.stderr,
+                    )
+                    return 1
 
                 engine = ToolExecutionEngine(
                     language_tool_matrix=ltm,

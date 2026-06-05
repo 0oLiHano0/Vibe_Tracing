@@ -11,9 +11,17 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def mock_tool_execution(monkeypatch):
+    import shutil
     from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
     from vibe_tracing.core.enums import CoverageStatus
     import json
+
+    # Mock shutil.which so the pre-flight dependency check passes
+    # even when tools like pytest/mypy are not installed in the test env.
+    _real_which = shutil.which
+    def mock_which(cmd):
+        return _real_which(cmd) or f"/usr/bin/{cmd}"
+    monkeypatch.setattr(shutil, "which", mock_which)
 
     def mock_execute_all(self, execution_paths):
         opts_path = self.project_root / "test_opts.json"

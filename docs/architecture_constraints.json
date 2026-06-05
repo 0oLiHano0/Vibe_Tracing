@@ -17,7 +17,7 @@
       },
       "coverage": {
         "tool": "coverage",
-        "default_command": "coverage run -m pytest {test_path} && coverage json -o {output_path}",
+        "default_command": "coverage run -m pytest {test_path} ; coverage json -o {output_path}",
         "output_format": "coverage_json",
         "pass_condition": "percent_covered >= 80"
       },

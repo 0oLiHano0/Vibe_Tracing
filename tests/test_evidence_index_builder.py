@@ -49,7 +49,7 @@ must
 
     # Write Architecture Constraints
     (base / "docs" / "architecture_constraints.json").write_text(
-        '{"constraints": []}', encoding="utf-8"
+        '{"constraints": [], "module_boundaries": [{"module_id": "MOD-VT-001", "name": "Mock Module", "description": "Mock"}]}', encoding="utf-8"
     )
 
     # Write Task List
@@ -66,6 +66,7 @@ must
                 "owner_role": "agent",
                 "objective": "Setup codebase structure",
                 "related_requirements": ["REQ-VT-001"],
+                "related_modules": ["MOD-VT-001"],
                 "related_acceptance_criteria": ["AC-VT-001-01"],
                 "definition_of_done": [],
             },
@@ -78,6 +79,7 @@ must
                 "owner_role": "agent",
                 "objective": "Write core tests",
                 "related_requirements": ["REQ-VT-001"],
+                "related_modules": ["MOD-VT-001"],
                 "related_acceptance_criteria": ["AC-VT-001-02"],
                 "definition_of_done": [],
             },

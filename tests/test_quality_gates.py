@@ -649,4 +649,4 @@ def test_gate_vt_014_architecture_change_log(tmp_path, capsys):
     exit_code = main(["analyze", "--project-root", str(tmp_path)])
     assert exit_code == 1
     captured = capsys.readouterr()
-    assert "Architecture constraints have been modified" in captured.err
+    assert "FATAL: 架构基线已被篡改！" in captured.err

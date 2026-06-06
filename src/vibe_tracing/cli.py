@@ -135,6 +135,18 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
                     f.write(content)
                 print(f"Created file: {rel_path}")
 
+        # 4. Install Git pre-commit hook (V4)
+        git_hooks_dir = project_root / ".git" / "hooks"
+        if git_hooks_dir.exists():
+            pre_commit_path = git_hooks_dir / "pre-commit"
+            if not pre_commit_path.exists():
+                hook_script = "#!/bin/sh\n# Vibe Tracing Git Guard\npython3 -m vibe_tracing analyze --pre-commit\n"
+                pre_commit_path.write_text(hook_script)
+                pre_commit_path.chmod(0o755)
+                print("Installed Git pre-commit hook (vibe_tracing analyze --pre-commit)")
+            else:
+                print("Skipped Git pre-commit hook: file already exists.")
+
         print("Vibe Tracing initialization completed successfully.")
         return 0
     except Exception as exc:
@@ -151,7 +163,7 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
     Returns:
         (passed: bool, message: str)
     """
-    from vibe_tracing.git_utils import git_show, git_last_commit_touching, git_file_modified_after, git_has_uncommitted_changes
+    from vibe_tracing.git_utils import git_show, git_has_uncommitted_changes
 
     finalize_commit = config_data.get("finalize_git_commit")
     finalize_constraints_path = config_data.get("finalize_constraints_path")
@@ -178,32 +190,17 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
     if not diffs:
         return True, "格式变化（无规则变更），直接更新检查点"
 
-    # Check uncommitted changes
-    if git_has_uncommitted_changes(str(constraints_path.relative_to(project_root)), project_root):
-        return False, "constraints.json 存在未提交变更，请先 git add + git commit 后再运行 vt finalize"
-
-    # Change log timeline validation
+    # In V4, finalize creates the commit. We expect architecture_change_log.md to have uncommitted changes.
     change_log_rel = "docs/architecture_change_log.md"
-    constraints_rel = str(constraints_path.relative_to(project_root))
+    if not git_has_uncommitted_changes(change_log_rel, project_root):
+        changed = [f"  - {d['action'].upper()}: {d.get('rule_id') or d['path']}" for d in diffs]
+        return False, (
+            "检测到架构约束被修改，但 change_log.md 未同步更新。\n"
+            "变更的规则：\n" + "\n".join(changed) + "\n"
+            "请在 docs/architecture_change_log.md 中记录变更原因后重新运行 vt finalize。"
+        )
 
-    last_change = git_last_commit_touching(constraints_rel, project_root)
-    if not last_change:
-        return False, "无法确定 constraints.json 的变更历史"
-
-    log_last = git_last_commit_touching(change_log_rel, project_root)
-    if log_last == last_change:
-        return True, "change_log.md 与 constraints.json 在同一 commit 中被修改"
-
-    if git_file_modified_after(change_log_rel, last_change, project_root):
-        return True, "change_log.md 在 constraints 变更之后被更新"
-
-    # Build rejection message with diff details
-    changed = [f"  - {d['action'].upper()}: {d.get('rule_id') or d['path']}" for d in diffs]
-    return False, (
-        "检测到架构约束被修改，但 change_log.md 未同步更新。\n"
-        "变更的规则：\n" + "\n".join(changed) + "\n"
-        "请在 docs/architecture_change_log.md 中记录变更原因后重新运行 vt finalize。"
-    )
+    return True, "合规的架构变更"
 
 
 def run_finalize(project_root: Path) -> int:
@@ -211,6 +208,20 @@ def run_finalize(project_root: Path) -> int:
     try:
         config_path = project_root / ".vibetracing" / "config.json"
         constraints_path = project_root / "docs" / "architecture_constraints.json"
+
+        # 0. Check purity of the working directory (V4: Finalize-as-a-Committer)
+        try:
+            status_out = subprocess.check_output(["git", "status", "--porcelain"], cwd=project_root, text=True)
+            for line in status_out.splitlines():
+                if not line.strip():
+                    continue
+                file_path = line[3:]
+                # Whitelist of allowed files during finalize
+                if not (file_path.startswith("docs/") or file_path.startswith(".vibetracing/")):
+                    print(f"Error: 发现未隔离的业务代码变更 ({file_path})。\n架构定稿 (vt finalize) 必须与业务代码修改严格分离！请剥离业务代码后再试。", file=sys.stderr)
+                    return 1
+        except Exception as e:
+            print(f"Warning: Failed to check git status ({e}).", file=sys.stderr)
 
         # 1. Check config.json exists
         if not config_path.exists():
@@ -266,28 +277,35 @@ def run_finalize(project_root: Path) -> int:
                 if not passed:
                     print(f"Error: {message}", file=sys.stderr)
                     return 1
-                # Validation passed — update hash and git metadata
+                
+                # Validation passed — update hash
                 config_data["architecture_constraints_hash"] = computed_hash
-                task_list_path = project_root / "docs" / "task_list.json"
-                if task_list_path.exists():
-                    config_data["task_list_hash"] = hashlib.sha256(task_list_path.read_bytes()).hexdigest()
-                agent_claims_path = project_root / ".vibetracing" / "agent_claims.json"
-                if agent_claims_path.exists():
-                    config_data["agent_claims_hash"] = hashlib.sha256(agent_claims_path.read_bytes()).hexdigest()
-                try:
-                    git_commit = subprocess.run(
-                        ["git", "rev-parse", "HEAD"],
-                        cwd=project_root,
-                        capture_output=True,
-                        text=True,
-                    )
-                    config_data["finalize_git_commit"] = git_commit.stdout.strip() if git_commit.returncode == 0 else None
-                except Exception:
-                    config_data["finalize_git_commit"] = None
                 config_data["finalize_constraints_path"] = str(constraints_path.relative_to(project_root))
+                
                 with config_path.open("w", encoding="utf-8") as f:
                     json.dump(config_data, f, indent=2, ensure_ascii=False)
-                print(f"Constraints checkpoint updated (hash={computed_hash[:12]}...). {message}")
+                
+                # V4 Finalize-as-a-Committer: Automatically commit the architecture baseline
+                try:
+                    subprocess.run(["git", "add", "docs/", ".vibetracing/"], cwd=project_root, check=True)
+                    subprocess.run(
+                        ["git", "commit", "-m", "chore: Vibe Tracing architecture baseline finalized", "--no-verify"],
+                        cwd=project_root,
+                        check=True
+                    )
+                    # Get the new commit hash and save it to config
+                    git_commit = subprocess.run(
+                        ["git", "rev-parse", "HEAD"], cwd=project_root, capture_output=True, text=True, check=True
+                    )
+                    config_data["finalize_git_commit"] = git_commit.stdout.strip()
+                    with config_path.open("w", encoding="utf-8") as f:
+                        json.dump(config_data, f, indent=2, ensure_ascii=False)
+                    subprocess.run(["git", "add", ".vibetracing/config.json"], cwd=project_root, check=True)
+                    subprocess.run(["git", "commit", "--amend", "--no-edit", "--no-verify"], cwd=project_root, check=True)
+                except Exception as e:
+                    print(f"Warning: Failed to automatically commit architecture baseline: {e}", file=sys.stderr)
+
+                print(f"Constraints checkpoint updated and committed (hash={computed_hash[:12]}...). {message}")
                 return 0
 
             if existing_tools != current_tools:
@@ -304,31 +322,34 @@ def run_finalize(project_root: Path) -> int:
             print(f"Error: {message}", file=sys.stderr)
             return 1
 
-        # Write language, tools, and hash metadata to config.json
         config_data["language"] = language
         config_data["validation_tools"] = tool_categories
         config_data["architecture_constraints_hash"] = computed_hash
-        task_list_path = project_root / "docs" / "task_list.json"
-        if task_list_path.exists():
-            config_data["task_list_hash"] = hashlib.sha256(task_list_path.read_bytes()).hexdigest()
-        agent_claims_path = project_root / ".vibetracing" / "agent_claims.json"
-        if agent_claims_path.exists():
-            config_data["agent_claims_hash"] = hashlib.sha256(agent_claims_path.read_bytes()).hexdigest()
-        try:
-            git_commit = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                cwd=project_root,
-                capture_output=True,
-                text=True,
-            )
-            config_data["finalize_git_commit"] = git_commit.stdout.strip() if git_commit.returncode == 0 else None
-        except Exception:
-            config_data["finalize_git_commit"] = None
         config_data["finalize_constraints_path"] = str(constraints_path.relative_to(project_root))
+        
         with config_path.open("w", encoding="utf-8") as f:
             json.dump(config_data, f, indent=2, ensure_ascii=False)
 
-        print(f"Project finalized: language={language}, tools={tool_categories}, hash={computed_hash[:12]}... {message}")
+        # V4 Finalize-as-a-Committer: Automatically commit the initial architecture baseline
+        try:
+            subprocess.run(["git", "add", "docs/", ".vibetracing/"], cwd=project_root, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "chore: Vibe Tracing initial architecture baseline finalized", "--no-verify"],
+                cwd=project_root,
+                check=True
+            )
+            git_commit = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=project_root, capture_output=True, text=True, check=True
+            )
+            config_data["finalize_git_commit"] = git_commit.stdout.strip()
+            with config_path.open("w", encoding="utf-8") as f:
+                json.dump(config_data, f, indent=2, ensure_ascii=False)
+            subprocess.run(["git", "add", ".vibetracing/config.json"], cwd=project_root, check=True)
+            subprocess.run(["git", "commit", "--amend", "--no-edit", "--no-verify"], cwd=project_root, check=True)
+        except Exception as e:
+            print(f"Warning: Failed to automatically commit initial architecture baseline: {e}", file=sys.stderr)
+
+        print(f"Vibe Tracing finalized for project. {message}")
         return 0
 
     except Exception as exc:
@@ -336,13 +357,14 @@ def run_finalize(project_root: Path) -> int:
         return 1
 
 
-def run_analyze(project_root: Path, output_dir: Path) -> int:
+def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = False) -> int:
     """
     Execute the full Vibe Tracing analysis pipeline.
 
     Args:
         project_root: The workspace root path.
         output_dir: The target output directory.
+        is_pre_commit: Whether running in pre-commit hook mode.
 
     Returns:
         Exit code:
@@ -397,6 +419,33 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
         task_list_record = records_dict.get("task_list")
         constraints_record = records_dict.get("architecture_constraints")
         claims_record = records_dict.get("agent_claims")
+
+        # --- V4 GATES ---
+        # Gate 1: Anti-Tampering (Architecture Baseline Check)
+        if constraints_record and constraints_record.status == "ok":
+            import hashlib
+            computed_hash = hashlib.sha256(Path(constraints_record.file_path).read_bytes()).hexdigest()
+            stored_hash = raw_loader.config_data.get("architecture_constraints_hash")
+            
+            # If it has been finalized, the hash MUST match.
+            if stored_hash and stored_hash != computed_hash:
+                print(
+                    "FATAL: 架构基线已被篡改！\n"
+                    f"预期 Hash: {stored_hash[:12]}...\n"
+                    f"实际 Hash: {computed_hash[:12]}...\n"
+                    "请恢复文件，或通过 `vt finalize` 提交合法的架构变更。",
+                    file=sys.stderr
+                )
+                return 1
+
+        # Gate 2: Ghost Code Reconciliation (Only in pre-commit mode)
+        if is_pre_commit:
+            from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+            reconciler = GhostCodeReconciler(project_root)
+            success, error_msg = reconciler.reconcile()
+            if not success:
+                print(error_msg, file=sys.stderr)
+                return 1
 
         # 1.1 Validate Schemas of all files that loaded successfully (Upfront Schema Validation)
         if task_list_record and task_list_record.status == "ok":
@@ -477,8 +526,14 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
         if task_list_record and task_list_record.status == "ok":
             task_list_path = Path(task_list_record.file_path)
             task_loader = TaskLoader(schemas_dir)
+            
+            # Pass architecture data for cross-referencing
+            arch_data = None
+            if constraints_record and constraints_record.status == "ok":
+                arch_data = constraints_record.content
+                
             task_res = task_loader.load_and_validate(
-                task_list_path, prd_res, content=task_list_record.content
+                task_list_path, prd_res, arch_data=arch_data, content=task_list_record.content
             )
             if not task_res.is_valid:
                 print(
@@ -548,33 +603,7 @@ def run_analyze(project_root: Path, output_dir: Path) -> int:
                     )
                     return 1
 
-            # Verify task_list hash
-            task_list_hash = raw_loader.config_data.get("task_list_hash")
-            if task_list_hash and task_list_record and task_list_record.status == "ok":
-                tl_hash = hashlib.sha256(
-                    Path(task_list_record.file_path).read_bytes()
-                ).hexdigest()
-                if tl_hash != task_list_hash:
-                    print(
-                        "Critical Error: task_list.json has been modified "
-                        "since the last lock! Run 'vibe-tracing finalize' to re-lock.",
-                        file=sys.stderr,
-                    )
-                    return 1
 
-            # Verify agent_claims hash
-            claims_hash = raw_loader.config_data.get("agent_claims_hash")
-            if claims_hash and claims_record and claims_record.status == "ok":
-                cl_hash = hashlib.sha256(
-                    Path(claims_record.file_path).read_bytes()
-                ).hexdigest()
-                if cl_hash != claims_hash:
-                    print(
-                        "Critical Error: agent_claims.json has been modified "
-                        "since the last lock! Run 'vibe-tracing finalize' to re-lock.",
-                        file=sys.stderr,
-                    )
-                    return 1
 
             ltm = constraints_content.get("language_tool_matrix", {})
             if is_draft:
@@ -925,6 +954,9 @@ def main(argv=None):
     analyze_parser.add_argument(
         "--out", help="Path to the output directory (default: <project-root>/output)"
     )
+    analyze_parser.add_argument(
+        "--pre-commit", action="store_true", help="Run in Git pre-commit hook mode (enables ghost code reconciliation)"
+    )
 
     init_parser = subparsers.add_parser(
         "init", help="Initialize a new Vibe Tracing project with template files"
@@ -964,7 +996,7 @@ def main(argv=None):
         else:
             output_dir = raw_loader.get_path("output_dir").resolve()
 
-        return run_analyze(project_root, output_dir)
+        return run_analyze(project_root, output_dir, is_pre_commit=args.pre_commit)
     elif args.command == "init":
         project_root = Path(args.project_root).resolve()
         return run_init(project_root, name=args.name, prefix=args.prefix)

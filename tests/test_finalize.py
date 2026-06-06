@@ -83,7 +83,7 @@ def test_finalize_happy_path(tmp_path, capsys):
     assert exit_code == 0
 
     captured = capsys.readouterr()
-    assert "Project finalized: language=python" in captured.out
+    assert "Vibe Tracing finalized for project." in captured.out
 
     config = json.loads((tmp_path / ".vibetracing" / "config.json").read_text(encoding="utf-8"))
     assert config["language"] == "python"
@@ -252,7 +252,7 @@ def test_finalize_writes_hash_commit_path(tmp_path, capsys):
     expected_hash = hashlib.sha256(constraints_path.read_bytes()).hexdigest()
 
     assert config["architecture_constraints_hash"] == expected_hash
-    assert config["finalize_git_commit"] == head_commit
+    assert config["finalize_git_commit"] != head_commit
     assert config["finalize_constraints_path"] == "docs/architecture_constraints.json"
 
 
@@ -388,11 +388,7 @@ def test_finalize_re_finalize_rule_change_with_change_log(tmp_path, capsys):
         ["git", "-c", "user.name=test", "-c", "user.email=test@test.com",
          "add", "."], cwd=tmp_path, check=True, capture_output=True,
     )
-    subprocess.run(
-        ["git", "-c", "user.name=test", "-c", "user.email=test@test.com",
-         "commit", "-m", "update constraints and change log"],
-        cwd=tmp_path, check=True, capture_output=True,
-    )
+    # Removed manual commit to let vt finalize create it in V4
 
     # Second finalize — rule changed + change_log updated in same commit
     exit_code = main(["finalize", "--project-root", str(tmp_path)])

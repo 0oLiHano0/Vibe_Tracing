@@ -32,6 +32,7 @@ def get_valid_task_list_dict(tasks=None):
                 "status": "todo",
                 "owner_role": "AI Coding Agent",
                 "objective": "Build skeletal project structure.",
+                "related_modules": ["MOD-VT-001"],
                 "related_requirements": ["REQ-VT-001"],
                 "related_acceptance_criteria": ["AC-VT-001-01"],
                 "definition_of_done": [
@@ -146,6 +147,7 @@ def test_duplicate_task_ids(task_loader):
             "status": "todo",
             "owner_role": "AI Coding Agent",
             "objective": "Task A objective",
+            "related_modules": ["MOD-VT-001"],
             "related_requirements": ["REQ-VT-001"],
             "related_acceptance_criteria": ["AC-VT-001-01"],
             "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
@@ -158,6 +160,7 @@ def test_duplicate_task_ids(task_loader):
             "status": "todo",
             "owner_role": "AI Coding Agent",
             "objective": "Task B objective",
+            "related_modules": ["MOD-VT-001"],
             "related_requirements": ["REQ-VT-001"],
             "related_acceptance_criteria": ["AC-VT-001-01"],
             "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
@@ -184,6 +187,7 @@ def test_isolated_task_fails(task_loader):
             "status": "todo",
             "owner_role": "AI Coding Agent",
             "objective": "Isolated task objective",
+            "related_modules": ["MOD-VT-001"],
             "related_requirements": [],  # Empty
             "related_acceptance_criteria": [],  # Empty
             "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
@@ -216,6 +220,7 @@ def test_references_non_existent_requirement_forms_gap(task_loader):
             "status": "todo",
             "owner_role": "AI Coding Agent",
             "objective": "Task objective",
+            "related_modules": ["MOD-VT-001"],
             "related_requirements": [
                 "REQ-VT-999",
                 "REQ-VT-001",
@@ -253,6 +258,7 @@ def test_references_non_existent_acceptance_criterion_forms_gap(task_loader):
             "status": "todo",
             "owner_role": "AI Coding Agent",
             "objective": "Task objective",
+            "related_modules": ["MOD-VT-001"],
             "related_requirements": ["REQ-VT-001"],
             "related_acceptance_criteria": ["AC-VT-001-99"],  # Non-existent AC
             "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
@@ -290,6 +296,7 @@ def test_inverse_relationship_mismatch_forms_gap(task_loader):
             "status": "todo",
             "owner_role": "AI Coding Agent",
             "objective": "Task objective",
+            "related_modules": ["MOD-VT-001"],
             "related_requirements": ["REQ-VT-002"],  # Missing REQ-VT-001
             "related_acceptance_criteria": ["AC-VT-001-01"],  # Belongs to REQ-VT-001
             "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
@@ -331,3 +338,33 @@ def test_validate_real_files_load(task_loader):
     # Let's check if the real task list has any validation issues
     assert res.is_valid is True, f"Real files load failed: {res.errors}"
     assert len(res.tasks) > 0
+
+def test_architectural_orphan_rejection(task_loader):
+    """
+    Validate that a task without related_modules fails validation as an architectural orphan.
+    Covers: Mandatory Architectural Bounding.
+    """
+    tasks = [
+        {
+            "task_id": "TASK-VT-001",
+            "title": "Architectural Orphan Task",
+            "phase_id": "PHASE-VT-001",
+            "priority": "must",
+            "status": "todo",
+            "owner_role": "AI Coding Agent",
+            "objective": "Task objective",
+            "related_requirements": ["REQ-VT-001"],
+            "related_acceptance_criteria": ["AC-VT-001-01"],
+            "related_modules": [],  # Empty modules!
+            "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}]
+        }
+    ]
+    data = get_valid_task_list_dict(tasks)
+    res = task_loader.validate_data(data)
+
+    assert res.is_valid is False
+    assert res.tasks[0].is_valid is False
+    assert any("architectural orphan" in err for err in res.tasks[0].errors)
+    assert any("architectural orphan" in err for err in res.errors)
+    assert len(res.gaps) == 1
+    assert "Architectural orphan" in res.gaps[0].reason

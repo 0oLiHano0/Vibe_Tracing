@@ -1531,10 +1531,7 @@
       "related_architecture_constraints": [
         "PRINCIPLE-VT-003",
         "TECH-VT-005",
-        "LOG-VT-001",
-        "TECH-VT-006",
-        "DEP-VT-006",
-        "STORE-VT-005"
+        "LOG-VT-001"
       ],
       "depends_on": [
         "TASK-VT-021"
@@ -1594,16 +1591,10 @@
         "AC-VT-002-02"
       ],
       "related_modules": [
-        "MOD-VT-011",
         "MOD-VT-003"
       ],
       "related_architecture_constraints": [
-        "PRINCIPLE-VT-016",
-        "PRINCIPLE-VT-017",
         "PRINCIPLE-VT-014",
-        "TECH-VT-006",
-        "DEP-VT-006",
-        "STORE-VT-005",
         "GATE-VT-013",
         "GATE-VT-014"
       ],
@@ -1666,17 +1657,10 @@
         "AC-VT-009-04"
       ],
       "related_modules": [
-        "MOD-VT-011"
+        "MOD-VT-001"
       ],
       "related_architecture_constraints": [
-        "PRINCIPLE-VT-016",
-        "PRINCIPLE-VT-017",
-        "TECH-VT-006",
-        "STORE-VT-005",
-        "GATE-VT-013",
-        "SEC-VT-005",
-        "FORBID-VT-008",
-        "FORBID-VT-009"
+        "GATE-VT-013"
       ],
       "depends_on": [
         "TASK-VT-023"
@@ -1736,16 +1720,10 @@
         "AC-VT-009-04"
       ],
       "related_modules": [
-        "MOD-VT-011",
         "MOD-VT-003",
         "MOD-VT-001"
       ],
       "related_architecture_constraints": [
-        "MOD-VT-011",
-        "DEP-VT-006",
-        "ERR-VT-006",
-        "LOG-VT-004",
-        "SEC-VT-005",
         "GATE-VT-013"
       ],
       "depends_on": [
@@ -1808,15 +1786,10 @@
         "AC-VT-002-02"
       ],
       "related_modules": [
-        "MOD-VT-011",
         "MOD-VT-005",
         "MOD-VT-006"
       ],
       "related_architecture_constraints": [
-        "PRINCIPLE-VT-017",
-        "FLOW-VT-007",
-        "LOG-VT-004",
-        "FORBID-VT-008",
         "GATE-VT-010",
         "GATE-VT-013"
       ],
@@ -1877,14 +1850,10 @@
         "AC-VT-008-03"
       ],
       "related_modules": [
-        "MOD-VT-011",
         "MOD-VT-009",
         "MOD-VT-007"
       ],
       "related_architecture_constraints": [
-        "FLOW-VT-008",
-        "SEC-VT-005",
-        "FORBID-VT-009",
         "GATE-VT-014",
         "PRINCIPLE-VT-005"
       ],
@@ -1951,7 +1920,6 @@
         "AC-VT-008-03"
       ],
       "related_modules": [
-        "MOD-VT-011",
         "MOD-VT-006",
         "MOD-VT-007",
         "MOD-VT-008"
@@ -1961,9 +1929,7 @@
         "GATE-VT-014",
         "FLOW-VT-003",
         "FLOW-VT-004",
-        "FORBID-VT-003",
-        "LOG-VT-004",
-        "PRINCIPLE-VT-017"
+        "FORBID-VT-003"
       ],
       "depends_on": [
         "TASK-VT-026",
@@ -2068,11 +2034,9 @@
         "AC-VT-009-06"
       ],
       "related_modules": [
-        "MOD-VT-011"
+        "MOD-VT-001"
       ],
-      "related_architecture_constraints": [
-        "FLOW-VT-008"
-      ],
+      "related_architecture_constraints": [],
       "depends_on": [
         "TASK-VT-029"
       ],
@@ -2347,7 +2311,7 @@
       ],
       "related_acceptance_criteria": [],
       "related_modules": [
-        "MOD-VT-011"
+        "MOD-VT-001"
       ],
       "related_architecture_constraints": [],
       "depends_on": [],

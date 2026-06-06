@@ -398,3 +398,323 @@ def test_finalize_re_finalize_rule_change_with_change_log(tmp_path, capsys):
         (tmp_path / ".vibetracing" / "config.json").read_text(encoding="utf-8")
     )
     assert second_config["architecture_constraints_hash"] != first_config["architecture_constraints_hash"]
+
+
+# ── REFACTOR-011: Precise git add ──────────────────────────────────────────────
+
+def _create_prd_file(base: Path, reqs: list[dict]) -> None:
+    """Helper to create a minimal PRD with given requirements.
+
+    Each req dict: {"id": "REQ-TEST-001", "title": "...", "priority": "must"}
+    The PRD parser expects `#### 优先级` as a level-4 heading before the priority value.
+    """
+    lines = [
+        "---",
+        "project_abbreviation: TEST",
+        "status: active",
+        "---",
+        "",
+        "# PRD: Test Project",
+        "",
+    ]
+    for req in reqs:
+        lines.append(f"### {req['id']} {req['title']}")
+        lines.append("")
+        lines.append("#### 优先级")
+        lines.append("")
+        lines.append(req["priority"])
+        lines.append("")
+    (base / "docs" / "prd.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+_CONSTRAINTS_WITH_COVERAGE = {
+    "schema_version": "1.0.0",
+    "project": {
+        "project_id": "PROJECT-TEST",
+        "name": "Test Project",
+        "stage": "mvp",
+        "language": "python",
+    },
+    "language_tool_matrix": {
+        "python": {
+            "test": {"tool": "pytest", "command": "pytest"},
+            "coverage": {"tool": "coverage", "command": "coverage run"},
+            "lint": {"tool": "ruff", "command": "ruff check"},
+            "type_check": {"tool": "mypy", "command": "mypy"},
+            "security": {"tool": "bandit", "command": "bandit -r"},
+        },
+    },
+    "design_rules": [
+        {
+            "rule_id": "DESIGN-001",
+            "title": "Basic feature rule",
+            "severity": "must",
+            "related_requirements": ["REQ-TEST-001"],
+        }
+    ],
+}
+
+
+def test_finalize_git_add_does_not_include_task_list(tmp_path, capsys):
+    """git add should NOT stage docs/task_list.json."""
+    from vibe_tracing.core import ids
+    ids.set_project_prefix("TEST")
+
+    _setup_project(tmp_path, constraints_data=_CONSTRAINTS_WITH_COVERAGE)
+    _create_prd_file(tmp_path, [
+        {"id": "REQ-TEST-001", "title": "Basic feature", "priority": "must"},
+    ])
+    # Create a task_list.json that should NOT be staged by finalize
+    (tmp_path / "docs" / "task_list.json").write_text(
+        json.dumps({"tasks": []}), encoding="utf-8"
+    )
+
+    _init_git_repo(tmp_path)
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    # Check the last commit's file list
+    result = subprocess.run(
+        ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
+        cwd=tmp_path, capture_output=True, text=True,
+    )
+    committed_files = set(result.stdout.strip().splitlines())
+    assert "docs/task_list.json" not in committed_files
+
+
+def test_finalize_git_add_precise_files(tmp_path, capsys):
+    """Finalize commit should only contain expected files (no task_list.json, etc.)."""
+    from vibe_tracing.core import ids
+    ids.set_project_prefix("TEST")
+
+    _setup_project(tmp_path, constraints_data=_CONSTRAINTS_WITH_COVERAGE)
+    _create_prd_file(tmp_path, [
+        {"id": "REQ-TEST-001", "title": "Basic feature", "priority": "must"},
+    ])
+    # Add extra files that should NOT be staged by finalize
+    (tmp_path / "docs" / "task_list.json").write_text(
+        json.dumps({"tasks": []}), encoding="utf-8"
+    )
+    (tmp_path / ".vibetracing" / "agent_claims.json").write_text(
+        json.dumps({"claims": []}), encoding="utf-8"
+    )
+
+    _init_git_repo(tmp_path)
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    result = subprocess.run(
+        ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
+        cwd=tmp_path, capture_output=True, text=True,
+    )
+    committed_files = set(result.stdout.strip().splitlines())
+
+    # config.json is modified by finalize, so it should be in the commit
+    assert ".vibetracing/config.json" in committed_files
+    # Non-target files should NOT appear in the finalize commit
+    assert "docs/task_list.json" not in committed_files
+    assert ".vibetracing/agent_claims.json" not in committed_files
+
+
+def test_finalize_git_add_includes_change_log_when_exists(tmp_path, capsys):
+    """git add should include architecture_change_log.md when it exists."""
+    from vibe_tracing.core import ids
+    ids.set_project_prefix("TEST")
+
+    _setup_project(tmp_path, constraints_data=_CONSTRAINTS_WITH_COVERAGE)
+    _create_prd_file(tmp_path, [
+        {"id": "REQ-TEST-001", "title": "Basic feature", "priority": "must"},
+    ])
+
+    _init_git_repo(tmp_path)
+
+    # Create change_log AFTER initial commit so it's a new file
+    (tmp_path / "docs" / "architecture_change_log.md").write_text(
+        "# Change Log\n", encoding="utf-8"
+    )
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    result = subprocess.run(
+        ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
+        cwd=tmp_path, capture_output=True, text=True,
+    )
+    committed_files = set(result.stdout.strip().splitlines())
+    assert "docs/architecture_change_log.md" in committed_files
+
+
+# ── REFACTOR-014~017: PRD <-> Architecture mapping validation ──────────────────
+
+def _setup_project_with_prd(base: Path, constraints_data: dict, prd_reqs: list[dict]) -> None:
+    """Helper to set up project with custom constraints and PRD."""
+    _setup_project(base, constraints_data=constraints_data)
+    _create_prd_file(base, prd_reqs)
+
+
+def test_finalize_dead_link_in_constraints(tmp_path, capsys):
+    """Constraints referencing non-existent REQ -> finalize fails."""
+    from vibe_tracing.core import ids
+    ids.set_project_prefix("TEST")
+
+    constraints = {
+        "schema_version": "1.0.0",
+        "project": {
+            "project_id": "PROJECT-TEST",
+            "name": "Test Project",
+            "stage": "mvp",
+            "language": "python",
+        },
+        "language_tool_matrix": {
+            "python": {"test": {"tool": "pytest", "command": "pytest"}},
+        },
+        "design_rules": [
+            {
+                "rule_id": "DESIGN-001",
+                "title": "Some rule",
+                "severity": "must",
+                "related_requirements": ["REQ-TEST-999"],  # Does not exist in PRD
+            }
+        ],
+    }
+    _setup_project_with_prd(
+        tmp_path, constraints,
+        [{"id": "REQ-TEST-001", "title": "Real req", "priority": "must"}],
+    )
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 1
+
+    captured = capsys.readouterr()
+    assert "REQ-TEST-999" in captured.err
+    assert "不存在" in captured.err
+
+
+def test_finalize_must_req_without_architecture_support(tmp_path, capsys):
+    """MUST-level REQ with no architecture coverage -> finalize fails."""
+    from vibe_tracing.core import ids
+    ids.set_project_prefix("TEST")
+
+    constraints = {
+        "schema_version": "1.0.0",
+        "project": {
+            "project_id": "PROJECT-TEST",
+            "name": "Test Project",
+            "stage": "mvp",
+            "language": "python",
+        },
+        "language_tool_matrix": {
+            "python": {"test": {"tool": "pytest", "command": "pytest"}},
+        },
+        "design_rules": [
+            {
+                "rule_id": "DESIGN-001",
+                "title": "Some rule",
+                "severity": "must",
+                "related_requirements": ["REQ-TEST-001"],
+            }
+        ],
+    }
+    _setup_project_with_prd(
+        tmp_path, constraints,
+        [
+            {"id": "REQ-TEST-001", "title": "Covered req", "priority": "must"},
+            {"id": "REQ-TEST-002", "title": "Uncovered must req", "priority": "must"},
+        ],
+    )
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 1
+
+    captured = capsys.readouterr()
+    assert "REQ-TEST-002" in captured.err
+    assert "MUST" in captured.err
+
+
+def test_finalize_should_req_without_mapping_warns(tmp_path, capsys):
+    """SHOULD-level REQ without architecture mapping -> finalize succeeds with warning."""
+    from vibe_tracing.core import ids
+    ids.set_project_prefix("TEST")
+
+    constraints = {
+        "schema_version": "1.0.0",
+        "project": {
+            "project_id": "PROJECT-TEST",
+            "name": "Test Project",
+            "stage": "mvp",
+            "language": "python",
+        },
+        "language_tool_matrix": {
+            "python": {"test": {"tool": "pytest", "command": "pytest"}},
+        },
+        "design_rules": [
+            {
+                "rule_id": "DESIGN-001",
+                "title": "Some rule",
+                "severity": "must",
+                "related_requirements": ["REQ-TEST-001"],
+            }
+        ],
+    }
+    _setup_project_with_prd(
+        tmp_path, constraints,
+        [
+            {"id": "REQ-TEST-001", "title": "Covered must", "priority": "must"},
+            {"id": "REQ-TEST-002", "title": "Uncovered should", "priority": "should"},
+        ],
+    )
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    captured = capsys.readouterr()
+    assert "REQ-TEST-002" in captured.out
+    assert "Warning" in captured.out
+
+
+def test_finalize_mapping_passes_when_all_must_covered(tmp_path, capsys):
+    """All MUST-level REQs covered -> finalize succeeds without warnings."""
+    from vibe_tracing.core import ids
+    ids.set_project_prefix("TEST")
+
+    constraints = {
+        "schema_version": "1.0.0",
+        "project": {
+            "project_id": "PROJECT-TEST",
+            "name": "Test Project",
+            "stage": "mvp",
+            "language": "python",
+        },
+        "language_tool_matrix": {
+            "python": {"test": {"tool": "pytest", "command": "pytest"}},
+        },
+        "design_rules": [
+            {
+                "rule_id": "DESIGN-001",
+                "title": "Rule for req 1",
+                "severity": "must",
+                "related_requirements": ["REQ-TEST-001"],
+            },
+            {
+                "rule_id": "DESIGN-002",
+                "title": "Rule for req 2",
+                "severity": "must",
+                "related_requirements": ["REQ-TEST-002"],
+            },
+        ],
+    }
+    _setup_project_with_prd(
+        tmp_path, constraints,
+        [
+            {"id": "REQ-TEST-001", "title": "Covered must", "priority": "must"},
+            {"id": "REQ-TEST-002", "title": "Also covered must", "priority": "must"},
+        ],
+    )
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    captured = capsys.readouterr()
+    assert "MUST" not in captured.err

@@ -2309,7 +2309,11 @@
       "related_requirements": [
         "REQ-VT-009"
       ],
-      "related_acceptance_criteria": [],
+      "related_acceptance_criteria": [
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03"
+      ],
       "related_modules": [
         "MOD-VT-001"
       ],
@@ -2597,7 +2601,9 @@
       "related_requirements": [
         "REQ-VT-009"
       ],
-      "related_acceptance_criteria": [],
+      "related_acceptance_criteria": [
+        "AC-VT-009-09"
+      ],
       "related_modules": [
         "MOD-VT-005"
       ],

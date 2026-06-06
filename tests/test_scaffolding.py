@@ -81,6 +81,19 @@ def test_run_init_creates_scaffolding(tmp_path):
     val_constraints = validator.validate_file(constraints_path, "architecture_constraints")
     assert val_constraints.is_valid is True, f"Generated architecture constraints schema validation failed: {val_constraints.message}"
 
+    # Verify language_tool_matrix is present with python tools
+    assert "language_tool_matrix" in constraints_data
+    ltm = constraints_data["language_tool_matrix"]
+    assert "python" in ltm
+    python_tools = ltm["python"]
+    for category in ("test", "coverage", "lint", "type_check", "security"):
+        assert category in python_tools, f"Missing tool category: {category}"
+        entry = python_tools[category]
+        assert "tool" in entry
+        assert "default_command" in entry
+        assert "output_format" in entry
+        assert "pass_condition" in entry
+
     # Verify run_init skips existing files
     # Modify one of the files
     with config_path.open("w", encoding="utf-8") as f:

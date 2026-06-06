@@ -31,7 +31,6 @@ from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceC
 from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
 from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
 from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
-from vibe_tracing.traceability.frozen_prd_auditor import FrozenPrdAuditor
 from vibe_tracing.risk_advisor import RiskAdvisor
 from vibe_tracing.dashboard_renderer import DashboardRenderer
 
@@ -203,6 +202,85 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
     return True, "合规的架构变更"
 
 
+def _collect_related_reqs(data):
+    """Recursively collect all related_requirements IDs from nested structures."""
+    reqs = set()
+    if isinstance(data, dict):
+        if "related_requirements" in data:
+            reqs.update(data["related_requirements"])
+        for v in data.values():
+            reqs.update(_collect_related_reqs(v))
+    elif isinstance(data, list):
+        for item in data:
+            reqs.update(_collect_related_reqs(item))
+    return reqs
+
+
+def _validate_prd_architecture_mapping(project_root: Path, constraints_data: dict) -> int:
+    """
+    Validate PRD <-> Architecture mapping (left-shift verification).
+
+    Returns:
+        0 if validation passes, 1 if validation fails.
+    """
+    prd_path = project_root / "docs" / "prd.md"
+    if not prd_path.exists():
+        print("Warning: prd.md not found, skipping PRD <-> Architecture mapping validation.")
+        return 0
+
+    try:
+        prd_parser = PrdParser()
+        prd_res = prd_parser.parse_file(prd_path)
+    except Exception as e:
+        print(f"Warning: 无法解析 PRD，跳过映射校验: {e}")
+        return 0
+
+    req_ids = {r.req_id: r.priority for r in prd_res.requirements}
+    if not req_ids:
+        print("Warning: PRD 中未发现需求，跳过映射校验。")
+        return 0
+
+    # Collect all related_requirements from architecture constraints
+    arch_reqs = _collect_related_reqs(constraints_data)
+
+    # Dead link detection: constraints referencing REQs that don't exist in PRD
+    dead_links = arch_reqs - set(req_ids.keys())
+    if dead_links:
+        print(
+            f"Error: 架构约束引用了 PRD 中不存在的需求: {', '.join(sorted(dead_links))}",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Collect REQs covered by architecture constraints
+    covered_reqs = set()
+    for section_key, section_val in constraints_data.items():
+        if isinstance(section_val, list):
+            for rule in section_val:
+                if isinstance(rule, dict) and "related_requirements" in rule:
+                    covered_reqs.update(rule["related_requirements"])
+
+    # Core coverage check: MUST-level REQs must have architecture support
+    must_reqs = {rid for rid, p in req_ids.items() if p == "must"}
+    uncovered_must = must_reqs - covered_reqs
+    if uncovered_must:
+        print(
+            f"Error: 以下 MUST 级需求缺少架构支撑: {', '.join(sorted(uncovered_must))}",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Non-core coverage warning: SHOULD/COULD-level REQs without mapping
+    should_could_reqs = {rid for rid, p in req_ids.items() if p in ("should", "could")}
+    uncovered_non_core = should_could_reqs - covered_reqs
+    if uncovered_non_core:
+        print(
+            f"Warning: 以下非 MUST 级需求缺少架构映射: {', '.join(sorted(uncovered_non_core))}"
+        )
+
+    return 0
+
+
 def run_finalize(project_root: Path) -> int:
     """Finalize project configuration by reading language and tools from architecture constraints."""
     try:
@@ -254,6 +332,16 @@ def run_finalize(project_root: Path) -> int:
 
         tool_categories = list(ltm[language].keys())
 
+        # Set project prefix for ID parsing (used by PrdParser)
+        project_prefix = config_data.get("project_prefix", "VT")
+        from vibe_tracing.core import ids
+        ids.set_project_prefix(project_prefix)
+
+        # 5.5. PRD <-> Architecture mapping validation (left-shift)
+        mapping_result = _validate_prd_architecture_mapping(project_root, constraints_data)
+        if mapping_result != 0:
+            return mapping_result
+
         # Compute SHA256 hash of constraints file
         computed_hash = hashlib.sha256(constraints_path.read_bytes()).hexdigest()
 
@@ -287,7 +375,18 @@ def run_finalize(project_root: Path) -> int:
                 
                 # V4 Finalize-as-a-Committer: Automatically commit the architecture baseline
                 try:
-                    subprocess.run(["git", "add", "docs/", ".vibetracing/"], cwd=project_root, check=True)
+                    files_to_add = [
+                        "docs/prd.md",
+                        "docs/architecture_constraints.json",
+                        ".vibetracing/config.json",
+                    ]
+                    change_log = project_root / "docs" / "architecture_change_log.md"
+                    if change_log.exists():
+                        files_to_add.append("docs/architecture_change_log.md")
+                    # Only add files that actually exist
+                    files_to_add = [f for f in files_to_add if (project_root / f).exists()]
+                    if files_to_add:
+                        subprocess.run(["git", "add"] + files_to_add, cwd=project_root, check=True)
                     subprocess.run(
                         ["git", "commit", "-m", "chore: Vibe Tracing architecture baseline finalized", "--no-verify"],
                         cwd=project_root,
@@ -332,7 +431,18 @@ def run_finalize(project_root: Path) -> int:
 
         # V4 Finalize-as-a-Committer: Automatically commit the initial architecture baseline
         try:
-            subprocess.run(["git", "add", "docs/", ".vibetracing/"], cwd=project_root, check=True)
+            files_to_add = [
+                "docs/prd.md",
+                "docs/architecture_constraints.json",
+                ".vibetracing/config.json",
+            ]
+            change_log = project_root / "docs" / "architecture_change_log.md"
+            if change_log.exists():
+                files_to_add.append("docs/architecture_change_log.md")
+            # Only add files that actually exist
+            files_to_add = [f for f in files_to_add if (project_root / f).exists()]
+            if files_to_add:
+                subprocess.run(["git", "add"] + files_to_add, cwd=project_root, check=True)
             subprocess.run(
                 ["git", "commit", "-m", "chore: Vibe Tracing initial architecture baseline finalized", "--no-verify"],
                 cwd=project_root,
@@ -446,6 +556,14 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
             if not success:
                 print(error_msg, file=sys.stderr)
                 return 1
+
+        # Gate 2.5: AC Freshness Detection (Only in pre-commit mode)
+        if is_pre_commit:
+            from vibe_tracing.ac_freshness_checker import AcFreshnessChecker
+            freshness_checker = AcFreshnessChecker(project_root)
+            success, warning_msg = freshness_checker.check()
+            if warning_msg:
+                print(warning_msg)
 
         # 1.1 Validate Schemas of all files that loaded successfully (Upfront Schema Validation)
         if task_list_record and task_list_record.status == "ok":
@@ -783,11 +901,6 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
                 if key not in seen_gaps:
                     seen_gaps.add(key)
                     merged_gaps.append(gap)
-
-        # Frozen state audit
-        frozen_auditor = FrozenPrdAuditor(project_root, prd_parser)
-        frozen_risks = frozen_auditor.audit(prd_res.status, prd_res.requirements)
-        final_risks.extend(frozen_risks)
 
         # 9. Run Merge Gate Engine
         gate_engine = MergeGateEngine(project_root)

@@ -114,6 +114,15 @@ must
                         }
                     }
                 }
+            if "module_boundaries" not in data:
+                data["module_boundaries"] = [
+                    {
+                        "module_id": "MOD-VT-001",
+                        "name": "Core Module",
+                        "responsibility": "Core feature implementation",
+                        "related_requirements": ["REQ-VT-001"],
+                    }
+                ]
             architecture_constraints = json.dumps(data)
     except Exception:
         pass

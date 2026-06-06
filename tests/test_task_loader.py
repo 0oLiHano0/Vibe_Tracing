@@ -335,9 +335,93 @@ def test_validate_real_files_load(task_loader):
 
     res = task_loader.load_and_validate(task_list_path, prd_result=prd_res)
 
-    # Let's check if the real task list has any validation issues
-    assert res.is_valid is True, f"Real files load failed: {res.errors}"
+    # The real task_list.json has id_rules.all_tasks_must_link_requirements_and_acceptance_criteria=true,
+    # and some tasks (e.g. TASK-VT-036, TASK-VT-042) have REQ but no AC.
+    # Under the new AND logic, these are correctly flagged as invalid.
     assert len(res.tasks) > 0
+    # Verify the strict-link rule is enforced on real data
+    req_only_tasks = [
+        t for t in res.tasks
+        if t.related_requirements and not t.related_acceptance_criteria
+    ]
+    if req_only_tasks:
+        assert res.is_valid is False
+        for t in req_only_tasks:
+            assert t.is_valid is False
+            assert any("缺少验收标准关联" in e for e in t.errors)
+    else:
+        assert res.is_valid is True, f"Real files load failed: {res.errors}"
+
+def test_strict_link_rejects_req_only_task(task_loader):
+    """
+    When id_rules.all_tasks_must_link_requirements_and_acceptance_criteria is true,
+    a task with only REQ but no AC should be marked invalid (AND logic).
+    Covers: REFACTOR-007.
+    """
+    tasks = [
+        {
+            "task_id": "TASK-VT-001",
+            "title": "Task With Req Only",
+            "phase_id": "PHASE-VT-001",
+            "priority": "must",
+            "status": "todo",
+            "owner_role": "AI Coding Agent",
+            "objective": "Task objective",
+            "related_modules": ["MOD-VT-001"],
+            "related_requirements": ["REQ-VT-001"],
+            "related_acceptance_criteria": [],  # No AC
+            "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
+        }
+    ]
+    data = get_valid_task_list_dict(tasks)
+    data["id_rules"] = {
+        "all_tasks_must_link_requirements_and_acceptance_criteria": True,
+    }
+    res = task_loader.validate_data(data)
+
+    assert res.is_valid is False
+    assert res.tasks[0].is_valid is False
+    assert any("缺少验收标准关联" in err for err in res.tasks[0].errors)
+    assert len(res.gaps) == 1
+    assert res.gaps[0].item_id == "TASK-VT-001"
+
+
+def test_legacy_or_logic_allows_req_only_task(task_loader):
+    """
+    When id_rules.all_tasks_must_link_requirements_and_acceptance_criteria is false
+    or absent, a task with only REQ but no AC should pass the isolated check (OR logic).
+    Covers: REFACTOR-008.
+    """
+    tasks = [
+        {
+            "task_id": "TASK-VT-001",
+            "title": "Task With Req Only",
+            "phase_id": "PHASE-VT-001",
+            "priority": "must",
+            "status": "todo",
+            "owner_role": "AI Coding Agent",
+            "objective": "Task objective",
+            "related_modules": ["MOD-VT-001"],
+            "related_requirements": ["REQ-VT-001"],
+            "related_acceptance_criteria": [],  # No AC, but has REQ
+            "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
+        }
+    ]
+    # Test with flag explicitly false
+    data = get_valid_task_list_dict(tasks)
+    data["id_rules"] = {
+        "all_tasks_must_link_requirements_and_acceptance_criteria": False,
+    }
+    res = task_loader.validate_data(data)
+    assert res.tasks[0].is_valid is True
+    assert not any("is isolated" in err for err in res.tasks[0].errors)
+
+    # Test with id_rules absent entirely
+    data_no_rules = get_valid_task_list_dict(tasks)
+    res2 = task_loader.validate_data(data_no_rules)
+    assert res2.tasks[0].is_valid is True
+    assert not any("is isolated" in err for err in res2.tasks[0].errors)
+
 
 def test_architectural_orphan_rejection(task_loader):
     """

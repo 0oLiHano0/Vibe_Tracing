@@ -155,6 +155,10 @@ class TaskLoader:
             )
 
         tasks_list = data.get("tasks", [])
+        id_rules = data.get("id_rules", {})
+        strict_link = id_rules.get(
+            "all_tasks_must_link_requirements_and_acceptance_criteria", False
+        )
         parsed_tasks: List[Task] = []
         errors: List[str] = []
         gaps: List[TaskGap] = []
@@ -277,13 +281,27 @@ class TaskLoader:
                 is_valid = False
 
             # Check isolated task condition: DOD-VT-007-01
-            if not related_requirements and not related_acceptance_criteria:
-                task_obj.is_valid = False
-                base_msg = f"Task {task_id} is isolated (no related requirements or acceptance criteria)."
-                full_msg = get_err_msg("related_requirements", base_msg)
-                task_obj.errors.append(full_msg)
-                errors.append(full_msg)
-                gaps.append(TaskGap(item_id=task_id, reason="Task is isolated"))
+            if strict_link:
+                # AND logic: must have both REQ and AC
+                if not related_requirements or not related_acceptance_criteria:
+                    task_obj.is_valid = False
+                    if not related_acceptance_criteria:
+                        base_msg = f"Task {task_id} 缺少验收标准关联，请在 PRD 中定义对应的 AC 并在 task 中引用。"
+                    else:
+                        base_msg = f"Task {task_id} 缺少需求关联，请在 PRD 中定义对应的 REQ 并在 task 中引用。"
+                    full_msg = get_err_msg("related_requirements", base_msg)
+                    task_obj.errors.append(full_msg)
+                    errors.append(full_msg)
+                    gaps.append(TaskGap(item_id=task_id, reason="Task is isolated"))
+            else:
+                # OR logic (legacy): must have at least one of REQ or AC
+                if not related_requirements and not related_acceptance_criteria:
+                    task_obj.is_valid = False
+                    base_msg = f"Task {task_id} is isolated (no related requirements or acceptance criteria)."
+                    full_msg = get_err_msg("related_requirements", base_msg)
+                    task_obj.errors.append(full_msg)
+                    errors.append(full_msg)
+                    gaps.append(TaskGap(item_id=task_id, reason="Task is isolated"))
 
             # Check architectural orphan condition
             if not related_modules and status != "done":

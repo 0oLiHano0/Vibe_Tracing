@@ -21,5 +21,39 @@
   "interface_contracts": [],
   "performance_constraints": [],
   "deployment_constraints": [],
-  "test_constraints": []
+  "test_constraints": [],
+  "language_tool_matrix": {
+    "python": {
+      "test": {
+        "tool": "pytest",
+        "default_command": "pytest {test_path} --tb=short -q --json-report --json-report-file={output_path}",
+        "output_format": "pytest_json",
+        "pass_condition": "exit_code == 0"
+      },
+      "coverage": {
+        "tool": "coverage",
+        "default_command": "coverage run -m pytest {test_path} ; coverage json -o {output_path}",
+        "output_format": "coverage_json",
+        "pass_condition": "percent_covered >= 80"
+      },
+      "lint": {
+        "tool": "ruff",
+        "default_command": "ruff check {source_path} --output-format=json",
+        "output_format": "ruff_json",
+        "pass_condition": "violations == 0"
+      },
+      "type_check": {
+        "tool": "mypy",
+        "default_command": "mypy {source_path} --json-report {output_path}",
+        "output_format": "mypy_json",
+        "pass_condition": "exit_code == 0"
+      },
+      "security": {
+        "tool": "bandit",
+        "default_command": "bandit -r {source_path} -f json -o {output_path}",
+        "output_format": "bandit_json",
+        "pass_condition": "results == 0"
+      }
+    }
+  }
 }

@@ -90,6 +90,14 @@ def _make_constraints(include_language=True):
     return {
         "schema_version": "1.0.0",
         "project": project,
+        "module_boundaries": [
+            {
+                "module_id": "MOD-VT-001",
+                "name": "Core Module",
+                "responsibility": "Core feature implementation",
+                "related_requirements": ["REQ-VT-001"],
+            }
+        ],
         "language_tool_matrix": {
             "python": {
                 "test": {

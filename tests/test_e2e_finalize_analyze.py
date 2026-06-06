@@ -9,6 +9,7 @@ requiring real tool installations.
 import json
 import re
 import shutil
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -236,6 +237,12 @@ def _finalize_and_prepare_constraints(base: Path, constraints_data: dict) -> Non
     finalization has written the language to ``config.json``.
     """
     import hashlib
+    import subprocess
+
+    # Initialize git repo so finalize can commit
+    subprocess.run(["git", "init"], cwd=base, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=base, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=base, capture_output=True, check=True)
 
     exit_code = run_finalize(base)
     assert exit_code == 0, "finalize must succeed"
@@ -528,6 +535,11 @@ class TestFinalizeIdempotent:
         """
         constraints_data = _make_constraints()
         _setup_project(tmp_path, constraints_data=constraints_data)
+
+        # Initialize git repo so finalize can commit
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, capture_output=True, check=True)
 
         # First finalize
         exit_code = run_finalize(tmp_path)

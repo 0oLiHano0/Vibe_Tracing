@@ -114,3 +114,13 @@ def _patch_build_and_loader():
     # Restore originals
     RawInputLoader.load = original_load
     EvidenceIndexBuilder.build = original_build
+
+
+@pytest.fixture(autouse=True)
+def reset_project_prefix():
+    """Reset the global project prefix to 'VT' before and after every test to ensure isolation."""
+    from vibe_tracing.core import ids
+    ids.set_project_prefix("VT")
+    yield
+    ids.set_project_prefix("VT")
+

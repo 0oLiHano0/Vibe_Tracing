@@ -82,7 +82,8 @@ class AcFreshnessChecker:
                 check=True,
             )
             return {line.strip() for line in result.stdout.splitlines() if line.strip()}
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             return set()
 
     def _get_staged_prd_ac_ids(self) -> Set[str]:
@@ -98,7 +99,8 @@ class AcFreshnessChecker:
             content = result.stdout
             ac_pattern = re.compile(r"AC-[A-Z]+-\d+-\d+")
             return set(ac_pattern.findall(content))
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             return set()
 
     def _get_new_tasks(self) -> Dict[str, Set[str]]:
@@ -116,7 +118,8 @@ class AcFreshnessChecker:
                 check=True,
             )
             staged_data = json.loads(staged_result.stdout)
-        except (subprocess.CalledProcessError, json.JSONDecodeError):
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             return {}
 
         try:
@@ -128,7 +131,8 @@ class AcFreshnessChecker:
                 check=True,
             )
             head_data = json.loads(head_result.stdout)
-        except (subprocess.CalledProcessError, json.JSONDecodeError):
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             head_data = {"tasks": []}
 
         head_task_ids = {t.get("task_id") for t in head_data.get("tasks", [])}

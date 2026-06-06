@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+from unittest.mock import patch
 import pytest
 from pathlib import Path
 
@@ -416,3 +417,12 @@ class TestAcFreshnessChecker:
         assert "TASK-VT-003" in msg
         assert "AC-VT-003-01" in msg
         assert "AC-VT-003-02" in msg
+
+    @patch("vibe_tracing.ac_freshness_checker.subprocess.run", side_effect=FileNotFoundError)
+    def test_git_not_installed_graceful(self, mock_run, tmp_path):
+        """When git is not on PATH, check() returns gracefully without crashing."""
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        assert success is True
+        assert msg == ""

@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Tuple, Set
 
@@ -43,7 +44,8 @@ class GhostCodeReconciler:
                 check=True
             )
             return {line.strip() for line in result.stdout.splitlines() if line.strip()}
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             return set()
 
     def _get_active_claims_code_refs(self) -> Set[str]:
@@ -53,7 +55,8 @@ class GhostCodeReconciler:
         else:
             try:
                 staged_claims = json.loads(self.claims_path.read_text(encoding="utf-8"))
-            except Exception:
+            except Exception as exc:
+                print(f"Warning: agent_claims.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
                 staged_claims = []
 
         # 2. Get HEAD Claims
@@ -68,7 +71,13 @@ class GhostCodeReconciler:
                 check=True
             )
             head_claims = json.loads(result.stdout)
-        except Exception:
+        except FileNotFoundError:
+            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
+            head_claims = []
+        except subprocess.CalledProcessError:
+            head_claims = []
+        except Exception as exc:
+            print(f"Warning: agent_claims.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
             head_claims = []
 
         # 3. Calculate Delta (State is Delta)

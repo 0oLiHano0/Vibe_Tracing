@@ -9,11 +9,14 @@
     "related_requirements": "每个 ID 格式为 REQ-{PROJECT_PREFIX}-NNN",
     "related_acceptance_criteria": "每个 ID 格式为 AC-{PROJECT_PREFIX}-NNN-NN",
     "project_id": "格式为 PROJECT-{PROJECT_PREFIX}",
-    "dod_id": "格式为 DOD-{PROJECT_PREFIX}-NNN-NN"
+    "dod_id": "格式为 DOD-{PROJECT_PREFIX}-NNN-NN",
+    "related_modules": "列出任务所属的模块 ID 列表，每个 ID 须在 architecture_constraints.module_boundaries 中存在",
+    "related_architecture_constraints": "列出关联的架构约束 ID 列表，每个 ID 须在 architecture_constraints 对应节中存在"
   },
   "agent_claims": {
     "claim_id": "格式为 CLAIM-{PROJECT_PREFIX}-NNN，NNN 为三位数字",
-    "related_task": "格式为 TASK-{PROJECT_PREFIX}-NNN，必须已存在于任务列表"
+    "related_task": "格式为 TASK-{PROJECT_PREFIX}-NNN，必须已存在于任务列表",
+    "evidence_refs": "已完成的 Claim 须至少引用一条外部证据（如测试用例 ID、commit hash 等），不能仅自引用"
   },
   "architecture_constraints": {
     "project_id": "格式为 PROJECT-{PROJECT_PREFIX}"

@@ -78,6 +78,7 @@ def _init_git_repo(base: Path) -> str:
 def test_finalize_happy_path(tmp_path, capsys):
     """Happy path: finalize writes language and validation_tools to config.json."""
     _setup_project(tmp_path)
+    _init_git_repo(tmp_path)
 
     exit_code = main(["finalize", "--project-root", str(tmp_path)])
     assert exit_code == 0
@@ -93,6 +94,7 @@ def test_finalize_happy_path(tmp_path, capsys):
 def test_finalize_already_finalized_same_language(tmp_path, capsys):
     """Running finalize again with the same language prints 'Already finalized' and exits 0."""
     _setup_project(tmp_path)
+    _init_git_repo(tmp_path)
 
     # First run
     exit_code = main(["finalize", "--project-root", str(tmp_path)])
@@ -114,6 +116,7 @@ def test_finalize_already_finalized_same_language(tmp_path, capsys):
 def test_finalize_updates_tools_when_matrix_changes(tmp_path, capsys):
     """When language_tool_matrix gains a new tool category, re-finalize updates validation_tools."""
     _setup_project(tmp_path)
+    _init_git_repo(tmp_path)
 
     # First run
     exit_code = main(["finalize", "--project-root", str(tmp_path)])
@@ -127,6 +130,17 @@ def test_finalize_updates_tools_when_matrix_changes(tmp_path, capsys):
         "command": "black --check",
     }
     constraints_path.write_text(json.dumps(constraints, indent=2), encoding="utf-8")
+
+    # Create change_log since hash changed (adding a tool modifies the file)
+    (tmp_path / "docs" / "architecture_change_log.md").write_text(
+        "# Change Log\n\n## [2026-06-07]\n* Added formatter tool\n",
+        encoding="utf-8",
+    )
+    # Stage change_log so git_has_uncommitted_changes detects it
+    subprocess.run(
+        ["git", "-c", "user.name=test", "-c", "user.email=test@test.com",
+         "add", "."], cwd=tmp_path, check=True, capture_output=True,
+    )
 
     # Second run — should detect tools changed
     exit_code = main(["finalize", "--project-root", str(tmp_path)])
@@ -665,6 +679,7 @@ def test_finalize_should_req_without_mapping_warns(tmp_path, capsys):
             {"id": "REQ-TEST-002", "title": "Uncovered should", "priority": "should"},
         ],
     )
+    _init_git_repo(tmp_path)
 
     exit_code = main(["finalize", "--project-root", str(tmp_path)])
     assert exit_code == 0
@@ -712,9 +727,185 @@ def test_finalize_mapping_passes_when_all_must_covered(tmp_path, capsys):
             {"id": "REQ-TEST-002", "title": "Also covered must", "priority": "must"},
         ],
     )
+    _init_git_repo(tmp_path)
 
     exit_code = main(["finalize", "--project-root", str(tmp_path)])
     assert exit_code == 0
 
     captured = capsys.readouterr()
     assert "MUST" not in captured.err
+
+
+# ── Security fix: both tools + content changed ────────────────────────────────
+
+def test_finalize_tools_and_content_both_changed_requires_changelog(tmp_path, capsys):
+    """When both tools AND content change, change_log is still required (exit 1)."""
+    _setup_project(tmp_path)
+    _init_git_repo(tmp_path)
+
+    # First finalize
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    # Modify constraints: change BOTH tools and a structural rule
+    constraints_path = tmp_path / "docs" / "architecture_constraints.json"
+    data = json.loads(constraints_path.read_text(encoding="utf-8"))
+    # Add a new tool category (tools change)
+    data["language_tool_matrix"]["python"]["formatter"] = {
+        "tool": "black",
+        "command": "black --check",
+    }
+    # Add a structural rule (content change)
+    data["storage_rules"] = [
+        {
+            "rule_id": "STORE-VT-001",
+            "title": "MVP no database",
+            "severity": "must",
+            "description": "No database allowed in MVP",
+        }
+    ]
+    constraints_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+    # Commit so there are no uncommitted changes
+    subprocess.run(
+        ["git", "-c", "user.name=test", "-c", "user.email=test@test.com",
+         "add", "."], cwd=tmp_path, check=True, capture_output=True,
+    )
+    subprocess.run(
+        ["git", "-c", "user.name=test", "-c", "user.email=test@test.com",
+         "commit", "-m", "modify constraints"], cwd=tmp_path, check=True, capture_output=True,
+    )
+
+    # NO change_log.md created — should fail
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 1
+
+    captured = capsys.readouterr()
+    assert "change_log.md" in captured.err
+
+
+def test_finalize_tools_and_content_both_changed_with_changelog(tmp_path, capsys):
+    """When both tools AND content change WITH change_log, finalize succeeds."""
+    _setup_project(tmp_path)
+    _init_git_repo(tmp_path)
+
+    # First finalize
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    first_config = json.loads(
+        (tmp_path / ".vibetracing" / "config.json").read_text(encoding="utf-8")
+    )
+
+    # Modify constraints: change BOTH tools and a structural rule
+    constraints_path = tmp_path / "docs" / "architecture_constraints.json"
+    data = json.loads(constraints_path.read_text(encoding="utf-8"))
+    # Add a new tool category (tools change)
+    data["language_tool_matrix"]["python"]["formatter"] = {
+        "tool": "black",
+        "command": "black --check",
+    }
+    # Add a structural rule (content change)
+    data["storage_rules"] = [
+        {
+            "rule_id": "STORE-VT-001",
+            "title": "MVP no database",
+            "severity": "must",
+            "description": "No database allowed in MVP",
+        }
+    ]
+    constraints_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+    # Create change_log so validation passes
+    change_log_path = tmp_path / "docs" / "architecture_change_log.md"
+    change_log_path.write_text(
+        "# Architecture Change Log\n\n## [2026-06-07]\n* Added STORE-VT-001\n* Added formatter tool\n",
+        encoding="utf-8",
+    )
+
+    # Stage changes
+    subprocess.run(
+        ["git", "-c", "user.name=test", "-c", "user.email=test@test.com",
+         "add", "."], cwd=tmp_path, check=True, capture_output=True,
+    )
+
+    # Should succeed — change_log exists and is staged in same commit
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    captured = capsys.readouterr()
+    assert "Updated validation_tools" in captured.out
+
+    second_config = json.loads(
+        (tmp_path / ".vibetracing" / "config.json").read_text(encoding="utf-8")
+    )
+    # Hash should have been updated
+    assert second_config["architecture_constraints_hash"] != first_config["architecture_constraints_hash"]
+    # Tools should include the new formatter
+    assert "formatter" in second_config["validation_tools"]
+
+
+# ── L1 Bug fix: git commit failure should return 1 ─────────────────────────
+
+def test_finalize_git_commit_failure_returns_1_first_finalize(tmp_path, capsys, monkeypatch):
+    """First finalize: if git commit fails, run_finalize returns 1 (not 0)."""
+    _setup_project(tmp_path)
+    _init_git_repo(tmp_path)
+
+    original_run = subprocess.run
+
+    call_count = 0
+
+    def mock_run(args, **kwargs):
+        nonlocal call_count
+        # Let git add succeed, but fail on the first git commit
+        if isinstance(args, list) and len(args) >= 2 and args[0] == "git" and args[1] == "commit":
+            call_count += 1
+            if call_count == 1:
+                raise subprocess.CalledProcessError(1, args, stderr=b"commit failed")
+        return original_run(args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 1
+
+    captured = capsys.readouterr()
+    assert "Error:" in captured.err
+    assert "Failed to automatically commit" in captured.err
+
+
+def test_finalize_git_commit_failure_returns_1_re_finalize(tmp_path, capsys, monkeypatch):
+    """Re-finalize (hash changed): if git commit fails, run_finalize returns 1 (not 0)."""
+    _setup_project(tmp_path)
+    _init_git_repo(tmp_path)
+
+    # First finalize — succeeds
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    # Modify constraints (format change to trigger re-finalize Branch B)
+    constraints_path = tmp_path / "docs" / "architecture_constraints.json"
+    data = json.loads(constraints_path.read_text(encoding="utf-8"))
+    constraints_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
+
+    original_run = subprocess.run
+
+    call_count = 0
+
+    def mock_run(args, **kwargs):
+        nonlocal call_count
+        if isinstance(args, list) and len(args) >= 2 and args[0] == "git" and args[1] == "commit":
+            call_count += 1
+            if call_count == 1:
+                raise subprocess.CalledProcessError(1, args, stderr=b"commit failed")
+        return original_run(args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 1
+
+    captured = capsys.readouterr()
+    assert "Error:" in captured.err
+    assert "Failed to automatically commit" in captured.err

@@ -101,21 +101,13 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
             content = content.replace("PROJECT-VT", config_project_id)
             content = content.replace("-VT-", f"-{config_prefix}-")
             content = content.replace("-VT\\", f"-{config_prefix}\\")
-            content = content.replace("-VT\\\\", f"-{config_prefix}\\\\")
             # 2. Replace explicit placeholders
             content = content.replace("{{PROJECT_NAME}}", config_name)
             content = content.replace("{{PROJECT_PREFIX}}", config_prefix)
             content = content.replace("{{TODAY}}", today_str)
             return content
 
-        # 3. Write config.json if not exist
-        if not config_path.exists():
-            config_path.parent.mkdir(parents=True, exist_ok=True)
-            config_content = render_template(config_text)
-            with config_path.open("w", encoding="utf-8") as f:
-                f.write(config_content)
-            print("Created file: .vibetracing/config.json")
-
+        # 3. Write ALL template files except config.json first
         other_files = {
             ".vibetracing/agent_claims.json": render_template(claims_text),
             "docs/task_list.json": render_template(task_list_text),
@@ -134,12 +126,21 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
                     f.write(content)
                 print(f"Created file: {rel_path}")
 
-        # 4. Install Git pre-commit hook (V4)
+        # 4. Write config.json LAST (if not exist) — prevents stale config on partial failure
+        if not config_path.exists():
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            config_content = render_template(config_text)
+            with config_path.open("w", encoding="utf-8") as f:
+                f.write(config_content)
+            print("Created file: .vibetracing/config.json")
+
+        # 5. Install Git pre-commit hook (V4)
         git_hooks_dir = project_root / ".git" / "hooks"
         if git_hooks_dir.exists():
             pre_commit_path = git_hooks_dir / "pre-commit"
             if not pre_commit_path.exists():
-                hook_script = "#!/bin/sh\n# Vibe Tracing Git Guard\npython3 -m vibe_tracing analyze --pre-commit\n"
+                python_path = sys.executable
+                hook_script = f'#!/bin/sh\n# Vibe Tracing Git Guard\n"{python_path}" -m vibe_tracing analyze --pre-commit\n'
                 pre_commit_path.write_text(hook_script)
                 pre_commit_path.chmod(0o755)
                 print("Installed Git pre-commit hook (vibe_tracing analyze --pre-commit)")
@@ -154,6 +155,26 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
 
 
 
+
+
+def _print_post_finalize_guidance(project_root: Path) -> None:
+    """Check for remaining uncommitted files and guide the agent."""
+    try:
+        status_out = subprocess.check_output(
+            ["git", "status", "--porcelain"], cwd=project_root, text=True
+        )
+        dirty_files = []
+        for line in status_out.splitlines():
+            if not line.strip():
+                continue
+            dirty_files.append(line[3:])
+        if dirty_files:
+            print(
+                "\n注意：设计基线已锁定，但工作目录中仍有未提交的变更。"
+                "工作流规范：先定稿设计，再提交代码。请单独提交剩余变更。"
+            )
+    except Exception:
+        pass
 
 
 def _validate_constraints_change(project_root: Path, constraints_path: Path, config_data: dict) -> tuple:
@@ -176,7 +197,6 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
     if base_content is None:
         return False, f"无法还原定稿版本 ({finalize_commit}:{finalize_constraints_path})"
 
-    import json
     base_data = json.loads(base_content)
     curr_data = json.loads(constraints_path.read_text(encoding="utf-8"))
 
@@ -287,20 +307,6 @@ def run_finalize(project_root: Path) -> int:
         config_path = project_root / ".vibetracing" / "config.json"
         constraints_path = project_root / "docs" / "architecture_constraints.json"
 
-        # 0. Check purity of the working directory (V4: Finalize-as-a-Committer)
-        try:
-            status_out = subprocess.check_output(["git", "status", "--porcelain"], cwd=project_root, text=True)
-            for line in status_out.splitlines():
-                if not line.strip():
-                    continue
-                file_path = line[3:]
-                # Whitelist of allowed files during finalize
-                if not (file_path.startswith("docs/") or file_path.startswith(".vibetracing/")):
-                    print(f"Error: 发现未隔离的业务代码变更 ({file_path})。\n架构定稿 (vt finalize) 必须与业务代码修改严格分离！请剥离业务代码后再试。", file=sys.stderr)
-                    return 1
-        except Exception as e:
-            print(f"Warning: Failed to check git status ({e}).", file=sys.stderr)
-
         # 1. Check config.json exists
         if not config_path.exists():
             print("Error: config.json not found. Run 'vibe-tracing init' first.", file=sys.stderr)
@@ -355,65 +361,68 @@ def run_finalize(project_root: Path) -> int:
             current_tools = sorted(tool_categories)
             stored_hash = config_data.get("architecture_constraints_hash")
 
-            if existing_tools == current_tools and stored_hash == computed_hash:
+            hash_changed = stored_hash != computed_hash
+            tools_changed = existing_tools != current_tools
+
+            if not hash_changed and not tools_changed:
                 print(f"Already finalized: language={language}, tools={current_tools}")
                 return 0
 
-            if existing_tools == current_tools and stored_hash != computed_hash:
-                # Tools match but constraints content changed — run validation
+            # Hash changed -> validate change_log (always required, regardless of tool changes)
+            message = ""
+            if hash_changed:
                 passed, message = _validate_constraints_change(project_root, constraints_path, config_data)
                 if not passed:
                     print(f"Error: {message}", file=sys.stderr)
                     return 1
-                
-                # Validation passed — update hash
                 config_data["architecture_constraints_hash"] = computed_hash
                 config_data["finalize_constraints_path"] = str(constraints_path.relative_to(project_root))
-                
-                with config_path.open("w", encoding="utf-8") as f:
-                    json.dump(config_data, f, indent=2, ensure_ascii=False)
-                
-                # V4 Finalize-as-a-Committer: Automatically commit the architecture baseline
-                try:
-                    files_to_add = [
-                        "docs/prd.md",
-                        "docs/architecture_constraints.json",
-                        ".vibetracing/config.json",
-                    ]
-                    change_log = project_root / "docs" / "architecture_change_log.md"
-                    if change_log.exists():
-                        files_to_add.append("docs/architecture_change_log.md")
-                    # Only add files that actually exist
-                    files_to_add = [f for f in files_to_add if (project_root / f).exists()]
-                    if files_to_add:
-                        subprocess.run(["git", "add"] + files_to_add, cwd=project_root, check=True)
-                    subprocess.run(
-                        ["git", "commit", "-m", "chore: Vibe Tracing architecture baseline finalized", "--no-verify"],
-                        cwd=project_root,
-                        check=True
-                    )
-                    # Get the new commit hash and save it to config
-                    git_commit = subprocess.run(
-                        ["git", "rev-parse", "HEAD"], cwd=project_root, capture_output=True, text=True, check=True
-                    )
-                    config_data["finalize_git_commit"] = git_commit.stdout.strip()
-                    with config_path.open("w", encoding="utf-8") as f:
-                        json.dump(config_data, f, indent=2, ensure_ascii=False)
-                    subprocess.run(["git", "add", ".vibetracing/config.json"], cwd=project_root, check=True)
-                    subprocess.run(["git", "commit", "--amend", "--no-edit", "--no-verify"], cwd=project_root, check=True)
-                except Exception as e:
-                    print(f"Warning: Failed to automatically commit architecture baseline: {e}", file=sys.stderr)
 
-                print(f"Constraints checkpoint updated and committed (hash={computed_hash[:12]}...). {message}")
-                return 0
-
-            if existing_tools != current_tools:
-                # Language matches but tools changed — update silently
+            # Tools changed -> update config
+            if tools_changed:
                 config_data["validation_tools"] = tool_categories
+
+            # Write config and commit if anything was updated
+            with config_path.open("w", encoding="utf-8") as f:
+                json.dump(config_data, f, indent=2, ensure_ascii=False)
+
+            try:
+                files_to_add = [
+                    "docs/prd.md",
+                    "docs/architecture_constraints.json",
+                    ".vibetracing/config.json",
+                ]
+                change_log = project_root / "docs" / "architecture_change_log.md"
+                if change_log.exists():
+                    files_to_add.append("docs/architecture_change_log.md")
+                files_to_add = [f for f in files_to_add if (project_root / f).exists()]
+                if files_to_add:
+                    subprocess.run(["git", "add"] + files_to_add, cwd=project_root, check=True)
+                subprocess.run(
+                    ["git", "commit", "-m", "chore: Vibe Tracing architecture baseline finalized", "--no-verify"],
+                    cwd=project_root,
+                    check=True
+                )
+                git_commit = subprocess.run(
+                    ["git", "rev-parse", "HEAD"], cwd=project_root, capture_output=True, text=True, check=True
+                )
+                config_data["finalize_git_commit"] = git_commit.stdout.strip()
                 with config_path.open("w", encoding="utf-8") as f:
                     json.dump(config_data, f, indent=2, ensure_ascii=False)
-                print(f"Updated validation_tools: {existing_tools} → {current_tools}")
-                return 0
+                subprocess.run(["git", "add", ".vibetracing/config.json"], cwd=project_root, check=True)
+                subprocess.run(["git", "commit", "--amend", "--no-edit", "--no-verify"], cwd=project_root, check=True)
+            except Exception as e:
+                print(f"Error: Failed to automatically commit architecture baseline: {e}", file=sys.stderr)
+                return 1
+
+            parts = []
+            if hash_changed:
+                parts.append(f"Constraints checkpoint updated (hash={computed_hash[:12]}...). {message}")
+            if tools_changed:
+                parts.append(f"Updated validation_tools: {existing_tools} → {current_tools}")
+            print(" ".join(parts) if parts else "No changes detected.")
+            _print_post_finalize_guidance(project_root)
+            return 0
 
         # 7. First finalization or language not yet set — validate and write
         passed, message = _validate_constraints_change(project_root, constraints_path, config_data)
@@ -457,9 +466,11 @@ def run_finalize(project_root: Path) -> int:
             subprocess.run(["git", "add", ".vibetracing/config.json"], cwd=project_root, check=True)
             subprocess.run(["git", "commit", "--amend", "--no-edit", "--no-verify"], cwd=project_root, check=True)
         except Exception as e:
-            print(f"Warning: Failed to automatically commit initial architecture baseline: {e}", file=sys.stderr)
+            print(f"Error: Failed to automatically commit initial architecture baseline: {e}", file=sys.stderr)
+            return 1
 
         print(f"Vibe Tracing finalized for project. {message}")
+        _print_post_finalize_guidance(project_root)
         return 0
 
     except Exception as exc:
@@ -561,7 +572,7 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
         if is_pre_commit:
             from vibe_tracing.ac_freshness_checker import AcFreshnessChecker
             freshness_checker = AcFreshnessChecker(project_root)
-            success, warning_msg = freshness_checker.check()
+            _, warning_msg = freshness_checker.check()
             if warning_msg:
                 print(warning_msg)
 

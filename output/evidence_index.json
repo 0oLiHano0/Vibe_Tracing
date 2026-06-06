@@ -1,12 +1,12 @@
 {
-  "run_id": "RUN-207de37f-d58a-4bf2-afef-7f964b2b32fb",
+  "run_id": "RUN-da6f32e3-7039-4944-bc24-8da407bfb461",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-05-22T13:53:29.368210Z",
+  "scan_time": "2026-06-06T07:56:54.534382Z",
   "evidences": [
     {
       "evidence_id": "EVIDENCE-VT-001",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-01",
         "AC-VT-002-01",
@@ -28,7 +28,7 @@
     {
       "evidence_id": "EVIDENCE-VT-002",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-03",
         "AC-VT-002-01",
@@ -50,7 +50,7 @@
     {
       "evidence_id": "EVIDENCE-VT-003",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-01",
         "AC-VT-001-02",
@@ -73,7 +73,7 @@
     {
       "evidence_id": "EVIDENCE-VT-004",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-03",
         "AC-VT-006-02",
@@ -93,7 +93,7 @@
     {
       "evidence_id": "EVIDENCE-VT-005",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-01",
         "AC-VT-001-04",
@@ -101,7 +101,7 @@
         "REQ-VT-001",
         "REQ-VT-002"
       ],
-      "status": "missing",
+      "status": "covered",
       "details": {
         "task_id": "TASK-VT-005",
         "title": "实现 Raw Input Loader",
@@ -112,7 +112,7 @@
     {
       "evidence_id": "EVIDENCE-VT-006",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-01",
         "AC-VT-001-02",
@@ -131,7 +131,7 @@
     {
       "evidence_id": "EVIDENCE-VT-007",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-01",
         "AC-VT-001-04",
@@ -148,7 +148,7 @@
     {
       "evidence_id": "EVIDENCE-VT-008",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-002-01",
         "AC-VT-002-02",
@@ -166,7 +166,7 @@
     {
       "evidence_id": "EVIDENCE-VT-009",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-02",
         "AC-VT-002-01",
@@ -180,7 +180,7 @@
       "status": "missing",
       "details": {
         "task_id": "TASK-VT-009",
-        "title": "实现工具输出规范化适配器",
+        "title": "实现 VT 工具执行与输出规范化适配器",
         "phase_id": "PHASE-VT-003",
         "priority": "must"
       }
@@ -188,7 +188,7 @@
     {
       "evidence_id": "EVIDENCE-VT-010",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-02",
         "AC-VT-001-03",
@@ -208,7 +208,7 @@
     {
       "evidence_id": "EVIDENCE-VT-011",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-01",
         "AC-VT-001-03",
@@ -226,7 +226,7 @@
     {
       "evidence_id": "EVIDENCE-VT-012",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-02",
         "AC-VT-001-03",
@@ -245,7 +245,7 @@
     {
       "evidence_id": "EVIDENCE-VT-013",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-002-01",
         "AC-VT-002-02",
@@ -263,7 +263,7 @@
     {
       "evidence_id": "EVIDENCE-VT-014",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-01",
         "AC-VT-001-02",
@@ -286,7 +286,7 @@
     {
       "evidence_id": "EVIDENCE-VT-015",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-03",
         "AC-VT-008-03",
@@ -304,7 +304,7 @@
     {
       "evidence_id": "EVIDENCE-VT-016",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-007-01",
         "AC-VT-007-02",
@@ -325,7 +325,7 @@
     {
       "evidence_id": "EVIDENCE-VT-017",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-02",
         "AC-VT-002-02",
@@ -348,7 +348,7 @@
     {
       "evidence_id": "EVIDENCE-VT-018",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-01",
         "AC-VT-001-02",
@@ -363,7 +363,7 @@
       "status": "missing",
       "details": {
         "task_id": "TASK-VT-018",
-        "title": "实现 CLI analyze 命令",
+        "title": "实现 CLI analyze 命令（含工具执行阶段）",
         "phase_id": "PHASE-VT-006",
         "priority": "must"
       }
@@ -371,7 +371,7 @@
     {
       "evidence_id": "EVIDENCE-VT-019",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-006-01",
         "AC-VT-006-02",
@@ -389,7 +389,7 @@
     {
       "evidence_id": "EVIDENCE-VT-020",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-01",
         "AC-VT-001-02",
@@ -424,7 +424,7 @@
     {
       "evidence_id": "EVIDENCE-VT-021",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-03",
         "AC-VT-006-02",
@@ -452,7 +452,7 @@
     {
       "evidence_id": "EVIDENCE-VT-022",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-006-03",
         "AC-VT-008-03",
@@ -475,7 +475,7 @@
     {
       "evidence_id": "EVIDENCE-VT-023",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-03",
         "AC-VT-002-02",
@@ -487,7 +487,7 @@
         "REQ-VT-002",
         "REQ-VT-009"
       ],
-      "status": "missing",
+      "status": "covered",
       "details": {
         "task_id": "TASK-VT-023",
         "title": "定义 Claude Code 自举配置 Schema 与治理契约",
@@ -498,7 +498,7 @@
     {
       "evidence_id": "EVIDENCE-VT-024",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-009-01",
         "AC-VT-009-02",
@@ -506,7 +506,7 @@
         "AC-VT-009-04",
         "REQ-VT-009"
       ],
-      "status": "missing",
+      "status": "covered",
       "details": {
         "task_id": "TASK-VT-024",
         "title": "创建 Claude Code 自举 subagent 与 skill 配置初版",
@@ -517,14 +517,14 @@
     {
       "evidence_id": "EVIDENCE-VT-025",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-009-01",
         "AC-VT-009-03",
         "AC-VT-009-04",
         "REQ-VT-009"
       ],
-      "status": "missing",
+      "status": "covered",
       "details": {
         "task_id": "TASK-VT-025",
         "title": "实现 Claude Code Bootstrap Adapter 配置读取与校验",
@@ -535,7 +535,7 @@
     {
       "evidence_id": "EVIDENCE-VT-026",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-001-03",
         "AC-VT-002-01",
@@ -545,7 +545,7 @@
         "REQ-VT-002",
         "REQ-VT-009"
       ],
-      "status": "missing",
+      "status": "covered",
       "details": {
         "task_id": "TASK-VT-026",
         "title": "实现 Claude Code 自举产物证据规范化",
@@ -556,14 +556,14 @@
     {
       "evidence_id": "EVIDENCE-VT-027",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-008-03",
         "AC-VT-009-04",
         "REQ-VT-008",
         "REQ-VT-009"
       ],
-      "status": "missing",
+      "status": "covered",
       "details": {
         "task_id": "TASK-VT-027",
         "title": "实现架构约束变更建议治理记录",
@@ -574,7 +574,7 @@
     {
       "evidence_id": "EVIDENCE-VT-028",
       "source_type": "task",
-      "source_path": "raw/03_tasks/task_list.json",
+      "source_path": "docs/task_list.json",
       "covers": [
         "AC-VT-006-01",
         "AC-VT-006-02",
@@ -587,13 +587,1552 @@
         "REQ-VT-008",
         "REQ-VT-009"
       ],
-      "status": "missing",
+      "status": "covered",
       "details": {
         "task_id": "TASK-VT-028",
         "title": "将 Claude Code 自举状态纳入报告、Dashboard 与质量门禁",
         "phase_id": "PHASE-VT-008",
         "priority": "must"
       }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-029",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-05",
+        "REQ-VT-009"
+      ],
+      "status": "missing",
+      "details": {
+        "task_id": "TASK-VT-029",
+        "title": "目录抽象重构与路径配置化实现",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-030",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-030",
+        "title": "自身开发治理规程归档与规范补签",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-031",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-05",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-031",
+        "title": "目录标准规范化与兼容性清理",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-032",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-002-04",
+        "REQ-VT-002"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-033",
+        "title": "实现证据多重匹配与安全收敛",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-033",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-006-04",
+        "REQ-VT-006"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-034",
+        "title": "实现 Dashboard 图标 Emoji 到 SVG 矢量图迁移",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-034",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-035",
+        "title": "实现基于 Schema Description 的零提示词 AI 引导与项目脚手架",
+        "phase_id": "PHASE-VT-008",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-035",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-036",
+        "title": "移除 Claude Code Bootstrap 模块及所有架构约束引用",
+        "phase_id": "PHASE-VT-009",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-036",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-04",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-037",
+        "title": "在架构约束中新增 language_tool_matrix 及相关 Schema",
+        "phase_id": "PHASE-VT-009",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-037",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-08",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-038",
+        "title": "实现 vt finalize 命令",
+        "phase_id": "PHASE-VT-009",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-038",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-09",
+        "AC-VT-009-10",
+        "REQ-VT-002",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-039",
+        "title": "实现 VT 工具执行引擎",
+        "phase_id": "PHASE-VT-009",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-039",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-11",
+        "REQ-VT-002",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-040",
+        "title": "实现 Claim 可信度判定与 low_confidence 标记",
+        "phase_id": "PHASE-VT-009",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-040",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-10",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-041",
+        "title": "实现工具执行 stderr 反馈机制",
+        "phase_id": "PHASE-VT-009",
+        "priority": "should"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-041",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-042",
+        "title": "更新 evidence_index_builder 移除 tool_reports 目录依赖",
+        "phase_id": "PHASE-VT-009",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-042",
+      "source_type": "task",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-08",
+        "AC-VT-009-09",
+        "AC-VT-009-11",
+        "REQ-VT-002",
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "task_id": "TASK-VT-043",
+        "title": "端到端测试：finalize → analyze → 工具执行 → 证据生成",
+        "phase_id": "PHASE-VT-009",
+        "priority": "must"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-043",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-005",
+        "related_task": "TASK-VT-005",
+        "timestamp": "2026-05-29T09:45:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-044",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/raw_input_loader.py",
+      "covers": [
+        "AC-VT-001-01",
+        "AC-VT-001-04",
+        "AC-VT-002-01",
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-005",
+        "related_task": "TASK-VT-005"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-045",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030",
+        "timestamp": "2026-05-29T09:45:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-046",
+      "source_type": "code",
+      "source_path": "docs/prd.md",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-047",
+      "source_type": "code",
+      "source_path": "docs/architecture_constraints.json",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-048",
+      "source_type": "code",
+      "source_path": "docs/task_list.json",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-049",
+      "source_type": "code",
+      "source_path": "docs/task_execution_rules.md",
+      "covers": [
+        "AC-VT-009-06",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-030",
+        "related_task": "TASK-VT-030"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-050",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-009-05",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-031",
+        "related_task": "TASK-VT-031",
+        "timestamp": "2026-05-29T09:45:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-051",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/raw_input_loader.py",
+      "covers": [
+        "AC-VT-009-05",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-031",
+        "related_task": "TASK-VT-031"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-052",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-002-04",
+        "REQ-VT-002"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-033",
+        "related_task": "TASK-VT-033",
+        "timestamp": "2026-05-29T10:35:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-053",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "covers": [
+        "AC-VT-002-04",
+        "REQ-VT-002"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-033",
+        "related_task": "TASK-VT-033"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-054",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-006-04",
+        "REQ-VT-006"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-034",
+        "related_task": "TASK-VT-034",
+        "timestamp": "2026-05-31T09:30:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-055",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/dashboard_renderer.py",
+      "covers": [
+        "AC-VT-006-04",
+        "REQ-VT-006"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-034",
+        "related_task": "TASK-VT-034"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-056",
+      "source_type": "claim",
+      "source_path": ".vibetracing/agent_claims.json",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "covered",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035",
+        "timestamp": "2026-05-31T11:00:00Z",
+        "notes": ""
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-057",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/schema_validator.py",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-058",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/task_loader.py",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-059",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/claim_loader.py",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-060",
+      "source_type": "code",
+      "source_path": "src/vibe_tracing/cli.py",
+      "covers": [
+        "AC-VT-009-07",
+        "REQ-VT-009"
+      ],
+      "status": "compliant",
+      "details": {
+        "claim_id": "CLAIM-VT-035",
+        "related_task": "TASK-VT-035"
+      }
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-061",
+      "source_type": "tool",
+      "source_path": "tests/test_raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest tests/test_raw_input_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_02083eca1c564098883fcead568ea98d.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-062",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest src/vibe_tracing/raw_input_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_2ae3d411fd714f6ead1b676ef2975277.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-063",
+      "source_type": "tool",
+      "source_path": "docs/prd.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest docs/prd.md --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_4466204e9fb84fc5a1694354a3c25926.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-064",
+      "source_type": "tool",
+      "source_path": "docs/architecture_constraints.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest docs/architecture_constraints.json --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_584df53b8c5f4a4caff1e94eecd35208.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-065",
+      "source_type": "tool",
+      "source_path": "docs/task_list.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest docs/task_list.json --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_afb30bbc498e41faaa23a454a2e3fdf6.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-066",
+      "source_type": "tool",
+      "source_path": "docs/task_execution_rules.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest docs/task_execution_rules.md --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_48cbb1da5cac42f0818e5444c73e55ef.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-067",
+      "source_type": "tool",
+      "source_path": "tests/test_claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest tests/test_claim_evidence_analyzer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_6c1f46c0e0fd4ca890bfc72e54d32906.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-068",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest src/vibe_tracing/traceability/claim_evidence_analyzer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_0b2f2b4066b54304acd13169c492872f.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-069",
+      "source_type": "tool",
+      "source_path": "tests/test_dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest tests/test_dashboard_renderer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_8538f260d2b64cdcaf21233059cdf029.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-070",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest src/vibe_tracing/dashboard_renderer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_b3eaa30b4a8d4a069bb4ca094e6ab5b6.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-071",
+      "source_type": "tool",
+      "source_path": "tests/test_scaffolding.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest tests/test_scaffolding.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_95102b14bff347a4bd16d8054364b349.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-072",
+      "source_type": "tool",
+      "source_path": "tests/test_dynamic_hints.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest tests/test_dynamic_hints.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_d030a1c6160340bba77972058ba94428.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-073",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/schema_validator.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest src/vibe_tracing/schema_validator.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_a16b1c29579d47d8a6019ba130611eba.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-074",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/task_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest src/vibe_tracing/task_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_26a7e35cffdb47d9beeec245ea7abf6e.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-075",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/claim_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest src/vibe_tracing/claim_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_92ca8fd47050476b958daa3d5ebdece1.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-076",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/cli.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "pytest src/vibe_tracing/cli.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_59d66c5e90d44f8697c22fd573ad3846.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: pytest: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-077",
+      "source_type": "tool",
+      "source_path": "tests/test_raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest tests/test_raw_input_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_7350c91edcd94ab1849d0662cbac1951.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-078",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest src/vibe_tracing/raw_input_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_01f987c85804439594680e9da46b2a15.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-079",
+      "source_type": "tool",
+      "source_path": "docs/prd.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest docs/prd.md ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_e0779797e56a45bcbf6cb90314d2e3d7.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-080",
+      "source_type": "tool",
+      "source_path": "docs/architecture_constraints.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest docs/architecture_constraints.json ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_73e0bd83ddee4d1483732b2bc227fa69.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-081",
+      "source_type": "tool",
+      "source_path": "docs/task_list.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest docs/task_list.json ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_33e0f299f494402f828c0d5f78bbaa2b.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-082",
+      "source_type": "tool",
+      "source_path": "docs/task_execution_rules.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest docs/task_execution_rules.md ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_b698c8e03f69424495239a34f1466edd.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-083",
+      "source_type": "tool",
+      "source_path": "tests/test_claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest tests/test_claim_evidence_analyzer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_e0593a4602a348c3a8124f7097aac89e.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-084",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest src/vibe_tracing/traceability/claim_evidence_analyzer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_969c8470a1eb4c6fbe570acb1056c21f.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-085",
+      "source_type": "tool",
+      "source_path": "tests/test_dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest tests/test_dashboard_renderer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_711533d2c66b40868ce04f54160da743.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-086",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest src/vibe_tracing/dashboard_renderer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_7a2374007c3940809f9191ba310e5ce9.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-087",
+      "source_type": "tool",
+      "source_path": "tests/test_scaffolding.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest tests/test_scaffolding.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_30de9d562dc64a78a4ca10543aa86a1c.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-088",
+      "source_type": "tool",
+      "source_path": "tests/test_dynamic_hints.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest tests/test_dynamic_hints.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_3d952ed90a4c449cac914ab8cacb76bd.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-089",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/schema_validator.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest src/vibe_tracing/schema_validator.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_4f8e23286f284a45bb574b3281df09b1.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-090",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/task_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest src/vibe_tracing/task_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_aa8c63b96188470c968124a3c270ace8.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-091",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/claim_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest src/vibe_tracing/claim_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_6eae1292b9764d9393331ffba911cb27.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-092",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/cli.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "coverage run -m pytest src/vibe_tracing/cli.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_337559951d6d4b8391965d8dc6828164.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-093",
+      "source_type": "tool",
+      "source_path": "tests/test_raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check tests/test_raw_input_loader.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-094",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check src/vibe_tracing/raw_input_loader.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-095",
+      "source_type": "tool",
+      "source_path": "docs/prd.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check docs/prd.md --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-096",
+      "source_type": "tool",
+      "source_path": "docs/architecture_constraints.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check docs/architecture_constraints.json --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-097",
+      "source_type": "tool",
+      "source_path": "docs/task_list.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check docs/task_list.json --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-098",
+      "source_type": "tool",
+      "source_path": "docs/task_execution_rules.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check docs/task_execution_rules.md --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-099",
+      "source_type": "tool",
+      "source_path": "tests/test_claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check tests/test_claim_evidence_analyzer.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-100",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check src/vibe_tracing/traceability/claim_evidence_analyzer.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-101",
+      "source_type": "tool",
+      "source_path": "tests/test_dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check tests/test_dashboard_renderer.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-102",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check src/vibe_tracing/dashboard_renderer.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-103",
+      "source_type": "tool",
+      "source_path": "tests/test_scaffolding.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check tests/test_scaffolding.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-104",
+      "source_type": "tool",
+      "source_path": "tests/test_dynamic_hints.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check tests/test_dynamic_hints.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-105",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/schema_validator.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check src/vibe_tracing/schema_validator.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-106",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/task_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check src/vibe_tracing/task_loader.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-107",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/claim_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check src/vibe_tracing/claim_loader.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-108",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/cli.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "ruff check src/vibe_tracing/cli.py --output-format=json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: ruff: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-109",
+      "source_type": "tool",
+      "source_path": "tests/test_raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy tests/test_raw_input_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_4f764b2c8bb0452ab89e3d0f1a5571bd.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-110",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy src/vibe_tracing/raw_input_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_61b1d5502e4b40b9b9b42c969096a12c.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-111",
+      "source_type": "tool",
+      "source_path": "docs/prd.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy docs/prd.md --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_662acb9ee76c4d9e86b51cd1fac0dadf.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-112",
+      "source_type": "tool",
+      "source_path": "docs/architecture_constraints.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy docs/architecture_constraints.json --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_e6d6ea7614ea46c684698e1cc1686df0.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-113",
+      "source_type": "tool",
+      "source_path": "docs/task_list.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy docs/task_list.json --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_7ac4d90b6ca547afb02895f5ceab4325.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-114",
+      "source_type": "tool",
+      "source_path": "docs/task_execution_rules.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy docs/task_execution_rules.md --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_2c17a27d9d71463785c402c4d5472b64.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-115",
+      "source_type": "tool",
+      "source_path": "tests/test_claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy tests/test_claim_evidence_analyzer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_89af48dffa2d4950b58b91bbe7848373.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-116",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy src/vibe_tracing/traceability/claim_evidence_analyzer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_17cef1ff820548e59d22d4c22edbcd35.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-117",
+      "source_type": "tool",
+      "source_path": "tests/test_dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy tests/test_dashboard_renderer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_7f1cc483183149bb9cdc45e834f4b4b4.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-118",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy src/vibe_tracing/dashboard_renderer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_f3b84b775e2a4dd6a175ee4f39e565af.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-119",
+      "source_type": "tool",
+      "source_path": "tests/test_scaffolding.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy tests/test_scaffolding.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_b0d0b51db2974d96a0db759873d5bc4d.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-120",
+      "source_type": "tool",
+      "source_path": "tests/test_dynamic_hints.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy tests/test_dynamic_hints.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_24b54c9932f7447898a4e259a0621684.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-121",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/schema_validator.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy src/vibe_tracing/schema_validator.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_b8fb96183a0a4438877f23da4fcc673c.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-122",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/task_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy src/vibe_tracing/task_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_f64cdcc96b434b34aec7c2315e8553d0.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-123",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/claim_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy src/vibe_tracing/claim_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_28f7555a51b647eb86e773d18df041df.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-124",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/cli.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "mypy src/vibe_tracing/cli.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_968d2f2209af4baf8754b9afc997e2f0.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: mypy: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-125",
+      "source_type": "tool",
+      "source_path": "tests/test_raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r tests/test_raw_input_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_dcdf434df9c14949809e56f5d3a49cdd.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-126",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/raw_input_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r src/vibe_tracing/raw_input_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_a819a80565db4610a5c84b619d25ff78.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-127",
+      "source_type": "tool",
+      "source_path": "docs/prd.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r docs/prd.md -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_e0cd79b8475e4464a3174d11df3a8560.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-128",
+      "source_type": "tool",
+      "source_path": "docs/architecture_constraints.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r docs/architecture_constraints.json -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_1e1937905d0d42feb807c1bf19b837c9.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-129",
+      "source_type": "tool",
+      "source_path": "docs/task_list.json",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r docs/task_list.json -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_90a8b2c2057c4dcab99ec33f3fa2c9de.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-130",
+      "source_type": "tool",
+      "source_path": "docs/task_execution_rules.md",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r docs/task_execution_rules.md -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_19ad34af828a4f9bbcbf02245f7f2213.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-131",
+      "source_type": "tool",
+      "source_path": "tests/test_claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r tests/test_claim_evidence_analyzer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_d096c392aeb4439a9f4e6d5b896f55e3.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-132",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r src/vibe_tracing/traceability/claim_evidence_analyzer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_dfa6870d12a14e108e91cbe7fa689e92.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-133",
+      "source_type": "tool",
+      "source_path": "tests/test_dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r tests/test_dashboard_renderer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_5312507d422d4d40a9500758df259fe4.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-134",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/dashboard_renderer.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r src/vibe_tracing/dashboard_renderer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_f9f5e1ee8c484fcaaa9d1ecf22f70731.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-135",
+      "source_type": "tool",
+      "source_path": "tests/test_scaffolding.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r tests/test_scaffolding.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_2c30c432da65416b8bf496894af6e3ee.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-136",
+      "source_type": "tool",
+      "source_path": "tests/test_dynamic_hints.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r tests/test_dynamic_hints.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_ca4f6b3fad7b4d9f940a7d50dd7501ad.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-137",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/schema_validator.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r src/vibe_tracing/schema_validator.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_b25aba00a1d74e5f9c34f222fd464efd.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-138",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/task_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r src/vibe_tracing/task_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_42a81369cf8b4d228fe123c6a33a1b93.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-139",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/claim_loader.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r src/vibe_tracing/claim_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_c471c9933975453791b34034936f86de.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
+    },
+    {
+      "evidence_id": "EVIDENCE-VT-140",
+      "source_type": "tool",
+      "source_path": "src/vibe_tracing/cli.py",
+      "covers": [],
+      "status": "blocked",
+      "details": {
+        "command": "bandit -r src/vibe_tracing/cli.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_a0360e8fb5a54b55bd37a4090391eba8.json",
+        "exit_code": 127,
+        "stderr": "/bin/sh: bandit: command not found\n"
+      },
+      "error_code": "tool_execution_failed"
     }
   ]
 }

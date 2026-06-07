@@ -4,9 +4,68 @@ Post-analyze reflection prompts for AI Agent self-improvement.
 These prompts are printed at the end of every vt analyze run (non gates-only)
 to trigger meta-cognitive reflection in the AI Agent, promoting architectural
 self-awareness and continuous project evolution.
+
+Reflection dimensions are loaded from a JSON template file, allowing
+customization without code changes.
 """
 
+import json
+import os
 from typing import Any, Dict, List, Optional
+
+
+def load_dimensions(template_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Load reflection dimensions from the JSON template.
+
+    Args:
+        template_path: Optional explicit path to the template JSON file.
+            Defaults to templates/reflection_prompts.template.json adjacent
+            to this module.
+
+    Returns:
+        List of dimension dicts, each with keys: id, index, title, prompt,
+        conditional_hints.
+    """
+    if template_path is None:
+        template_path = os.path.join(
+            os.path.dirname(__file__), "templates", "reflection_prompts.template.json"
+        )
+    with open(template_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data["dimensions"]
+
+
+def _evaluate_condition(
+    condition: str,
+    *,
+    has_blocked: bool,
+    has_fail: bool,
+    has_must_risks: bool,
+    gap_count: int,
+    risk_count: int,
+    low_conf_count: int,
+    has_coverage_gaps: bool,
+    unclear_count: int,
+    violation_count: int,
+) -> bool:
+    """Evaluate a named condition against the analysis context."""
+    if condition == "gate_blocked":
+        return has_blocked
+    if condition == "gate_fail":
+        return has_fail
+    if condition == "has_must_risks":
+        return has_must_risks
+    if condition == "high_gap_risk_count":
+        return gap_count > 5 or risk_count > 10
+    if condition == "has_low_confidence":
+        return low_conf_count > 0
+    if condition == "has_coverage_gaps":
+        return has_coverage_gaps
+    if condition == "has_unclear_constraints":
+        return unclear_count > 0
+    if condition == "has_violations":
+        return violation_count > 0
+    return False
 
 
 def render_reflection_prompts(
@@ -14,6 +73,7 @@ def render_reflection_prompts(
     gaps: List[Dict[str, Any]],
     risks: List[Dict[str, Any]],
     compliance_result: Optional[Dict[str, Any]] = None,
+    dimensions: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
     """Render the 8-dimension reflection prompt block.
 
@@ -22,20 +82,36 @@ def render_reflection_prompts(
         gaps: Identified gaps from analyzers.
         risks: Enriched risks from RiskAdvisor.
         compliance_result: Result from ArchitectureComplianceChecker.
+        dimensions: Optional list of dimension dicts to render. When None,
+            loads from the default JSON template via ``load_dimensions()``.
 
     Returns:
         Formatted reflection prompt string for console output.
     """
+    if dimensions is None:
+        dimensions = load_dimensions()
+
     # Gather context for conditional prompts
     has_blocked = gate_decision == "blocked"
     has_fail = gate_decision == "fail"
     has_ac_gaps = any(g.get("item_type") == "ac" for g in gaps)
     has_req_gaps = any(g.get("item_type") == "requirement" for g in gaps)
     has_must_risks = any(r.get("severity") == "must" for r in risks)
-    has_unclear = bool(compliance_result and compliance_result.get("unclear_constraints"))
-    violation_count = len(compliance_result.get("architecture_violations", [])) if compliance_result else 0
+    unclear_count = (
+        len(compliance_result.get("unclear_constraints", []))
+        if compliance_result
+        else 0
+    )
+    violation_count = (
+        len(compliance_result.get("architecture_violations", []))
+        if compliance_result
+        else 0
+    )
     risk_count = len(risks)
     gap_count = len(gaps)
+    low_conf_risks = [r for r in risks if r.get("confidence") == "low_confidence"]
+    low_conf_count = len(low_conf_risks)
+    has_coverage_gaps = has_ac_gaps or has_req_gaps
 
     lines = [
         "",
@@ -47,84 +123,40 @@ def render_reflection_prompts(
         "",
     ]
 
-    # 1. Deficiencies
-    deficiency_hint = ""
-    if has_blocked:
-        deficiency_hint = "（本轮 Gate 为 BLOCKED，需识别阻断根因）"
-    elif has_fail:
-        deficiency_hint = "（本轮 Gate 为 FAIL，需识别条件性缺陷）"
-    lines.extend([
-        "  1. 项目不足识别 (Deficiencies)",
-        f"     本轮自管理暴露了项目哪些设计或功能缺陷？{deficiency_hint}",
-        "",
-    ])
+    for dim in dimensions:
+        idx = dim["index"]
+        title = dim["title"]
+        prompt = dim["prompt"]
 
-    # 2. Simplicity
-    lines.extend([
-        "  2. 架构精简度评估 (Simplicity)",
-        "     项目架构是否符合剃刀原则与第一性原理？是否存在过度工程？",
-        "",
-    ])
+        # Resolve the first matching conditional hint
+        hint_text = ""
+        for hint in dim.get("conditional_hints", []):
+            if _evaluate_condition(
+                hint["condition"],
+                has_blocked=has_blocked,
+                has_fail=has_fail,
+                has_must_risks=has_must_risks,
+                gap_count=gap_count,
+                risk_count=risk_count,
+                low_conf_count=low_conf_count,
+                has_coverage_gaps=has_coverage_gaps,
+                unclear_count=unclear_count,
+                violation_count=violation_count,
+            ):
+                hint_text = hint["text"]
+                # Format template placeholders in hint text
+                hint_text = hint_text.format(
+                    gap_count=gap_count,
+                    risk_count=risk_count,
+                    low_conf_count=low_conf_count,
+                    unclear_count=unclear_count,
+                    violation_count=violation_count,
+                )
+                break
 
-    # 3. Root-Cause Fix
-    root_hint = ""
-    if has_must_risks:
-        root_hint = "（本轮存在 must 级风险，确认是否直击物理根因）"
-    lines.extend([
-        "  3. 彻底根因修复验证 (Root-Cause Fix)",
-        f"     本轮修改是直击物理根因，还是引进了打补丁式的短路代码？{root_hint}",
-        "",
-    ])
-
-    # 4. Redundancy
-    redundancy_hint = ""
-    if gap_count > 5 or risk_count > 10:
-        redundancy_hint = f"（本轮 {gap_count} gaps + {risk_count} risks，检查是否存在冗余数据流转）"
-    lines.extend([
-        "  4. 计算与逻辑冗余 (Redundancy)",
-        f"     是否存在重复 I/O、二次反序列化或冗余数据流转？{redundancy_hint}",
-        "",
-    ])
-
-    # 5. Credibility
-    cred_hint = ""
-    low_conf_risks = [r for r in risks if r.get("confidence") == "low_confidence"]
-    if low_conf_risks:
-        cred_hint = f"（本轮存在 {len(low_conf_risks)} 个低可信度风险）"
-    lines.extend([
-        "  5. 凭证真实性 (Credibility)",
-        f"     测试用例是否存在过度 Mock？凭证是否真实触达物理逻辑？{cred_hint}",
-        "",
-    ])
-
-    # 6. Cognitive Complexity
-    lines.extend([
-        "  6. 代码认知复杂度 (Cognitive Complexity)",
-        "     新增代码是否推高了认知复杂度？是否会阻碍下一轮 Agent 的上下文推理？",
-        "",
-    ])
-
-    # 7. Exception & Bypass
-    bypass_hint = ""
-    if has_ac_gaps or has_req_gaps:
-        bypass_hint = "（本轮存在覆盖缺口，确认是否存在绕过机制）"
-    lines.extend([
-        "  7. 豁免与绕过机制 (Exception & Bypass)",
-        f"     是否使用了忽略规则或临时白名单绕过门禁？能否通过重构彻底消除？{bypass_hint}",
-        "",
-    ])
-
-    # 8. Dead Code
-    dead_hint = ""
-    if has_unclear:
-        dead_hint = f"（本轮 {len(compliance_result.get('unclear_constraints', []))} 条模糊约束，检查是否存在死代码或失效规则）"
-    elif violation_count > 0:
-        dead_hint = f"（本轮 {violation_count} 条架构违规，检查是否存在未清理的废弃代码）"
-    lines.extend([
-        "  8. 残留与死代码清理 (Dead Code)",
-        f"     代码库中是否存在已被废弃的类、模板文件或失效测试未被完全清理？{dead_hint}",
-        "",
-    ])
+        lines.append(f"  {idx}. {title}")
+        lines.append(f"     {prompt}{hint_text}")
+        lines.append("")
 
     lines.extend([
         "═══════════════════════════════════════════════════════════════",

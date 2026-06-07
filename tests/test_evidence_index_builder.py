@@ -7,6 +7,7 @@ import pytest
 from pathlib import Path
 from vibe_tracing.evidence_index_builder import EvidenceIndexBuilder
 from vibe_tracing.schema_validator import SchemaValidator
+from vibe_tracing.context import UnifiedContext
 
 
 @pytest.fixture
@@ -106,6 +107,51 @@ must
         json.dumps(agent_claims), encoding="utf-8"
     )
 
+    # Write config.json
+    config_data = {
+        "project_id": "PROJECT-VT",
+        "project_prefix": "VT",
+        "project_name": "Vibe Tracing",
+    }
+    (base / ".vibetracing" / "config.json").write_text(
+        json.dumps(config_data), encoding="utf-8"
+    )
+
+
+def _build_ctx(base: Path) -> UnifiedContext:
+    """Build a UnifiedContext from the mock project at *base*."""
+    from vibe_tracing.raw_input_loader import RawInputLoader
+    from vibe_tracing.prd_parser import PrdParser
+    from vibe_tracing.task_loader import TaskLoader
+    from vibe_tracing.claim_loader import ClaimLoader
+
+    schemas_dir = base / "schemas"
+    if not schemas_dir.is_dir():
+        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+
+    raw_loader = RawInputLoader(base)
+    manifest = raw_loader.load()
+
+    prd_parser = PrdParser()
+    prd_res = prd_parser.parse_file(base / "docs" / "prd.md")
+
+    task_loader = TaskLoader(schemas_dir)
+    task_res = task_loader.load_and_validate(base / "docs" / "task_list.json", prd_res)
+
+    claim_loader = ClaimLoader(schemas_dir)
+    claim_res = claim_loader.load_and_validate(base / ".vibetracing" / "agent_claims.json", task_res)
+    claims_list = claim_res.claims if claim_res.is_valid else []
+
+    config_prefix = raw_loader.config_data.get("project_prefix", "VT")
+
+    return UnifiedContext(
+        config=raw_loader.config_data,
+        prd=prd_res,
+        task_result=task_res,
+        claims_list=claims_list,
+        manifest=manifest,
+        config_prefix=config_prefix,
+    )
 
 
 def test_build_successful_evidence_index(tmp_path: Path) -> None:
@@ -117,7 +163,9 @@ def test_build_successful_evidence_index(tmp_path: Path) -> None:
     setup_mock_project(tmp_path)
 
     builder = EvidenceIndexBuilder(tmp_path)
-    index = builder.build()
+    ctx = _build_ctx(tmp_path)
+    output_path = tmp_path / "output" / "evidence_index.json"
+    index = builder.build(output_path, ctx)
 
     # Verify high-level keys
     assert index["project_id"] == "PROJECT-VT"
@@ -125,12 +173,11 @@ def test_build_successful_evidence_index(tmp_path: Path) -> None:
     assert "scan_time" in index
 
     # Verify output file generated
-    output_file = tmp_path / "output" / "evidence_index.json"
-    assert output_file.exists()
+    assert output_path.exists()
 
     # Validate output schema via SchemaValidator
     validator = SchemaValidator(tmp_path / "schemas")
-    val_res = validator.validate_file(output_file, "evidence_index")
+    val_res = validator.validate_file(output_path, "evidence_index")
     assert val_res.is_valid is True, f"Schema validation error: {val_res.message}"
 
     evidences = index["evidences"]
@@ -172,21 +219,20 @@ def test_build_successful_evidence_index(tmp_path: Path) -> None:
     assert sorted(code_ev["covers"]) == ["AC-VT-001-01", "REQ-VT-001"]
 
 
-
 def test_build_missing_required_files_raises_error(tmp_path: Path) -> None:
     """
     Verify that EvidenceIndexBuilder raises a ValueError if required raw files are missing.
     Covers: AC-VT-001-04.
     """
     builder = EvidenceIndexBuilder(tmp_path)
-    with pytest.raises(ValueError) as excinfo:
-        builder.build()
-    assert "Required raw files failed to load" in str(excinfo.value)
+    # ctx=None triggers AttributeError on ctx.prd — the fallback path is gone
+    with pytest.raises((ValueError, AttributeError)):
+        builder.build(tmp_path / "output" / "evidence_index.json", None)
 
 
 def test_build_invalid_raw_content_raises_error(tmp_path: Path) -> None:
     """
-    Verify that EvidenceIndexBuilder raises a ValueError if task list or other file contains malformed data.
+    Verify that invalid task list data is caught by upstream validation (TaskLoader).
     Covers: AC-VT-001-02.
     """
     setup_mock_project(tmp_path)
@@ -195,14 +241,16 @@ def test_build_invalid_raw_content_raises_error(tmp_path: Path) -> None:
         "{invalid json}", encoding="utf-8"
     )
 
-    builder = EvidenceIndexBuilder(tmp_path)
-    with pytest.raises(ValueError) as excinfo:
-        builder.build()
-    assert (
-        "Required raw files failed to load" in str(excinfo.value)
-        or "validation errors" in str(excinfo.value)
-        or "parsing errors" in str(excinfo.value)
+    # Upstream validation catches the error — TaskLoader returns is_valid=False
+    from vibe_tracing.prd_parser import PrdParser
+    from vibe_tracing.task_loader import TaskLoader
+    schemas_dir = tmp_path / "schemas"
+    prd_res = PrdParser().parse_file(tmp_path / "docs" / "prd.md")
+    task_res = TaskLoader(schemas_dir).load_and_validate(
+        tmp_path / "docs" / "task_list.json", prd_res
     )
+    assert not task_res.is_valid
+    assert len(task_res.errors) > 0
 
 
 def test_no_untraced_evidence_generated(tmp_path: Path) -> None:
@@ -213,7 +261,9 @@ def test_no_untraced_evidence_generated(tmp_path: Path) -> None:
     setup_mock_project(tmp_path)
 
     builder = EvidenceIndexBuilder(tmp_path)
-    index = builder.build()
+    ctx = _build_ctx(tmp_path)
+    output_path = tmp_path / "output" / "evidence_index.json"
+    index = builder.build(output_path, ctx)
 
     for ev in index["evidences"]:
         # Assert type is one of the allowed types

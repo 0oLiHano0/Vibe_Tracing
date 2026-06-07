@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-46ab33d8-3147-4d5f-9684-219296f65c37",
+  "run_id": "RUN-36a0cfba-08fc-425b-944a-42eb2541672a",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-06-07T10:57:03.528942Z",
+  "scan_time": "2026-06-07T11:42:10.212203Z",
   "gate_decision": "blocked",
   "requirement_coverage": [
     {
@@ -158,6 +158,86 @@
   ],
   "gaps": [
     {
+      "item_id": "AC-VT-001-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-001-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-001-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-001-02 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-001-03",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-001-03 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-001-04",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-001-04 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-002-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-002-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-002-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-002-02 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-002-03",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-002-03 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-002-04",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-002-04 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-006-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-006-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-006-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-006-02 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-006-04",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-006-04 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-008-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-008-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-008-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-008-02 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-008-03",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-008-03 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-01",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-01 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-02",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-02 is missing passing test coverage."
+    },
+    {
       "item_id": "AC-VT-009-03",
       "item_type": "ac",
       "reason": "Must acceptance criterion AC-VT-009-03 is missing passing test coverage."
@@ -166,6 +246,21 @@
       "item_id": "AC-VT-009-04",
       "item_type": "ac",
       "reason": "Must acceptance criterion AC-VT-009-04 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-05",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-05 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-06",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-06 is missing passing test coverage."
+    },
+    {
+      "item_id": "AC-VT-009-07",
+      "item_type": "ac",
+      "reason": "Must acceptance criterion AC-VT-009-07 is missing passing test coverage."
     },
     {
       "item_id": "AC-VT-009-08",
@@ -221,7 +316,7 @@
   "risks": [
     {
       "risk_id": "RISK-VT-001",
-      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_manifest_includes_tool_report_files.",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_load_all_valid_files_returns_ok_manifest.",
       "severity": "must",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
@@ -229,33 +324,121 @@
     },
     {
       "risk_id": "RISK-VT-002",
-      "description": "Claim CLAIM-VT-005 声明完成但 test_refs 中无测试覆盖 AC AC-VT-001-01。已有覆盖测试: ['tests/test_task_loader.py::test_valid_task_list_passes', 'tests/test_task_loader.py::test_validate_real_files_load']",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_required_files_have_content.",
       "severity": "must",
-      "risk_category": "test_covers_mismatch",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
       "risk_id": "RISK-VT-003",
-      "description": "Claim CLAIM-VT-005 声明完成但 test_refs 中无测试覆盖 AC AC-VT-001-04。已有覆盖测试: ['tests/test_evidence_index_builder.py::test_build_missing_required_files_raises_error', 'tests/test_task_loader.py::test_valid_task_list_passes', 'tests/test_task_loader.py::test_invalid_schema_structure_fails', 'tests/test_task_loader.py::test_duplicate_task_ids', 'tests/test_task_loader.py::test_validate_real_files_load']",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_missing_required_file_sets_has_required_errors.",
       "severity": "must",
-      "risk_category": "test_covers_mismatch",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
       "risk_id": "RISK-VT-004",
-      "description": "Claim CLAIM-VT-005 声明完成但 test_refs 中无测试覆盖 AC AC-VT-002-01。已有覆盖测试: ['tests/test_claim_evidence_analyzer.py::test_successful_claim_validation', 'tests/test_claim_evidence_analyzer.py::test_self_referential_or_empty_evidence', 'tests/test_claim_evidence_analyzer.py::test_references_non_existent_evidence', 'tests/test_claim_evidence_analyzer.py::test_references_non_compliant_evidence_status', 'tests/test_claim_evidence_analyzer.py::test_claim_lookup_by_nodeid_and_source_path', 'tests/test_evidence_index_builder.py::test_build_successful_evidence_index', 'tests/test_claim_loader.py::test_valid_claims_list_passes', 'tests/test_claim_loader.py::test_validate_real_files_load']",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_missing_required_file_record_has_error_code.",
       "severity": "must",
-      "risk_category": "test_covers_mismatch",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
       "risk_id": "RISK-VT-005",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_missing_optional_file_does_not_set_has_required_errors.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-006",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_invalid_json_file_sets_parse_error.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-007",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_raw_files_not_modified.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-008",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_manifest_records_all_required_file_keys.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-009",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_manifest_includes_tool_report_files.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-010",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_loader_has_no_gate_decision_attribute.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-011",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-012",
+      "description": "Claim CLAIM-VT-005 references non-existent evidence tests/test_raw_input_loader.py::test_self_governance_rules_contract.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-013",
+      "description": "Claim CLAIM-VT-005 is completed but related AC AC-VT-001-01 has no test coverage.",
+      "severity": "must",
+      "risk_category": "no_test_coverage",
+      "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。",
+      "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-014",
+      "description": "Claim CLAIM-VT-005 is completed but related AC AC-VT-001-04 has no test coverage.",
+      "severity": "must",
+      "risk_category": "no_test_coverage",
+      "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。",
+      "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-015",
+      "description": "Claim CLAIM-VT-005 is completed but related AC AC-VT-002-01 has no test coverage.",
+      "severity": "must",
+      "risk_category": "no_test_coverage",
+      "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。",
+      "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-016",
       "description": "Claim CLAIM-VT-005 references code file src/vibe_tracing/raw_input_loader.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -266,7 +449,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-006",
+      "risk_id": "RISK-VT-017",
       "description": "Claim CLAIM-VT-005 references test file tests/test_raw_input_loader.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -277,16 +460,24 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-007",
-      "description": "Claim CLAIM-VT-030 声明完成但 test_refs 中无测试覆盖 AC AC-VT-009-06。已有覆盖测试: ['tests/test_raw_input_loader.py::test_self_governance_rules_contract']",
+      "risk_id": "RISK-VT-018",
+      "description": "Claim CLAIM-VT-030 references non-existent evidence tests/test_raw_input_loader.py::test_self_governance_rules_contract.",
       "severity": "must",
-      "risk_category": "test_covers_mismatch",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-008",
+      "risk_id": "RISK-VT-019",
+      "description": "Claim CLAIM-VT-030 is completed but related AC AC-VT-009-06 has no test coverage.",
+      "severity": "must",
+      "risk_category": "no_test_coverage",
+      "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。",
+      "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-020",
       "description": "Claim CLAIM-VT-030 references code file docs/prd.md which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -297,7 +488,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-009",
+      "risk_id": "RISK-VT-021",
       "description": "Claim CLAIM-VT-030 references code file docs/architecture_constraints.json which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -308,7 +499,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-010",
+      "risk_id": "RISK-VT-022",
       "description": "Claim CLAIM-VT-030 references code file docs/task_list.json which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -319,7 +510,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-011",
+      "risk_id": "RISK-VT-023",
       "description": "Claim CLAIM-VT-030 references code file docs/task_execution_rules.md which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -330,7 +521,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-012",
+      "risk_id": "RISK-VT-024",
       "description": "Claim CLAIM-VT-030 references test file tests/test_raw_input_loader.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -341,16 +532,24 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-013",
-      "description": "Claim CLAIM-VT-031 声明完成但 test_refs 中无测试覆盖 AC AC-VT-009-05。已有覆盖测试: ['tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback']",
+      "risk_id": "RISK-VT-025",
+      "description": "Claim CLAIM-VT-031 references non-existent evidence tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback.",
       "severity": "must",
-      "risk_category": "test_covers_mismatch",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-014",
+      "risk_id": "RISK-VT-026",
+      "description": "Claim CLAIM-VT-031 is completed but related AC AC-VT-009-05 has no test coverage.",
+      "severity": "must",
+      "risk_category": "no_test_coverage",
+      "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。",
+      "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-027",
       "description": "Claim CLAIM-VT-031 references code file src/vibe_tracing/raw_input_loader.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -361,7 +560,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-015",
+      "risk_id": "RISK-VT-028",
       "description": "Claim CLAIM-VT-031 references test file tests/test_raw_input_loader.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -372,16 +571,24 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-016",
-      "description": "Claim CLAIM-VT-033 声明完成但 test_refs 中无测试覆盖 AC AC-VT-002-04。已有覆盖测试: ['tests/test_claim_evidence_analyzer.py::test_claim_lookup_multi_matching_and_fail_fast']",
+      "risk_id": "RISK-VT-029",
+      "description": "Claim CLAIM-VT-033 references non-existent evidence tests/test_claim_evidence_analyzer.py::test_claim_lookup_multi_matching_and_fail_fast.",
       "severity": "must",
-      "risk_category": "test_covers_mismatch",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-017",
+      "risk_id": "RISK-VT-030",
+      "description": "Claim CLAIM-VT-033 is completed but related AC AC-VT-002-04 has no test coverage.",
+      "severity": "must",
+      "risk_category": "no_test_coverage",
+      "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。",
+      "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-031",
       "description": "Claim CLAIM-VT-033 references code file src/vibe_tracing/traceability/claim_evidence_analyzer.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -392,7 +599,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-018",
+      "risk_id": "RISK-VT-032",
       "description": "Claim CLAIM-VT-033 references test file tests/test_claim_evidence_analyzer.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -403,16 +610,24 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-019",
-      "description": "Claim CLAIM-VT-034 声明完成但 test_refs 中无测试覆盖 AC AC-VT-006-04。已有覆盖测试: ['tests/test_dashboard_renderer.py::test_dashboard_renderer_svg_no_emojis']",
+      "risk_id": "RISK-VT-033",
+      "description": "Claim CLAIM-VT-034 references non-existent evidence tests/test_dashboard_renderer.py::test_dashboard_renderer_svg_no_emojis.",
       "severity": "must",
-      "risk_category": "test_covers_mismatch",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-020",
+      "risk_id": "RISK-VT-034",
+      "description": "Claim CLAIM-VT-034 is completed but related AC AC-VT-006-04 has no test coverage.",
+      "severity": "must",
+      "risk_category": "no_test_coverage",
+      "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。",
+      "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-035",
       "description": "Claim CLAIM-VT-034 references code file src/vibe_tracing/dashboard_renderer.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -423,7 +638,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-021",
+      "risk_id": "RISK-VT-036",
       "description": "Claim CLAIM-VT-034 references test file tests/test_dashboard_renderer.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -434,16 +649,64 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-022",
-      "description": "Claim CLAIM-VT-035 声明完成但 test_refs 中无测试覆盖 AC AC-VT-009-07。已有覆盖测试: ['tests/test_scaffolding.py::test_run_init_creates_scaffolding']",
+      "risk_id": "RISK-VT-037",
+      "description": "Claim CLAIM-VT-035 references non-existent evidence tests/test_scaffolding.py::test_run_init_creates_scaffolding.",
       "severity": "must",
-      "risk_category": "test_covers_mismatch",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-023",
+      "risk_id": "RISK-VT-038",
+      "description": "Claim CLAIM-VT-035 references non-existent evidence tests/test_dynamic_hints.py::test_claims_schema_validation_error_with_dynamic_hints.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-039",
+      "description": "Claim CLAIM-VT-035 references non-existent evidence tests/test_dynamic_hints.py::test_tasks_schema_validation_error_with_dynamic_hints.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-040",
+      "description": "Claim CLAIM-VT-035 references non-existent evidence tests/test_dynamic_hints.py::test_task_loader_logical_validation_error_with_dynamic_hints.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-041",
+      "description": "Claim CLAIM-VT-035 references non-existent evidence tests/test_dynamic_hints.py::test_claim_loader_logical_validation_error_with_dynamic_hints.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-042",
+      "description": "Claim CLAIM-VT-035 references non-existent evidence tests/test_dynamic_hints.py::test_silent_filtering_of_template_records.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-043",
+      "description": "Claim CLAIM-VT-035 is completed but related AC AC-VT-009-07 has no test coverage.",
+      "severity": "must",
+      "risk_category": "no_test_coverage",
+      "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。",
+      "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-044",
       "description": "Claim CLAIM-VT-035 references code file src/vibe_tracing/schema_validator.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -454,7 +717,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-024",
+      "risk_id": "RISK-VT-045",
       "description": "Claim CLAIM-VT-035 references code file src/vibe_tracing/task_loader.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -465,7 +728,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-025",
+      "risk_id": "RISK-VT-046",
       "description": "Claim CLAIM-VT-035 references code file src/vibe_tracing/claim_loader.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -476,7 +739,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-026",
+      "risk_id": "RISK-VT-047",
       "description": "Claim CLAIM-VT-035 references code file src/vibe_tracing/cli.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -487,7 +750,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-027",
+      "risk_id": "RISK-VT-048",
       "description": "Claim CLAIM-VT-035 references test file tests/test_scaffolding.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -498,7 +761,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-028",
+      "risk_id": "RISK-VT-049",
       "description": "Claim CLAIM-VT-035 references test file tests/test_dynamic_hints.py which was modified after the claim timestamp.",
       "severity": "should",
       "risk_category": "stale_file",
@@ -509,61 +772,34 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-029",
-      "description": "Claim CLAIM-VT-036 references evidence tests/test_unified_context.py which has conflicting statuses: ['blocked', 'compliant', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_id": "RISK-VT-050",
+      "description": "Claim CLAIM-VT-036 references evidence tests/test_unified_context.py which has status 'blocked'.",
+      "severity": "must",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-030",
-      "description": "Claim CLAIM-VT-036 references evidence tests/test_unified_context.py which has status 'violated'.",
+      "risk_id": "RISK-VT-051",
+      "description": "Claim CLAIM-VT-036 references evidence tests/test_evidence_index_builder.py which has status 'blocked'.",
       "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
-      "evidence_ids": []
-    },
-    {
-      "risk_id": "RISK-VT-031",
-      "description": "Claim CLAIM-VT-036 references evidence tests/test_evidence_index_builder.py which has conflicting statuses: ['blocked', 'compliant', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-032",
-      "description": "Claim CLAIM-VT-036 references evidence tests/test_evidence_index_builder.py which has status 'violated'.",
+      "risk_id": "RISK-VT-052",
+      "description": "Claim CLAIM-VT-036 references evidence tests/test_cli_analyze.py which has status 'blocked'.",
       "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
-      "evidence_ids": []
-    },
-    {
-      "risk_id": "RISK-VT-033",
-      "description": "Claim CLAIM-VT-036 references evidence tests/test_cli_analyze.py which has conflicting statuses: ['blocked', 'compliant', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-034",
-      "description": "Claim CLAIM-VT-036 references evidence tests/test_cli_analyze.py which has status 'violated'.",
-      "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
-      "evidence_ids": []
-    },
-    {
-      "risk_id": "RISK-VT-035",
+      "risk_id": "RISK-VT-053",
       "description": "Claim CLAIM-VT-036 is completed but related AC AC-VT-009-12 has no test coverage.",
       "severity": "must",
       "risk_category": "no_test_coverage",
@@ -572,25 +808,16 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-036",
-      "description": "Claim CLAIM-VT-037 references evidence tests/test_merge_gate_engine.py which has conflicting statuses: ['blocked', 'compliant', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_id": "RISK-VT-054",
+      "description": "Claim CLAIM-VT-037 references evidence tests/test_merge_gate_engine.py which has status 'blocked'.",
+      "severity": "must",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-037",
-      "description": "Claim CLAIM-VT-037 references evidence tests/test_merge_gate_engine.py which has status 'violated'.",
-      "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
-      "evidence_ids": []
-    },
-    {
-      "risk_id": "RISK-VT-038",
+      "risk_id": "RISK-VT-055",
       "description": "Claim CLAIM-VT-037 is completed but related AC AC-VT-009-13 has no test coverage.",
       "severity": "must",
       "risk_category": "no_test_coverage",
@@ -599,25 +826,24 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-039",
-      "description": "Claim CLAIM-VT-038 references evidence tests/test_finalize.py which has conflicting statuses: ['blocked', 'compliant', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_id": "RISK-VT-056",
+      "description": "Claim CLAIM-VT-038 references evidence tests/test_finalize.py which has status 'blocked'.",
+      "severity": "must",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-040",
-      "description": "Claim CLAIM-VT-038 references evidence tests/test_finalize.py which has status 'violated'.",
+      "risk_id": "RISK-VT-057",
+      "description": "Claim CLAIM-VT-038 references non-existent evidence tests/test_cli_analyze.py::test_prd_drift_detection.",
       "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-041",
+      "risk_id": "RISK-VT-058",
       "description": "Claim CLAIM-VT-038 is completed but related AC AC-VT-009-14 has no test coverage.",
       "severity": "must",
       "risk_category": "no_test_coverage",
@@ -626,25 +852,32 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-042",
-      "description": "Claim CLAIM-VT-039 references evidence tests/test_prd_arch_validator.py which has conflicting statuses: ['blocked', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_id": "RISK-VT-059",
+      "description": "Claim CLAIM-VT-039 references evidence tests/test_prd_arch_validator.py which has status 'blocked'.",
+      "severity": "must",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-043",
-      "description": "Claim CLAIM-VT-039 references evidence tests/test_prd_arch_validator.py which has status 'violated'.",
+      "risk_id": "RISK-VT-060",
+      "description": "Claim CLAIM-VT-039 references non-existent evidence tests/test_cli_analyze.py::test_mapping_dead_link_blocks.",
       "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-044",
+      "risk_id": "RISK-VT-061",
+      "description": "Claim CLAIM-VT-039 references non-existent evidence tests/test_cli_analyze.py::test_mapping_must_uncovered_blocks.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-062",
       "description": "Claim CLAIM-VT-039 is completed but related AC AC-VT-009-15 has no test coverage.",
       "severity": "must",
       "risk_category": "no_test_coverage",
@@ -653,7 +886,23 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-045",
+      "risk_id": "RISK-VT-063",
+      "description": "Claim CLAIM-VT-040 references non-existent evidence tests/test_claim_evidence_analyzer.py::test_claim_test_refs_cover_ac.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-064",
+      "description": "Claim CLAIM-VT-040 references non-existent evidence tests/test_claim_evidence_analyzer.py::test_claim_test_refs_miss_ac_coverage.",
+      "severity": "must",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-065",
       "description": "Claim CLAIM-VT-040 is completed but related AC AC-VT-009-16 has no test coverage.",
       "severity": "must",
       "risk_category": "no_test_coverage",
@@ -662,25 +911,24 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-046",
-      "description": "Claim CLAIM-VT-041 references evidence tests/test_scaffolding.py which has conflicting statuses: ['blocked', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_id": "RISK-VT-066",
+      "description": "Claim CLAIM-VT-041 references evidence tests/test_scaffolding.py which has status 'blocked'.",
+      "severity": "must",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-047",
-      "description": "Claim CLAIM-VT-041 references evidence tests/test_scaffolding.py which has status 'violated'.",
+      "risk_id": "RISK-VT-067",
+      "description": "Claim CLAIM-VT-041 references non-existent evidence tests/test_cli_analyze.py::test_gates_only_skips_analysis.",
       "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-048",
+      "risk_id": "RISK-VT-068",
       "description": "Claim CLAIM-VT-041 references non-existent evidence tests/test_ghost_code_reconciler.py::test_unstaged_claims_are_not_seen.",
       "severity": "must",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
@@ -688,7 +936,7 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-049",
+      "risk_id": "RISK-VT-069",
       "description": "Claim CLAIM-VT-041 is completed but related AC AC-VT-009-17 has no test coverage.",
       "severity": "must",
       "risk_category": "no_test_coverage",
@@ -697,61 +945,34 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-050",
-      "description": "Claim CLAIM-VT-042 references evidence tests/test_tool_execution.py which has conflicting statuses: ['blocked', 'compliant', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_id": "RISK-VT-070",
+      "description": "Claim CLAIM-VT-042 references evidence tests/test_tool_execution.py which has status 'blocked'.",
+      "severity": "must",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-051",
-      "description": "Claim CLAIM-VT-042 references evidence tests/test_tool_execution.py which has status 'violated'.",
+      "risk_id": "RISK-VT-071",
+      "description": "Claim CLAIM-VT-042 references evidence tests/test_task_loader.py which has status 'blocked'.",
       "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
-      "evidence_ids": []
-    },
-    {
-      "risk_id": "RISK-VT-052",
-      "description": "Claim CLAIM-VT-042 references evidence tests/test_task_loader.py which has conflicting statuses: ['blocked', 'compliant', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-053",
-      "description": "Claim CLAIM-VT-042 references evidence tests/test_task_loader.py which has status 'violated'.",
+      "risk_id": "RISK-VT-072",
+      "description": "Claim CLAIM-VT-042 references evidence tests/test_claim_loader.py which has status 'blocked'.",
       "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
-      "evidence_ids": []
-    },
-    {
-      "risk_id": "RISK-VT-054",
-      "description": "Claim CLAIM-VT-042 references evidence tests/test_claim_loader.py which has conflicting statuses: ['blocked', 'compliant', 'violated'].",
-      "severity": "should",
-      "risk_category": "conflicting_statuses",
+      "risk_category": "unclear_evidence_status",
       "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
       "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-055",
-      "description": "Claim CLAIM-VT-042 references evidence tests/test_claim_loader.py which has status 'violated'.",
-      "severity": "must",
-      "risk_category": "violated_evidence",
-      "business_impact": "关联的验收标准测试执行失败，导致无法提供合格证明。",
-      "suggested_action": "运行并修复该验收标准关联的失败测试用例。",
-      "evidence_ids": []
-    },
-    {
-      "risk_id": "RISK-VT-056",
+      "risk_id": "RISK-VT-073",
       "description": "Claim CLAIM-VT-042 is completed but related AC AC-VT-009-12 has no test coverage.",
       "severity": "must",
       "risk_category": "no_test_coverage",
@@ -760,7 +981,194 @@
       "evidence_ids": []
     },
     {
-      "risk_id": "RISK-VT-057",
+      "risk_id": "RISK-VT-074",
+      "description": "Claim CLAIM-VT-043 references evidence tests/test_reflection_prompts.py which has conflicting statuses: ['blocked', 'compliant'].",
+      "severity": "should",
+      "risk_category": "conflicting_statuses",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-075",
+      "description": "Claim CLAIM-VT-043 references evidence tests/test_reflection_prompts.py which has status 'blocked'.",
+      "severity": "must",
+      "risk_category": "unclear_evidence_status",
+      "business_impact": "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。",
+      "suggested_action": "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-076",
+      "description": "Claim CLAIM-VT-043 is completed but related AC AC-VT-009-12 has no test coverage.",
+      "severity": "must",
+      "risk_category": "no_test_coverage",
+      "business_impact": "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。",
+      "suggested_action": "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。",
+      "evidence_ids": []
+    },
+    {
+      "risk_id": "RISK-VT-077",
+      "description": "验收标准 AC-VT-001-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-001-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-001-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-078",
+      "description": "验收标准 AC-VT-001-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-001-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-001-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-079",
+      "description": "验收标准 AC-VT-001-03 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-001-03` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-001-03`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-080",
+      "description": "验收标准 AC-VT-001-04 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-001-04` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-001-04`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-081",
+      "description": "验收标准 AC-VT-002-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-002-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-002-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-082",
+      "description": "验收标准 AC-VT-002-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-002-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-002-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-083",
+      "description": "验收标准 AC-VT-002-03 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-002-03` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-002-03`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-084",
+      "description": "验收标准 AC-VT-002-04 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-002-04` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-002-04`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-085",
+      "description": "验收标准 AC-VT-006-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-006-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-006-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-086",
+      "description": "验收标准 AC-VT-006-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-006-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-006-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-087",
+      "description": "验收标准 AC-VT-006-04 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-006-04` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-006-04`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-088",
+      "description": "验收标准 AC-VT-008-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-008-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-008-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-089",
+      "description": "验收标准 AC-VT-008-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-008-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-008-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-090",
+      "description": "验收标准 AC-VT-008-03 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-008-03` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-008-03`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-091",
+      "description": "验收标准 AC-VT-009-01 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-01` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-01`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-092",
+      "description": "验收标准 AC-VT-009-02 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-02` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-02`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-093",
       "description": "验收标准 AC-VT-009-03 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -770,7 +1178,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-058",
+      "risk_id": "RISK-VT-094",
       "description": "验收标准 AC-VT-009-04 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -780,7 +1188,37 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-059",
+      "risk_id": "RISK-VT-095",
+      "description": "验收标准 AC-VT-009-05 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-05` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-05`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-096",
+      "description": "验收标准 AC-VT-009-06 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-06` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-06`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-097",
+      "description": "验收标准 AC-VT-009-07 缺失通过的测试证据。",
+      "severity": "must",
+      "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
+      "suggested_action": "针对验收标准 `AC-VT-009-07` 补充测试用例，并在测试函数的 docstring 中声明 `covers: AC-VT-009-07`。",
+      "evidence_ids": [
+        "EVIDENCE-VT-999"
+      ]
+    },
+    {
+      "risk_id": "RISK-VT-098",
       "description": "验收标准 AC-VT-009-08 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -790,7 +1228,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-060",
+      "risk_id": "RISK-VT-099",
       "description": "验收标准 AC-VT-009-09 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -800,7 +1238,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-061",
+      "risk_id": "RISK-VT-100",
       "description": "验收标准 AC-VT-009-10 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -810,7 +1248,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-062",
+      "risk_id": "RISK-VT-101",
       "description": "验收标准 AC-VT-009-11 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -820,7 +1258,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-063",
+      "risk_id": "RISK-VT-102",
       "description": "验收标准 AC-VT-009-12 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -830,7 +1268,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-064",
+      "risk_id": "RISK-VT-103",
       "description": "验收标准 AC-VT-009-13 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -840,7 +1278,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-065",
+      "risk_id": "RISK-VT-104",
       "description": "验收标准 AC-VT-009-14 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -850,7 +1288,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-066",
+      "risk_id": "RISK-VT-105",
       "description": "验收标准 AC-VT-009-15 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -860,7 +1298,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-067",
+      "risk_id": "RISK-VT-106",
       "description": "验收标准 AC-VT-009-16 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -870,7 +1308,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-068",
+      "risk_id": "RISK-VT-107",
       "description": "验收标准 AC-VT-009-17 缺失通过的测试证据。",
       "severity": "must",
       "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
@@ -880,8 +1318,8 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-069",
-      "description": "架构约束违反 (规则 MOD-VT-001): Import of 'tool_evidence_adapter' (module MOD-VT-004) at line 728 in cli.py is not in allowed_to_call whitelist",
+      "risk_id": "RISK-VT-108",
+      "description": "架构约束违反 (规则 MOD-VT-001): Import of 'tool_evidence_adapter' (module MOD-VT-004) at line 714 in cli.py is not in allowed_to_call whitelist",
       "severity": "must",
       "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
       "suggested_action": "根据规则 `MOD-VT-001` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
@@ -890,8 +1328,8 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-070",
-      "description": "架构约束违反 (规则 MOD-VT-005): Import of 'raw_input_loader' (module MOD-VT-002) at line 79 in evidence_index_builder.py is not in allowed_to_call whitelist",
+      "risk_id": "RISK-VT-109",
+      "description": "架构约束违反 (规则 MOD-VT-005): Import of 'raw_input_loader' (module MOD-VT-002) at line 17 in evidence_index_builder.py is not in allowed_to_call whitelist",
       "severity": "must",
       "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
       "suggested_action": "根据规则 `MOD-VT-005` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
@@ -900,7 +1338,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-071",
+      "risk_id": "RISK-VT-110",
       "description": "架构约束违反 (规则 GATE-VT-006): One or more Must-level architecture constraints are violated.",
       "severity": "must",
       "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
@@ -910,7 +1348,7 @@
       ]
     },
     {
-      "risk_id": "RISK-VT-072",
+      "risk_id": "RISK-VT-111",
       "description": "架构约束 PRINCIPLE-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -922,7 +1360,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-073",
+      "risk_id": "RISK-VT-112",
       "description": "架构约束 PRINCIPLE-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -934,7 +1372,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-074",
+      "risk_id": "RISK-VT-113",
       "description": "架构约束 PRINCIPLE-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -946,7 +1384,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-075",
+      "risk_id": "RISK-VT-114",
       "description": "架构约束 PRINCIPLE-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -958,7 +1396,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-076",
+      "risk_id": "RISK-VT-115",
       "description": "架构约束 PRINCIPLE-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -970,7 +1408,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-077",
+      "risk_id": "RISK-VT-116",
       "description": "架构约束 PRINCIPLE-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -982,7 +1420,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-078",
+      "risk_id": "RISK-VT-117",
       "description": "架构约束 PRINCIPLE-VT-007 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -994,7 +1432,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-079",
+      "risk_id": "RISK-VT-118",
       "description": "架构约束 PRINCIPLE-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1006,7 +1444,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-080",
+      "risk_id": "RISK-VT-119",
       "description": "架构约束 PRINCIPLE-VT-009 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1018,7 +1456,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-081",
+      "risk_id": "RISK-VT-120",
       "description": "架构约束 PRINCIPLE-VT-010 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1030,7 +1468,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-082",
+      "risk_id": "RISK-VT-121",
       "description": "架构约束 PRINCIPLE-VT-011 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1042,7 +1480,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-083",
+      "risk_id": "RISK-VT-122",
       "description": "架构约束 PRINCIPLE-VT-012 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1054,7 +1492,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-084",
+      "risk_id": "RISK-VT-123",
       "description": "架构约束 PRINCIPLE-VT-013 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1066,7 +1504,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-085",
+      "risk_id": "RISK-VT-124",
       "description": "架构约束 PRINCIPLE-VT-014 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1078,7 +1516,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-086",
+      "risk_id": "RISK-VT-125",
       "description": "架构约束 PRINCIPLE-VT-015 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1090,7 +1528,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-087",
+      "risk_id": "RISK-VT-126",
       "description": "架构约束 PRINCIPLE-VT-018 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1102,7 +1540,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-088",
+      "risk_id": "RISK-VT-127",
       "description": "架构约束 DEP-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1114,7 +1552,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-089",
+      "risk_id": "RISK-VT-128",
       "description": "架构约束 DEP-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1126,7 +1564,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-090",
+      "risk_id": "RISK-VT-129",
       "description": "架构约束 DEP-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1138,7 +1576,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-091",
+      "risk_id": "RISK-VT-130",
       "description": "架构约束 DEP-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1150,7 +1588,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-092",
+      "risk_id": "RISK-VT-131",
       "description": "架构约束 FLOW-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1162,7 +1600,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-093",
+      "risk_id": "RISK-VT-132",
       "description": "架构约束 FLOW-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1174,7 +1612,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-094",
+      "risk_id": "RISK-VT-133",
       "description": "架构约束 FLOW-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1186,7 +1624,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-095",
+      "risk_id": "RISK-VT-134",
       "description": "架构约束 FLOW-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1198,7 +1636,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-096",
+      "risk_id": "RISK-VT-135",
       "description": "架构约束 FLOW-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1210,7 +1648,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-097",
+      "risk_id": "RISK-VT-136",
       "description": "架构约束 FLOW-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1222,7 +1660,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-098",
+      "risk_id": "RISK-VT-137",
       "description": "架构约束 FLOW-VT-009 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1234,7 +1672,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-099",
+      "risk_id": "RISK-VT-138",
       "description": "架构约束 STORE-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1246,7 +1684,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-100",
+      "risk_id": "RISK-VT-139",
       "description": "架构约束 STORE-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1258,7 +1696,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-101",
+      "risk_id": "RISK-VT-140",
       "description": "架构约束 STORE-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1270,7 +1708,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-102",
+      "risk_id": "RISK-VT-141",
       "description": "架构约束 ERR-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1282,7 +1720,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-103",
+      "risk_id": "RISK-VT-142",
       "description": "架构约束 ERR-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1294,7 +1732,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-104",
+      "risk_id": "RISK-VT-143",
       "description": "架构约束 ERR-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1306,7 +1744,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-105",
+      "risk_id": "RISK-VT-144",
       "description": "架构约束 ERR-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1318,7 +1756,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-106",
+      "risk_id": "RISK-VT-145",
       "description": "架构约束 ERR-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1330,7 +1768,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-107",
+      "risk_id": "RISK-VT-146",
       "description": "架构约束 LOG-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1342,7 +1780,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-108",
+      "risk_id": "RISK-VT-147",
       "description": "架构约束 LOG-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1354,7 +1792,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-109",
+      "risk_id": "RISK-VT-148",
       "description": "架构约束 SEC-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1366,7 +1804,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-110",
+      "risk_id": "RISK-VT-149",
       "description": "架构约束 SEC-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1378,7 +1816,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-111",
+      "risk_id": "RISK-VT-150",
       "description": "架构约束 SEC-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1390,7 +1828,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-112",
+      "risk_id": "RISK-VT-151",
       "description": "架构约束 SEC-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1402,7 +1840,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-113",
+      "risk_id": "RISK-VT-152",
       "description": "架构约束 TECH-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1414,7 +1852,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-114",
+      "risk_id": "RISK-VT-153",
       "description": "架构约束 TECH-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1426,7 +1864,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-115",
+      "risk_id": "RISK-VT-154",
       "description": "架构约束 TECH-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1438,7 +1876,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-116",
+      "risk_id": "RISK-VT-155",
       "description": "架构约束 TECH-VT-007 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1450,7 +1888,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-117",
+      "risk_id": "RISK-VT-156",
       "description": "架构约束 FORBID-VT-001 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1462,7 +1900,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-118",
+      "risk_id": "RISK-VT-157",
       "description": "架构约束 FORBID-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1474,7 +1912,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-119",
+      "risk_id": "RISK-VT-158",
       "description": "架构约束 FORBID-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1486,7 +1924,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-120",
+      "risk_id": "RISK-VT-159",
       "description": "架构约束 FORBID-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1498,7 +1936,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-121",
+      "risk_id": "RISK-VT-160",
       "description": "架构约束 FORBID-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1510,7 +1948,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-122",
+      "risk_id": "RISK-VT-161",
       "description": "架构约束 FORBID-VT-006 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1522,7 +1960,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-123",
+      "risk_id": "RISK-VT-162",
       "description": "架构约束 GATE-VT-002 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1534,7 +1972,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-124",
+      "risk_id": "RISK-VT-163",
       "description": "架构约束 GATE-VT-003 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1546,7 +1984,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-125",
+      "risk_id": "RISK-VT-164",
       "description": "架构约束 GATE-VT-004 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1558,7 +1996,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-126",
+      "risk_id": "RISK-VT-165",
       "description": "架构约束 GATE-VT-005 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1570,7 +2008,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-127",
+      "risk_id": "RISK-VT-166",
       "description": "架构约束 GATE-VT-008 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1582,7 +2020,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-128",
+      "risk_id": "RISK-VT-167",
       "description": "架构约束 GATE-VT-009 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1594,7 +2032,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-129",
+      "risk_id": "RISK-VT-168",
       "description": "架构约束 GATE-VT-010 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1606,7 +2044,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-130",
+      "risk_id": "RISK-VT-169",
       "description": "架构约束 GATE-VT-011 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1618,7 +2056,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-131",
+      "risk_id": "RISK-VT-170",
       "description": "架构约束 GATE-VT-012 状态不明确：This constraint is not machine-verifiable and requires manual review.",
       "severity": "should",
       "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
@@ -1630,7 +2068,7 @@
       "type": "suggestion"
     },
     {
-      "risk_id": "RISK-VT-132",
+      "risk_id": "RISK-VT-171",
       "description": "Claim CLAIM-VT-005 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1639,7 +2077,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-133",
+      "risk_id": "RISK-VT-172",
       "description": "Claim CLAIM-VT-030 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1648,7 +2086,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-134",
+      "risk_id": "RISK-VT-173",
       "description": "Claim CLAIM-VT-031 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1657,7 +2095,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-135",
+      "risk_id": "RISK-VT-174",
       "description": "Claim CLAIM-VT-033 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1666,7 +2104,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-136",
+      "risk_id": "RISK-VT-175",
       "description": "Claim CLAIM-VT-034 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1675,7 +2113,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-137",
+      "risk_id": "RISK-VT-176",
       "description": "Claim CLAIM-VT-035 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1684,7 +2122,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-138",
+      "risk_id": "RISK-VT-177",
       "description": "Claim CLAIM-VT-036 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1693,7 +2131,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-139",
+      "risk_id": "RISK-VT-178",
       "description": "Claim CLAIM-VT-037 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1702,7 +2140,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-140",
+      "risk_id": "RISK-VT-179",
       "description": "Claim CLAIM-VT-038 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1711,7 +2149,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-141",
+      "risk_id": "RISK-VT-180",
       "description": "Claim CLAIM-VT-039 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1720,7 +2158,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-142",
+      "risk_id": "RISK-VT-181",
       "description": "Claim CLAIM-VT-040 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1729,7 +2167,7 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-143",
+      "risk_id": "RISK-VT-182",
       "description": "Claim CLAIM-VT-041 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
@@ -1738,8 +2176,17 @@
       "item_type": "claim_credibility"
     },
     {
-      "risk_id": "RISK-VT-144",
+      "risk_id": "RISK-VT-183",
       "description": "Claim CLAIM-VT-042 声明任务完成但无 VT 执行的工具验证证据",
+      "severity": "must",
+      "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
+      "suggested_action": "确保关联的测试文件存在、声明了 covers AC、且 pytest 能通过。然后重新运行 vibe-tracing analyze。",
+      "evidence_ids": [],
+      "item_type": "claim_credibility"
+    },
+    {
+      "risk_id": "RISK-VT-184",
+      "description": "Claim CLAIM-VT-043 声明任务完成但无 VT 执行的工具验证证据",
       "severity": "must",
       "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
       "suggested_action": "确保关联的测试文件存在、声明了 covers AC、且 pytest 能通过。然后重新运行 vibe-tracing analyze。",
@@ -2313,17 +2760,17 @@
     {
       "rule_id": "MOD-VT-001",
       "evidence_id": "EVIDENCE-VT-067",
-      "message": "Import of 'tool_evidence_adapter' (module MOD-VT-004) at line 728 in cli.py is not in allowed_to_call whitelist"
+      "message": "Import of 'tool_evidence_adapter' (module MOD-VT-004) at line 714 in cli.py is not in allowed_to_call whitelist"
+    },
+    {
+      "rule_id": "MOD-VT-001",
+      "evidence_id": "EVIDENCE-VT-067",
+      "message": "Import of 'tool_evidence_adapter' (module MOD-VT-004) at line 727 in cli.py is not in allowed_to_call whitelist"
     },
     {
       "rule_id": "MOD-VT-005",
       "evidence_id": "EVIDENCE-VT-070",
-      "message": "Import of 'raw_input_loader' (module MOD-VT-002) at line 79 in evidence_index_builder.py is not in allowed_to_call whitelist"
-    },
-    {
-      "rule_id": "MOD-VT-005",
-      "evidence_id": "EVIDENCE-VT-070",
-      "message": "Import of 'raw_input_loader' (module MOD-VT-002) at line 127 in evidence_index_builder.py is not in allowed_to_call whitelist"
+      "message": "Import of 'raw_input_loader' (module MOD-VT-002) at line 17 in evidence_index_builder.py is not in allowed_to_call whitelist"
     },
     {
       "rule_id": "GATE-VT-006",

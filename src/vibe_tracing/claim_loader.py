@@ -73,35 +73,11 @@ class ClaimLoader:
         claims_path: Path,
         task_result: Optional[TaskListLoadResult] = None,
         content: Optional[list] = None,
-        skip_schema: bool = False,
     ) -> ClaimListLoadResult:
         """
         Load an agent claims file, validate it against the JSON schema, and cross-reference with tasks.
         """
-        # Step 1: Validate file/dict using SchemaValidator
-        if not skip_schema:
-            if content is not None:
-                val_res = self.schema_validator.validate_dict(
-                    content, "agent_claims", source_label=str(claims_path)
-                )
-            else:
-                val_res = self.schema_validator.validate_file(claims_path, "agent_claims")
-
-            if not val_res.is_valid:
-                error_msg = f"Schema validation failed for {claims_path}"
-                if val_res.message:
-                    error_msg += f": {val_res.message}"
-                if val_res.field_path:
-                    error_msg += f" at field '{val_res.field_path}'"
-                if val_res.hint:
-                    error_msg += f" (Hint: {val_res.hint})"
-                return ClaimListLoadResult(
-                    claims=[],
-                    is_valid=False,
-                    errors=[error_msg],
-                )
-
-        # Step 2: Parse the file content
+        # Parse the file content (schema is validated once by the CLI caller)
         if content is not None:
             data = content
         else:

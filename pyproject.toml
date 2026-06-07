@@ -32,3 +32,6 @@ packages = ["src/vibe_tracing"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+markers = [
+    "no_mock_which: skip the shutil.which mock in mock_tool_execution fixture",
+]

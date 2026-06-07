@@ -266,5 +266,113 @@
     ],
     "timestamp": "2026-06-07T19:00:00Z",
     "notes": "vt analyze 结束时输出 8 维度元认知反思提示"
+  },
+  {
+    "claim_id": "CLAIM-VT-044",
+    "related_task": "TASK-VT-044",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_evidence_index_builder.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/evidence_index_builder.py",
+      "tests/conftest.py",
+      "tests/test_evidence_index_builder.py"
+    ],
+    "test_refs": [
+      "tests/test_evidence_index_builder.py"
+    ],
+    "timestamp": "2026-06-07T20:00:00Z",
+    "notes": "EVO-001: 删除 ctx=None fallback，纯 UnifiedContext 路径"
+  },
+  {
+    "claim_id": "CLAIM-VT-045",
+    "related_task": "TASK-VT-044",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_architecture_compliance_checker.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "tests/test_architecture_compliance_checker.py"
+    ],
+    "test_refs": [
+      "tests/test_architecture_compliance_checker.py"
+    ],
+    "timestamp": "2026-06-07T20:00:00Z",
+    "notes": "EVO-002: 删除 constraints_data=None fallback"
+  },
+  {
+    "claim_id": "CLAIM-VT-046",
+    "related_task": "TASK-VT-044",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_task_loader.py",
+      "tests/test_claim_loader.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_task_loader.py",
+      "tests/test_claim_loader.py"
+    ],
+    "timestamp": "2026-06-07T20:00:00Z",
+    "notes": "EVO-003: 移除 skip_schema 参数"
+  },
+  {
+    "claim_id": "CLAIM-VT-047",
+    "related_task": "TASK-VT-044",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_cli_analyze.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_cli_analyze.py"
+    ],
+    "timestamp": "2026-06-07T20:00:00Z",
+    "notes": "EVO-004: run_analyze 拆分为 5 个子函数"
+  },
+  {
+    "claim_id": "CLAIM-VT-048",
+    "related_task": "TASK-VT-044",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_cli_analyze.py::test_missing_tools_produces_blocked_evidence"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_cli_analyze.py"
+    ],
+    "timestamp": "2026-06-07T20:00:00Z",
+    "notes": "EVO-005: 工具依赖检查失败注入 BLOCKED 证据而非硬退出"
+  },
+  {
+    "claim_id": "CLAIM-VT-049",
+    "related_task": "TASK-VT-044",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_reflection_prompts.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/reflection_prompts.py",
+      "src/vibe_tracing/templates/reflection_prompts.template.json",
+      "tests/test_reflection_prompts.py",
+      "pyproject.toml"
+    ],
+    "test_refs": [
+      "tests/test_reflection_prompts.py"
+    ],
+    "timestamp": "2026-06-07T20:00:00Z",
+    "notes": "EVO-006: reflection prompts 从 JSON 模板加载"
   }
 ]

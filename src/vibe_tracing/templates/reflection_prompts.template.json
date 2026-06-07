@@ -1,0 +1,98 @@
+{
+  "dimensions": [
+    {
+      "id": "deficiencies",
+      "index": 1,
+      "title": "项目不足识别 (Deficiencies)",
+      "prompt": "本轮自管理暴露了项目哪些设计或功能缺陷？",
+      "conditional_hints": [
+        {
+          "condition": "gate_blocked",
+          "text": "（本轮 Gate 为 BLOCKED，需识别阻断根因）"
+        },
+        {
+          "condition": "gate_fail",
+          "text": "（本轮 Gate 为 FAIL，需识别条件性缺陷）"
+        }
+      ]
+    },
+    {
+      "id": "simplicity",
+      "index": 2,
+      "title": "架构精简度评估 (Simplicity)",
+      "prompt": "项目架构是否符合剃刀原则与第一性原理？是否存在过度工程？",
+      "conditional_hints": []
+    },
+    {
+      "id": "root_cause",
+      "index": 3,
+      "title": "彻底根因修复验证 (Root-Cause Fix)",
+      "prompt": "本轮修改是直击物理根因，还是引进了打补丁式的短路代码？",
+      "conditional_hints": [
+        {
+          "condition": "has_must_risks",
+          "text": "（本轮存在 must 级风险，确认是否直击物理根因）"
+        }
+      ]
+    },
+    {
+      "id": "redundancy",
+      "index": 4,
+      "title": "计算与逻辑冗余 (Redundancy)",
+      "prompt": "是否存在重复 I/O、二次反序列化或冗余数据流转？",
+      "conditional_hints": [
+        {
+          "condition": "high_gap_risk_count",
+          "text": "（本轮 {gap_count} gaps + {risk_count} risks，检查是否存在冗余数据流转）"
+        }
+      ]
+    },
+    {
+      "id": "credibility",
+      "index": 5,
+      "title": "凭证真实性 (Credibility)",
+      "prompt": "测试用例是否存在过度 Mock？凭证是否真实触达物理逻辑？",
+      "conditional_hints": [
+        {
+          "condition": "has_low_confidence",
+          "text": "（本轮存在 {low_conf_count} 个低可信度风险）"
+        }
+      ]
+    },
+    {
+      "id": "cognitive_complexity",
+      "index": 6,
+      "title": "代码认知复杂度 (Cognitive Complexity)",
+      "prompt": "新增代码是否推高了认知复杂度？是否会阻碍下一轮 Agent 的上下文推理？",
+      "conditional_hints": []
+    },
+    {
+      "id": "exception_bypass",
+      "index": 7,
+      "title": "豁免与绕过机制 (Exception & Bypass)",
+      "prompt": "是否使用了忽略规则或临时白名单绕过门禁？能否通过重构彻底消除？",
+      "conditional_hints": [
+        {
+          "condition": "has_coverage_gaps",
+          "text": "（本轮存在覆盖缺口，确认是否存在绕过机制）"
+        }
+      ]
+    },
+    {
+      "id": "dead_code",
+      "index": 8,
+      "title": "残留与死代码清理 (Dead Code)",
+      "prompt": "代码库中是否存在废弃的类、函数、模板或失效测试？VT 处于开发期，零历史兼容债务，严禁为了向后兼容保留陈旧逻辑或接口，一切以当前最佳实现为目标，执行彻底清零清理。",
+      "conditional_hints": [
+        {
+          "condition": "has_unclear_constraints",
+          "text": "（本轮 {unclear_count} 条模糊约束，检查是否存在死代码或失效规则）"
+        },
+        {
+          "condition": "has_violations",
+          "text": "（本轮 {violation_count} 条架构违规，检查是否存在未清理的废弃代码）"
+        }
+      ]
+    }
+  ]
+}

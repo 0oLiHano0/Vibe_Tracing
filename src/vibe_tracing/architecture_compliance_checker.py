@@ -6,7 +6,6 @@ Unverifiable constraints are returned as unclear, per FORBID-VT-007.
 """
 
 import ast
-import json
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional, Tuple
@@ -28,18 +27,6 @@ class ArchitectureComplianceChecker:
             self.constraints_path = (
                 self.project_root / "docs" / "architecture_constraints.json"
             )
-
-    def _load_constraints(self) -> Dict[str, Any]:
-        """Load architecture constraints JSON file."""
-        if not self.constraints_path.exists():
-            raise FileNotFoundError(
-                f"Architecture constraints file not found at {self.constraints_path}"
-            )
-        try:
-            with self.constraints_path.open("r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as exc:
-            raise ValueError(f"Failed to parse architecture constraints JSON: {exc}")
 
     def _get_python_imports(self, file_path: Path) -> List[Tuple[str, int]]:
         """Statically extract import statement module names and their line numbers from a python file."""
@@ -133,16 +120,14 @@ class ArchitectureComplianceChecker:
     def check(
         self,
         evidences: List[Dict[str, Any]],
-        constraints_data: Optional[Dict[str, Any]] = None,
+        constraints_data: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
         Check all must architectural constraints and module boundaries.
 
         Args:
             evidences: List of evidence entries from evidence_index.json.
-            constraints_data: Optional pre-loaded constraints dict. When
-                provided the method skips reading the constraints file from
-                disk (backward-compatible fallback still works if ``None``).
+            constraints_data: Pre-loaded constraints dict (required).
 
         Returns:
             A dictionary containing:
@@ -150,11 +135,7 @@ class ArchitectureComplianceChecker:
                 "architecture_violations": List of confirmed violations.
                 "unclear_constraints": List of constraints marked as unclear.
         """
-        if constraints_data is not None:
-            loaded_constraints = constraints_data
-        else:
-            loaded_constraints = self._load_constraints()
-        self.constraints = loaded_constraints
+        self.constraints = constraints_data
         src_dir = self.project_root / "src"
 
         # List all Python files
@@ -169,7 +150,7 @@ class ArchitectureComplianceChecker:
 
         # Parse module boundaries
         boundaries_by_id = {}
-        for m in loaded_constraints.get("module_boundaries", []):
+        for m in constraints_data.get("module_boundaries", []):
             m_id = m.get("module_id")
             boundaries_by_id[m_id] = m
 
@@ -596,7 +577,7 @@ class ArchitectureComplianceChecker:
         # 6.1 Evaluate GATE-VT-014 (Architecture change proposals must be explicitly logged)
         # ----------------------------------------------------
         has_gate_14 = False
-        for gate in loaded_constraints.get("quality_gates", []):
+        for gate in constraints_data.get("quality_gates", []):
             if gate.get("gate_id") == "GATE-VT-014":
                 has_gate_14 = True
                 break
@@ -699,7 +680,7 @@ class ArchitectureComplianceChecker:
         already_checked_ids = {st["rule_id"] for st in status_list}
 
         for cat in all_categories:
-            for rule in loaded_constraints.get(cat, []):
+            for rule in constraints_data.get(cat, []):
                 # Resolve rule ID from potential keys
                 r_id = (
                     rule.get("rule_id")

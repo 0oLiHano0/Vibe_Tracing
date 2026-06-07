@@ -1,6 +1,8 @@
 """Tests for post-analyze meta-cognitive reflection prompts."""
 
-from vibe_tracing.reflection_prompts import render_reflection_prompts
+import json
+
+from vibe_tracing.reflection_prompts import load_dimensions, render_reflection_prompts
 
 
 class TestRenderReflectionPrompts:
@@ -91,3 +93,70 @@ class TestRenderReflectionPrompts:
             gate_decision="blocked", gaps=gaps, risks=[]
         )
         assert "冗余数据流转" in result
+
+
+class TestLoadDimensions:
+    """Test loading reflection dimensions from JSON template."""
+
+    def test_default_template_loads_8_dimensions(self):
+        """Default template file loads exactly 8 dimensions."""
+        dims = load_dimensions()
+        assert len(dims) == 8
+        assert dims[0]["id"] == "deficiencies"
+        assert dims[7]["id"] == "dead_code"
+
+    def test_custom_template_path(self, tmp_path):
+        """Custom dimensions can be loaded from a user-specified JSON file."""
+        custom = {
+            "dimensions": [
+                {
+                    "id": "custom_dim",
+                    "index": 1,
+                    "title": "Custom Dimension",
+                    "prompt": "Custom prompt text?",
+                    "conditional_hints": [],
+                }
+            ]
+        }
+        custom_file = tmp_path / "custom_reflection.json"
+        custom_file.write_text(json.dumps(custom), encoding="utf-8")
+
+        dims = load_dimensions(template_path=str(custom_file))
+        assert len(dims) == 1
+        assert dims[0]["id"] == "custom_dim"
+
+    def test_custom_dimensions_rendered_in_output(self, tmp_path):
+        """Custom dimensions are rendered into the reflection output."""
+        custom = {
+            "dimensions": [
+                {
+                    "id": "custom_only",
+                    "index": 1,
+                    "title": "My Custom Title",
+                    "prompt": "My custom prompt?",
+                    "conditional_hints": [],
+                }
+            ]
+        }
+        custom_file = tmp_path / "custom_reflection.json"
+        custom_file.write_text(json.dumps(custom), encoding="utf-8")
+
+        dims = load_dimensions(template_path=str(custom_file))
+        result = render_reflection_prompts(
+            gate_decision="pass", gaps=[], risks=[], dimensions=dims
+        )
+        assert "1. My Custom Title" in result
+        assert "My custom prompt?" in result
+        # Standard dimensions should NOT be present
+        assert "项目不足识别" not in result
+
+    def test_dimensions_idempotent_with_default(self):
+        """Rendering with explicitly loaded dimensions matches default rendering."""
+        dims = load_dimensions()
+        result_explicit = render_reflection_prompts(
+            gate_decision="pass", gaps=[], risks=[], dimensions=dims
+        )
+        result_default = render_reflection_prompts(
+            gate_decision="pass", gaps=[], risks=[]
+        )
+        assert result_explicit == result_default

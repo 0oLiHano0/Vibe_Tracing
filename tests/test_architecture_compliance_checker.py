@@ -74,7 +74,10 @@ def base_constraints_data():
 
 @pytest.fixture
 def temp_workspace(tmp_path, base_constraints_data):
-    """Sets up a temporary workspace with standard folders and a constraints file."""
+    """Sets up a temporary workspace with standard folders and a constraints file.
+
+    Returns a tuple of (project_root_path, constraints_data_dict).
+    """
     # Create standard folders
     docs_dir = tmp_path / "docs"
     docs_dir.mkdir(parents=True)
@@ -97,41 +100,35 @@ def temp_workspace(tmp_path, base_constraints_data):
     src_dir.mkdir(parents=True)
     (src_dir / "__init__.py").write_text("", encoding="utf-8")
 
-    return tmp_path
+    return tmp_path, base_constraints_data
 
 
 def test_init_and_missing_constraints(tmp_path):
     """covers: AC-VT-001-03, AC-VT-008-03"""
     checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    with pytest.raises(
-        FileNotFoundError, match="Architecture constraints file not found"
-    ):
-        checker._load_constraints()
+    # constraints_path is set to the default even when not provided
+    assert checker.constraints_path == tmp_path / "docs" / "architecture_constraints.json"
 
 
-def test_invalid_json_constraints(tmp_path):
-    """covers: AC-VT-001-03, AC-VT-008-03"""
-    docs_dir = tmp_path / "docs"
-    docs_dir.mkdir(parents=True, exist_ok=True)
-    constraints_file = docs_dir / "architecture_constraints.json"
-    constraints_file.write_text("{invalid json", encoding="utf-8")
-
+def test_check_requires_constraints_data(tmp_path):
+    """covers: AC-VT-001-03 -- check() requires a constraints_data argument."""
     checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    with pytest.raises(ValueError, match="Failed to parse architecture constraints"):
-        checker._load_constraints()
+    with pytest.raises(TypeError):
+        checker.check(evidences=[])
 
 
 def test_clean_workspace(temp_workspace):
     """covers: AC-VT-001-03, AC-VT-008-03"""
+    tmp_path, constraints_data = temp_workspace
     # Create valid files in src
-    src_dir = temp_workspace / "src/vibe_tracing"
+    src_dir = tmp_path / "src/vibe_tracing"
     (src_dir / "raw_input_loader.py").write_text("import json\n", encoding="utf-8")
     (src_dir / "schema_validator.py").write_text(
         "import jsonschema\n", encoding="utf-8"
     )
 
-    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
-    results = checker.check(evidences=[])
+    checker = ArchitectureComplianceChecker(project_root=tmp_path)
+    results = checker.check(evidences=[], constraints_data=constraints_data)
 
     assert "architecture_compliance_status" in results
     assert "architecture_violations" in results
@@ -152,19 +149,20 @@ def test_clean_workspace(temp_workspace):
 
 def test_database_import_violation(temp_workspace):
     """covers: AC-VT-001-03, AC-VT-008-03"""
-    src_dir = temp_workspace / "src/vibe_tracing"
+    tmp_path, constraints_data = temp_workspace
+    src_dir = tmp_path / "src/vibe_tracing"
     (src_dir / "raw_input_loader.py").write_text(
         "import sqlalchemy\n", encoding="utf-8"
     )
 
-    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
+    checker = ArchitectureComplianceChecker(project_root=tmp_path)
     evidences = [
         {
             "evidence_id": "EVIDENCE-VT-001",
             "source_path": "src/vibe_tracing/raw_input_loader.py",
         }
     ]
-    results = checker.check(evidences=evidences)
+    results = checker.check(evidences=evidences, constraints_data=constraints_data)
 
     violations = results["architecture_violations"]
     assert len(violations) == 2
@@ -184,13 +182,14 @@ def test_database_import_violation(temp_workspace):
 
 def test_agent_runtime_import_violation(temp_workspace):
     """covers: AC-VT-001-03, AC-VT-008-03"""
-    src_dir = temp_workspace / "src/vibe_tracing"
+    tmp_path, constraints_data = temp_workspace
+    src_dir = tmp_path / "src/vibe_tracing"
     (src_dir / "raw_input_loader.py").write_text(
         "import claude_code\n", encoding="utf-8"
     )
 
-    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
-    results = checker.check(evidences=[])
+    checker = ArchitectureComplianceChecker(project_root=tmp_path)
+    results = checker.check(evidences=[], constraints_data=constraints_data)
 
     violations = results["architecture_violations"]
     assert len(violations) == 2
@@ -210,13 +209,14 @@ def test_agent_runtime_import_violation(temp_workspace):
 
 def test_forbidden_module_import_violation(temp_workspace):
     """covers: AC-VT-001-03, AC-VT-008-03"""
-    src_dir = temp_workspace / "src/vibe_tracing"
+    tmp_path, constraints_data = temp_workspace
+    src_dir = tmp_path / "src/vibe_tracing"
     (src_dir / "raw_input_loader.py").write_text(
         "import vibe_tracing.traceability.requirement_task_analyzer\n", encoding="utf-8"
     )
 
-    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
-    results = checker.check(evidences=[])
+    checker = ArchitectureComplianceChecker(project_root=tmp_path)
+    results = checker.check(evidences=[], constraints_data=constraints_data)
 
     violations = results["architecture_violations"]
     assert len(violations) == 3
@@ -238,15 +238,16 @@ def test_forbidden_module_import_violation(temp_workspace):
 
 def test_allowed_module_import_violation(temp_workspace):
     """covers: AC-VT-001-03, AC-VT-008-03"""
-    src_dir = temp_workspace / "src/vibe_tracing"
+    tmp_path, constraints_data = temp_workspace
+    src_dir = tmp_path / "src/vibe_tracing"
     # schema_validator (MOD-VT-003) is allowed to call []
     # If it imports raw_input_loader, it violates the whitelist
     (src_dir / "schema_validator.py").write_text(
         "import vibe_tracing.raw_input_loader\n", encoding="utf-8"
     )
 
-    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
-    results = checker.check(evidences=[])
+    checker = ArchitectureComplianceChecker(project_root=tmp_path)
+    results = checker.check(evidences=[], constraints_data=constraints_data)
 
     violations = results["architecture_violations"]
     assert len(violations) == 2
@@ -265,14 +266,15 @@ def test_allowed_module_import_violation(temp_workspace):
 
 def test_dashboard_compliance_and_violation(temp_workspace):
     """covers: AC-VT-001-03, AC-VT-008-03"""
+    tmp_path, constraints_data = temp_workspace
     # 1. Compliant dashboard
-    dash_file = temp_workspace / "dashboard.html"
+    dash_file = tmp_path / "dashboard.html"
     dash_file.write_text(
         "<html><head><script src='local.js'></script></head></html>", encoding="utf-8"
     )
 
-    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
-    results = checker.check(evidences=[])
+    checker = ArchitectureComplianceChecker(project_root=tmp_path)
+    results = checker.check(evidences=[], constraints_data=constraints_data)
 
     statuses = {
         s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
@@ -286,7 +288,7 @@ def test_dashboard_compliance_and_violation(temp_workspace):
         encoding="utf-8",
     )
 
-    results2 = checker.check(evidences=[])
+    results2 = checker.check(evidences=[], constraints_data=constraints_data)
     statuses2 = {
         s["rule_id"]: s["status"] for s in results2["architecture_compliance_status"]
     }
@@ -304,11 +306,12 @@ def test_dashboard_compliance_and_violation(temp_workspace):
 
 def test_missing_required_files(temp_workspace):
     """covers: AC-VT-001-03, AC-VT-008-03"""
+    tmp_path, constraints_data = temp_workspace
     # Delete a required file
-    (temp_workspace / "docs/prd.md").unlink()
+    (tmp_path / "docs/prd.md").unlink()
 
-    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
-    results = checker.check(evidences=[])
+    checker = ArchitectureComplianceChecker(project_root=tmp_path)
+    results = checker.check(evidences=[], constraints_data=constraints_data)
 
     statuses = {
         s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
@@ -327,10 +330,11 @@ def test_missing_required_files(temp_workspace):
 
 def test_gate_compliance_logic(temp_workspace):
     """covers: AC-VT-001-03, AC-VT-008-03"""
+    tmp_path, constraints_data = temp_workspace
     # In a clean workspace, the other MUST rules (unverifiable) will be returned as unclear
     # This should trigger GATE-VT-007 as unclear, and GATE-VT-006 as compliant (no MUST violations)
-    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
-    results = checker.check(evidences=[])
+    checker = ArchitectureComplianceChecker(project_root=tmp_path)
+    results = checker.check(evidences=[], constraints_data=constraints_data)
 
     statuses = {
         s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
@@ -339,31 +343,27 @@ def test_gate_compliance_logic(temp_workspace):
     assert statuses["GATE-VT-007"] == "unclear"
 
     # If we introduce a violation (e.g. database import)
-    (temp_workspace / "src/vibe_tracing/raw_input_loader.py").write_text(
+    (tmp_path / "src/vibe_tracing/raw_input_loader.py").write_text(
         "import sqlite3\n", encoding="utf-8"
     )
 
-    results2 = checker.check(evidences=[])
+    results2 = checker.check(evidences=[], constraints_data=constraints_data)
     statuses2 = {
         s["rule_id"]: s["status"] for s in results2["architecture_compliance_status"]
     }
     assert statuses2["GATE-VT-006"] == "violated"
 
 
-def test_check_uses_preloaded_constraints_data(temp_workspace, base_constraints_data):
-    """covers: REFACTOR-007 -- check() should skip disk read when constraints_data is passed."""
-    from unittest.mock import patch
+def test_check_uses_constraints_data(temp_workspace, base_constraints_data):
+    """covers: REFACTOR-007 -- check() uses the provided constraints_data directly."""
+    tmp_path, _ = temp_workspace
 
-    src_dir = temp_workspace / "src/vibe_tracing"
+    src_dir = tmp_path / "src/vibe_tracing"
     (src_dir / "raw_input_loader.py").write_text("import json\n", encoding="utf-8")
 
-    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
+    checker = ArchitectureComplianceChecker(project_root=tmp_path)
 
-    # Patch _load_constraints so it raises if called -- proving it is skipped
-    with patch.object(
-        checker, "_load_constraints", side_effect=AssertionError("should not be called")
-    ):
-        results = checker.check(evidences=[], constraints_data=base_constraints_data)
+    results = checker.check(evidences=[], constraints_data=base_constraints_data)
 
     assert "architecture_compliance_status" in results
     violations = results["architecture_violations"]

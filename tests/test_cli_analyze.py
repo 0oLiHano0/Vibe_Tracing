@@ -7,7 +7,7 @@ from vibe_tracing.schema_validator import SchemaValidator
 
 
 @pytest.fixture(autouse=True)
-def mock_tool_execution(monkeypatch):
+def mock_tool_execution(request, monkeypatch):
     import shutil
     from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
     from vibe_tracing.core.enums import CoverageStatus
@@ -15,10 +15,12 @@ def mock_tool_execution(monkeypatch):
 
     # Mock shutil.which so the pre-flight dependency check passes
     # even when tools like pytest/mypy are not installed in the test env.
-    _real_which = shutil.which
-    def mock_which(cmd):
-        return _real_which(cmd) or f"/usr/bin/{cmd}"
-    monkeypatch.setattr(shutil, "which", mock_which)
+    # Skip this mock when test is marked with no_mock_which.
+    if not request.node.get_closest_marker("no_mock_which"):
+        _real_which = shutil.which
+        def mock_which(cmd):
+            return _real_which(cmd) or f"/usr/bin/{cmd}"
+        monkeypatch.setattr(shutil, "which", mock_which)
 
     def mock_execute_all(self, execution_paths):
         opts_path = self.project_root / "test_opts.json"
@@ -584,3 +586,54 @@ def test_gates_only_skips_analysis(tmp_path, capsys):
     assert not (output_dir / "evidence_index.json").exists()
     assert not (output_dir / "traceability_report.json").exists()
     assert not (output_dir / "run_metadata.json").exists()
+
+
+@pytest.mark.no_mock_which
+def test_missing_tools_produces_blocked_evidence(tmp_path, capsys, monkeypatch):
+    """
+    covers: AC-VT-009-02
+    Test that missing tools produce BLOCKED evidence entries in the evidence index
+    instead of hard-exiting with exit code 1. The exit code should be determined
+    by the gate engine based on the blocked evidence.
+    """
+    import shutil
+
+    # Mock shutil.which to return None for ALL tools (simulate missing tools)
+    monkeypatch.setattr(shutil, "which", lambda cmd: None)
+
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # Should NOT exit 1 (that was the old hard-exit behavior).
+    # Exit code is determined by gate engine (0 for pass/fail, 2 for blocked).
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+
+    # Repair guide should still be printed
+    assert "AI Agent Repair Guide" in captured.err
+
+    # Evidence index should exist and contain BLOCKED entries for missing tools
+    evidence_index_path = tmp_path / "output" / "evidence_index.json"
+    assert evidence_index_path.exists(), "evidence_index.json should be generated"
+
+    evidence_index = json.loads(evidence_index_path.read_text(encoding="utf-8"))
+    evidences = evidence_index.get("evidences", [])
+
+    blocked_entries = [e for e in evidences if e.get("status") == "blocked"]
+    assert len(blocked_entries) > 0, "Should have at least one BLOCKED evidence entry for missing tools"
+
+    # Verify blocked entries have the expected structure
+    for entry in blocked_entries:
+        assert entry["source_type"] == "tool"
+        assert entry["source_path"].startswith("<dependency:")
+        assert entry["error_code"] == "tool_not_found"
+        # stderr is stored inside details by EvidenceIndexBuilder
+        assert "is not installed" in entry.get("details", {}).get("stderr", "")
+        assert entry.get("details", {}).get("error_type") == "tool_not_found"

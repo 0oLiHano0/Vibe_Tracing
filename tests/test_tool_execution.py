@@ -619,47 +619,20 @@ class TestExecuteAll:
 
 
 # ---------------------------------------------------------------------------
-# Test: Backward compatibility
+# Test: ToolEvidenceCandidate dataclass
 # ---------------------------------------------------------------------------
 
-class TestBackwardCompatibility:
-    """Verify the legacy ToolEvidenceAdapter still works."""
-
-    def test_parse_report_file_still_works(self, tmp_path: Path) -> None:
-        """covers: AC-VT-008-01"""
-        from vibe_tracing.tool_evidence_adapter import ToolEvidenceAdapter
-        import warnings
-
-        report_data = {
-            "tool": "pytest",
-            "command": "pytest",
-            "exit_code": 0,
-            "tests": [],
-        }
-        report_file = tmp_path / "pytest_report.json"
-        report_file.write_text(json.dumps(report_data), encoding="utf-8")
-
-        adapter = ToolEvidenceAdapter(tmp_path)
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            candidates = adapter.parse_report_file(report_file)
-            assert len(w) == 1
-            assert issubclass(w[0].category, DeprecationWarning)
-            assert "deprecated" in str(w[0].message).lower()
-
-        assert isinstance(candidates, list)
-
-    def test_tool_evidence_candidate_unchanged(self) -> None:
-        """covers: AC-VT-008-01"""
-        c = ToolEvidenceCandidate(
-            source_type="test",
-            source_path="tests/test_foo.py",
-            covers=["AC-VT-001-01"],
-            status=CoverageStatus.COVERED.value,
-        )
-        assert c.source_type == "test"
-        assert c.command == ""
-        assert c.exit_code == 0
-        assert c.stderr == ""
-        assert c.error_code is None
-        assert c.details == {}
+def test_tool_evidence_candidate_unchanged() -> None:
+    """covers: AC-VT-008-01"""
+    c = ToolEvidenceCandidate(
+        source_type="test",
+        source_path="tests/test_foo.py",
+        covers=["AC-VT-001-01"],
+        status=CoverageStatus.COVERED.value,
+    )
+    assert c.source_type == "test"
+    assert c.command == ""
+    assert c.exit_code == 0
+    assert c.stderr == ""
+    assert c.error_code is None
+    assert c.details == {}

@@ -22,9 +22,19 @@ class TestMalformedClaimsWarning:
     """L7: malformed agent_claims.json must print a warning to stderr."""
 
     def test_malformed_claims_json_prints_warning(self, project, capsys):
-        """When claims file contains invalid JSON, a warning appears on stderr."""
+        """When STAGED claims file contains invalid JSON, a warning appears on stderr."""
+        # Init git repo so git show :path works
+        subprocess.run(["git", "init"], cwd=project, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "t@t"], cwd=project, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "T"], cwd=project, capture_output=True, check=True)
+        (project / "placeholder.txt").write_text("init")
+        subprocess.run(["git", "add", "placeholder.txt"], cwd=project, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=project, capture_output=True, check=True)
+
+        # Stage a malformed claims file
         claims_path = project / ".vibetracing" / "agent_claims.json"
         claims_path.write_text("{not valid json!!", encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
         reconciler = GhostCodeReconciler(project)
 
@@ -213,11 +223,11 @@ class TestDeltaCalculation:
         subprocess.run(["git", "add", "placeholder.txt"], cwd=project, capture_output=True, check=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=project, capture_output=True, check=True)
 
-        # Now write a new claims file (not yet committed)
+        # Now write a new claims file and stage it
         new_claim = {"claim_id": "C-0001", "code_refs": ["src/new.py"]}
-        (project / ".vibetracing" / "agent_claims.json").write_text(
-            json.dumps([new_claim]), encoding="utf-8"
-        )
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.write_text(json.dumps([new_claim]), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
         reconciler = GhostCodeReconciler(project)
         refs = reconciler._get_active_claims_code_refs()
@@ -246,9 +256,10 @@ class TestDeltaCalculation:
         subprocess.run(["git", "add", "-A"], cwd=project, capture_output=True, check=True)
         subprocess.run(["git", "commit", "-m", "add claims"], cwd=project, capture_output=True, check=True)
 
-        # Modify the claim's code_refs
+        # Modify the claim's code_refs and stage it
         modified_claim = {"claim_id": "C-0001", "code_refs": ["src/updated.py"]}
         claims_path.write_text(json.dumps([modified_claim]), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
         reconciler = GhostCodeReconciler(project)
         refs = reconciler._get_active_claims_code_refs()
@@ -263,13 +274,52 @@ class TestDeltaCalculation:
         subprocess.run(["git", "commit", "-m", "init"], cwd=project, capture_output=True, check=True)
 
         template = {"claim_id": "C-9999", "code_refs": ["src/template.py"]}
-        (project / ".vibetracing" / "agent_claims.json").write_text(
-            json.dumps([template]), encoding="utf-8"
-        )
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.write_text(json.dumps([template]), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
         reconciler = GhostCodeReconciler(project)
         refs = reconciler._get_active_claims_code_refs()
         assert "src/template.py" not in refs
+
+    def test_unstaged_claims_are_not_seen(self, project):
+        """Claims written to working directory but NOT staged must be invisible to the reconciler.
+
+        This is the core bypass fix: an AI agent writes a claim file but forgets
+        to `git add` it.  The reconciler must NOT pick up that unstaged claim.
+        """
+        self._init_git_repo(project)
+        (project / "placeholder.txt").write_text("init")
+        subprocess.run(["git", "add", "placeholder.txt"], cwd=project, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=project, capture_output=True, check=True)
+
+        # Write claims to working directory only -- do NOT git add
+        claim = {"claim_id": "C-0001", "code_refs": ["src/ghost.py"]}
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.write_text(json.dumps([claim]), encoding="utf-8")
+
+        reconciler = GhostCodeReconciler(project)
+        refs = reconciler._get_active_claims_code_refs()
+        # Unstaged claims must be invisible
+        assert "src/ghost.py" not in refs
+        assert refs == set()
+
+    def test_staged_claims_are_seen(self, project):
+        """Claims that are properly `git add`-ed must be visible to the reconciler."""
+        self._init_git_repo(project)
+        (project / "placeholder.txt").write_text("init")
+        subprocess.run(["git", "add", "placeholder.txt"], cwd=project, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=project, capture_output=True, check=True)
+
+        # Write claims AND stage them
+        claim = {"claim_id": "C-0001", "code_refs": ["src/visible.py"]}
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.write_text(json.dumps([claim]), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        refs = reconciler._get_active_claims_code_refs()
+        assert "src/visible.py" in refs
 
 
 class TestWhitelistLogic:

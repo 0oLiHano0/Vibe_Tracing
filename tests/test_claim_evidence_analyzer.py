@@ -675,3 +675,157 @@ def test_code_ref_outdated_skipped_in_ci(temp_project_dir, monkeypatch) -> None:
     assert "was modified after the claim timestamp" in res_no_ci["risks"][0]["description"]
     assert res_no_ci["claims_analysis"][0]["status"] == CoverageStatus.LOW_CONFIDENCE.value
 
+
+def test_claim_test_refs_cover_ac(temp_project_dir) -> None:
+    """
+    Claim's test_refs includes a test that covers the related AC.
+    No risk should be raised from covers consistency check.
+    """
+    # Create test file so the file-existence check does not flag it
+    import os
+
+    test_file = temp_project_dir / "tests" / "test_feature.py"
+    test_file.parent.mkdir(parents=True, exist_ok=True)
+    test_file.write_text("def test_feature(): pass")
+    # Set mtime to before the claim timestamp (2026-05-22T10:00:00Z)
+    os.utime(test_file, (1000000000, 1000000000))
+
+    claim = Claim(
+        claim_id="CLAIM-VT-001",
+        related_task="TASK-VT-001",
+        claimed_status=CoverageStatus.COVERED.value,
+        evidence_refs=["EVIDENCE-VT-002"],
+        timestamp="2026-05-22T10:00:00Z",
+        test_refs=[str(test_file.relative_to(temp_project_dir.parent.parent))],
+    )
+
+    evidences = [
+        {
+            "evidence_id": "EVIDENCE-VT-001",
+            "source_type": "task",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"task_id": "TASK-VT-001"},
+        },
+        {
+            "evidence_id": "EVIDENCE-VT-002",
+            "source_type": "test",
+            "source_path": str(test_file.relative_to(temp_project_dir.parent.parent)),
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+        },
+    ]
+
+    analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+    res = analyzer.analyze([claim], evidences)
+
+    # No risks at all - claim's test_refs covers the AC
+    assert len(res["risks"]) == 0
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
+
+
+def test_claim_test_refs_miss_ac_coverage(temp_project_dir) -> None:
+    """
+    Claim's test_refs has tests but none cover the AC, while other tests do.
+    A must risk with 'test_covers_mismatch' should be raised.
+    """
+    # Create both test files so the file-existence check does not flag them
+    import os
+
+    tests_dir = temp_project_dir / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
+    test_feature = tests_dir / "test_feature.py"
+    test_feature.write_text("def test_feature(): pass")
+    test_other = tests_dir / "test_other.py"
+    test_other.write_text("def test_other(): pass")
+    # Set mtime to before the claim timestamp (2026-05-22T10:00:00Z)
+    os.utime(test_feature, (1000000000, 1000000000))
+    os.utime(test_other, (1000000000, 1000000000))
+
+    root = temp_project_dir.parent.parent
+    claim = Claim(
+        claim_id="CLAIM-VT-001",
+        related_task="TASK-VT-001",
+        claimed_status=CoverageStatus.COVERED.value,
+        evidence_refs=["EVIDENCE-VT-002"],
+        timestamp="2026-05-22T10:00:00Z",
+        test_refs=[str(test_other.relative_to(root))],
+    )
+
+    evidences = [
+        {
+            "evidence_id": "EVIDENCE-VT-001",
+            "source_type": "task",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"task_id": "TASK-VT-001"},
+        },
+        # This test covers the AC but is NOT in claim's test_refs
+        {
+            "evidence_id": "EVIDENCE-VT-002",
+            "source_type": "test",
+            "source_path": str(test_feature.relative_to(root)),
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+        },
+        # This test is in claim's test_refs but does NOT cover the AC
+        {
+            "evidence_id": "EVIDENCE-VT-003",
+            "source_type": "test",
+            "source_path": str(test_other.relative_to(root)),
+            "covers": ["AC-VT-001-02"],
+            "status": CoverageStatus.COVERED.value,
+        },
+    ]
+
+    analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+    res = analyzer.analyze([claim], evidences)
+
+    # Should have exactly 1 risk for test_covers_mismatch
+    covers_risks = [r for r in res["risks"] if r.get("risk_category") == "test_covers_mismatch"]
+    assert len(covers_risks) == 1
+    assert covers_risks[0]["severity"] == "must"
+    assert "AC-VT-001-01" in covers_risks[0]["description"]
+
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.LOW_CONFIDENCE.value
+
+
+def test_claim_no_test_refs_skips_check(temp_project_dir) -> None:
+    """
+    Claim has no test_refs -> covers consistency check is skipped.
+    No risk from this check should be raised.
+    """
+    claim = Claim(
+        claim_id="CLAIM-VT-001",
+        related_task="TASK-VT-001",
+        claimed_status=CoverageStatus.COVERED.value,
+        evidence_refs=["EVIDENCE-VT-002"],
+        timestamp="2026-05-22T10:00:00Z",
+        # No test_refs
+    )
+
+    evidences = [
+        {
+            "evidence_id": "EVIDENCE-VT-001",
+            "source_type": "task",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+            "details": {"task_id": "TASK-VT-001"},
+        },
+        {
+            "evidence_id": "EVIDENCE-VT-002",
+            "source_type": "test",
+            "source_path": "tests/test_feature.py",
+            "covers": ["AC-VT-001-01"],
+            "status": CoverageStatus.COVERED.value,
+        },
+    ]
+
+    analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+    res = analyzer.analyze([claim], evidences)
+
+    # No test_covers_mismatch risks should be raised
+    covers_risks = [r for r in res["risks"] if r.get("risk_category") == "test_covers_mismatch"]
+    assert len(covers_risks) == 0
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
+

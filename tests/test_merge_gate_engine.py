@@ -248,3 +248,126 @@ def test_separate_gate_and_human_decisions():
     assert "gate_decision" in res
     assert res["gate_decision"] == "pass"
     assert "human_decision" not in res
+
+
+def test_blocked_with_fail_reasons_included():
+    """
+    Test that when a blocked condition (AC gap) AND a fail condition (REQ gap) both exist,
+    the gate_decision is "blocked" but reasons list contains BOTH the blocked and fail entries.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "AC-VT-001-01",
+            "item_type": "ac",
+            "reason": "Must acceptance criterion AC-VT-001-01 is missing passing test coverage.",
+        },
+        {
+            "item_id": "REQ-VT-002",
+            "item_type": "requirement",
+            "reason": "No task coverage for requirement REQ-VT-002.",
+        },
+    ]
+    risks = []
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+
+    res = engine.evaluate(gaps, risks, compliance)
+
+    assert res["gate_decision"] == "blocked"
+    assert any("AC-VT-001-01" in msg for msg in res["reasons"])
+    assert any("REQ-VT-002" in msg for msg in res["reasons"])
+    assert len(res["blocked_items"]) > 0
+
+
+def test_blocked_with_should_risk_reasons_included():
+    """
+    Test that when a blocked condition (must risk) AND a fail condition (should risk) both exist,
+    the gate_decision is "blocked" but reasons list contains BOTH.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = [
+        {
+            "risk_id": "RISK-VT-010",
+            "description": "Critical vulnerability found.",
+            "severity": "must",
+            "suggested_action": "Patch immediately",
+            "business_impact": "System compromise",
+        },
+        {
+            "risk_id": "RISK-VT-011",
+            "description": "Minor style inconsistency.",
+            "severity": "should",
+            "confidence": "low_confidence",
+            "type": "suggestion",
+        },
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+
+    res = engine.evaluate(gaps, risks, compliance)
+
+    assert res["gate_decision"] == "blocked"
+    assert any("RISK-VT-010" in msg for msg in res["reasons"])
+    assert any("RISK-VT-011" in msg for msg in res["reasons"])
+    assert len(res["blocked_items"]) > 0
+
+
+def test_pass_no_issues():
+    """
+    Test that with no gaps, no risks, and clean compliance, the gate passes with a pass message.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = []
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+
+    res = engine.evaluate(gaps, risks, compliance)
+
+    assert res["gate_decision"] == "pass"
+    assert "所有质量门禁规则均已通过" in res["reasons"][0]
+    assert len(res["blocked_items"]) == 0
+
+
+def test_blocked_only_ac_gap():
+    """
+    Test that when only an AC gap is present (no fail conditions), the gate is blocked
+    and reasons contain only the blocked reason.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "AC-VT-005-01",
+            "item_type": "ac",
+            "reason": "Missing test evidence for AC-VT-005-01.",
+        }
+    ]
+    risks = []
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+
+    res = engine.evaluate(gaps, risks, compliance)
+
+    assert res["gate_decision"] == "blocked"
+    assert any("AC-VT-005-01" in msg for msg in res["reasons"])
+    # Only blocked reasons, no fail reasons
+    assert len(res["reasons"]) == 1
+    assert len(res["blocked_items"]) == 1

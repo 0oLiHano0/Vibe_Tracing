@@ -58,7 +58,8 @@ def test_run_init_creates_scaffolding(tmp_path):
     assert constraints_data["schema_version"] == "1.0.0"
     assert constraints_data["project"]["project_id"] == "PROJECT-VT"
     assert len(constraints_data["architecture_principles"]) == 0
-    assert len(constraints_data["module_boundaries"]) == 0
+    assert len(constraints_data["module_boundaries"]) == 1
+    assert constraints_data["module_boundaries"][0]["related_requirements"] == ["REQ-VT-9999"]
     assert len(constraints_data["dependency_rules"]) == 0
 
     # Verify config.json content
@@ -67,6 +68,8 @@ def test_run_init_creates_scaffolding(tmp_path):
     assert config_data["paths"]["prd"] == "docs/prd.md"
     assert config_data["project_name"] == "Vibe Tracing"
     assert config_data["project_prefix"] == "VT"
+    assert "prd_hash" in config_data, "config.json should contain prd_hash field for vt finalize"
+    assert config_data["prd_hash"] == ""
 
     # Verify both generated files pass schema validation
     from vibe_tracing.schema_validator import SchemaValidator
@@ -125,6 +128,10 @@ def test_run_init_pre_commit_hook_uses_sys_executable(tmp_path):
     assert hook_path.is_file()
     content = hook_path.read_text(encoding="utf-8")
 
+    # Must contain 'set -e' so failures are not silently swallowed
+    assert "set -e" in content, (
+        f"Pre-commit hook should contain 'set -e', got: {content}"
+    )
     # Must NOT contain hardcoded python3 -m
     assert "python3 -m" not in content, (
         f"Pre-commit hook should not hardcode 'python3 -m', got: {content}"

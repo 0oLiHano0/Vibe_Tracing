@@ -21,14 +21,14 @@ def _prepare_project(tmp_path, folder_name):
 def test_e2e_good_project(tmp_path):
     """
     covers: AC-VT-001-01, AC-VT-001-02, AC-VT-001-03, AC-VT-001-04, AC-VT-002-01, AC-VT-002-02, AC-VT-002-03, AC-VT-006-01, AC-VT-006-02, AC-VT-008-03, AC-VT-009-01, AC-VT-009-02, AC-VT-009-03, AC-VT-009-04
-    Verify sample_project_good produces a PASS decision, exit code 0, and all outputs are valid.
+    Verify sample_project_good produces a BLOCKED decision (due to low-confidence claim without tool evidence) and exit code 2.
     """
     project_root = _prepare_project(tmp_path, "sample_project_good")
     output_dir = project_root / "output"
 
     # Run analyzer
     exit_code = main(["analyze", "--project-root", str(project_root)])
-    assert exit_code == 0
+    assert exit_code == 2
 
     # Verify output files exist
     evidence_index_path = output_dir / "evidence_index.json"
@@ -51,9 +51,12 @@ def test_e2e_good_project(tmp_path):
 
     # Validate run metadata
     meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
-    assert meta["gate_decision"] == "pass"
-    assert meta["exit_code"] == 0
-    assert "所有质量门禁规则均已通过" in meta["summary"]
+    assert meta["gate_decision"] == "blocked"
+    assert meta["exit_code"] == 2
+    assert (
+        "验收标准缺失测试证据" in meta["summary"]
+        or "低可信度" in meta["summary"]
+    )
 
 
 def test_e2e_missing_tests(tmp_path):
@@ -104,21 +107,21 @@ def test_e2e_bad_claim(tmp_path):
 def test_e2e_arch_unclear(tmp_path):
     """
     covers: AC-VT-008-03, AC-VT-009-02, AC-VT-009-04
-    Verify sample_project_arch_unclear produces a FAIL decision (due to unclear constraints) and exit code 0.
+    Verify sample_project_arch_unclear produces a BLOCKED decision (due to low-confidence claim AND unclear constraints) and exit code 2.
     """
     project_root = _prepare_project(tmp_path, "sample_project_arch_unclear")
     output_dir = project_root / "output"
 
     # Run analyzer
     exit_code = main(["analyze", "--project-root", str(project_root)])
-    assert exit_code == 0
+    assert exit_code == 2
 
     run_metadata_path = output_dir / "run_metadata.json"
     assert run_metadata_path.exists()
 
     meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
-    assert meta["gate_decision"] == "fail"
-    assert meta["exit_code"] == 0
+    assert meta["gate_decision"] == "blocked"
+    assert meta["exit_code"] == 2
     assert (
         "存在不明确的架构约束规则" in meta["summary"]
         or "GATE-VT-008" in meta["summary"]

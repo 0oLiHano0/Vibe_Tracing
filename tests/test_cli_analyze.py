@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 import pytest
@@ -404,3 +405,182 @@ def test_cli_analyze_custom_output_dir(tmp_path):
     assert (custom_out / "evidence_index.json").exists()
     assert (custom_out / "traceability_report.json").exists()
     assert (custom_out / "run_metadata.json").exists()
+
+
+def test_prd_drift_detection(tmp_path, capsys):
+    """
+    Test that modifying PRD after finalize triggers a drift WARNING but does NOT block.
+    Exit code must be 0 (warning only).
+    """
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # Compute the original PRD hash and store it in config.json (simulates finalize baseline)
+    prd_path = tmp_path / "docs" / "prd.md"
+    original_hash = hashlib.sha256(prd_path.read_bytes()).hexdigest()
+
+    cfg_path = tmp_path / ".vibetracing" / "config.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    cfg["prd_hash"] = original_hash
+    cfg_path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+
+    # Modify the PRD to trigger drift
+    prd_path.write_text(
+        prd_path.read_text(encoding="utf-8") + "\n<!-- drift -->\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+
+    # Warning only, must NOT block
+    assert exit_code == 0
+
+    captured = capsys.readouterr()
+    assert "PRD 已从基线漂移" in captured.err
+
+
+def test_mapping_dead_link_blocks(tmp_path, capsys):
+    """
+    Test that architecture constraints referencing a non-existent PRD requirement
+    (dead link) blocks the analysis with exit code 1.
+    """
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # Remove stored hash so Gate 1 (tampering check) doesn't block on modified constraints
+    cfg_path = tmp_path / ".vibetracing" / "config.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    cfg.pop("architecture_constraints_hash", None)
+    cfg_path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+
+    # Modify architecture constraints to reference a REQ that doesn't exist in PRD
+    arch_path = tmp_path / "docs" / "architecture_constraints.json"
+    arch = json.loads(arch_path.read_text(encoding="utf-8"))
+    arch["module_boundaries"][0]["related_requirements"] = ["REQ-VT-999"]
+    arch_path.write_text(json.dumps(arch, indent=2), encoding="utf-8")
+
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+    assert exit_code == 1
+
+    captured = capsys.readouterr()
+    assert "BLOCKED" in captured.err
+    assert "死链" in captured.err
+
+
+def test_mapping_must_uncovered_blocks(tmp_path, capsys):
+    """
+    Test that a MUST-level PRD requirement without architecture support
+    blocks the analysis with exit code 1.
+    """
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # Remove stored hash so Gate 1 (tampering check) doesn't block
+    cfg_path = tmp_path / ".vibetracing" / "config.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    cfg.pop("architecture_constraints_hash", None)
+    cfg_path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+
+    # Add a new MUST requirement to PRD without a corresponding architecture module
+    prd_path = tmp_path / "docs" / "prd.md"
+    prd_path.write_text(
+        prd_path.read_text(encoding="utf-8")
+        + "\n### REQ-VT-002: 新增MUST需求\n#### 优先级\nmust\n\n"
+        "##### AC-VT-002-01: 验收标准\n* 是否必须有测试：是\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+    assert exit_code == 1
+
+    captured = capsys.readouterr()
+    assert "BLOCKED" in captured.err
+    assert "MUST" in captured.err
+    assert "无架构支撑" in captured.err
+
+
+def test_mapping_should_uncovered_warns(tmp_path, capsys):
+    """
+    Test that a SHOULD-level PRD requirement without architecture mapping
+    produces a WARNING but does NOT block (exit code 0).
+    """
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # Remove stored hash so Gate 1 (tampering check) doesn't block
+    cfg_path = tmp_path / ".vibetracing" / "config.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    cfg.pop("architecture_constraints_hash", None)
+    cfg_path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+
+    # Add a new SHOULD requirement to PRD without architecture mapping
+    prd_path = tmp_path / "docs" / "prd.md"
+    prd_path.write_text(
+        prd_path.read_text(encoding="utf-8")
+        + "\n### REQ-VT-002: 新增SHOULD需求\n#### 优先级\nshould\n\n"
+        "##### AC-VT-002-01: 验收标准\n* 是否必须有测试：否\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    captured = capsys.readouterr()
+    assert "WARNING" in captured.err
+
+
+def test_gates_only_skips_analysis(tmp_path, capsys):
+    """
+    Test that --gates-only runs only integrity gates and skips the full analysis.
+    With --pre-commit, gates 2/2.5 also run; with --gates-only, the pipeline
+    returns 0 immediately after gates complete.
+    """
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    exit_code = main([
+        "analyze", "--project-root", str(tmp_path),
+        "--pre-commit", "--gates-only",
+    ])
+    assert exit_code == 0
+
+    captured = capsys.readouterr()
+    assert "Gates-only mode: integrity gates passed. Skipping analysis." in captured.out
+    # Full analysis output should NOT appear
+    assert "Analysis complete. Gate decision:" not in captured.out
+
+    # No output files should be generated (evidence_index, traceability_report, etc.)
+    output_dir = tmp_path / "output"
+    assert not (output_dir / "evidence_index.json").exists()
+    assert not (output_dir / "traceability_report.json").exists()
+    assert not (output_dir / "run_metadata.json").exists()

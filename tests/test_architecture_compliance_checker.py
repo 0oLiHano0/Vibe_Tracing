@@ -348,3 +348,29 @@ def test_gate_compliance_logic(temp_workspace):
         s["rule_id"]: s["status"] for s in results2["architecture_compliance_status"]
     }
     assert statuses2["GATE-VT-006"] == "violated"
+
+
+def test_check_uses_preloaded_constraints_data(temp_workspace, base_constraints_data):
+    """covers: REFACTOR-007 -- check() should skip disk read when constraints_data is passed."""
+    from unittest.mock import patch
+
+    src_dir = temp_workspace / "src/vibe_tracing"
+    (src_dir / "raw_input_loader.py").write_text("import json\n", encoding="utf-8")
+
+    checker = ArchitectureComplianceChecker(project_root=temp_workspace)
+
+    # Patch _load_constraints so it raises if called -- proving it is skipped
+    with patch.object(
+        checker, "_load_constraints", side_effect=AssertionError("should not be called")
+    ):
+        results = checker.check(evidences=[], constraints_data=base_constraints_data)
+
+    assert "architecture_compliance_status" in results
+    violations = results["architecture_violations"]
+    assert len(violations) == 0, f"Expected no violations, got {violations}"
+
+    statuses = {
+        s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
+    }
+    assert statuses["STORE-VT-001"] == "compliant"
+    assert statuses["DEP-VT-001"] == "compliant"

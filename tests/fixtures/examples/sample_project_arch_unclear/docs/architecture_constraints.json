@@ -5,7 +5,14 @@
     "name": "Sample Project",
     "stage": "mvp"
   },
-  "module_boundaries": [],
+  "module_boundaries": [
+    {
+      "module_id": "MOD-VT-001",
+      "name": "Core Module",
+      "responsibility": "Core feature implementation",
+      "related_requirements": ["REQ-VT-001"]
+    }
+  ],
   "architecture_principles": [
     {
       "principle_id": "FORBID-VT-007",

@@ -11,8 +11,10 @@
     "output_dir": "output"
   },
   "language": "python",
-  "validation_tools": ["test"],
-  "architecture_constraints_hash": "fb2b5bf352553c633eb2833c33aa13f3c8b1606b30610add3aba512e2dd5917f",
+  "validation_tools": [
+    "test"
+  ],
+  "architecture_constraints_hash": "49c8b93a564f30045cc5d7077fb7ec324876c793cc74d519aa82d8c53f4047c4",
   "finalize_git_commit": "abc123deadbeef",
   "finalize_constraints_path": "docs/architecture_constraints.json"
 }

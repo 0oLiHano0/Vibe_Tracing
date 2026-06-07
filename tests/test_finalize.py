@@ -270,6 +270,29 @@ def test_finalize_writes_hash_commit_path(tmp_path, capsys):
     assert config["finalize_constraints_path"] == "docs/architecture_constraints.json"
 
 
+def test_finalize_writes_prd_hash(tmp_path, capsys):
+    """First finalize computes and stores prd_hash (SHA256 of prd.md) in config.json."""
+    from vibe_tracing.core import ids
+    ids.set_project_prefix("TEST")
+
+    _setup_project(tmp_path, constraints_data=_CONSTRAINTS_WITH_COVERAGE)
+    _create_prd_file(tmp_path, [
+        {"id": "REQ-TEST-001", "title": "Basic feature", "priority": "must"},
+    ])
+    _init_git_repo(tmp_path)
+
+    exit_code = main(["finalize", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    config = json.loads((tmp_path / ".vibetracing" / "config.json").read_text(encoding="utf-8"))
+
+    prd_path = tmp_path / "docs" / "prd.md"
+    expected_prd_hash = hashlib.sha256(prd_path.read_bytes()).hexdigest()
+
+    assert config["prd_hash"] == expected_prd_hash
+    assert len(config["prd_hash"]) == 64  # SHA256 hex digest length
+
+
 def test_finalize_re_finalize_hash_match(tmp_path, capsys):
     """Re-finalize with unchanged constraints prints 'Already finalized' (hash matches)."""
     _setup_project(tmp_path)

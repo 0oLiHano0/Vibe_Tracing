@@ -326,7 +326,7 @@ class TestHappyPath:
                 _make_pytest_report(
                     [
                         {
-                            "nodeid": "tests/test_feature.py::test_feature",
+                            "nodeid": "tests/test_feature.py",
                             "outcome": "passed",
                             "docstring": "covers: AC-VT-001-01",
                         }

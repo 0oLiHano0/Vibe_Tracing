@@ -472,5 +472,23 @@
     ],
     "timestamp": "2026-06-07T23:00:00Z",
     "notes": "Gate 2.5 反向覆盖校验升级：无覆盖 task → BLOCKED"
+  },
+  {
+    "claim_id": "CLAIM-VT-054",
+    "related_task": "TASK-VT-049",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_scaffolding.py::test_run_init_pre_commit_hook_uses_sys_executable"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_scaffolding.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "timestamp": "2026-06-07T23:30:00Z",
+    "notes": "hook 模板去除 --gates-only，每次 commit 运行完整分析 + 反思提示"
   }
 ]

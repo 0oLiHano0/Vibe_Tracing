@@ -1130,7 +1130,29 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
             return exit_code
 
         if gates_only:
-            print("Gates-only mode: integrity gates passed. Skipping analysis.")
+            # Render reflection prompts with available data (no analysis results)
+            from vibe_tracing.reflection_prompts import render_reflection_prompts
+            affected_files_gs: List[str] = []
+            for claim in ctx.claims_list:
+                for ref in (claim.code_refs if hasattr(claim, "code_refs") else claim.get("code_refs", [])):
+                    path = ref.split("#")[0]
+                    if path and path not in affected_files_gs:
+                        affected_files_gs.append(path)
+            task_list_gs: Dict[str, Any] = {"tasks": []}
+            if ctx.task_result and ctx.task_result.tasks:
+                task_list_gs = {
+                    "tasks": [
+                        {"task_id": t.task_id, "related_requirements": t.related_requirements,
+                         "related_acceptance_criteria": t.related_acceptance_criteria,
+                         "category": getattr(t, "category", None)}
+                        for t in ctx.task_result.tasks
+                    ]
+                }
+            print(render_reflection_prompts(
+                gate_decision="pass", gaps=[], risks=[],
+                task_list=task_list_gs, affected_files=affected_files_gs,
+            ))
+            print("Gates-only mode: integrity gates passed. Skipping tool execution.")
             return 0
 
         tool_evidence = _execute_tools(ctx, project_root, is_draft)

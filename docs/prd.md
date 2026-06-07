@@ -1266,6 +1266,73 @@ Must
 * 异常处理：无。
 * 是否必须有测试：是
 
+##### AC-VT-009-12：分析流水线必须单次加载输入文件
+
+* 条件：执行 vibe-tracing analyze
+* 输入：config.json、prd.md、architecture_constraints.json、task_list.json、agent_claims.json
+* 期望输出：
+  1. 所有输入文件在 analyze 流水线中仅从磁盘读取一次。
+  2. 解析结果通过 UnifiedContext 强类型领域对象传递给下游组件。
+  3. EvidenceIndexBuilder 不得内部重新加载已由 cli.py 加载的文件。
+* 异常处理：无。
+* 是否必须有测试：是
+
+##### AC-VT-009-13：门禁决策不得吞掉低级别警告
+
+* 条件：执行 vibe-tracing analyze 且存在多种级别问题
+* 输入：同时存在 AC gap（blocked 级）和 REQ gap（fail 级）
+* 期望输出：
+  1. Gate Decision 为 blocked（最高优先级）。
+  2. reasons 列表同时包含 AC gap 和 REQ gap 的描述。
+  3. 不得因 blocked 而丢弃 fail 级别的问题记录。
+* 异常处理：无。
+* 是否必须有测试：是
+
+##### AC-VT-009-14：PRD 哈希保护与漂移检测
+
+* 条件：执行 vt finalize 后修改 prd.md 再执行 vt analyze
+* 输入：被修改的 prd.md
+* 期望输出：
+  1. vt finalize 必须同时存储 constraints_hash 和 prd_hash 到 config.json。
+  2. vt analyze 检测到 PRD 哈希不匹配时输出 WARNING（不阻断）。
+  3. vt analyze 检测到 PRD↔Architecture 映射失效时必须阻断。
+* 异常处理：config.json 中无 prd_hash 字段时跳过检测。
+* 是否必须有测试：是
+
+##### AC-VT-009-15：PRD↔Architecture 映射必须在 analyze 时持续校验
+
+* 条件：执行 vibe-tracing analyze 且 PRD 或 constraints 存在
+* 输入：当前 PRD + 当前 constraints
+* 期望输出：
+  1. 死链检测：constraints 引用的 REQ 不存在于 PRD → 阻断。
+  2. MUST 覆盖检测：MUST 级 REQ 无架构支撑 → 阻断。
+  3. SHOULD/COULD 缺失 → WARNING（不阻断）。
+  4. 映射校验必须在每次 analyze 时执行，不仅在 finalize 时。
+* 异常处理：PRD 缺失或解析失败时跳过校验。
+* 是否必须有测试：是
+
+##### AC-VT-009-16：Claim 的 test_refs 必须覆盖关联 AC
+
+* 条件：执行 vibe-tracing analyze 且存在 completed Claim
+* 输入：Claim 的 test_refs + 关联 task 的 AC 列表
+* 期望输出：
+  1. 如果 Claim 的 test_refs 中的测试未覆盖关联的 AC，必须产生 must 级 risk。
+  2. risk_category 为 "test_covers_mismatch"。
+  3. 无 test_refs 的 Claim 跳过此检查。
+* 异常处理：无测试覆盖该 AC 时由 AcTestAnalyzer 检测，不由本检查重复。
+* 是否必须有测试：是
+
+##### AC-VT-009-17：Pre-commit hook 必须可靠且快速
+
+* 条件：vt init 安装 pre-commit hook 后执行 git commit
+* 输入：staged 文件
+* 期望输出：
+  1. hook 脚本必须包含 `set -e`，防止 Python 不可用时静默通过。
+  2. hook 使用 `--gates-only` 模式，仅执行 Gate 1/2/2.5，跳过工具执行。
+  3. hook 执行时间不超过 5 秒。
+* 异常处理：hook 阻断时必须输出具体原因和修复建议。
+* 是否必须有测试：是
+
 #### 边界场景
 
 * 架构约束中缺少 project.language 或 language_tool_matrix 字段

@@ -3,10 +3,16 @@
 Implements Gate 2.5 in the pre-commit flow: if a new task references ACs that
 were NOT touched in the same PRD update, emit a WARNING (never blocks).
 
-Also implements a **reverse coverage check**: staged code files that are covered
-by a task (via claims' ``code_refs``) but whose covering task was NOT modified
-in this commit produce a WARNING.  This prevents the bypass pattern where
-task+AC land in commit A and code changes silently land in commit B.
+Also implements a **reverse coverage check** with two severity levels:
+
+* **BLOCKED** -- A staged code file has NO claim covering it at all (equivalent
+  to ghost code).  This produces ``success=False``.
+* **WARNING** -- A staged code file IS covered by a claim, but the covering
+  task was NOT modified in this commit.  This produces ``success=True`` with a
+  warning message.
+
+This prevents the bypass pattern where task+AC land in commit A and code
+changes silently land in commit B.
 """
 
 import json
@@ -30,18 +36,31 @@ class AcFreshnessChecker:
     def check(self) -> Tuple[bool, str]:
         """Run the AC freshness check.
 
-        Returns ``(success, warning_message)``.
-        *success* is always ``True`` -- this gate only warns, never blocks.
+        Returns ``(success, message)``.
+
+        * ``success=False`` when the reverse check finds staged code files with
+          **no covering claim at all** (BLOCKED).
+        * ``success=True`` when there are only warnings (task not modified) or
+          no issues.
         """
-        # -- Forward check: new task -> AC fresh? --
+        # -- Forward check: new task -> AC fresh? (always WARNING) --
         forward_warnings = self._forward_check()
 
         # -- Reverse check: staged code -> covering task modified? --
-        reverse_warnings = self._reverse_check()
+        reverse_blocked, reverse_warnings = self._reverse_check()
 
-        all_warnings = forward_warnings + reverse_warnings
-        if all_warnings:
-            return True, "\n".join(all_warnings)
+        # Combine all messages
+        all_parts: List[str] = []
+        if reverse_blocked:
+            all_parts.extend(reverse_blocked)
+        if forward_warnings:
+            all_parts.extend(forward_warnings)
+        if reverse_warnings:
+            all_parts.extend(reverse_warnings)
+
+        if all_parts:
+            success = not reverse_blocked  # False only when BLOCKED
+            return success, "\n".join(all_parts)
 
         return True, ""
 
@@ -97,15 +116,21 @@ class AcFreshnessChecker:
     # Reverse check (new logic)
     # ------------------------------------------------------------------
 
-    def _reverse_check(self) -> List[str]:
-        """Reverse check: staged code files covered by tasks not modified in this commit."""
+    def _reverse_check(self) -> Tuple[List[str], List[str]]:
+        """Reverse check: staged code files vs. covering claims.
+
+        Returns ``(blocked, warnings)`` where each is a list of formatted
+        message strings.
+
+        * **BLOCKED** -- staged code file has no covering claim at all.
+        * **WARNING** -- staged code file is covered but its task was not
+          modified in this commit.
+        """
         staged_code_files = self._get_staged_code_files()
         if not staged_code_files:
-            return []
+            return [], []
 
         staged_claims = self._get_staged_claims()
-        if not staged_claims:
-            return []
 
         # Build mapping: code_file -> set of task_ids that cover it
         file_to_tasks: Dict[str, Set[str]] = {}
@@ -119,32 +144,47 @@ class AcFreshnessChecker:
                 if clean_ref:
                     file_to_tasks.setdefault(clean_ref, set()).add(task_id)
 
-        if not file_to_tasks:
-            return []
-
         modified_task_ids = self._get_modified_task_ids()
 
+        blocked: List[str] = []
         warnings: List[str] = []
         for code_file in sorted(staged_code_files):
-            covering_tasks = file_to_tasks.get(code_file, set())
-            for task_id in sorted(covering_tasks):
-                if task_id not in modified_task_ids:
-                    warnings.append(
-                        f"  - 代码文件 {code_file} 被任务 {task_id} 覆盖，"
-                        f"但该任务未在本次提交中修改。"
-                        f"请确认是否需要更新任务状态或提交 Claim。"
-                    )
+            if code_file not in file_to_tasks:
+                # No claim covers this file at all -> BLOCKED
+                blocked.append(
+                    f"  - 代码文件 {code_file} 没有关联的 Claim。"
+                    f"请创建 Claim 或将文件加入白名单。"
+                )
+            else:
+                # Has covering claims -> check if any task was modified
+                for task_id in sorted(file_to_tasks[code_file]):
+                    if task_id not in modified_task_ids:
+                        warnings.append(
+                            f"  - 代码文件 {code_file} 被任务 {task_id} 覆盖，"
+                            f"但该任务未在本次提交中修改。"
+                            f"请确认是否需要更新任务状态或提交 Claim。"
+                        )
 
+        blocked_messages: List[str] = []
+        if blocked:
+            blocked_messages.append(
+                "反向覆盖检查阻断："
+                "以下代码文件没有被任何任务覆盖：\n"
+                + "\n".join(blocked)
+                + "\n未声明 Claim 的业务代码将阻断提交。"
+            )
+
+        warning_messages: List[str] = []
         if warnings:
-            return [
+            warning_messages.append(
                 "反向覆盖检查提醒："
                 "以下代码文件的覆盖任务未在本次提交中修改：\n"
                 + "\n".join(warnings)
                 + "\n如果这是有意为之"
                 f"（例如仅修改实现细节），可忽略此警告。"
-            ]
+            )
 
-        return []
+        return blocked_messages, warning_messages
 
     # ------------------------------------------------------------------
     # Internal helpers -- staged files / PRD / new tasks

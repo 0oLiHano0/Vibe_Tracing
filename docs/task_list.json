@@ -3121,6 +3121,104 @@
         "通过 claims code_refs 映射 code_file -> task_id",
         "line-range 后缀需剥离"
       ]
+    },
+    {
+      "task_id": "TASK-VT-053",
+      "phase_id": "PHASE-VT-05",
+      "title": "Gate 3 语义审计协议",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-02",
+        "AC-VT-010-03"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "实现 SemanticAuditor 两阶段协议：generate_tickets 生成 pending 审计单，verify_tickets 验证 Agent 填充结果",
+      "atomic_scope": "新建 semantic_auditor.py，修改 cli.py、ac_freshness_checker.py",
+      "out_of_scope": [
+        "Claims 移除（阶段 1 演进）"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-052"
+      ],
+      "expected_deliverables": [
+        "semantic_auditor.py",
+        "修改后的 cli.py",
+        "修改后的 ac_freshness_checker.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-053-01",
+          "description": "quality_evolution 代码变更生成 pending ticket"
+        },
+        {
+          "dod_id": "DOD-VT-053-02",
+          "description": "pending ticket 阻断提交（exit 2）"
+        },
+        {
+          "dod_id": "DOD-VT-053-03",
+          "description": "passed + reason 非空 + hash 匹配放行"
+        },
+        {
+          "dod_id": "DOD-VT-053-04",
+          "description": "无覆盖 task 代码变更阻断（exit 2）"
+        },
+        {
+          "dod_id": "DOD-VT-053-05",
+          "description": "48h 清理 archived tickets"
+        }
+      ],
+      "ai_coding_guidance": [
+        "审计单位置 .vibetracing/semantic_audit.json",
+        "category 从 task 或 requirement 查找"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-054",
+      "phase_id": "PHASE-VT-05",
+      "title": "Gate 2.5 反向覆盖校验升级为 BLOCKING",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-17"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "反向覆盖校验分层：无覆盖 task → BLOCKED，task 未修改 → WARNING",
+      "atomic_scope": "修改 ac_freshness_checker.py",
+      "out_of_scope": [],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-052"
+      ],
+      "expected_deliverables": [
+        "修改后的 ac_freshness_checker.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-054-01",
+          "description": "无覆盖 task 返回 success=False"
+        },
+        {
+          "dod_id": "DOD-VT-054-02",
+          "description": "task 未修改保持 WARNING"
+        }
+      ],
+      "ai_coding_guidance": [
+        "_reverse_check 返回 (blocked, warnings) 元组"
+      ]
     }
   ]
 }

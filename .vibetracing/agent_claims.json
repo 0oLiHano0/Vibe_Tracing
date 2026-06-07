@@ -435,5 +435,42 @@
     ],
     "timestamp": "2026-06-07T22:00:00Z",
     "notes": "GOV: Gate 2.5 反向覆盖校验 — staged 代码文件覆盖 task 修改状态"
+  },
+  {
+    "claim_id": "CLAIM-VT-052",
+    "related_task": "TASK-VT-053",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_semantic_auditor.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/semantic_auditor.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_semantic_auditor.py",
+      ".vibetracing/semantic_audit.json"
+    ],
+    "test_refs": [
+      "tests/test_semantic_auditor.py"
+    ],
+    "timestamp": "2026-06-07T23:00:00Z",
+    "notes": "Gate 3: SemanticAuditor 两阶段协议（generate → verify）"
+  },
+  {
+    "claim_id": "CLAIM-VT-053",
+    "related_task": "TASK-VT-054",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_ac_freshness.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/ac_freshness_checker.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_ac_freshness.py"
+    ],
+    "test_refs": [
+      "tests/test_ac_freshness.py"
+    ],
+    "timestamp": "2026-06-07T23:00:00Z",
+    "notes": "Gate 2.5 反向覆盖校验升级：无覆盖 task → BLOCKED"
   }
 ]

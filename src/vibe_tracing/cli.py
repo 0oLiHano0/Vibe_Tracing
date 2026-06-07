@@ -670,9 +670,56 @@ def _run_integrity_gates(
     if is_pre_commit:
         from vibe_tracing.ac_freshness_checker import AcFreshnessChecker
         freshness_checker = AcFreshnessChecker(project_root)
-        _, warning_msg = freshness_checker.check()
+        success, warning_msg = freshness_checker.check()
         if warning_msg:
-            print(warning_msg)
+            print(warning_msg, file=sys.stderr)
+        if not success:
+            return 1
+
+    # Gate 3: Semantic Audit (pre-commit only)
+    if is_pre_commit:
+        from vibe_tracing.semantic_auditor import SemanticAuditor
+        auditor = SemanticAuditor(project_root)
+        staged_code_files = auditor.get_staged_code_files()
+        if staged_code_files:
+            # Convert Task objects and Requirement objects to dicts for the auditor
+            tasks_as_dicts = []
+            if ctx.task_result and ctx.task_result.tasks:
+                for t in ctx.task_result.tasks:
+                    tasks_as_dicts.append({
+                        "task_id": t.task_id,
+                        "related_requirements": t.related_requirements,
+                        "related_acceptance_criteria": t.related_acceptance_criteria,
+                        "category": getattr(t, "category", None),
+                    })
+            reqs_as_dicts = []
+            if ctx.prd and ctx.prd.requirements:
+                for r in ctx.prd.requirements:
+                    reqs_as_dicts.append({
+                        "req_id": r.req_id,
+                        "category": r.category,
+                    })
+            claims_as_dicts = []
+            for c in ctx.claims_list:
+                claims_as_dicts.append({
+                    "claim_id": c.claim_id if hasattr(c, "claim_id") else c.get("claim_id", ""),
+                    "related_task": c.related_task if hasattr(c, "related_task") else c.get("related_task", ""),
+                    "code_refs": c.code_refs if hasattr(c, "code_refs") else c.get("code_refs", []),
+                })
+
+            new_tickets = auditor.generate_tickets(
+                staged_code_files, claims_as_dicts, tasks_as_dicts, reqs_as_dicts,
+            )
+            if new_tickets:
+                print(
+                    f"Semantic Audit: 生成 {len(new_tickets)} 个审计单，等待 Agent 填充理由。",
+                    file=sys.stderr,
+                )
+            success, audit_msg = auditor.verify_tickets(staged_code_files)
+            if audit_msg:
+                print(audit_msg, file=sys.stderr)
+            if not success:
+                return 2
 
     return None
 

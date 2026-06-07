@@ -491,8 +491,8 @@ class TestReverseCoverageCheck:
             cwd=tmp_path, check=True, capture_output=True,
         )
 
-    def test_staged_code_no_covering_task__no_warning(self, tmp_path):
-        """Staged code file with no covering task -> no warning."""
+    def test_staged_code_no_covering_task__blocked(self, tmp_path):
+        """Staged code file with no covering task -> BLOCKED (success=False)."""
         _write_task_list(tmp_path, [
             {
                 "task_id": "TASK-VT-001",
@@ -518,8 +518,10 @@ class TestReverseCoverageCheck:
         checker = AcFreshnessChecker(tmp_path)
         success, msg = checker.check()
 
-        assert success is True
-        assert msg == ""
+        assert success is False
+        assert "反向覆盖检查阻断" in msg
+        assert "src/new_file.py" in msg
+        assert "没有关联的 Claim" in msg
 
     def test_staged_code_covered_by_unmodified_task__warns(self, tmp_path):
         """Staged code covered by a task that was NOT modified -> WARNING."""
@@ -617,8 +619,8 @@ class TestReverseCoverageCheck:
         assert "反向覆盖检查提醒" in msg
         assert "src/foo.py" in msg
 
-    def test_no_claims__reverse_check_skipped(self, tmp_path):
-        """When there are no staged claims, reverse check produces no warning."""
+    def test_no_claims__reverse_check_blocked(self, tmp_path):
+        """When there are no staged claims, staged code files are BLOCKED."""
         _write_task_list(tmp_path, [
             {
                 "task_id": "TASK-VT-001",
@@ -643,8 +645,9 @@ class TestReverseCoverageCheck:
         checker = AcFreshnessChecker(tmp_path)
         success, msg = checker.check()
 
-        assert success is True
-        assert "反向覆盖检查提醒" not in msg
+        assert success is False
+        assert "反向覆盖检查阻断" in msg
+        assert "src/feature.py" in msg
 
     def test_new_task_also_counted_as_modified(self, tmp_path):
         """A new task (not in HEAD) is treated as modified -> no reverse warning."""
@@ -793,4 +796,45 @@ class TestReverseCoverageCheck:
         assert "AC 新鲜度提醒" in msg
         # Reverse warning present
         assert "反向覆盖检查提醒" in msg
+        assert "TASK-VT-001" in msg
+
+    def test_staged_code_no_covering_claim_at_all__blocked(self, tmp_path):
+        """Claims exist but none cover the staged code file -> BLOCKED."""
+        self._setup_baseline(tmp_path)
+
+        # Stage a NEW code file that is NOT covered by any existing claim
+        _write_code_file(tmp_path, "src/uncovered.py", "# uncovered\n")
+        _stage_file(tmp_path, "src/uncovered.py")
+
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        assert success is False
+        assert "反向覆盖检查阻断" in msg
+        assert "src/uncovered.py" in msg
+        assert "没有关联的 Claim" in msg
+
+    def test_mixed_blocked_and_warning__overall_blocked(self, tmp_path):
+        """One file has no coverage (BLOCKED), another is covered but task
+        unmodified (WARNING) -> overall result is BLOCKED."""
+        self._setup_baseline(tmp_path)
+
+        # Stage the already-covered file (task NOT modified -> WARNING)
+        _write_code_file(tmp_path, "src/feature.py", "# modified\n")
+        _stage_file(tmp_path, "src/feature.py")
+
+        # Stage a new uncovered file (-> BLOCKED)
+        _write_code_file(tmp_path, "src/new.py", "# new\n")
+        _stage_file(tmp_path, "src/new.py")
+
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        assert success is False
+        # BLOCKED present for uncovered file
+        assert "反向覆盖检查阻断" in msg
+        assert "src/new.py" in msg
+        # WARNING present for covered-but-unmodified file
+        assert "反向覆盖检查提醒" in msg
+        assert "src/feature.py" in msg
         assert "TASK-VT-001" in msg

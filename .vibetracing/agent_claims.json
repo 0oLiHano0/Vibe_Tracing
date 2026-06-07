@@ -452,7 +452,7 @@
     "test_refs": [
       "tests/test_semantic_auditor.py"
     ],
-    "timestamp": "2026-06-07T23:00:00Z",
+    "timestamp": "2026-06-08T00:30:00Z",
     "notes": "Gate 3: SemanticAuditor 两阶段协议（generate → verify）"
   },
   {

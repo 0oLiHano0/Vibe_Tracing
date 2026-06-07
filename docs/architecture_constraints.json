@@ -29,8 +29,8 @@
       },
       "type_check": {
         "tool": "mypy",
-        "default_command": "mypy {source_path} --no-error-summary",
-        "output_format": "mypy_text",
+        "default_command": "mypy {source_path}",
+        "output_format": "mypy_json",
         "pass_condition": "exit_code == 0"
       },
       "security": {

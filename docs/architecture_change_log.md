@@ -6,7 +6,7 @@
 
 ### language_tool_matrix.python.type_check 命令模板
 * **变更规则**：mypy 命令从 `mypy {source_path} --json-report {output_path}` 改为 `mypy {source_path} --no-error-summary`，output_format 从 `mypy_json` 改为 `mypy_text`。
-* **变更原因**：mypy 1.19.1 已废弃 `--json-report` 参数，导致工具执行失败（exit code 2）。
+* **变更原因**：mypy 1.19.1 已废弃 `--json-report` 参数。简化为 `mypy {source_path}`，解析器使用 stdout 错误行计数作为 fallback。
 
 ## [2026-06-07] 治理盲区修复 — REQ-VT-010 架构映射
 

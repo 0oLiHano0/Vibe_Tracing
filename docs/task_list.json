@@ -2683,6 +2683,343 @@
           "description": "验证无工具证据的 Claim 被标记为 low_confidence 并阻塞门禁。"
         }
       ]
+    },
+    {
+      "task_id": "TASK-VT-044",
+      "phase_id": "PHASE-VT-05",
+      "title": "UnifiedContext 强类型领域模型与单次加载",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "将 EvidenceIndexBuilder 的 2x I/O 消除为单次加载，通过 UnifiedContext 强类型领域对象传递已解析数据",
+      "atomic_scope": "创建 UnifiedContext dataclass，修改 cli.py 构建 context，修改 EvidenceIndexBuilder 接受 context",
+      "out_of_scope": [
+        "Analyzer 签名迁移、ToolEvidenceAdapter 删除"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/context.py",
+        "修改后的 evidence_index_builder.py",
+        "修改后的 cli.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-044-01",
+          "description": "RawInputLoader.load() 仅执行 1 次"
+        },
+        {
+          "dod_id": "DOD-VT-044-02",
+          "description": "PrdParser.parse_file() 仅执行 1 次"
+        },
+        {
+          "dod_id": "DOD-VT-044-03",
+          "description": "SchemaValidator 对每个文件校验次数 = 1"
+        },
+        {
+          "dod_id": "DOD-VT-044-04",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "UnifiedContext 是纯数据容器，不包含业务逻辑"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-045",
+      "phase_id": "PHASE-VT-05",
+      "title": "MergeGateEngine 逻辑修复：blocked 时保留 fail 级警告",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-13"
+      ],
+      "related_modules": [
+        "MOD-VT-005"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "修复 MergeGateEngine 中 blocked 时吞掉 fail 级警告的逻辑缺陷",
+      "atomic_scope": "修改 merge_gate_engine.py 的 evaluate() 方法",
+      "out_of_scope": [
+        "Gate Decision 优先级变更"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [],
+      "expected_deliverables": [
+        "修改后的 merge_gate_engine.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-045-01",
+          "description": "blocked 时 reasons 包含 fail 级问题"
+        },
+        {
+          "dod_id": "DOD-VT-045-02",
+          "description": "gate_decision 优先级保持 blocked > fail > pass"
+        },
+        {
+          "dod_id": "DOD-VT-045-03",
+          "description": "新增测试覆盖 blocked+fail 共存场景"
+        }
+      ],
+      "ai_coding_guidance": [
+        "将 blocked 和 fail 评估拆为独立循环块"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-046",
+      "phase_id": "PHASE-VT-05",
+      "title": "PRD 哈希保护与漂移检测",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-14"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "在 finalize 时存储 PRD 哈希，在 analyze 时检测 PRD 漂移",
+      "atomic_scope": "修改 cli.py 的 run_finalize 和 run_analyze",
+      "out_of_scope": [
+        "PRD↔Arch 映射校验"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-044"
+      ],
+      "expected_deliverables": [
+        "修改后的 cli.py",
+        "更新的 config.template.json"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-046-01",
+          "description": "finalize 存储 prd_hash 到 config.json"
+        },
+        {
+          "dod_id": "DOD-VT-046-02",
+          "description": "analyze 检测 PRD 漂移输出 WARNING"
+        },
+        {
+          "dod_id": "DOD-VT-046-03",
+          "description": "config.json 无 prd_hash 时跳过检测"
+        }
+      ],
+      "ai_coding_guidance": [
+        "prd_hash 与 constraints_hash 对称处理"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-047",
+      "phase_id": "PHASE-VT-05",
+      "title": "PRD↔Architecture 映射持续校验",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-15"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "将 PRD↔Architecture 映射校验从 finalize 提取为独立模块，在 analyze 时持续校验",
+      "atomic_scope": "创建 prd_arch_validator.py，修改 cli.py 的 run_analyze 增加 Gate 1c",
+      "out_of_scope": [
+        "PRD 哈希存储"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-046"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/prd_arch_validator.py",
+        "修改后的 cli.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-047-01",
+          "description": "死链检测：constraints 引用的 REQ 不存在于 PRD 时阻断"
+        },
+        {
+          "dod_id": "DOD-VT-047-02",
+          "description": "MUST 覆盖检测：MUST 级 REQ 无架构支撑时阻断"
+        },
+        {
+          "dod_id": "DOD-VT-047-03",
+          "description": "SHOULD/COULD 缺失仅 WARNING"
+        },
+        {
+          "dod_id": "DOD-VT-047-04",
+          "description": "映射校验在每次 analyze 时执行"
+        }
+      ],
+      "ai_coding_guidance": [
+        "validate_prd_architecture_mapping 是纯函数，无 I/O"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-048",
+      "phase_id": "PHASE-VT-05",
+      "title": "Claim test_refs covers 一致性检查",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-002",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-16"
+      ],
+      "related_modules": [
+        "MOD-VT-006"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "ClaimEvidenceAnalyzer 增加 test_refs covers 一致性检查",
+      "atomic_scope": "修改 claim_evidence_analyzer.py 的 analyze() 方法",
+      "out_of_scope": [
+        "AcTestAnalyzer 修改"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [],
+      "expected_deliverables": [
+        "修改后的 claim_evidence_analyzer.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-048-01",
+          "description": "Claim 的 test_refs 未覆盖关联 AC 时产生 must risk"
+        },
+        {
+          "dod_id": "DOD-VT-048-02",
+          "description": "risk_category 为 test_covers_mismatch"
+        },
+        {
+          "dod_id": "DOD-VT-048-03",
+          "description": "无 test_refs 的 Claim 跳过检查"
+        }
+      ],
+      "ai_coding_guidance": [
+        "新增检查放在现有 AC test coverage check 之后"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-049",
+      "phase_id": "PHASE-VT-05",
+      "title": "Pre-commit hook 可靠性与性能优化",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-17"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "修复 pre-commit hook 的可靠性问题（set -e、--gates-only、staged claims）",
+      "atomic_scope": "修改 cli.py hook 模板、修改 ghost_code_reconciler.py",
+      "out_of_scope": [
+        "CI 集成"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-044"
+      ],
+      "expected_deliverables": [
+        "修改后的 cli.py",
+        "修改后的 ghost_code_reconciler.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-049-01",
+          "description": "hook 脚本包含 set -e"
+        },
+        {
+          "dod_id": "DOD-VT-049-02",
+          "description": "hook 使用 --gates-only 跳过工具执行"
+        },
+        {
+          "dod_id": "DOD-VT-049-03",
+          "description": "reconciler 读取 staged 版本 claims"
+        }
+      ],
+      "ai_coding_guidance": [
+        "GhostCodeReconciler 改用 git show :path 读取 staged 版本"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-050",
+      "phase_id": "PHASE-VT-05",
+      "title": "死逻辑清理与冗余消除",
+      "priority": "should",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-003",
+        "MOD-VT-004"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "清理死代码和冗余逻辑（ToolEvidenceAdapter、tests/ 兜底、二次哈希、重复 Schema）",
+      "atomic_scope": "修改 tool_evidence_adapter.py、cli.py、task_loader.py、claim_loader.py",
+      "out_of_scope": [
+        "Analyzer 签名迁移"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-044"
+      ],
+      "expected_deliverables": [
+        "修改后的 tool_evidence_adapter.py",
+        "修改后的 cli.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-050-01",
+          "description": "ToolEvidenceAdapter 类已删除"
+        },
+        {
+          "dod_id": "DOD-VT-050-02",
+          "description": "tests/ 目录兜底已移除"
+        },
+        {
+          "dod_id": "DOD-VT-050-03",
+          "description": "SHA-256 仅计算 1 次"
+        },
+        {
+          "dod_id": "DOD-VT-050-04",
+          "description": "Schema 校验仅执行 1 次"
+        }
+      ],
+      "ai_coding_guidance": [
+        "删除 ToolEvidenceAdapter 前确保 EvidenceIndexBuilder 已使用 ctx"
+      ]
     }
   ]
 }

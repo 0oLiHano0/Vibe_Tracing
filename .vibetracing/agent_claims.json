@@ -111,5 +111,142 @@
       "tests/test_dynamic_hints.py"
     ],
     "timestamp": "2026-05-31T11:00:00Z"
+  },
+  {
+    "claim_id": "CLAIM-VT-036",
+    "related_task": "TASK-VT-044",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_unified_context.py",
+      "tests/test_evidence_index_builder.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/context.py",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_unified_context.py",
+      "tests/test_evidence_index_builder.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "timestamp": "2026-06-07T18:45:00Z",
+    "notes": "UnifiedContext 强类型领域模型，EvidenceIndexBuilder 单次加载"
+  },
+  {
+    "claim_id": "CLAIM-VT-037",
+    "related_task": "TASK-VT-045",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_merge_gate_engine.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/merge_gate_engine.py"
+    ],
+    "test_refs": [
+      "tests/test_merge_gate_engine.py"
+    ],
+    "timestamp": "2026-06-07T18:45:00Z",
+    "notes": "MergeGateEngine blocked 时不再吞掉 fail 级警告"
+  },
+  {
+    "claim_id": "CLAIM-VT-038",
+    "related_task": "TASK-VT-046",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_finalize.py",
+      "tests/test_cli_analyze.py::test_prd_drift_detection"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_finalize.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "timestamp": "2026-06-07T18:45:00Z",
+    "notes": "finalize 存储 prd_hash，analyze 检测 PRD 漂移"
+  },
+  {
+    "claim_id": "CLAIM-VT-039",
+    "related_task": "TASK-VT-047",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_prd_arch_validator.py",
+      "tests/test_cli_analyze.py::test_mapping_dead_link_blocks",
+      "tests/test_cli_analyze.py::test_mapping_must_uncovered_blocks"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/prd_arch_validator.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_prd_arch_validator.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "timestamp": "2026-06-07T18:45:00Z",
+    "notes": "PRD↔Arch 映射校验提取为独立模块，analyze 时持续校验"
+  },
+  {
+    "claim_id": "CLAIM-VT-040",
+    "related_task": "TASK-VT-048",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_claim_evidence_analyzer.py::test_claim_test_refs_cover_ac",
+      "tests/test_claim_evidence_analyzer.py::test_claim_test_refs_miss_ac_coverage"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
+    ],
+    "test_refs": [
+      "tests/test_claim_evidence_analyzer.py"
+    ],
+    "timestamp": "2026-06-07T18:45:00Z",
+    "notes": "Claim 的 test_refs 必须覆盖关联 AC"
+  },
+  {
+    "claim_id": "CLAIM-VT-041",
+    "related_task": "TASK-VT-049",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_scaffolding.py",
+      "tests/test_cli_analyze.py::test_gates_only_skips_analysis",
+      "tests/test_ghost_code_reconciler.py::test_unstaged_claims_are_not_seen"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/ghost_code_reconciler.py"
+    ],
+    "test_refs": [
+      "tests/test_scaffolding.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_ghost_code_reconciler.py"
+    ],
+    "timestamp": "2026-06-07T18:45:00Z",
+    "notes": "hook set -e + --gates-only + staged claims 读取"
+  },
+  {
+    "claim_id": "CLAIM-VT-042",
+    "related_task": "TASK-VT-050",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_tool_execution.py",
+      "tests/test_task_loader.py",
+      "tests/test_claim_loader.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_tool_execution.py",
+      "tests/test_task_loader.py",
+      "tests/test_claim_loader.py"
+    ],
+    "timestamp": "2026-06-07T18:45:00Z",
+    "notes": "删除 ToolEvidenceAdapter、移除 tests/ 兜底、hashlib 顶部导入、skip_schema"
   }
 ]

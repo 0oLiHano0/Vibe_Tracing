@@ -141,7 +141,7 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
             pre_commit_path = git_hooks_dir / "pre-commit"
             if not pre_commit_path.exists():
                 python_path = sys.executable
-                hook_script = f'#!/bin/sh\nset -e\n# Vibe Tracing Git Guard\n"{python_path}" -m vibe_tracing analyze --pre-commit --gates-only\n'
+                hook_script = f'#!/bin/sh\nset -e\n# Vibe Tracing Git Guard\n"{python_path}" -m vibe_tracing analyze --pre-commit\n'
                 pre_commit_path.write_text(hook_script)
                 pre_commit_path.chmod(0o755)
                 print("Installed Git pre-commit hook (vibe_tracing analyze --pre-commit)")
@@ -798,16 +798,17 @@ def _execute_tools(
         project_root=project_root,
     )
 
-    # Collect paths to execute tools against
+    # Collect paths to execute tools against (code files only)
+    _CODE_EXTENSIONS = {".py", ".js", ".ts", ".jsx", ".tsx"}
     execution_paths: List[str] = []
     for claim in claims_list:
         for ref in claim.test_refs:
             path_only = ref.split("#")[0]
-            if path_only and path_only not in execution_paths:
+            if path_only and Path(path_only).suffix in _CODE_EXTENSIONS and path_only not in execution_paths:
                 execution_paths.append(path_only)
         for ref in claim.code_refs:
             path_only = ref.split("#")[0]
-            if path_only and path_only not in execution_paths:
+            if path_only and Path(path_only).suffix in _CODE_EXTENSIONS and path_only not in execution_paths:
                 execution_paths.append(path_only)
 
     if task_res:
@@ -1130,29 +1131,7 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
             return exit_code
 
         if gates_only:
-            # Render reflection prompts with available data (no analysis results)
-            from vibe_tracing.reflection_prompts import render_reflection_prompts
-            affected_files_gs: List[str] = []
-            for claim in ctx.claims_list:
-                for ref in (claim.code_refs if hasattr(claim, "code_refs") else claim.get("code_refs", [])):
-                    path = ref.split("#")[0]
-                    if path and path not in affected_files_gs:
-                        affected_files_gs.append(path)
-            task_list_gs: Dict[str, Any] = {"tasks": []}
-            if ctx.task_result and ctx.task_result.tasks:
-                task_list_gs = {
-                    "tasks": [
-                        {"task_id": t.task_id, "related_requirements": t.related_requirements,
-                         "related_acceptance_criteria": t.related_acceptance_criteria,
-                         "category": getattr(t, "category", None)}
-                        for t in ctx.task_result.tasks
-                    ]
-                }
-            print(render_reflection_prompts(
-                gate_decision="pass", gaps=[], risks=[],
-                task_list=task_list_gs, affected_files=affected_files_gs,
-            ))
-            print("Gates-only mode: integrity gates passed. Skipping tool execution.")
+            print("Gates-only mode: integrity gates passed. Skipping analysis.")
             return 0
 
         tool_evidence = _execute_tools(ctx, project_root, is_draft)

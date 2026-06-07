@@ -579,9 +579,7 @@ def test_gates_only_skips_analysis(tmp_path, capsys):
     assert exit_code == 0
 
     captured = capsys.readouterr()
-    assert "Gates-only mode: integrity gates passed. Skipping tool execution." in captured.out
-    # Reflection prompts are now rendered in gates-only mode too
-    assert "元认知反思提示" in captured.out
+    assert "Gates-only mode: integrity gates passed. Skipping analysis." in captured.out
     # Full analysis output should NOT appear
     assert "Analysis complete. Gate decision:" not in captured.out
 

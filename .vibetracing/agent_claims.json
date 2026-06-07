@@ -488,7 +488,7 @@
       "tests/test_scaffolding.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-07T23:30:00Z",
-    "notes": "hook 模板去除 --gates-only，每次 commit 运行完整分析 + 反思提示"
+    "timestamp": "2026-06-08T00:00:00Z",
+    "notes": "hook 模板去除 --gates-only + 工具执行过滤非代码文件"
   }
 ]

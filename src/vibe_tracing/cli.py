@@ -1038,6 +1038,16 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
         if is_draft and (not task_res or not task_res.tasks) and not claims_list:
             print("\n【零提示词引导】当前项目处于 PRD 草稿阶段（draft），且未发现任何开发任务。请让 AI Agent 读取项目内的 .vibetracing/prompts/prd_analysis.md 并按照其中的 7 步分析法对 PRD 进行分析与补充，逐步生成对应的架构约束和任务列表。")
 
+        # Meta-cognitive reflection prompts (skip in gates-only mode)
+        if not gates_only:
+            from vibe_tracing.reflection_prompts import render_reflection_prompts
+            print(render_reflection_prompts(
+                gate_decision=gate_decision,
+                gaps=merged_gaps,
+                risks=final_risks,
+                compliance_result=compliance_res,
+            ))
+
         return exit_code
 
     except Exception as exc:

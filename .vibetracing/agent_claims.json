@@ -248,5 +248,23 @@
     ],
     "timestamp": "2026-06-07T18:45:00Z",
     "notes": "删除 ToolEvidenceAdapter、移除 tests/ 兜底、hashlib 顶部导入、skip_schema"
+  },
+  {
+    "claim_id": "CLAIM-VT-043",
+    "related_task": "TASK-VT-044",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_reflection_prompts.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/reflection_prompts.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_reflection_prompts.py"
+    ],
+    "test_refs": [
+      "tests/test_reflection_prompts.py"
+    ],
+    "timestamp": "2026-06-07T19:00:00Z",
+    "notes": "vt analyze 结束时输出 8 维度元认知反思提示"
   }
 ]

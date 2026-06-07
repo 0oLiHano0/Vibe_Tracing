@@ -3020,6 +3020,107 @@
       "ai_coding_guidance": [
         "删除 ToolEvidenceAdapter 前确保 EvidenceIndexBuilder 已使用 ctx"
       ]
+    },
+    {
+      "task_id": "TASK-VT-051",
+      "phase_id": "PHASE-VT-05",
+      "title": "治理盲区修复 — PRD 类别 + 反思覆盖校验",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01",
+        "AC-VT-010-02"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "PRD 新增 quality_evolution REQ 类别，PrdParser 解析 category 字段，反思诊断输出覆盖校验 WARNING",
+      "atomic_scope": "修改 prd_parser.py、prd.template.md、reflection_prompts.py、cli.py、prd.md",
+      "out_of_scope": [
+        "LLM 语义校验"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-044"
+      ],
+      "expected_deliverables": [
+        "修改后的 prd_parser.py",
+        "修改后的 reflection_prompts.py",
+        "更新后的 prd.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-051-01",
+          "description": "Requirement.category 必填，无默认值"
+        },
+        {
+          "dod_id": "DOD-VT-051-02",
+          "description": "所有 REQ 有 #### 类别 段落"
+        },
+        {
+          "dod_id": "DOD-VT-051-03",
+          "description": "check_uncovered_scopes 输出未覆盖文件"
+        },
+        {
+          "dod_id": "DOD-VT-051-04",
+          "description": "render_reflection_prompts 必传 task_list 和 affected_files"
+        }
+      ],
+      "ai_coding_guidance": [
+        "category 字段无默认值，缺失报错",
+        "task_list 参数非 Optional"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-052",
+      "phase_id": "PHASE-VT-05",
+      "title": "Gate 2.5 反向覆盖校验",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-17"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "在 AC 新鲜度检测中增加反向覆盖校验：staged 代码文件的覆盖 task 是否在本次 commit 修改",
+      "atomic_scope": "修改 ac_freshness_checker.py",
+      "out_of_scope": [
+        "语义一致性校验"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-049"
+      ],
+      "expected_deliverables": [
+        "修改后的 ac_freshness_checker.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-052-01",
+          "description": "_reverse_check 检测 staged 代码文件覆盖 task 修改状态"
+        },
+        {
+          "dod_id": "DOD-VT-052-02",
+          "description": "未修改 task 覆盖的代码文件触发 WARNING"
+        },
+        {
+          "dod_id": "DOD-VT-052-03",
+          "description": "正向 + 反向警告合并输出"
+        }
+      ],
+      "ai_coding_guidance": [
+        "通过 claims code_refs 映射 code_file -> task_id",
+        "line-range 后缀需剥离"
+      ]
     }
   ]
 }

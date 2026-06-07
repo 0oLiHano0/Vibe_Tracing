@@ -374,5 +374,66 @@
     ],
     "timestamp": "2026-06-07T20:00:00Z",
     "notes": "EVO-006: reflection prompts 从 JSON 模板加载"
+  },
+  {
+    "claim_id": "CLAIM-VT-050",
+    "related_task": "TASK-VT-051",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_prd_parser.py",
+      "tests/test_reflection_prompts.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_e2e_finalize_analyze.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/prd_parser.py",
+      "src/vibe_tracing/templates/prd.template.md",
+      "src/vibe_tracing/reflection_prompts.py",
+      "src/vibe_tracing/templates/reflection_prompts.template.json",
+      "src/vibe_tracing/cli.py",
+      "docs/prd.md",
+      "tests/test_prd_parser.py",
+      "tests/test_reflection_prompts.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_e2e_finalize_analyze.py",
+      "tests/test_requirement_task_analyzer.py",
+      "tests/test_task_loader.py",
+      "tests/test_ac_test_analyzer.py",
+      "tests/test_evidence_index_builder.py",
+      "tests/test_prd_draft_guidance.py",
+      "tests/test_quality_gates.py",
+      "tests/fixtures/examples/sample_project_arch_unclear/docs/prd.md",
+      "tests/fixtures/examples/sample_project_bad_claim/docs/prd.md",
+      "tests/fixtures/examples/sample_project_good/docs/prd.md",
+      "tests/fixtures/examples/sample_project_missing_tests/docs/prd.md"
+    ],
+    "test_refs": [
+      "tests/test_prd_parser.py",
+      "tests/test_reflection_prompts.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_e2e_finalize_analyze.py"
+    ],
+    "timestamp": "2026-06-07T22:00:00Z",
+    "notes": "GOV: PRD quality_evolution REQ 类别 + 反思覆盖校验 WARNING"
+  },
+  {
+    "claim_id": "CLAIM-VT-051",
+    "related_task": "TASK-VT-052",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_ac_freshness.py",
+      "tests/test_quality_gates.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/ac_freshness_checker.py",
+      "tests/test_ac_freshness.py",
+      "tests/test_quality_gates.py"
+    ],
+    "test_refs": [
+      "tests/test_ac_freshness.py",
+      "tests/test_quality_gates.py"
+    ],
+    "timestamp": "2026-06-07T22:00:00Z",
+    "notes": "GOV: Gate 2.5 反向覆盖校验 — staged 代码文件覆盖 task 修改状态"
   }
 ]

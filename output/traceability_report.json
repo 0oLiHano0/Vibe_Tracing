@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-da6f32e3-7039-4944-bc24-8da407bfb461",
+  "run_id": "RUN-873da4bb-27f1-46b4-ac42-372b42c887ff",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-06-06T07:56:54.534382Z",
+  "scan_time": "2026-06-07T10:30:56.075643Z",
   "gate_decision": "blocked",
   "requirement_coverage": [
     {
@@ -984,7 +984,7 @@
     },
     {
       "risk_id": "RISK-VT-075",
-      "description": "架构约束违反 (规则 MOD-VT-001): Import of 'tool_evidence_adapter' (module MOD-VT-004) at line 612 in cli.py is not in allowed_to_call whitelist",
+      "description": "架构约束违反 (规则 MOD-VT-001): Import of 'tool_evidence_adapter' (module MOD-VT-004) at line 728 in cli.py is not in allowed_to_call whitelist",
       "severity": "must",
       "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
       "suggested_action": "根据规则 `MOD-VT-001` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
@@ -994,7 +994,7 @@
     },
     {
       "risk_id": "RISK-VT-076",
-      "description": "架构约束违反 (规则 MOD-VT-005): Import of 'raw_input_loader' (module MOD-VT-002) at line 107 in evidence_index_builder.py is not in allowed_to_call whitelist",
+      "description": "架构约束违反 (规则 MOD-VT-005): Import of 'raw_input_loader' (module MOD-VT-002) at line 79 in evidence_index_builder.py is not in allowed_to_call whitelist",
       "severity": "must",
       "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
       "suggested_action": "根据规则 `MOD-VT-005` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
@@ -2353,12 +2353,17 @@
     {
       "rule_id": "MOD-VT-001",
       "evidence_id": "EVIDENCE-VT-060",
-      "message": "Import of 'tool_evidence_adapter' (module MOD-VT-004) at line 612 in cli.py is not in allowed_to_call whitelist"
+      "message": "Import of 'tool_evidence_adapter' (module MOD-VT-004) at line 728 in cli.py is not in allowed_to_call whitelist"
     },
     {
       "rule_id": "MOD-VT-005",
       "evidence_id": "EVIDENCE-VT-999",
-      "message": "Import of 'raw_input_loader' (module MOD-VT-002) at line 107 in evidence_index_builder.py is not in allowed_to_call whitelist"
+      "message": "Import of 'raw_input_loader' (module MOD-VT-002) at line 79 in evidence_index_builder.py is not in allowed_to_call whitelist"
+    },
+    {
+      "rule_id": "MOD-VT-005",
+      "evidence_id": "EVIDENCE-VT-999",
+      "message": "Import of 'raw_input_loader' (module MOD-VT-002) at line 127 in evidence_index_builder.py is not in allowed_to_call whitelist"
     },
     {
       "rule_id": "GATE-VT-006",

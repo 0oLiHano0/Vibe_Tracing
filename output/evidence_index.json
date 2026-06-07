@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-da6f32e3-7039-4944-bc24-8da407bfb461",
+  "run_id": "RUN-873da4bb-27f1-46b4-ac42-372b42c887ff",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-06-06T07:56:54.534382Z",
+  "scan_time": "2026-06-07T10:30:56.075643Z",
   "evidences": [
     {
       "evidence_id": "EVIDENCE-VT-001",
@@ -696,6 +696,9 @@
       "source_type": "task",
       "source_path": "docs/task_list.json",
       "covers": [
+        "AC-VT-009-01",
+        "AC-VT-009-02",
+        "AC-VT-009-03",
         "REQ-VT-009"
       ],
       "status": "covered",
@@ -794,6 +797,7 @@
       "source_type": "task",
       "source_path": "docs/task_list.json",
       "covers": [
+        "AC-VT-009-09",
         "REQ-VT-009"
       ],
       "status": "covered",
@@ -1101,7 +1105,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest tests/test_raw_input_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_02083eca1c564098883fcead568ea98d.json",
+        "command": "pytest tests/test_raw_input_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_9ef33a7c00454a879947ba9af7bcab01.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1114,7 +1118,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest src/vibe_tracing/raw_input_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_2ae3d411fd714f6ead1b676ef2975277.json",
+        "command": "pytest src/vibe_tracing/raw_input_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_7371848b6e1b4d718cd4583b75aeab9a.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1127,7 +1131,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest docs/prd.md --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_4466204e9fb84fc5a1694354a3c25926.json",
+        "command": "pytest docs/prd.md --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_1ebabfdab2674d9aa73684878c86e202.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1140,7 +1144,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest docs/architecture_constraints.json --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_584df53b8c5f4a4caff1e94eecd35208.json",
+        "command": "pytest docs/architecture_constraints.json --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_3686f16b522f4d119bd8c30253dc4bf3.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1153,7 +1157,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest docs/task_list.json --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_afb30bbc498e41faaa23a454a2e3fdf6.json",
+        "command": "pytest docs/task_list.json --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_895cf28d753b441898a7b6381307e8f8.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1166,7 +1170,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest docs/task_execution_rules.md --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_48cbb1da5cac42f0818e5444c73e55ef.json",
+        "command": "pytest docs/task_execution_rules.md --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_3ab5eb39773342e39a14adf23de7d3d5.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1179,7 +1183,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest tests/test_claim_evidence_analyzer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_6c1f46c0e0fd4ca890bfc72e54d32906.json",
+        "command": "pytest tests/test_claim_evidence_analyzer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_b4e8d6ab86b3427f8ab074a35b4c444c.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1192,7 +1196,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest src/vibe_tracing/traceability/claim_evidence_analyzer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_0b2f2b4066b54304acd13169c492872f.json",
+        "command": "pytest src/vibe_tracing/traceability/claim_evidence_analyzer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_759b1ec19b874faebb22f7094b49fda8.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1205,7 +1209,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest tests/test_dashboard_renderer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_8538f260d2b64cdcaf21233059cdf029.json",
+        "command": "pytest tests/test_dashboard_renderer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_43e43e4b5661488a8b929ce469842d7d.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1218,7 +1222,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest src/vibe_tracing/dashboard_renderer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_b3eaa30b4a8d4a069bb4ca094e6ab5b6.json",
+        "command": "pytest src/vibe_tracing/dashboard_renderer.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_87a8cbf3a4ef4ae787ae8e0e78c69ed9.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1231,7 +1235,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest tests/test_scaffolding.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_95102b14bff347a4bd16d8054364b349.json",
+        "command": "pytest tests/test_scaffolding.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_d31eee8223ce4202ac79fea30a187523.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1244,7 +1248,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest tests/test_dynamic_hints.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_d030a1c6160340bba77972058ba94428.json",
+        "command": "pytest tests/test_dynamic_hints.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_e4f2ff10e5be42d48dbb0ca18e466d1f.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1257,7 +1261,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest src/vibe_tracing/schema_validator.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_a16b1c29579d47d8a6019ba130611eba.json",
+        "command": "pytest src/vibe_tracing/schema_validator.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ec3be68816284a52beedb43388c2104d.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1270,7 +1274,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest src/vibe_tracing/task_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_26a7e35cffdb47d9beeec245ea7abf6e.json",
+        "command": "pytest src/vibe_tracing/task_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_648a354344664fa0bca23b2dd4707ff7.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1283,7 +1287,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest src/vibe_tracing/claim_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_92ca8fd47050476b958daa3d5ebdece1.json",
+        "command": "pytest src/vibe_tracing/claim_loader.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_0a5dfdd47ff64ab6bcdada772189b6eb.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1296,7 +1300,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "pytest src/vibe_tracing/cli.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_59d66c5e90d44f8697c22fd573ad3846.json",
+        "command": "pytest src/vibe_tracing/cli.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_c449eda7c1bb4173b31a0dbdf7cf1951.json",
         "exit_code": 127,
         "stderr": "/bin/sh: pytest: command not found\n"
       },
@@ -1309,7 +1313,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest tests/test_raw_input_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_7350c91edcd94ab1849d0662cbac1951.json",
+        "command": "coverage run -m pytest tests/test_raw_input_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_3c515a84037b447394a4c055f7280a03.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1322,7 +1326,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest src/vibe_tracing/raw_input_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_01f987c85804439594680e9da46b2a15.json",
+        "command": "coverage run -m pytest src/vibe_tracing/raw_input_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_4eb03786911444eab3dcaa1204310932.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1335,7 +1339,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest docs/prd.md ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_e0779797e56a45bcbf6cb90314d2e3d7.json",
+        "command": "coverage run -m pytest docs/prd.md ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_10b3395826a545b889a4aa887046163c.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1348,7 +1352,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest docs/architecture_constraints.json ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_73e0bd83ddee4d1483732b2bc227fa69.json",
+        "command": "coverage run -m pytest docs/architecture_constraints.json ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_54a43c51c6b6421ba01875fcbab37ff6.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1361,7 +1365,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest docs/task_list.json ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_33e0f299f494402f828c0d5f78bbaa2b.json",
+        "command": "coverage run -m pytest docs/task_list.json ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_155e43b976df4f5e9673cf699f41745f.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1374,7 +1378,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest docs/task_execution_rules.md ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_b698c8e03f69424495239a34f1466edd.json",
+        "command": "coverage run -m pytest docs/task_execution_rules.md ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_0edd7ed488c04b8eb50c531b7d2b7026.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1387,7 +1391,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest tests/test_claim_evidence_analyzer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_e0593a4602a348c3a8124f7097aac89e.json",
+        "command": "coverage run -m pytest tests/test_claim_evidence_analyzer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_0d4b80c5e38a4b35b1e908705b717ca6.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1400,7 +1404,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest src/vibe_tracing/traceability/claim_evidence_analyzer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_969c8470a1eb4c6fbe570acb1056c21f.json",
+        "command": "coverage run -m pytest src/vibe_tracing/traceability/claim_evidence_analyzer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_32e0b4bb398f4a32b749550049b9a122.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1413,7 +1417,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest tests/test_dashboard_renderer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_711533d2c66b40868ce04f54160da743.json",
+        "command": "coverage run -m pytest tests/test_dashboard_renderer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_3477d59af25a4badbdacebe9af34936a.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1426,7 +1430,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest src/vibe_tracing/dashboard_renderer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_7a2374007c3940809f9191ba310e5ce9.json",
+        "command": "coverage run -m pytest src/vibe_tracing/dashboard_renderer.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_71c61435942f4c2691b42dc4ef19abd3.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1439,7 +1443,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest tests/test_scaffolding.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_30de9d562dc64a78a4ca10543aa86a1c.json",
+        "command": "coverage run -m pytest tests/test_scaffolding.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_5b835b65b76d4b719b5edf73c0f6cf33.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1452,7 +1456,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest tests/test_dynamic_hints.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_3d952ed90a4c449cac914ab8cacb76bd.json",
+        "command": "coverage run -m pytest tests/test_dynamic_hints.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_d85bcfdd689f444e977138b3e508bee3.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1465,7 +1469,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest src/vibe_tracing/schema_validator.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_4f8e23286f284a45bb574b3281df09b1.json",
+        "command": "coverage run -m pytest src/vibe_tracing/schema_validator.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_cb68d2ab99dc43d29e3a4ee55b15c3ce.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1478,7 +1482,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest src/vibe_tracing/task_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_aa8c63b96188470c968124a3c270ace8.json",
+        "command": "coverage run -m pytest src/vibe_tracing/task_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_f5df072bc08549c6ba562632c838e2a2.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1491,7 +1495,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest src/vibe_tracing/claim_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_6eae1292b9764d9393331ffba911cb27.json",
+        "command": "coverage run -m pytest src/vibe_tracing/claim_loader.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_9a041c27316b468cba4d1d2b0e48abd5.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1504,7 +1508,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "coverage run -m pytest src/vibe_tracing/cli.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_337559951d6d4b8391965d8dc6828164.json",
+        "command": "coverage run -m pytest src/vibe_tracing/cli.py ; coverage json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_coverage_73d507c2e7a244f88dcea29d14ada7a7.json",
         "exit_code": 127,
         "stderr": "/bin/sh: coverage: command not found\n/bin/sh: coverage: command not found\n"
       },
@@ -1725,7 +1729,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy tests/test_raw_input_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_4f764b2c8bb0452ab89e3d0f1a5571bd.json",
+        "command": "mypy tests/test_raw_input_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_0da3485491de455bb932523bc467c4f1.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1738,7 +1742,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy src/vibe_tracing/raw_input_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_61b1d5502e4b40b9b9b42c969096a12c.json",
+        "command": "mypy src/vibe_tracing/raw_input_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_7cf4fd11e8f5457396c1b6800447016b.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1751,7 +1755,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy docs/prd.md --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_662acb9ee76c4d9e86b51cd1fac0dadf.json",
+        "command": "mypy docs/prd.md --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_05e6d629bd354b938e3f3582830c4ad0.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1764,7 +1768,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy docs/architecture_constraints.json --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_e6d6ea7614ea46c684698e1cc1686df0.json",
+        "command": "mypy docs/architecture_constraints.json --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_5f31e4f5760847b38cec1607d4f78374.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1777,7 +1781,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy docs/task_list.json --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_7ac4d90b6ca547afb02895f5ceab4325.json",
+        "command": "mypy docs/task_list.json --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_b86061ebf48649efa4a9dfe89a8d3169.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1790,7 +1794,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy docs/task_execution_rules.md --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_2c17a27d9d71463785c402c4d5472b64.json",
+        "command": "mypy docs/task_execution_rules.md --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_394c15bb09f744a7bd50a2944b4ec8de.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1803,7 +1807,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy tests/test_claim_evidence_analyzer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_89af48dffa2d4950b58b91bbe7848373.json",
+        "command": "mypy tests/test_claim_evidence_analyzer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_d3af7505dc044ac88de9eba1922a31bb.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1816,7 +1820,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy src/vibe_tracing/traceability/claim_evidence_analyzer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_17cef1ff820548e59d22d4c22edbcd35.json",
+        "command": "mypy src/vibe_tracing/traceability/claim_evidence_analyzer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_9bc0f41426764aa7841de1bc828d894a.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1829,7 +1833,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy tests/test_dashboard_renderer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_7f1cc483183149bb9cdc45e834f4b4b4.json",
+        "command": "mypy tests/test_dashboard_renderer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_6f5e207760e74e94af327bdac6c463eb.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1842,7 +1846,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy src/vibe_tracing/dashboard_renderer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_f3b84b775e2a4dd6a175ee4f39e565af.json",
+        "command": "mypy src/vibe_tracing/dashboard_renderer.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_3b6e81567106431381652164086de705.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1855,7 +1859,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy tests/test_scaffolding.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_b0d0b51db2974d96a0db759873d5bc4d.json",
+        "command": "mypy tests/test_scaffolding.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_8c162106d25a499797d6d7fc7c76ac8a.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1868,7 +1872,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy tests/test_dynamic_hints.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_24b54c9932f7447898a4e259a0621684.json",
+        "command": "mypy tests/test_dynamic_hints.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_fd1a00fcf4674743afc2cb80bea11432.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1881,7 +1885,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy src/vibe_tracing/schema_validator.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_b8fb96183a0a4438877f23da4fcc673c.json",
+        "command": "mypy src/vibe_tracing/schema_validator.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_efb4a8a50d3c4d509d270e6e4257a728.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1894,7 +1898,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy src/vibe_tracing/task_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_f64cdcc96b434b34aec7c2315e8553d0.json",
+        "command": "mypy src/vibe_tracing/task_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_c08b9b36727e4e06a3fe915bbc6dcb5d.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1907,7 +1911,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy src/vibe_tracing/claim_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_28f7555a51b647eb86e773d18df041df.json",
+        "command": "mypy src/vibe_tracing/claim_loader.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_9ae77d8aedcc43a18b0c948e1a1212a7.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1920,7 +1924,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "mypy src/vibe_tracing/cli.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_968d2f2209af4baf8754b9afc997e2f0.json",
+        "command": "mypy src/vibe_tracing/cli.py --json-report /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_type_check_eb3e283e44c6428f9a55cc74b959c1cc.json",
         "exit_code": 127,
         "stderr": "/bin/sh: mypy: command not found\n"
       },
@@ -1933,7 +1937,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r tests/test_raw_input_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_dcdf434df9c14949809e56f5d3a49cdd.json",
+        "command": "bandit -r tests/test_raw_input_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_0d5febc4265a4165bd368ae7f7d0788a.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -1946,7 +1950,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r src/vibe_tracing/raw_input_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_a819a80565db4610a5c84b619d25ff78.json",
+        "command": "bandit -r src/vibe_tracing/raw_input_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_b038a33ba53741ef83c0a3ff0e4b2d78.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -1959,7 +1963,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r docs/prd.md -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_e0cd79b8475e4464a3174d11df3a8560.json",
+        "command": "bandit -r docs/prd.md -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_7f48763108c541c9a009900d48051cb2.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -1972,7 +1976,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r docs/architecture_constraints.json -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_1e1937905d0d42feb807c1bf19b837c9.json",
+        "command": "bandit -r docs/architecture_constraints.json -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_209285c1bb1a4ced89b23800bcdd9092.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -1985,7 +1989,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r docs/task_list.json -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_90a8b2c2057c4dcab99ec33f3fa2c9de.json",
+        "command": "bandit -r docs/task_list.json -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_cdae83e11d9a4b0eabab100a794abe76.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -1998,7 +2002,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r docs/task_execution_rules.md -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_19ad34af828a4f9bbcbf02245f7f2213.json",
+        "command": "bandit -r docs/task_execution_rules.md -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_03c4c1d9f944463ea7095ad7e2b5200b.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2011,7 +2015,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r tests/test_claim_evidence_analyzer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_d096c392aeb4439a9f4e6d5b896f55e3.json",
+        "command": "bandit -r tests/test_claim_evidence_analyzer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_32914df8765f4873a90317ea0190a689.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2024,7 +2028,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r src/vibe_tracing/traceability/claim_evidence_analyzer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_dfa6870d12a14e108e91cbe7fa689e92.json",
+        "command": "bandit -r src/vibe_tracing/traceability/claim_evidence_analyzer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_032e9225d8844a8f9a196b3a367ea0e4.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2037,7 +2041,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r tests/test_dashboard_renderer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_5312507d422d4d40a9500758df259fe4.json",
+        "command": "bandit -r tests/test_dashboard_renderer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_0cd1bd1b63bc4961a45dbd43b6eaa92b.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2050,7 +2054,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r src/vibe_tracing/dashboard_renderer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_f9f5e1ee8c484fcaaa9d1ecf22f70731.json",
+        "command": "bandit -r src/vibe_tracing/dashboard_renderer.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_62993d5c617c4d6799bdad779809df01.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2063,7 +2067,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r tests/test_scaffolding.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_2c30c432da65416b8bf496894af6e3ee.json",
+        "command": "bandit -r tests/test_scaffolding.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_63d66a24ce2c42078a12dfe4463bf92a.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2076,7 +2080,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r tests/test_dynamic_hints.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_ca4f6b3fad7b4d9f940a7d50dd7501ad.json",
+        "command": "bandit -r tests/test_dynamic_hints.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_e80998805e36441eba0d04f9a0f7ad4f.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2089,7 +2093,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r src/vibe_tracing/schema_validator.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_b25aba00a1d74e5f9c34f222fd464efd.json",
+        "command": "bandit -r src/vibe_tracing/schema_validator.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_4ed6e582b373418baa120fef3df1e453.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2102,7 +2106,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r src/vibe_tracing/task_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_42a81369cf8b4d228fe123c6a33a1b93.json",
+        "command": "bandit -r src/vibe_tracing/task_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_6b5d65c5262543d495a5c39cb8040a4b.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2115,7 +2119,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r src/vibe_tracing/claim_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_c471c9933975453791b34034936f86de.json",
+        "command": "bandit -r src/vibe_tracing/claim_loader.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_dc99c8ab64f749e4a3dc7415de331981.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },
@@ -2128,7 +2132,7 @@
       "covers": [],
       "status": "blocked",
       "details": {
-        "command": "bandit -r src/vibe_tracing/cli.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_a0360e8fb5a54b55bd37a4090391eba8.json",
+        "command": "bandit -r src/vibe_tracing/cli.py -f json -o /Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_security_995a329fa5d74e99a70bfdfbf061390d.json",
         "exit_code": 127,
         "stderr": "/bin/sh: bandit: command not found\n"
       },

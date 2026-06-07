@@ -130,12 +130,19 @@ class ArchitectureComplianceChecker:
                 return ev["evidence_id"]
         return ids.sentinel_evidence_id()
 
-    def check(self, evidences: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def check(
+        self,
+        evidences: List[Dict[str, Any]],
+        constraints_data: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Check all must architectural constraints and module boundaries.
 
         Args:
             evidences: List of evidence entries from evidence_index.json.
+            constraints_data: Optional pre-loaded constraints dict. When
+                provided the method skips reading the constraints file from
+                disk (backward-compatible fallback still works if ``None``).
 
         Returns:
             A dictionary containing:
@@ -143,8 +150,11 @@ class ArchitectureComplianceChecker:
                 "architecture_violations": List of confirmed violations.
                 "unclear_constraints": List of constraints marked as unclear.
         """
-        constraints_data = self._load_constraints()
-        self.constraints = constraints_data
+        if constraints_data is not None:
+            loaded_constraints = constraints_data
+        else:
+            loaded_constraints = self._load_constraints()
+        self.constraints = loaded_constraints
         src_dir = self.project_root / "src"
 
         # List all Python files
@@ -159,7 +169,7 @@ class ArchitectureComplianceChecker:
 
         # Parse module boundaries
         boundaries_by_id = {}
-        for m in constraints_data.get("module_boundaries", []):
+        for m in loaded_constraints.get("module_boundaries", []):
             m_id = m.get("module_id")
             boundaries_by_id[m_id] = m
 
@@ -586,7 +596,7 @@ class ArchitectureComplianceChecker:
         # 6.1 Evaluate GATE-VT-014 (Architecture change proposals must be explicitly logged)
         # ----------------------------------------------------
         has_gate_14 = False
-        for gate in constraints_data.get("quality_gates", []):
+        for gate in loaded_constraints.get("quality_gates", []):
             if gate.get("gate_id") == "GATE-VT-014":
                 has_gate_14 = True
                 break
@@ -689,7 +699,7 @@ class ArchitectureComplianceChecker:
         already_checked_ids = {st["rule_id"] for st in status_list}
 
         for cat in all_categories:
-            for rule in constraints_data.get(cat, []):
+            for rule in loaded_constraints.get(cat, []):
                 # Resolve rule ID from potential keys
                 r_id = (
                     rule.get("rule_id")

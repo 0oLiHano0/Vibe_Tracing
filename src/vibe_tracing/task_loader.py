@@ -84,31 +84,33 @@ class TaskLoader:
         prd_result: Optional[PrdParseResult] = None,
         arch_data: Optional[Dict] = None,
         content: Optional[dict] = None,
+        skip_schema: bool = False,
     ) -> TaskListLoadResult:
         """
         Load a task list file, validate it against the JSON schema, and cross-reference with the PRD and Architecture.
         """
         # Step 1: Validate file/dict using SchemaValidator
-        if content is not None:
-            val_res = self.schema_validator.validate_dict(
-                content, "task_list", source_label=str(task_list_path)
-            )
-        else:
-            val_res = self.schema_validator.validate_file(task_list_path, "task_list")
+        if not skip_schema:
+            if content is not None:
+                val_res = self.schema_validator.validate_dict(
+                    content, "task_list", source_label=str(task_list_path)
+                )
+            else:
+                val_res = self.schema_validator.validate_file(task_list_path, "task_list")
 
-        if not val_res.is_valid:
-            error_msg = f"Schema validation failed for {task_list_path}"
-            if val_res.message:
-                error_msg += f": {val_res.message}"
-            if val_res.field_path:
-                error_msg += f" at field '{val_res.field_path}'"
-            if val_res.hint:
-                error_msg += f" (Hint: {val_res.hint})"
-            return TaskListLoadResult(
-                tasks=[],
-                is_valid=False,
-                errors=[error_msg],
-            )
+            if not val_res.is_valid:
+                error_msg = f"Schema validation failed for {task_list_path}"
+                if val_res.message:
+                    error_msg += f": {val_res.message}"
+                if val_res.field_path:
+                    error_msg += f" at field '{val_res.field_path}'"
+                if val_res.hint:
+                    error_msg += f" (Hint: {val_res.hint})"
+                return TaskListLoadResult(
+                    tasks=[],
+                    is_valid=False,
+                    errors=[error_msg],
+                )
 
         # Step 2: Parse the file content
         if content is not None:

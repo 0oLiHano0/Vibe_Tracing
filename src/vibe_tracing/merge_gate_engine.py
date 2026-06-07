@@ -128,58 +128,66 @@ class MergeGateEngine:
 
         # ----------------------------------------------------
         # 2. Evaluate 'fail' conditions (conditional / SHOULD issues)
+        # NOTE: Fail reasons are ALWAYS recorded regardless of gate_decision,
+        # so users see all issues in a single run. Only upgrade the decision
+        # to "fail" when gate_decision is still "pass".
         # ----------------------------------------------------
-        if gate_decision != "blocked":
-            # 2.1 Check unclear architecture constraints
-            if compliance_result:
-                unclear_constraints = compliance_result.get("unclear_constraints", [])
-                for uc in unclear_constraints:
-                    rule_id = uc.get("rule_id", "")
-                    reason = uc.get("reason", "")
-                    msg = f"存在不明确的架构约束规则 ({rule_id}): {reason}"
-                    reasons.append(msg)
-                    gate_decision = "fail"
+        fail_detected = False
 
-                # Check status list for any MUST/SHOULD unclear
-                status_list = compliance_result.get(
-                    "architecture_compliance_status", []
-                )
-                for status_item in status_list:
-                    rule_id = status_item.get("rule_id", "")
-                    status = status_item.get("status")
-                    if status == "unclear":
-                        msg = f"架构规则状态不明确 ({rule_id})"
-                        if not any(msg in item for item in reasons):
-                            reasons.append(msg)
-                            gate_decision = "fail"
+        # 2.1 Check unclear architecture constraints
+        if compliance_result:
+            unclear_constraints = compliance_result.get("unclear_constraints", [])
+            for uc in unclear_constraints:
+                rule_id = uc.get("rule_id", "")
+                reason = uc.get("reason", "")
+                msg = f"存在不明确的架构约束规则 ({rule_id}): {reason}"
+                reasons.append(msg)
+                fail_detected = True
 
-            # 2.2 Check Should-level gaps (e.g. requirement or task gaps, which are non-blocking)
-            for gap in gaps:
-                item_type = gap.get("item_type")
-                item_id = gap.get("item_id", "")
-                reason = gap.get("reason", "")
-                if item_type != "ac":
-                    msg = f"非阻塞缺口 ({item_type} {item_id}): {reason}"
-                    reasons.append(msg)
-                    gate_decision = "fail"
+            # Check status list for any MUST/SHOULD unclear
+            status_list = compliance_result.get(
+                "architecture_compliance_status", []
+            )
+            for status_item in status_list:
+                rule_id = status_item.get("rule_id", "")
+                status = status_item.get("status")
+                if status == "unclear":
+                    msg = f"架构规则状态不明确 ({rule_id})"
+                    if not any(msg in item for item in reasons):
+                        reasons.append(msg)
+                        fail_detected = True
 
-            # 2.3 Check Should/Could severity risks or speculative risks
-            for risk in risks:
-                severity = risk.get("severity")
-                desc = risk.get("description", "")
-                risk_id = risk.get("risk_id", "")
-                confidence = risk.get("confidence")
-                risk_type = risk.get("type")
+        # 2.2 Check Should-level gaps (e.g. requirement or task gaps, which are non-blocking)
+        for gap in gaps:
+            item_type = gap.get("item_type")
+            item_id = gap.get("item_id", "")
+            reason = gap.get("reason", "")
+            if item_type != "ac":
+                msg = f"非阻塞缺口 ({item_type} {item_id}): {reason}"
+                reasons.append(msg)
+                fail_detected = True
 
-                is_speculative = (
-                    confidence == "low_confidence" or risk_type == "suggestion"
-                )
-                is_should_could = severity in ("should", "could")
+        # 2.3 Check Should/Could severity risks or speculative risks
+        for risk in risks:
+            severity = risk.get("severity")
+            desc = risk.get("description", "")
+            risk_id = risk.get("risk_id", "")
+            confidence = risk.get("confidence")
+            risk_type = risk.get("type")
 
-                if is_should_could or is_speculative:
-                    msg = f"低/中风险或推测性风险 ({risk_id}): {desc}"
-                    reasons.append(msg)
-                    gate_decision = "fail"
+            is_speculative = (
+                confidence == "low_confidence" or risk_type == "suggestion"
+            )
+            is_should_could = severity in ("should", "could")
+
+            if is_should_could or is_speculative:
+                msg = f"低/中风险或推测性风险 ({risk_id}): {desc}"
+                reasons.append(msg)
+                fail_detected = True
+
+        # Only upgrade to "fail" if not already "blocked"
+        if fail_detected and gate_decision == "pass":
+            gate_decision = "fail"
 
         # ----------------------------------------------------
         # 3. Handle 'pass'

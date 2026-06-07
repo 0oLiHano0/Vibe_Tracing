@@ -49,17 +49,29 @@ class GhostCodeReconciler:
             return set()
 
     def _get_active_claims_code_refs(self) -> Set[str]:
-        # 1. Get Staged Claims
-        if not self.claims_path.exists():
+        # 1. Get Staged Claims (from git index, NOT working directory)
+        staged_claims = []
+        try:
+            claims_rel = str(self.claims_path.relative_to(self.project_root))
+            result = subprocess.run(
+                ["git", "show", f":{claims_rel}"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            staged_claims = json.loads(result.stdout)
+        except FileNotFoundError:
+            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             staged_claims = []
-        else:
-            try:
-                staged_claims = json.loads(self.claims_path.read_text(encoding="utf-8"))
-            except Exception as exc:
-                print(f"Warning: agent_claims.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
-                staged_claims = []
+        except subprocess.CalledProcessError:
+            # File not staged - no claims available
+            staged_claims = []
+        except Exception as exc:
+            print(f"Warning: agent_claims.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
+            staged_claims = []
 
-        # 2. Get HEAD Claims
+        # 2. Get HEAD Claims (unchanged)
         head_claims = []
         try:
             claims_rel = str(self.claims_path.relative_to(self.project_root))
@@ -90,7 +102,7 @@ class GhostCodeReconciler:
             if staged_claim not in head_claims:
                 # It is a NEW or MODIFIED claim in this commit!
                 active_code_refs.update(staged_claim.get("code_refs", []))
-        
+
         return active_code_refs
 
     def reconcile(self) -> Tuple[bool, str]:

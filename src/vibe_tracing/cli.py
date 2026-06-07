@@ -33,6 +33,7 @@ from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
 from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
 from vibe_tracing.risk_advisor import RiskAdvisor
 from vibe_tracing.dashboard_renderer import DashboardRenderer
+from vibe_tracing.context import UnifiedContext
 
 
 def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[str] = None) -> int:
@@ -140,7 +141,7 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
             pre_commit_path = git_hooks_dir / "pre-commit"
             if not pre_commit_path.exists():
                 python_path = sys.executable
-                hook_script = f'#!/bin/sh\n# Vibe Tracing Git Guard\n"{python_path}" -m vibe_tracing analyze --pre-commit\n'
+                hook_script = f'#!/bin/sh\nset -e\n# Vibe Tracing Git Guard\n"{python_path}" -m vibe_tracing analyze --pre-commit --gates-only\n'
                 pre_commit_path.write_text(hook_script)
                 pre_commit_path.chmod(0o755)
                 print("Installed Git pre-commit hook (vibe_tracing analyze --pre-commit)")
@@ -222,85 +223,6 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
     return True, "合规的架构变更"
 
 
-def _collect_related_reqs(data):
-    """Recursively collect all related_requirements IDs from nested structures."""
-    reqs = set()
-    if isinstance(data, dict):
-        if "related_requirements" in data:
-            reqs.update(data["related_requirements"])
-        for v in data.values():
-            reqs.update(_collect_related_reqs(v))
-    elif isinstance(data, list):
-        for item in data:
-            reqs.update(_collect_related_reqs(item))
-    return reqs
-
-
-def _validate_prd_architecture_mapping(project_root: Path, constraints_data: dict) -> int:
-    """
-    Validate PRD <-> Architecture mapping (left-shift verification).
-
-    Returns:
-        0 if validation passes, 1 if validation fails.
-    """
-    prd_path = project_root / "docs" / "prd.md"
-    if not prd_path.exists():
-        print("Warning: prd.md not found, skipping PRD <-> Architecture mapping validation.")
-        return 0
-
-    try:
-        prd_parser = PrdParser()
-        prd_res = prd_parser.parse_file(prd_path)
-    except Exception as e:
-        print(f"Warning: 无法解析 PRD，跳过映射校验: {e}")
-        return 0
-
-    req_ids = {r.req_id: r.priority for r in prd_res.requirements}
-    if not req_ids:
-        print("Warning: PRD 中未发现需求，跳过映射校验。")
-        return 0
-
-    # Collect all related_requirements from architecture constraints
-    arch_reqs = _collect_related_reqs(constraints_data)
-
-    # Dead link detection: constraints referencing REQs that don't exist in PRD
-    dead_links = arch_reqs - set(req_ids.keys())
-    if dead_links:
-        print(
-            f"Error: 架构约束引用了 PRD 中不存在的需求: {', '.join(sorted(dead_links))}",
-            file=sys.stderr,
-        )
-        return 1
-
-    # Collect REQs covered by architecture constraints
-    covered_reqs = set()
-    for section_key, section_val in constraints_data.items():
-        if isinstance(section_val, list):
-            for rule in section_val:
-                if isinstance(rule, dict) and "related_requirements" in rule:
-                    covered_reqs.update(rule["related_requirements"])
-
-    # Core coverage check: MUST-level REQs must have architecture support
-    must_reqs = {rid for rid, p in req_ids.items() if p == "must"}
-    uncovered_must = must_reqs - covered_reqs
-    if uncovered_must:
-        print(
-            f"Error: 以下 MUST 级需求缺少架构支撑: {', '.join(sorted(uncovered_must))}",
-            file=sys.stderr,
-        )
-        return 1
-
-    # Non-core coverage warning: SHOULD/COULD-level REQs without mapping
-    should_could_reqs = {rid for rid, p in req_ids.items() if p in ("should", "could")}
-    uncovered_non_core = should_could_reqs - covered_reqs
-    if uncovered_non_core:
-        print(
-            f"Warning: 以下非 MUST 级需求缺少架构映射: {', '.join(sorted(uncovered_non_core))}"
-        )
-
-    return 0
-
-
 def run_finalize(project_root: Path) -> int:
     """Finalize project configuration by reading language and tools from architecture constraints."""
     try:
@@ -344,12 +266,23 @@ def run_finalize(project_root: Path) -> int:
         ids.set_project_prefix(project_prefix)
 
         # 5.5. PRD <-> Architecture mapping validation (left-shift)
-        mapping_result = _validate_prd_architecture_mapping(project_root, constraints_data)
-        if mapping_result != 0:
-            return mapping_result
+        from vibe_tracing.prd_arch_validator import validate_prd_architecture_mapping_from_path
+        mapping_pvr = validate_prd_architecture_mapping_from_path(project_root, constraints_data)
+        if mapping_pvr.message:
+            if mapping_pvr.exit_code != 0:
+                print(mapping_pvr.message, file=sys.stderr)
+            else:
+                print(mapping_pvr.message)
+        if mapping_pvr.exit_code != 0:
+            return mapping_pvr.exit_code
 
         # Compute SHA256 hash of constraints file
         computed_hash = hashlib.sha256(constraints_path.read_bytes()).hexdigest()
+
+        # Compute SHA256 hash of PRD file
+        prd_rel = config_data.get("paths", {}).get("prd", "docs/prd.md")
+        prd_abs = project_root / prd_rel
+        prd_hash = hashlib.sha256(prd_abs.read_bytes()).hexdigest() if prd_abs.exists() else ""
 
         # 6. Check if already finalized (language + tools + hash)
         existing_language = config_data.get("language")
@@ -360,11 +293,13 @@ def run_finalize(project_root: Path) -> int:
             existing_tools = sorted(config_data.get("validation_tools", []))
             current_tools = sorted(tool_categories)
             stored_hash = config_data.get("architecture_constraints_hash")
+            stored_prd_hash = config_data.get("prd_hash", "")
 
             hash_changed = stored_hash != computed_hash
             tools_changed = existing_tools != current_tools
+            prd_hash_changed = stored_prd_hash != prd_hash
 
-            if not hash_changed and not tools_changed:
+            if not hash_changed and not tools_changed and not prd_hash_changed:
                 print(f"Already finalized: language={language}, tools={current_tools}")
                 return 0
 
@@ -377,6 +312,10 @@ def run_finalize(project_root: Path) -> int:
                     return 1
                 config_data["architecture_constraints_hash"] = computed_hash
                 config_data["finalize_constraints_path"] = str(constraints_path.relative_to(project_root))
+
+            # PRD hash changed -> update config
+            if prd_hash_changed:
+                config_data["prd_hash"] = prd_hash
 
             # Tools changed -> update config
             if tools_changed:
@@ -434,6 +373,7 @@ def run_finalize(project_root: Path) -> int:
         config_data["validation_tools"] = tool_categories
         config_data["architecture_constraints_hash"] = computed_hash
         config_data["finalize_constraints_path"] = str(constraints_path.relative_to(project_root))
+        config_data["prd_hash"] = prd_hash
         
         with config_path.open("w", encoding="utf-8") as f:
             json.dump(config_data, f, indent=2, ensure_ascii=False)
@@ -478,7 +418,7 @@ def run_finalize(project_root: Path) -> int:
         return 1
 
 
-def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = False) -> int:
+def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = False, gates_only: bool = False) -> int:
     """
     Execute the full Vibe Tracing analysis pipeline.
 
@@ -486,6 +426,8 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
         project_root: The workspace root path.
         output_dir: The target output directory.
         is_pre_commit: Whether running in pre-commit hook mode.
+        gates_only: If True, run only integrity gates (1, 2, 2.5) and skip
+            tool execution and full analysis (fast mode for pre-commit).
 
     Returns:
         Exit code:
@@ -494,6 +436,8 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
             2: Gate decision is 'blocked'.
     """
     try:
+        import hashlib
+
         schemas_dir = project_root / "schemas"
         if not schemas_dir.is_dir():
             schemas_dir = Path(__file__).parent / "schemas"
@@ -544,7 +488,6 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
         # --- V4 GATES ---
         # Gate 1: Anti-Tampering (Architecture Baseline Check)
         if constraints_record and constraints_record.status == "ok":
-            import hashlib
             computed_hash = hashlib.sha256(Path(constraints_record.file_path).read_bytes()).hexdigest()
             stored_hash = raw_loader.config_data.get("architecture_constraints_hash")
             
@@ -558,6 +501,57 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
                     file=sys.stderr
                 )
                 return 1
+
+        # Gate 1b: PRD drift detection
+        prd_path = raw_loader.get_path("prd")
+        prd_drifted = False
+        if prd_path and Path(prd_path).exists():
+            computed_p_hash = hashlib.sha256(Path(prd_path).read_bytes()).hexdigest()
+            stored_p_hash = raw_loader.config_data.get("prd_hash")
+            if stored_p_hash and stored_p_hash != computed_p_hash:
+                print(
+                    "WARNING: PRD 已从基线漂移！\n"
+                    f"预期 Hash: {stored_p_hash[:12]}...\n"
+                    f"实际 Hash: {computed_p_hash[:12]}...\n"
+                    "将重新验证 PRD ↔ Architecture 映射关系。",
+                    file=sys.stderr
+                )
+                prd_drifted = True
+
+        # Gate 1c: PRD ↔ Architecture mapping validation
+        # Runs every time (not just when prd_drifted) because constraints could also have changed
+        prd_res = None
+        if constraints_record and constraints_record.status == "ok" and prd_record and prd_record.status == "ok":
+            from vibe_tracing.prd_arch_validator import validate_prd_architecture_mapping
+            prd_parser_early = PrdParser()
+            prd_res = prd_parser_early.parse_file(Path(prd_record.file_path))
+            if prd_res.is_valid:
+                mapping_result = validate_prd_architecture_mapping(
+                    prd_res.requirements,
+                    constraints_record.content,
+                    config_prefix,
+                )
+                if mapping_result.has_dead_links:
+                    for link in mapping_result.dead_links:
+                        print(
+                            f"BLOCKED: 架构约束引用的 {link} 不存在于 PRD。\n"
+                            "请更新 architecture_constraints.json 或 PRD 以修复死链。",
+                            file=sys.stderr
+                        )
+                    return 1
+                if mapping_result.has_must_uncovered:
+                    for req_id in mapping_result.must_uncovered:
+                        print(
+                            f"BLOCKED: MUST 级需求 {req_id} 无架构支撑。\n"
+                            "请在 architecture_constraints.json 中为该需求规划架构模块。",
+                            file=sys.stderr
+                        )
+                    return 1
+                for req_id in mapping_result.should_uncovered:
+                    print(
+                        f"WARNING: SHOULD/COULD 级需求 {req_id} 缺失架构映射。",
+                        file=sys.stderr
+                    )
 
         # Gate 2: Ghost Code Reconciliation (Only in pre-commit mode)
         if is_pre_commit:
@@ -575,6 +569,10 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
             _, warning_msg = freshness_checker.check()
             if warning_msg:
                 print(warning_msg)
+
+        if gates_only:
+            print("Gates-only mode: integrity gates passed. Skipping analysis.")
+            return 0
 
         # 1.1 Validate Schemas of all files that loaded successfully (Upfront Schema Validation)
         if task_list_record and task_list_record.status == "ok":
@@ -627,8 +625,10 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
             return 1
 
         # 2. Map/parse PRD requirements (Do this early so we can check if it is draft status)
-        prd_parser = PrdParser()
-        prd_res = prd_parser.parse_file(Path(prd_record.file_path))
+        # Reuse prd_res from Gate 1c if already parsed; otherwise parse now
+        if prd_res is None:
+            prd_parser = PrdParser()
+            prd_res = prd_parser.parse_file(Path(prd_record.file_path))
         if not prd_res.is_valid:
             print(f"PRD parsing error: {'; '.join(prd_res.errors)}", file=sys.stderr)
             return 1
@@ -662,7 +662,7 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
                 arch_data = constraints_record.content
                 
             task_res = task_loader.load_and_validate(
-                task_list_path, prd_res, arch_data=arch_data, content=task_list_record.content
+                task_list_path, prd_res, arch_data=arch_data, content=task_list_record.content, skip_schema=True
             )
             if not task_res.is_valid:
                 print(
@@ -680,7 +680,7 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
             claims_path = Path(claims_record.file_path)
             claim_loader = ClaimLoader(schemas_dir)
             claim_res_loader = claim_loader.load_and_validate(
-                claims_path, task_res, content=claims_record.content
+                claims_path, task_res, content=claims_record.content, skip_schema=True
             )
             if not claim_res_loader.is_valid:
                 print(
@@ -692,6 +692,17 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
 
 
         # PRD, tasks and claims have been successfully parsed and validated above.
+
+        # Build unified context (REFACTOR-005)
+        ctx = UnifiedContext(
+            config=raw_loader.config_data,
+            prd=prd_res,
+            constraints=constraints_record.content if constraints_record and constraints_record.status == "ok" else None,
+            task_result=task_res,
+            claims_list=claims_list,
+            manifest=manifest,
+            config_prefix=config_prefix,
+        )
 
         # 5. Tool Execution Phase (MOD-VT-012)
         # Read language, validation_tools, language_tool_matrix from config/constraints
@@ -707,30 +718,6 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
                     file=sys.stderr,
                 )
                 return 1
-
-            # Anti-corruption layer: verify architecture constraints hash
-            config_hash = raw_loader.config_data.get("architecture_constraints_hash")
-            finalize_commit = raw_loader.config_data.get("finalize_git_commit")
-            if config_hash:
-                if not finalize_commit:
-                    print(
-                        "Critical Error: config.json has architecture_constraints_hash "
-                        "but missing finalize_git_commit. Config may have been tampered. "
-                        "Run 'vibe-tracing finalize' to re-lock.",
-                        file=sys.stderr,
-                    )
-                    return 1
-                current_hash = hashlib.sha256(
-                    Path(constraints_record.file_path).read_bytes()
-                ).hexdigest()
-                if current_hash != config_hash:
-                    print(
-                        "Critical Error: Architecture constraints have been modified "
-                        "since the last lock! The anti-corruption layer prevents execution. "
-                        "Run 'vibe-tracing finalize' to audit and re-lock the changes.",
-                        file=sys.stderr,
-                    )
-                    return 1
 
 
 
@@ -794,12 +781,6 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
                             if path_only and path_only not in execution_paths:
                                 execution_paths.append(path_only)
 
-                # Default to tests/ directory if no specific paths found
-                if not execution_paths:
-                    tests_dir = project_root / "tests"
-                    if tests_dir.is_dir():
-                        execution_paths.append("tests/")
-
                 if execution_paths:
                     print(f"Executing validation tools for {len(execution_paths)} path(s)...")
                     tool_evidence_candidates = engine.execute_all(execution_paths)
@@ -835,12 +816,16 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
                         f"({blocked_count} blocked)"
                     )
 
+        # Inject tool evidence into unified context (REFACTOR-005)
+        ctx.tool_evidence = tool_evidence_candidates or []
+
         # 6. Build and save evidence index
         index_builder = EvidenceIndexBuilder(project_root)
         index_path = output_dir / "evidence_index.json"
         try:
             evidences_index = index_builder.build(
                 output_path=index_path,
+                ctx=ctx,
                 tool_evidence_candidates=tool_evidence_candidates,
                 prd_record=prd_res,
                 task_result=task_res,
@@ -893,7 +878,14 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
             compliance_checker = ArchitectureComplianceChecker(
                 project_root, constraints_path=constraints_path
             )
-            compliance_res = compliance_checker.check(evidence_list)
+            constraints_for_compliance = (
+                constraints_record.content
+                if constraints_record and constraints_record.status == "ok"
+                else None
+            )
+            compliance_res = compliance_checker.check(
+                evidence_list, constraints_data=constraints_for_compliance
+            )
 
         # 8. Run Risk Advisor
         risk_advisor = RiskAdvisor(project_root)
@@ -1081,6 +1073,10 @@ def main(argv=None):
     analyze_parser.add_argument(
         "--pre-commit", action="store_true", help="Run in Git pre-commit hook mode (enables ghost code reconciliation)"
     )
+    analyze_parser.add_argument(
+        "--gates-only", action="store_true",
+        help="Run only integrity gates (1, 2, 2.5), skip tool execution and analysis (fast mode for pre-commit)"
+    )
 
     init_parser = subparsers.add_parser(
         "init", help="Initialize a new Vibe Tracing project with template files"
@@ -1120,7 +1116,7 @@ def main(argv=None):
         else:
             output_dir = raw_loader.get_path("output_dir").resolve()
 
-        return run_analyze(project_root, output_dir, is_pre_commit=args.pre_commit)
+        return run_analyze(project_root, output_dir, is_pre_commit=args.pre_commit, gates_only=args.gates_only)
     elif args.command == "init":
         project_root = Path(args.project_root).resolve()
         return run_init(project_root, name=args.name, prefix=args.prefix)

@@ -278,6 +278,37 @@ class ClaimEvidenceAnalyzer:
                                         }
                                     )
                                     risk_counter += 1
+
+                    # 3b. Covers consistency: claim's test_refs must include tests covering related ACs
+                    if claim.test_refs:
+                        claim_test_paths = set(ref.split("#")[0] for ref in claim.test_refs)
+                        for ac_id in related_acs:
+                            # Find test evidences that cover this AC
+                            ac_covering_tests = [t for t in test_evs if ac_id in t.get("covers", [])]
+                            if not ac_covering_tests:
+                                continue  # No test covers this AC - already caught by existing check above
+
+                            # Check if any of the covering tests are in claim's test_refs
+                            claim_covers_ac = any(
+                                t.get("source_path") in claim_test_paths
+                                for t in ac_covering_tests
+                            )
+                            if not claim_covers_ac:
+                                has_other_mismatch = True
+                                reason = (
+                                    f"Claim {claim_id} 声明完成但 test_refs 中无测试覆盖 AC {ac_id}。"
+                                    f"已有覆盖测试: {[t.get('source_path') for t in ac_covering_tests]}"
+                                )
+                                mismatches.append(reason)
+                                risks.append(
+                                    {
+                                        "risk_id": ids.make_risk_id(risk_counter),
+                                        "description": reason,
+                                        "severity": "must",
+                                        "risk_category": "test_covers_mismatch",
+                                    }
+                                )
+                                risk_counter += 1
                 else:
                     has_other_mismatch = True
                     reason = (

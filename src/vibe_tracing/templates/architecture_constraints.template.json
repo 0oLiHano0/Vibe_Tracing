@@ -8,7 +8,14 @@
     "language": "python"
   },
   "architecture_principles": [],
-  "module_boundaries": [],
+  "module_boundaries": [
+    {
+      "module_id": "MOD-{{PROJECT_PREFIX}}-001",
+      "name": "Core Module",
+      "responsibility": "Core feature implementation",
+      "related_requirements": ["REQ-{{PROJECT_PREFIX}}-9999"]
+    }
+  ],
   "dependency_rules": [],
   "data_flow_rules": [],
   "storage_rules": [],

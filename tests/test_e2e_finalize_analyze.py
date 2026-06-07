@@ -48,6 +48,9 @@ status: active
 
 ### REQ-VT-001: Core Feature
 
+#### 类别
+functional
+
 #### 优先级
 must
 

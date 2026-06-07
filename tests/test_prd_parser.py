@@ -10,11 +10,11 @@ def test_parse_real_prd():
 
     assert result.is_valid is True
     assert len(result.errors) == 0
-    assert len(result.requirements) == 9
+    assert len(result.requirements) == 10
 
-    # Verify IDs are REQ-VT-001 through REQ-VT-009
+    # Verify IDs are REQ-VT-001 through REQ-VT-010
     req_ids = [req.req_id for req in result.requirements]
-    expected_req_ids = [f"REQ-VT-00{i}" for i in range(1, 10)]
+    expected_req_ids = [f"REQ-VT-00{i}" for i in range(1, 10)] + ["REQ-VT-010"]
     assert req_ids == expected_req_ids
 
     # Check priorities
@@ -49,10 +49,14 @@ def test_duplicate_requirement_id():
     parser = PrdParser()
     text = """
 ### REQ-VT-001：全链路需求追踪
+#### 类别
+functional
 #### 优先级
 Must
 
 ### REQ-VT-001：重复需求
+#### 类别
+functional
 #### 优先级
 Should
 """
@@ -66,6 +70,8 @@ def test_duplicate_ac_id():
     parser = PrdParser()
     text = """
 ### REQ-VT-001：全链路需求追踪
+#### 类别
+functional
 #### 优先级
 Must
 
@@ -85,6 +91,8 @@ def test_heading_level_mismatch_req():
     parser = PrdParser()
     text = """
 #### REQ-VT-001：优先级不应该在 Level 4 heading
+#### 类别
+functional
 #### 优先级
 Must
 """
@@ -101,6 +109,8 @@ def test_heading_level_mismatch_ac():
     parser = PrdParser()
     text = """
 ### REQ-VT-001：全链路需求追踪
+#### 类别
+functional
 #### 优先级
 Must
 
@@ -119,6 +129,8 @@ def test_missing_parent_requirement():
     parser = PrdParser()
     text = """
 ### REQ-VT-002：证据驱动的 Agent Claim 校验
+#### 类别
+functional
 #### 优先级
 Must
 
@@ -139,10 +151,14 @@ def test_nesting_mismatch():
     parser = PrdParser()
     text = """
 ### REQ-VT-001：全链路需求追踪
+#### 类别
+functional
 #### 优先级
 Must
 
 ### REQ-VT-002：证据驱动的 Agent Claim 校验
+#### 类别
+functional
 #### 优先级
 Must
 
@@ -162,6 +178,8 @@ def test_invalid_priority_value():
     parser = PrdParser()
     text = """
 ### REQ-VT-001：全链路需求追踪
+#### 类别
+functional
 #### 优先级
 high
 """
@@ -179,6 +197,8 @@ def test_missing_priority_heading():
     parser = PrdParser()
     text = """
 ### REQ-VT-001：全链路需求追踪
+#### 类别
+functional
 """
     result = parser.parse_text(text)
     assert result.is_valid is False
@@ -193,6 +213,8 @@ def test_missing_testing_required_field():
     parser = PrdParser()
     text = """
 ### REQ-VT-001：全链路需求追踪
+#### 类别
+functional
 #### 优先级
 Must
 
@@ -212,6 +234,8 @@ def test_malformed_testing_required_field():
     parser = PrdParser()
     text = """
 ### REQ-VT-001：全链路需求追踪
+#### 类别
+functional
 #### 优先级
 Must
 
@@ -226,3 +250,99 @@ Must
         in err
         for err in result.errors
     )
+
+
+def test_missing_category_heading():
+    """Missing category section should produce an error."""
+    parser = PrdParser()
+    text = """
+### REQ-VT-001：全链路需求追踪
+#### 优先级
+Must
+"""
+    result = parser.parse_text(text)
+    assert result.is_valid is False
+    assert result.requirements[0].category == "unclear"
+    assert any(
+        "Category not found for requirement REQ-VT-001" in err
+        for err in result.errors
+    )
+
+
+def test_invalid_category_value():
+    """Invalid category value should produce an error."""
+    parser = PrdParser()
+    text = """
+### REQ-VT-001：全链路需求追踪
+#### 类别
+invalid_value
+#### 优先级
+Must
+"""
+    result = parser.parse_text(text)
+    assert result.is_valid is False
+    assert result.requirements[0].category == "unclear"
+    assert any(
+        "Invalid category 'invalid_value' for requirement REQ-VT-001" in err
+        for err in result.errors
+    )
+
+
+def test_valid_category_functional():
+    """functional category should parse correctly."""
+    parser = PrdParser()
+    text = """
+### REQ-VT-001：全链路需求追踪
+#### 类别
+functional
+#### 优先级
+Must
+"""
+    result = parser.parse_text(text)
+    assert result.requirements[0].category == "functional"
+
+
+def test_valid_category_quality_evolution():
+    """quality_evolution category should parse correctly."""
+    parser = PrdParser()
+    text = """
+### Q-001：质量演进需求
+#### 类别
+quality_evolution
+#### 优先级
+Should
+"""
+    result = parser.parse_text(text)
+    assert result.requirements[0].category == "quality_evolution"
+
+
+def test_q_pattern_category_mismatch_warning():
+    """Q-\\d+ pattern REQ without quality_evolution category should emit warning."""
+    parser = PrdParser()
+    text = """
+### Q-001：质量演进需求
+#### 类别
+functional
+#### 优先级
+Should
+"""
+    result = parser.parse_text(text)
+    # Q-pattern mismatch is a warning (appended to errors but doesn't invalidate)
+    assert any(
+        "Q-\\d+ pattern" in err and "quality_evolution" in err
+        for err in result.errors
+    )
+
+
+def test_category_case_insensitive():
+    """Category parsing should be case-insensitive."""
+    parser = PrdParser()
+    text = """
+### REQ-VT-001：全链路需求追踪
+#### 类别
+FUNCTIONAL
+#### 优先级
+Must
+"""
+    result = parser.parse_text(text)
+    assert result.requirements[0].category == "functional"

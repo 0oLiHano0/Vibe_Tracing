@@ -2,7 +2,87 @@
 
 import json
 
-from vibe_tracing.reflection_prompts import load_dimensions, render_reflection_prompts
+from vibe_tracing.reflection_prompts import (
+    check_uncovered_scopes,
+    load_dimensions,
+    render_reflection_prompts,
+)
+
+_EMPTY_TASK_LIST = {"tasks": []}
+
+
+class TestCheckUncoveredScopes:
+    """Test the uncovered scope detection function."""
+
+    def test_all_covered(self):
+        """Files present in task code_refs are not reported."""
+        task_list = {
+            "tasks": [
+                {"code_refs": ["src/foo.py", "src/bar.py"]},
+            ]
+        }
+        result = check_uncovered_scopes(["src/foo.py", "src/bar.py"], task_list)
+        assert result == []
+
+    def test_none_covered(self):
+        """Files absent from all task code_refs are all reported."""
+        task_list = {"tasks": [{"code_refs": ["src/other.py"]}]}
+        result = check_uncovered_scopes(["src/foo.py", "src/bar.py"], task_list)
+        assert result == ["src/bar.py", "src/foo.py"]
+
+    def test_partial_coverage(self):
+        """Mix of covered and uncovered files."""
+        task_list = {
+            "tasks": [
+                {"code_refs": ["src/foo.py#L1-L10"]},
+            ]
+        }
+        result = check_uncovered_scopes(
+            ["src/foo.py", "src/bar.py", "src/baz.py"], task_list
+        )
+        assert result == ["src/bar.py", "src/baz.py"]
+
+    def test_strips_line_range_suffix(self):
+        """Line-range suffixes (e.g. #L1-L10) are stripped when matching."""
+        task_list = {
+            "tasks": [{"code_refs": ["src/foo.py#L5-L20"]}]
+        }
+        result = check_uncovered_scopes(["src/foo.py"], task_list)
+        assert result == []
+
+    def test_empty_tasks_list(self):
+        """Empty tasks list means all affected files are uncovered."""
+        result = check_uncovered_scopes(["src/a.py"], {"tasks": []})
+        assert result == ["src/a.py"]
+
+    def test_empty_affected_files(self):
+        """No affected files means nothing to report."""
+        task_list = {"tasks": [{"code_refs": ["src/a.py"]}]}
+        result = check_uncovered_scopes([], task_list)
+        assert result == []
+
+    def test_multiple_tasks(self):
+        """Code refs from multiple tasks are aggregated."""
+        task_list = {
+            "tasks": [
+                {"code_refs": ["src/a.py"]},
+                {"code_refs": ["src/b.py"]},
+            ]
+        }
+        result = check_uncovered_scopes(["src/a.py", "src/b.py", "src/c.py"], task_list)
+        assert result == ["src/c.py"]
+
+    def test_task_without_code_refs(self):
+        """Tasks without code_refs key are handled gracefully."""
+        task_list = {"tasks": [{"task_id": "TASK-001"}]}
+        result = check_uncovered_scopes(["src/a.py"], task_list)
+        assert result == ["src/a.py"]
+
+    def test_result_is_sorted(self):
+        """Uncovered files are returned in sorted order."""
+        task_list = {"tasks": []}
+        result = check_uncovered_scopes(["z.py", "a.py", "m.py"], task_list)
+        assert result == ["a.py", "m.py", "z.py"]
 
 
 class TestRenderReflectionPrompts:
@@ -11,7 +91,9 @@ class TestRenderReflectionPrompts:
     def test_basic_structure(self):
         """All 8 dimensions are present in output."""
         result = render_reflection_prompts(
-            gate_decision="pass", gaps=[], risks=[], compliance_result=None
+            gate_decision="pass", gaps=[], risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
+            compliance_result=None,
         )
         assert "1. 项目不足识别 (Deficiencies)" in result
         assert "2. 架构精简度评估 (Simplicity)" in result
@@ -26,7 +108,8 @@ class TestRenderReflectionPrompts:
     def test_blocked_gate_adds_hint(self):
         """Blocked gate triggers deficiency hint."""
         result = render_reflection_prompts(
-            gate_decision="blocked", gaps=[], risks=[]
+            gate_decision="blocked", gaps=[], risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
         )
         assert "BLOCKED" in result
         assert "阻断根因" in result
@@ -34,7 +117,8 @@ class TestRenderReflectionPrompts:
     def test_fail_gate_adds_hint(self):
         """Fail gate triggers deficiency hint."""
         result = render_reflection_prompts(
-            gate_decision="fail", gaps=[], risks=[]
+            gate_decision="fail", gaps=[], risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
         )
         assert "FAIL" in result
         assert "条件性缺陷" in result
@@ -45,6 +129,7 @@ class TestRenderReflectionPrompts:
             gate_decision="pass",
             gaps=[],
             risks=[{"severity": "must", "description": "test"}],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
         )
         assert "直击物理根因" in result
 
@@ -54,6 +139,7 @@ class TestRenderReflectionPrompts:
             gate_decision="pass",
             gaps=[],
             risks=[{"confidence": "low_confidence"}],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
         )
         assert "低可信度" in result
 
@@ -63,6 +149,7 @@ class TestRenderReflectionPrompts:
             gate_decision="blocked",
             gaps=[{"item_type": "ac", "item_id": "AC-VT-001-01"}],
             risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
         )
         assert "覆盖缺口" in result
 
@@ -72,6 +159,7 @@ class TestRenderReflectionPrompts:
             gate_decision="pass",
             gaps=[],
             risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
             compliance_result={"unclear_constraints": [{"rule_id": "TEST-001"}]},
         )
         assert "模糊约束" in result
@@ -79,7 +167,9 @@ class TestRenderReflectionPrompts:
     def test_pass_no_hints(self):
         """Pass with no issues has no conditional hints."""
         result = render_reflection_prompts(
-            gate_decision="pass", gaps=[], risks=[], compliance_result=None
+            gate_decision="pass", gaps=[], risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
+            compliance_result=None,
         )
         assert "BLOCKED" not in result
         assert "FAIL" not in result
@@ -90,9 +180,46 @@ class TestRenderReflectionPrompts:
         """Many gaps trigger redundancy hint."""
         gaps = [{"item_type": "ac", "item_id": f"AC-{i}"} for i in range(6)]
         result = render_reflection_prompts(
-            gate_decision="blocked", gaps=gaps, risks=[]
+            gate_decision="blocked", gaps=gaps, risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
         )
         assert "冗余数据流转" in result
+
+    def test_uncovered_files_produce_warning(self):
+        """Files not covered by any task produce a governance coverage warning."""
+        task_list = {"tasks": []}
+        result = render_reflection_prompts(
+            gate_decision="pass", gaps=[], risks=[],
+            task_list=task_list,
+            affected_files=["src/foo.py", "src/bar.py"],
+        )
+        assert "治理覆盖警告" in result
+        assert "src/foo.py" in result
+        assert "src/bar.py" in result
+        assert "docs/task_list.json" in result
+
+    def test_covered_files_produce_no_warning(self):
+        """Files covered by tasks produce no governance coverage warning."""
+        task_list = {
+            "tasks": [{"code_refs": ["src/foo.py", "src/bar.py"]}]
+        }
+        result = render_reflection_prompts(
+            gate_decision="pass", gaps=[], risks=[],
+            task_list=task_list,
+            affected_files=["src/foo.py", "src/bar.py"],
+        )
+        assert "治理覆盖警告" not in result
+
+    def test_uncovered_hint_in_dead_code_dimension(self):
+        """Uncovered scope triggers the dead_code dimension conditional hint."""
+        task_list = {"tasks": []}
+        result = render_reflection_prompts(
+            gate_decision="pass", gaps=[], risks=[],
+            task_list=task_list,
+            affected_files=["src/ghost.py"],
+        )
+        assert "治理链路存在盲区" in result
+        assert "1" in result  # uncovered_count = 1
 
 
 class TestLoadDimensions:
@@ -143,7 +270,9 @@ class TestLoadDimensions:
 
         dims = load_dimensions(template_path=str(custom_file))
         result = render_reflection_prompts(
-            gate_decision="pass", gaps=[], risks=[], dimensions=dims
+            gate_decision="pass", gaps=[], risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
+            dimensions=dims,
         )
         assert "1. My Custom Title" in result
         assert "My custom prompt?" in result
@@ -154,9 +283,12 @@ class TestLoadDimensions:
         """Rendering with explicitly loaded dimensions matches default rendering."""
         dims = load_dimensions()
         result_explicit = render_reflection_prompts(
-            gate_decision="pass", gaps=[], risks=[], dimensions=dims
+            gate_decision="pass", gaps=[], risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
+            dimensions=dims,
         )
         result_default = render_reflection_prompts(
-            gate_decision="pass", gaps=[], risks=[]
+            gate_decision="pass", gaps=[], risks=[],
+            task_list=_EMPTY_TASK_LIST, affected_files=[],
         )
         assert result_explicit == result_default

@@ -1016,10 +1016,30 @@ def _evaluate_and_output(
         print("\n【零提示词引导】当前项目处于 PRD 草稿阶段（draft），且未发现任何开发任务。请让 AI Agent 读取项目内的 .vibetracing/prompts/prd_analysis.md 并按照其中的 7 步分析法对 PRD 进行分析与补充，逐步生成对应的架构约束和任务列表。")
 
     from vibe_tracing.reflection_prompts import render_reflection_prompts
+
+    # Extract affected_files from the analysis context
+    affected_files: List[str] = []
+    for claim in claims_list:
+        for ref in claim.code_refs:
+            path = ref.split("#")[0]
+            if path and path not in affected_files:
+                affected_files.append(path)
+        for ref in claim.test_refs:
+            path = ref.split("#")[0]
+            if path and path not in affected_files:
+                affected_files.append(path)
+
+    # Extract raw task_list dict from manifest
+    records_dict_all = {r.file_key: r for r in manifest.inputs_used}
+    task_list_record = records_dict_all.get("task_list")
+    task_list_raw = task_list_record.content if task_list_record and task_list_record.status == "ok" else {"tasks": []}
+
     print(render_reflection_prompts(
         gate_decision=gate_decision,
         gaps=merged_gaps,
         risks=final_risks,
+        task_list=task_list_raw,
+        affected_files=affected_files,
         compliance_result=compliance_res,
     ))
 

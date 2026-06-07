@@ -83,6 +83,8 @@ def setup_gate_test_project(
     # Write PRD
     prd_content = f"""# Vibe Tracing PRD
 ### REQ-VT-001: 全链路需求追踪
+#### 类别
+functional
 #### 优先级
 must
 
@@ -365,6 +367,8 @@ def test_gate_vt_003_must_req_no_tasks(tmp_path, capsys):
     # Define an extra MUST requirement in PRD but do not add any tasks for it
     extra_prd = """
 ### REQ-VT-999: 孤立需求测试
+#### 类别
+functional
 #### 优先级
 must
 

@@ -34,6 +34,8 @@ def setup_mock_project(base: Path) -> None:
     # Write PRD
     prd_content = """# Vibe Tracing PRD
 ### REQ-VT-001: 全链路需求追踪
+#### 类别
+functional
 #### 优先级
 must
 

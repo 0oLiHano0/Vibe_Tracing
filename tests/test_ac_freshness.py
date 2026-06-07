@@ -63,6 +63,21 @@ def _stage_all(base: Path) -> None:
     )
 
 
+def _write_claims(base: Path, claims: list) -> None:
+    """Write agent_claims.json."""
+    (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing" / "agent_claims.json").write_text(
+        json.dumps(claims, indent=2, ensure_ascii=False), encoding="utf-8",
+    )
+
+
+def _write_code_file(base: Path, rel_path: str, content: str = "# code\n") -> None:
+    """Create a code file at the given relative path."""
+    full = base / rel_path
+    full.parent.mkdir(parents=True, exist_ok=True)
+    full.write_text(content, encoding="utf-8")
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -426,3 +441,356 @@ class TestAcFreshnessChecker:
 
         assert success is True
         assert msg == ""
+
+
+# ---------------------------------------------------------------------------
+# Reverse coverage check tests
+# ---------------------------------------------------------------------------
+
+
+class TestReverseCoverageCheck:
+    """Tests for the reverse coverage check (staged code -> covering task modified?)."""
+
+    def _setup_baseline(self, tmp_path: Path) -> None:
+        """Commit a baseline with task_list, claims, and a code file."""
+        # Init repo first (empty commit not possible, so init without commit)
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+
+        _write_task_list(tmp_path, [
+            {
+                "task_id": "TASK-VT-001",
+                "title": "Implement feature",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "todo",
+                "owner_role": "agent",
+                "objective": "Implement the feature",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+        ])
+        _write_prd(tmp_path, "## Requirements\nAC-VT-001-01: criterion\n")
+        _write_claims(tmp_path, [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "claimed_status": "covered",
+                "evidence_refs": [],
+                "timestamp": "2030-01-01T00:00:00Z",
+                "code_refs": ["src/feature.py#L1-L10"],
+                "test_refs": [],
+                "notes": "Baseline",
+            },
+        ])
+        _write_code_file(tmp_path, "src/feature.py", "# baseline\n")
+        _stage_all(tmp_path)
+        subprocess.run(
+            ["git", "-c", "user.name=test", "-c", "user.email=test@test.com",
+             "commit", "-m", "baseline"],
+            cwd=tmp_path, check=True, capture_output=True,
+        )
+
+    def test_staged_code_no_covering_task__no_warning(self, tmp_path):
+        """Staged code file with no covering task -> no warning."""
+        _write_task_list(tmp_path, [
+            {
+                "task_id": "TASK-VT-001",
+                "title": "Old task",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "done",
+                "owner_role": "agent",
+                "objective": "Old stuff",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+        ])
+        _write_prd(tmp_path, "## Requirements\nAC-VT-001-01: old\n")
+        _write_claims(tmp_path, [])  # No claims
+        _init_git_repo(tmp_path)
+
+        # Stage a new code file not covered by any claim
+        _write_code_file(tmp_path, "src/new_file.py", "# new\n")
+        _stage_file(tmp_path, "src/new_file.py")
+
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        assert success is True
+        assert msg == ""
+
+    def test_staged_code_covered_by_unmodified_task__warns(self, tmp_path):
+        """Staged code covered by a task that was NOT modified -> WARNING."""
+        self._setup_baseline(tmp_path)
+
+        # Modify code file but do NOT modify the task
+        _write_code_file(tmp_path, "src/feature.py", "# modified\n")
+        _stage_file(tmp_path, "src/feature.py")
+
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        assert success is True
+        assert "反向覆盖检查提醒" in msg
+        assert "src/feature.py" in msg
+        assert "TASK-VT-001" in msg
+        assert "未在本次提交中修改" in msg
+
+    def test_staged_code_covered_by_modified_task__no_warning(self, tmp_path):
+        """Staged code covered by a task that WAS modified -> no warning."""
+        self._setup_baseline(tmp_path)
+
+        # Modify both the task AND the code file
+        _write_task_list(tmp_path, [
+            {
+                "task_id": "TASK-VT-001",
+                "title": "Implement feature (updated)",  # Modified field
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "in_progress",  # Modified field
+                "owner_role": "agent",
+                "objective": "Implement the feature",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+        ])
+        _write_code_file(tmp_path, "src/feature.py", "# modified\n")
+        _stage_all(tmp_path)
+
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        assert success is True
+        assert "反向覆盖检查提醒" not in msg
+
+    def test_line_range_suffix_stripped(self, tmp_path):
+        """Line-range suffixes in code_refs are correctly stripped."""
+        # Init repo
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+
+        _write_task_list(tmp_path, [
+            {
+                "task_id": "TASK-VT-001",
+                "title": "Task",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "todo",
+                "owner_role": "agent",
+                "objective": "Do it",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+        ])
+        _write_prd(tmp_path, "## Requirements\nAC-VT-001-01: criterion\n")
+        _write_claims(tmp_path, [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "claimed_status": "covered",
+                "evidence_refs": [],
+                "timestamp": "2030-01-01T00:00:00Z",
+                "code_refs": ["src/foo.py#L5-L20"],
+                "test_refs": [],
+                "notes": "Baseline",
+            },
+        ])
+        _write_code_file(tmp_path, "src/foo.py", "# code\n")
+        _stage_all(tmp_path)
+        subprocess.run(
+            ["git", "-c", "user.name=test", "-c", "user.email=test@test.com",
+             "commit", "-m", "baseline"],
+            cwd=tmp_path, check=True, capture_output=True,
+        )
+
+        # Now stage only the code file (task NOT modified)
+        _write_code_file(tmp_path, "src/foo.py", "# modified\n")
+        _stage_file(tmp_path, "src/foo.py")
+
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        assert success is True
+        assert "反向覆盖检查提醒" in msg
+        assert "src/foo.py" in msg
+
+    def test_no_claims__reverse_check_skipped(self, tmp_path):
+        """When there are no staged claims, reverse check produces no warning."""
+        _write_task_list(tmp_path, [
+            {
+                "task_id": "TASK-VT-001",
+                "title": "Task",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "todo",
+                "owner_role": "agent",
+                "objective": "Do it",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+        ])
+        _write_prd(tmp_path, "## Requirements\nAC-VT-001-01: criterion\n")
+        _init_git_repo(tmp_path)
+
+        # Stage a code file but no claims
+        _write_code_file(tmp_path, "src/feature.py", "# new\n")
+        _stage_file(tmp_path, "src/feature.py")
+
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        assert success is True
+        assert "反向覆盖检查提醒" not in msg
+
+    def test_new_task_also_counted_as_modified(self, tmp_path):
+        """A new task (not in HEAD) is treated as modified -> no reverse warning."""
+        self._setup_baseline(tmp_path)
+
+        # Add a new task that covers the code file, plus stage code and PRD
+        _write_task_list(tmp_path, [
+            {
+                "task_id": "TASK-VT-001",
+                "title": "Implement feature",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "todo",
+                "owner_role": "agent",
+                "objective": "Implement the feature",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+            {
+                "task_id": "TASK-VT-002",
+                "title": "New task covering same file",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "todo",
+                "owner_role": "agent",
+                "objective": "New task",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+        ])
+        _write_claims(tmp_path, [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "claimed_status": "covered",
+                "evidence_refs": [],
+                "timestamp": "2030-01-01T00:00:00Z",
+                "code_refs": ["src/feature.py#L1-L10"],
+                "test_refs": [],
+                "notes": "Baseline",
+            },
+            {
+                "claim_id": "CLAIM-VT-002",
+                "related_task": "TASK-VT-002",
+                "claimed_status": "covered",
+                "evidence_refs": [],
+                "timestamp": "2030-01-01T00:00:00Z",
+                "code_refs": ["src/feature.py"],
+                "test_refs": [],
+                "notes": "New claim",
+            },
+        ])
+        _write_prd(tmp_path, "## Requirements\nAC-VT-001-01: criterion\n")
+        _write_code_file(tmp_path, "src/feature.py", "# modified\n")
+        _stage_all(tmp_path)
+
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        # TASK-VT-002 is new (modified), so no reverse warning for it.
+        # TASK-VT-001 is NOT modified -> reverse warning for it.
+        assert success is True
+        assert "反向覆盖检查提醒" in msg
+        assert "TASK-VT-001" in msg
+        # TASK-VT-002 should NOT appear in the reverse check section
+        # (it may appear in forward check if PRD not staged, but here PRD IS staged so forward check is clean)
+        reverse_section = msg.split("反向覆盖检查提醒")[1] if "反向覆盖检查提醒" in msg else ""
+        assert "TASK-VT-002" not in reverse_section
+
+    def test_forward_and_reverse_warnings_combined(self, tmp_path):
+        """Forward and reverse warnings are both present in output."""
+        # Setup baseline
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        _write_task_list(tmp_path, [
+            {
+                "task_id": "TASK-VT-001",
+                "title": "Old task",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "done",
+                "owner_role": "agent",
+                "objective": "Old stuff",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+        ])
+        _write_prd(tmp_path, "## Requirements\nAC-VT-001-01: old\n")
+        _write_claims(tmp_path, [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "claimed_status": "covered",
+                "evidence_refs": [],
+                "timestamp": "2030-01-01T00:00:00Z",
+                "code_refs": ["src/feature.py#L1-L10"],
+                "test_refs": [],
+                "notes": "Baseline",
+            },
+        ])
+        _write_code_file(tmp_path, "src/feature.py", "# baseline\n")
+        _stage_all(tmp_path)
+        subprocess.run(
+            ["git", "-c", "user.name=test", "-c", "user.email=test@test.com",
+             "commit", "-m", "baseline"],
+            cwd=tmp_path, check=True, capture_output=True,
+        )
+
+        # Add a new task (triggers forward warning) + modify code without changing task
+        _write_task_list(tmp_path, [
+            {
+                "task_id": "TASK-VT-001",
+                "title": "Old task",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "done",
+                "owner_role": "agent",
+                "objective": "Old stuff",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+            {
+                "task_id": "TASK-VT-002",
+                "title": "New task",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "todo",
+                "owner_role": "agent",
+                "objective": "New stuff",
+                "related_requirements": ["REQ-VT-001"],
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+                "definition_of_done": [],
+            },
+        ])
+        _write_code_file(tmp_path, "src/feature.py", "# modified\n")
+        _stage_all(tmp_path)
+
+        checker = AcFreshnessChecker(tmp_path)
+        success, msg = checker.check()
+
+        assert success is True
+        # Forward warning present
+        assert "AC 新鲜度提醒" in msg
+        # Reverse warning present
+        assert "反向覆盖检查提醒" in msg
+        assert "TASK-VT-001" in msg

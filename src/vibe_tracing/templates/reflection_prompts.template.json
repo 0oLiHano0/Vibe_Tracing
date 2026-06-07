@@ -91,6 +91,10 @@
         {
           "condition": "has_violations",
           "text": "（本轮 {violation_count} 条架构违规，检查是否存在未清理的废弃代码）"
+        },
+        {
+          "condition": "has_uncovered_evolution_scope",
+          "text": "\n     ⚠ 发现 {uncovered_count} 个反思诊断涉及的文件未被 Task/AC 覆盖，治理链路存在盲区。"
         }
       ]
     }

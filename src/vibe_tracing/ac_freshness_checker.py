@@ -2,13 +2,20 @@
 
 Implements Gate 2.5 in the pre-commit flow: if a new task references ACs that
 were NOT touched in the same PRD update, emit a WARNING (never blocks).
+
+Also implements a **reverse coverage check**: staged code files that are covered
+by a task (via claims' ``code_refs``) but whose covering task was NOT modified
+in this commit produce a WARNING.  This prevents the bypass pattern where
+task+AC land in commit A and code changes silently land in commit B.
 """
 
 import json
 import re
 import subprocess
 from pathlib import Path
-from typing import Dict, Set, Tuple
+from typing import Dict, List, Set, Tuple
+
+_CODE_EXTENSIONS = {".py", ".js", ".ts", ".jsx", ".tsx"}
 
 
 class AcFreshnessChecker:
@@ -18,6 +25,7 @@ class AcFreshnessChecker:
         self.project_root = project_root
         self.prd_path = "docs/prd.md"
         self.task_list_path = "docs/task_list.json"
+        self.claims_path = ".vibetracing/agent_claims.json"
 
     def check(self) -> Tuple[bool, str]:
         """Run the AC freshness check.
@@ -25,6 +33,24 @@ class AcFreshnessChecker:
         Returns ``(success, warning_message)``.
         *success* is always ``True`` -- this gate only warns, never blocks.
         """
+        # -- Forward check: new task -> AC fresh? --
+        forward_warnings = self._forward_check()
+
+        # -- Reverse check: staged code -> covering task modified? --
+        reverse_warnings = self._reverse_check()
+
+        all_warnings = forward_warnings + reverse_warnings
+        if all_warnings:
+            return True, "\n".join(all_warnings)
+
+        return True, ""
+
+    # ------------------------------------------------------------------
+    # Forward check (original logic)
+    # ------------------------------------------------------------------
+
+    def _forward_check(self) -> List[str]:
+        """Forward check: new tasks referencing ACs not updated in this commit."""
         staged_files = self._get_staged_files()
         prd_is_staged = self.prd_path in staged_files
 
@@ -35,9 +61,9 @@ class AcFreshnessChecker:
         new_tasks = self._get_new_tasks()
 
         if not new_tasks:
-            return True, ""
+            return []
 
-        warnings = []
+        warnings: List[str] = []
         for task_id, ac_ids in new_tasks.items():
             if not ac_ids:
                 continue
@@ -57,18 +83,71 @@ class AcFreshnessChecker:
                     )
 
         if warnings:
-            return True, (
+            return [
                 "AC 新鲜度提醒："
                 "以下新增任务引用的 AC 未在本次提交中更新：\n"
                 + "\n".join(warnings)
                 + "\n如果这是有意为之"
                 f"（例如复用已有 AC），可忽略此警告。"
-            )
+            ]
 
-        return True, ""
+        return []
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # Reverse check (new logic)
+    # ------------------------------------------------------------------
+
+    def _reverse_check(self) -> List[str]:
+        """Reverse check: staged code files covered by tasks not modified in this commit."""
+        staged_code_files = self._get_staged_code_files()
+        if not staged_code_files:
+            return []
+
+        staged_claims = self._get_staged_claims()
+        if not staged_claims:
+            return []
+
+        # Build mapping: code_file -> set of task_ids that cover it
+        file_to_tasks: Dict[str, Set[str]] = {}
+        for claim in staged_claims:
+            task_id = claim.get("related_task", "")
+            if not task_id:
+                continue
+            for code_ref in claim.get("code_refs", []):
+                # Strip line-range suffixes like #L1-L10
+                clean_ref = code_ref.split("#")[0]
+                if clean_ref:
+                    file_to_tasks.setdefault(clean_ref, set()).add(task_id)
+
+        if not file_to_tasks:
+            return []
+
+        modified_task_ids = self._get_modified_task_ids()
+
+        warnings: List[str] = []
+        for code_file in sorted(staged_code_files):
+            covering_tasks = file_to_tasks.get(code_file, set())
+            for task_id in sorted(covering_tasks):
+                if task_id not in modified_task_ids:
+                    warnings.append(
+                        f"  - 代码文件 {code_file} 被任务 {task_id} 覆盖，"
+                        f"但该任务未在本次提交中修改。"
+                        f"请确认是否需要更新任务状态或提交 Claim。"
+                    )
+
+        if warnings:
+            return [
+                "反向覆盖检查提醒："
+                "以下代码文件的覆盖任务未在本次提交中修改：\n"
+                + "\n".join(warnings)
+                + "\n如果这是有意为之"
+                f"（例如仅修改实现细节），可忽略此警告。"
+            ]
+
+        return []
+
+    # ------------------------------------------------------------------
+    # Internal helpers -- staged files / PRD / new tasks
     # ------------------------------------------------------------------
 
     def _get_staged_files(self) -> Set[str]:
@@ -145,3 +224,84 @@ class AcFreshnessChecker:
                 new_tasks[task_id] = ac_ids
 
         return new_tasks
+
+    # ------------------------------------------------------------------
+    # Internal helpers -- reverse check
+    # ------------------------------------------------------------------
+
+    def _get_staged_code_files(self) -> Set[str]:
+        """Get staged file paths filtered to code files."""
+        all_staged = self._get_staged_files()
+        code_files: Set[str] = set()
+        for path in all_staged:
+            suffix = Path(path).suffix.lower()
+            if suffix in _CODE_EXTENSIONS:
+                code_files.add(path)
+        return code_files
+
+    def _get_staged_claims(self) -> List[dict]:
+        """Read staged agent_claims.json from the git index."""
+        try:
+            result = subprocess.run(
+                ["git", "show", f":{self.claims_path}"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            data = json.loads(result.stdout)
+            if isinstance(data, list):
+                return data
+            return []
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+            return []
+
+    def _get_modified_task_ids(self) -> Set[str]:
+        """Return set of task_ids whose content differs between staged and HEAD.
+
+        Detects both *new* tasks (exist in staged but not HEAD) and *modified*
+        tasks (exist in both but content differs).
+        """
+        try:
+            staged_result = subprocess.run(
+                ["git", "show", f":{self.task_list_path}"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            staged_data = json.loads(staged_result.stdout)
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+            return set()
+
+        try:
+            head_result = subprocess.run(
+                ["git", "show", f"HEAD:{self.task_list_path}"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            head_data = json.loads(head_result.stdout)
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+            # No HEAD version -- every task in staged is new
+            return {t.get("task_id") for t in staged_data.get("tasks", []) if t.get("task_id")}
+
+        head_tasks_by_id = {
+            t.get("task_id"): t for t in head_data.get("tasks", []) if t.get("task_id")
+        }
+
+        modified: Set[str] = set()
+        for task in staged_data.get("tasks", []):
+            task_id = task.get("task_id")
+            if not task_id:
+                continue
+            head_task = head_tasks_by_id.get(task_id)
+            if head_task is None:
+                # New task
+                modified.add(task_id)
+            elif task != head_task:
+                # Modified task (content differs)
+                modified.add(task_id)
+
+        return modified

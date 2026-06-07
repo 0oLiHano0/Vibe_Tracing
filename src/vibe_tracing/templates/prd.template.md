@@ -17,12 +17,15 @@ status: draft
 - 最近更新：{{TODAY}}
 - 当前状态：draft
 
-<!-- 
+<!--
 AI Agent Guide:
 1. This document is audited by Vibe Tracing.
 2. Requirements MUST use Level 3 Headings (### REQ-{{PROJECT_PREFIX}}-\d+).
 3. Acceptance Criteria MUST use Level 5 Headings (##### AC-{{PROJECT_PREFIX}}-\d+-\d+).
 4. Each AC must specify "是否必须有测试：是/否".
+5. Each REQ MUST have a "#### 类别" section (REQUIRED, no default value).
+   Allowed values: "functional" or "quality_evolution".
+   Missing category is a parse error.
 -->
 
 ---
@@ -77,6 +80,10 @@ AI Agent Guide:
 #### 业务价值
 
 为什么这个需求重要？
+
+#### 类别
+
+functional
 
 #### 优先级
 

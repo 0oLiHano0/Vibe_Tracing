@@ -9,7 +9,7 @@ from vibe_tracing.core.enums import CoverageStatus
 
 def test_full_coverage() -> None:
     """covers: AC-VT-001-01, AC-VT-001-03"""
-    req = Requirement(req_id="REQ-VT-001", title="Traceability", priority="must")
+    req = Requirement(req_id="REQ-VT-001", title="Traceability", priority="must", category="functional")
 
     evidences = [
         {
@@ -39,7 +39,7 @@ def test_full_coverage() -> None:
 
 def test_partial_coverage() -> None:
     """covers: AC-VT-001-01, AC-VT-001-03"""
-    req = Requirement(req_id="REQ-VT-001", title="Traceability", priority="must")
+    req = Requirement(req_id="REQ-VT-001", title="Traceability", priority="must", category="functional")
 
     evidences = [
         {
@@ -69,7 +69,7 @@ def test_partial_coverage() -> None:
 
 def test_missing_coverage_with_gap() -> None:
     """covers: AC-VT-001-01, AC-VT-001-04"""
-    req = Requirement(req_id="REQ-VT-001", title="Traceability", priority="must")
+    req = Requirement(req_id="REQ-VT-001", title="Traceability", priority="must", category="functional")
 
     analyzer = RequirementTaskAnalyzer()
     res = analyzer.analyze([req], [])
@@ -89,7 +89,7 @@ def test_missing_coverage_with_gap() -> None:
 
 def test_missing_coverage_no_gap() -> None:
     """covers: AC-VT-001-01, AC-VT-001-04"""
-    req = Requirement(req_id="REQ-VT-001", title="Traceability", priority="should")
+    req = Requirement(req_id="REQ-VT-001", title="Traceability", priority="should", category="functional")
 
     analyzer = RequirementTaskAnalyzer()
     res = analyzer.analyze([req], [])
@@ -106,9 +106,9 @@ def test_missing_coverage_no_gap() -> None:
 def test_unclear_priority_or_status() -> None:
     """covers: AC-VT-001-01, AC-VT-001-03"""
     req_unclear_pri = Requirement(
-        req_id="REQ-VT-001", title="Unclear Req", priority="unclear"
+        req_id="REQ-VT-001", title="Unclear Req", priority="unclear", category="functional"
     )
-    req_must = Requirement(req_id="REQ-VT-002", title="Must Req", priority="must")
+    req_must = Requirement(req_id="REQ-VT-002", title="Must Req", priority="must", category="functional")
 
     evidences = [
         {

@@ -13,7 +13,7 @@ def test_successful_test_coverage() -> None:
         ac_id="AC-VT-001-01", title="AC 1", is_testing_required=True
     )
     req = Requirement(
-        req_id="REQ-VT-001", title="Req 1", priority="must", acceptance_criteria=[ac]
+        req_id="REQ-VT-001", title="Req 1", priority="must", category="functional", acceptance_criteria=[ac]
     )
 
     evidences = [
@@ -42,7 +42,7 @@ def test_failed_test_non_coverage() -> None:
         ac_id="AC-VT-001-01", title="AC 1", is_testing_required=True
     )
     req = Requirement(
-        req_id="REQ-VT-001", title="Req 1", priority="must", acceptance_criteria=[ac]
+        req_id="REQ-VT-001", title="Req 1", priority="must", category="functional", acceptance_criteria=[ac]
     )
 
     evidences = [
@@ -76,7 +76,7 @@ def test_no_covers_tag_non_coverage() -> None:
         ac_id="AC-VT-001-01", title="AC 1", is_testing_required=True
     )
     req = Requirement(
-        req_id="REQ-VT-001", title="Req 1", priority="must", acceptance_criteria=[ac]
+        req_id="REQ-VT-001", title="Req 1", priority="must", category="functional", acceptance_criteria=[ac]
     )
 
     evidences = [
@@ -109,7 +109,7 @@ def test_missing_test_with_gap() -> None:
         ac_id="AC-VT-001-01", title="AC 1", is_testing_required=True
     )
     req = Requirement(
-        req_id="REQ-VT-001", title="Req 1", priority="must", acceptance_criteria=[ac]
+        req_id="REQ-VT-001", title="Req 1", priority="must", category="functional", acceptance_criteria=[ac]
     )
 
     analyzer = AcTestAnalyzer()
@@ -132,7 +132,7 @@ def test_missing_test_no_gap_not_must_req() -> None:
         ac_id="AC-VT-001-01", title="AC 1", is_testing_required=True
     )
     req = Requirement(
-        req_id="REQ-VT-001", title="Req 1", priority="should", acceptance_criteria=[ac]
+        req_id="REQ-VT-001", title="Req 1", priority="should", category="functional", acceptance_criteria=[ac]
     )
 
     analyzer = AcTestAnalyzer()
@@ -151,7 +151,7 @@ def test_missing_test_no_gap_testing_not_required() -> None:
         ac_id="AC-VT-001-01", title="AC 1", is_testing_required=False
     )
     req = Requirement(
-        req_id="REQ-VT-001", title="Req 1", priority="must", acceptance_criteria=[ac]
+        req_id="REQ-VT-001", title="Req 1", priority="must", category="functional", acceptance_criteria=[ac]
     )
 
     analyzer = AcTestAnalyzer()

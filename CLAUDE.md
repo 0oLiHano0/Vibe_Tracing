@@ -30,6 +30,9 @@ Hook 执行 Gate 1（防篡改）、Gate 2（幽灵代码检测）、Gate 2.5（
 - `docs/task_list.json` — 开发任务，关联 REQ/AC
 - `.vibetracing/config.json` — 项目配置，存储双哈希基线
 
+> [!CAUTION]
+> VT项目自身的prd.md、architecture_constraints.json等与init阶段的src/vibe_tracing/templates，还有src/vibe_tracing/schemas，存在关联性关系，需要考虑是否关联更新。
+
 ### 门禁链路
 
 ```

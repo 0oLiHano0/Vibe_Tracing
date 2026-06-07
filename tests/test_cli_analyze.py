@@ -73,6 +73,8 @@ def setup_mock_project(
     # Write PRD
     prd_content = """# Vibe Tracing PRD
 ### REQ-VT-001: 全链路需求追踪
+#### 类别
+functional
 #### 优先级
 must
 
@@ -505,7 +507,7 @@ def test_mapping_must_uncovered_blocks(tmp_path, capsys):
     prd_path = tmp_path / "docs" / "prd.md"
     prd_path.write_text(
         prd_path.read_text(encoding="utf-8")
-        + "\n### REQ-VT-002: 新增MUST需求\n#### 优先级\nmust\n\n"
+        + "\n### REQ-VT-002: 新增MUST需求\n#### 类别\nfunctional\n#### 优先级\nmust\n\n"
         "##### AC-VT-002-01: 验收标准\n* 是否必须有测试：是\n",
         encoding="utf-8",
     )
@@ -543,7 +545,7 @@ def test_mapping_should_uncovered_warns(tmp_path, capsys):
     prd_path = tmp_path / "docs" / "prd.md"
     prd_path.write_text(
         prd_path.read_text(encoding="utf-8")
-        + "\n### REQ-VT-002: 新增SHOULD需求\n#### 优先级\nshould\n\n"
+        + "\n### REQ-VT-002: 新增SHOULD需求\n#### 类别\nfunctional\n#### 优先级\nshould\n\n"
         "##### AC-VT-002-01: 验收标准\n* 是否必须有测试：否\n",
         encoding="utf-8",
     )

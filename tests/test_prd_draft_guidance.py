@@ -39,6 +39,8 @@ status: draft
 
 ## 3. 功能需求
 ### REQ-VT-001：样例需求
+#### 类别
+functional
 #### 优先级
 must
 ##### AC-VT-001-01：样例验收标准

@@ -19,6 +19,7 @@ class Requirement:
     req_id: str  # e.g., "REQ-VT-001"
     title: str  # e.g., "全链路需求追踪"
     priority: str  # "must", "should", "could", or "unclear" (lowercase)
+    category: str  # "functional" or "quality_evolution" (required, no default)
     acceptance_criteria: List[AcceptanceCriteria] = field(default_factory=list)
 
 
@@ -159,7 +160,8 @@ class PrdParser:
         prefix = ids.get_project_prefix()
 
         # Domain-specific ID patterns (not generic Markdown structure)
-        req_id_pattern = re.compile(rf"REQ-{prefix}-\d+")
+        # REQ IDs can be either REQ-{prefix}-\d+ or Q-\d+ (quality evolution)
+        req_id_pattern = re.compile(rf"(?:REQ-{prefix}-\d+|Q-\d+)")
         ac_id_pattern = re.compile(rf"AC-{prefix}-\d+-\d+")
 
         # Build AST from body (front matter stripped so mistune won't misparse ---)
@@ -175,11 +177,13 @@ class PrdParser:
         all_ac_ids_seen: List[str] = []
         all_parsed_ac_ids: set = set()
         priorities_processed: set = set()
+        categories_processed: set = set()
         ac_test_found: set = set()  # set of id(AcceptanceCriteria) objects
 
         # State machine context (single pass)
         current_req: Optional[Requirement] = None
         expect_priority: bool = False
+        expect_category: bool = False
         current_ac: Optional[AcceptanceCriteria] = None
 
         for token in tokens:
@@ -190,9 +194,10 @@ class PrdParser:
                 level: int = token["attrs"]["level"]
                 heading_text: str = _extract_text(token).strip()
 
-                # A new heading always resets expect_priority; missing priority
-                # value (if any) is caught in the post-parse check below.
+                # A new heading always resets expect_priority and expect_category;
+                # missing values (if any) are caught in the post-parse check below.
                 expect_priority = False
+                expect_category = False
 
                 req_ids = req_id_pattern.findall(heading_text)
                 ac_ids = ac_id_pattern.findall(heading_text)
@@ -221,6 +226,7 @@ class PrdParser:
                         req_id=req_id,
                         title=clean_title(title_part),
                         priority="unclear",
+                        category="unclear",
                         acceptance_criteria=[],
                     )
                     requirements.append(current_req)
@@ -228,6 +234,10 @@ class PrdParser:
 
                 elif level == 4 and "优先级" in heading_text and current_req:
                     expect_priority = True
+                    current_ac = None
+
+                elif level == 4 and "类别" in heading_text and current_req:
+                    expect_category = True
                     current_ac = None
 
                 elif level == 5 and ac_ids:
@@ -281,6 +291,22 @@ class PrdParser:
                     current_req.priority = "unclear"
                     is_valid = False
 
+            # ── PARAGRAPH (category value) ────────────────────────────────────
+            elif ttype == "paragraph" and expect_category and current_req:
+                category_val = _extract_text(token).strip()
+                val_lower = category_val.lower()
+                expect_category = False
+                categories_processed.add(current_req.req_id)
+
+                if val_lower in ("functional", "quality_evolution"):
+                    current_req.category = val_lower
+                else:
+                    errors.append(
+                        f"Invalid category '{category_val}' for requirement {current_req.req_id}"
+                    )
+                    current_req.category = "unclear"
+                    is_valid = False
+
             # ── LIST or PARAGRAPH (AC body: 是否必须有测试) ─────────────────
             # Both list items (*/-) and bare paragraph lines are accepted;
             # the old regex engine matched any line regardless of list syntax.
@@ -309,6 +335,21 @@ class PrdParser:
                 errors.append(f"Priority not found for requirement {req.req_id}")
                 req.priority = "unclear"
                 is_valid = False
+
+        # Missing category section for any requirement
+        for req in requirements:
+            if req.req_id not in categories_processed:
+                errors.append(f"Category not found for requirement {req.req_id}")
+                req.category = "unclear"
+                is_valid = False
+
+        # Q-pattern REQ should have quality_evolution category (warning)
+        for req in requirements:
+            if re.match(r"Q-\d+", req.req_id) and req.category != "quality_evolution":
+                errors.append(
+                    f"WARNING: Requirement {req.req_id} matches Q-\\d+ pattern "
+                    f"but category is '{req.category}' (expected 'quality_evolution')"
+                )
 
         # Duplicate requirement IDs
         for rid, count in Counter(all_req_ids_seen).items():

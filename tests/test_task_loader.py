@@ -59,6 +59,7 @@ def get_mock_prd_result():
                 req_id="REQ-VT-001",
                 title="Full Traceability",
                 priority="must",
+                category="functional",
                 acceptance_criteria=[
                     AcceptanceCriteria(
                         ac_id="AC-VT-001-01",
@@ -76,6 +77,7 @@ def get_mock_prd_result():
                 req_id="REQ-VT-002",
                 title="Agent Claim Verification",
                 priority="must",
+                category="functional",
                 acceptance_criteria=[
                     AcceptanceCriteria(
                         ac_id="AC-VT-002-01",

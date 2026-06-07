@@ -220,7 +220,8 @@
       "related_requirements": [
         "REQ-VT-001",
         "REQ-VT-006",
-        "REQ-VT-008"
+        "REQ-VT-008",
+        "REQ-VT-010"
       ],
       "owned_files": [
         "schema_validator.py"

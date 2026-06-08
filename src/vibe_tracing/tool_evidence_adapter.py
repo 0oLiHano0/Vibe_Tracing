@@ -13,6 +13,7 @@ import json
 import re
 import shlex
 import subprocess
+import sys
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -719,6 +720,21 @@ class ToolExecutionEngine:
                     stderr=str(exc),
                 )
             ]
+
+        # Fallback: if tool binary not on PATH, try python3 -m <tool>
+        import shutil as _shutil
+        segments = command.split(";")
+        resolved_segments = []
+        for seg in segments:
+            seg = seg.strip()
+            if not seg:
+                resolved_segments.append(seg)
+                continue
+            tool_name = seg.split()[0]
+            if tool_name and not _shutil.which(tool_name):
+                seg = f"{sys.executable} -m {seg}"
+            resolved_segments.append(seg)
+        command = " ; ".join(resolved_segments)
 
         # Execute the command
         exit_code, stdout, stderr, exec_error = self._run_subprocess(command)

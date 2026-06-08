@@ -868,7 +868,20 @@ def _execute_tools(
         if tool_name:
             required_binaries.add(tool_name)
 
-    missing = sorted(t for t in required_binaries if not shutil.which(t))
+    def _tool_available(name: str) -> bool:
+        """Check if a tool is available as a binary or as a Python module."""
+        if shutil.which(name):
+            return True
+        try:
+            subprocess.run(
+                [sys.executable, "-m", name, "--version"],
+                capture_output=True, timeout=10,
+            )
+            return True
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            return False
+
+    missing = sorted(t for t in required_binaries if not _tool_available(t))
     if missing:
         print(f"\n[AI Agent Repair Guide]", file=sys.stderr)
         print(

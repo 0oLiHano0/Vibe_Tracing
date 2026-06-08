@@ -593,9 +593,18 @@ def test_missing_tools_skips_with_warning(tmp_path, capsys, monkeypatch):
     execution gracefully, without blocking the gate.
     """
     import shutil
+    import subprocess
 
     # Mock shutil.which to return None for ALL tools (simulate missing tools)
     monkeypatch.setattr(shutil, "which", lambda cmd: None)
+
+    # Mock subprocess.run to fail for python3 -m <tool> --version checks
+    _real_run = subprocess.run
+    def mock_run(cmd, *args, **kwargs):
+        if isinstance(cmd, list) and len(cmd) >= 3 and cmd[1] == "-m" and "--version" in cmd:
+            raise FileNotFoundError("tool not found")
+        return _real_run(cmd, *args, **kwargs)
+    monkeypatch.setattr(subprocess, "run", mock_run)
 
     setup_mock_project(
         tmp_path,

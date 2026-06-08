@@ -295,7 +295,7 @@ def test_cli_analyze_blocked(tmp_path, capsys):
 
     captured = capsys.readouterr()
     assert "Analysis complete. Gate decision: BLOCKED" in captured.out
-    assert "验收标准缺失测试证据 (AC-VT-001-02)" in captured.out
+    assert "AC-VT-001-02" in captured.out and "缺失测试证据" in captured.out
 
     # Files should still be generated
     traceability_report_path = (

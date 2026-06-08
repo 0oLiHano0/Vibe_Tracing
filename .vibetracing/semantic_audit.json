@@ -2,15 +2,15 @@
   {
     "ticket_id": "AUDIT-VT-001",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:7c842cb2620ee45c1b1ce17c2ffcf01fcd248ba19da799e072fe90bb75c80522",
+    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
     "task_id": "TASK-VT-058",
     "ac_ids": [
       "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: 噪音消除措施改进，新增 Agent 行动清单格式化、stale WARNING、非代码文件 skipped 证据、决策日志加载",
+    "audit_reason": "cli.py: 进化轮次 d — Agent 行动清单函数拆分 + hints 迁移 + 变更分离机制 + 决策日志加载",
     "created_at": "2026-06-08T01:38:30.163828Z",
-    "updated_at": "2026-06-08T12:48:55.688817Z"
+    "updated_at": "2026-06-08T15:39:50.060090Z"
   },
   {
     "ticket_id": "AUDIT-VT-002",
@@ -55,16 +55,16 @@
   {
     "ticket_id": "AUDIT-VT-005",
     "file_path": "tests/test_e2e_finalize_analyze.py",
-    "file_hash": "sha256:34e0cd6547125d7a0638fe77dcb9aea84d330ae7c4870a9988a6fb0722333cba",
+    "file_hash": "sha256:dcec2b461422fe63b393035d1e6d271b5bb7f5046bf0784a6d703888f88410b3",
     "task_id": "TASK-VT-051",
     "ac_ids": [
       "AC-VT-010-01",
       "AC-VT-010-02"
     ],
     "status": "passed",
-    "audit_reason": "test_e2e_finalize_analyze.py mock 配置补充 extensions 字段以适配配置驱动扩展名变更。language_tool_matrix.python 新增 extensions: [.py]。",
+    "audit_reason": "test_e2e_finalize_analyze.py: 更新测试适配变更分离机制（pre-existing 不阻断）",
     "created_at": "2026-06-08T01:38:57.216444Z",
-    "updated_at": "2026-06-08T02:00:00.000000Z"
+    "updated_at": "2026-06-08T15:39:50.065465Z"
   },
   {
     "ticket_id": "AUDIT-VT-006",
@@ -96,30 +96,30 @@
   {
     "ticket_id": "AUDIT-VT-008",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:7c842cb2620ee45c1b1ce17c2ffcf01fcd248ba19da799e072fe90bb75c80522",
+    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: 报告组装扩展，新增 accepted_rules 字段和 skipped_count 统计",
+    "audit_reason": "cli.py: 门禁理由分组输出（CURRENT ISSUES vs PRE-EXISTING DEBT）",
     "created_at": "2026-06-08T03:06:28.667333Z",
-    "updated_at": "2026-06-08T12:48:55.694686Z"
+    "updated_at": "2026-06-08T15:39:50.071341Z"
   },
   {
     "ticket_id": "AUDIT-VT-009",
     "file_path": "tests/test_cli_analyze.py",
-    "file_hash": "sha256:b5602b582a7073ed91ac43eb9b90ecc6570f965ddfc366397cdfa0c9bffc2f80",
+    "file_hash": "sha256:9618ab5b6c8bae8cba20c9c7d752ed22351c009ac7897c5a824cf5bb94ca1a67",
     "task_id": "TASK-VT-044",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "test_cli_analyze.py 更新 test_missing_tools 测试：从验证 BLOCKED 证据改为验证 WARNING 输出和跳过行为。",
+    "audit_reason": "test_cli_analyze.py: 新增 AC-VT-009 覆盖率测试",
     "created_at": "2026-06-08T03:06:28.672473Z",
-    "updated_at": "2026-06-08T03:06:35.703294Z"
+    "updated_at": "2026-06-08T15:39:50.076263Z"
   },
   {
     "ticket_id": "AUDIT-VT-010",
@@ -138,30 +138,30 @@
   {
     "ticket_id": "AUDIT-VT-011",
     "file_path": "src/vibe_tracing/architecture_compliance_checker.py",
-    "file_hash": "sha256:87a66e7a578f362a6f305b55e8444edbe3e334d126233c62b5c79f3740ffc518",
+    "file_hash": "sha256:e9ae5e3fe8360fa34d9f591d8ccfb94791d7d69fa3f897994b3e8146fa26c16e",
     "task_id": "TASK-VT-044",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "architecture_compliance_checker.py: accepted_by 可见化，accepted_rules 收集替代静默跳过，修复注释/代码矛盾，新增 _is_stale_acceptance 检测函数",
+    "audit_reason": "architecture_compliance_checker.py: hints 迁移 + accepted_rules 收集",
     "created_at": "2026-06-08T09:54:49.173342Z",
-    "updated_at": "2026-06-08T12:48:55.699734Z"
+    "updated_at": "2026-06-08T15:39:50.081189Z"
   },
   {
     "ticket_id": "AUDIT-VT-012",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:7c842cb2620ee45c1b1ce17c2ffcf01fcd248ba19da799e072fe90bb75c80522",
+    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: Agent 行动清单，_format_agent_actions 函数输出可执行指令（含内联 AC 描述、代码片段、测试场景）",
+    "audit_reason": "cli.py: staged_items 扩展支持 AC ID 匹配",
     "created_at": "2026-06-08T09:54:49.178453Z",
-    "updated_at": "2026-06-08T12:48:55.704859Z"
+    "updated_at": "2026-06-08T15:39:50.086209Z"
   },
   {
     "ticket_id": "AUDIT-VT-013",
@@ -180,30 +180,30 @@
   {
     "ticket_id": "AUDIT-VT-014",
     "file_path": "src/vibe_tracing/merge_gate_engine.py",
-    "file_hash": "sha256:81ed4f9104c7f707304b70d9f7a136710f9244176a23433da8e29ee3a5fb0da0",
+    "file_hash": "sha256:178fe0730a0beb999f8092b108bf793704973761e64016372b6894ad91ee41ca",
     "task_id": "TASK-VT-045",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-13"
     ],
     "status": "passed",
-    "audit_reason": "merge_gate_engine.py 新增 staged_items 参数和 _tag_reason 方法，BLOCKED reasons 区分 [当前] 和 [预存] 来源，帮助 Agent 判断是否为预存债务。",
+    "audit_reason": "merge_gate_engine.py: hints 迁移 + _is_current() 变更分离",
     "created_at": "2026-06-08T09:54:49.188628Z",
-    "updated_at": "2026-06-08T09:55:11.291045Z"
+    "updated_at": "2026-06-08T15:39:50.090883Z"
   },
   {
     "ticket_id": "AUDIT-VT-015",
     "file_path": "src/vibe_tracing/tool_evidence_adapter.py",
-    "file_hash": "sha256:76fe4addbe271ddccfed7192766ec0e26c827eb243dd3b4a3da9b4663acbabb2",
+    "file_hash": "sha256:51d073feaa3daa951a47c1a39222e67c0289d527789f8265a29879a6fcd39025",
     "task_id": "TASK-VT-050",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "tool_evidence_adapter.py: skipped 证据生成，pytest exit 5/2 和 mypy exit 2 返回 status=skipped 的 ToolEvidenceCandidate",
+    "audit_reason": "tool_evidence_adapter.py: hints 迁移 + skipped 证据生成",
     "created_at": "2026-06-08T09:54:49.193736Z",
-    "updated_at": "2026-06-08T12:48:55.709902Z"
+    "updated_at": "2026-06-08T15:39:50.095580Z"
   },
   {
     "ticket_id": "AUDIT-VT-016",
@@ -222,7 +222,7 @@
   {
     "ticket_id": "AUDIT-VT-017",
     "file_path": "tests/test_merge_gate_engine.py",
-    "file_hash": "sha256:5351160b6af97ae95f71a997f8845be6c581f9c680a32ee0208340953779b5cb",
+    "file_hash": "sha256:ede46db7896ece924b6a5bdd21f818dc1d3ae3de41bb3def7b0cb8cb288785a3",
     "task_id": "TASK-VT-063",
     "audit_level": "detailed",
     "ac_ids": [
@@ -230,14 +230,14 @@
       "AC-VT-010-02"
     ],
     "status": "passed",
-    "audit_reason": "test_merge_gate_engine.py 新增 4 个测试：staged claim 标记 [当前]、non-staged claim 标记 [预存]、无 staged_items 向后兼容、架构违规标记 [当前]。",
+    "audit_reason": "test_merge_gate_engine.py: 新增 7 个变更分离测试覆盖预存/当前 AC gap 和 MUST risk 场景",
     "created_at": "2026-06-08T09:54:49.203513Z",
-    "updated_at": "2026-06-08T09:55:11.291045Z"
+    "updated_at": "2026-06-08T15:39:50.100494Z"
   },
   {
     "ticket_id": "AUDIT-VT-018",
     "file_path": "decision_server.py",
-    "file_hash": "sha256:06a2da13526877251408e9457eaa327527771865aca706bae34614c0dd6d9964",
+    "file_hash": "sha256:aad1b443f862c0b70f8ab4e7f576ba7eb29f446bebb20853c738ff647c12e3c2",
     "task_id": "TASK-VT-065",
     "audit_level": "detailed",
     "ac_ids": [
@@ -245,37 +245,37 @@
       "AC-VT-010-02"
     ],
     "status": "passed",
-    "audit_reason": "decision_server.py: 新增 Flask Decision API，3 个端点（GET/POST /api/decisions, GET /api/pending），写入 .vibetracing/human_decisions.json",
+    "audit_reason": "decision_server.py: 实现 /api/pending 端点从 traceability_report.json 提取待决策项",
     "created_at": "2026-06-08T12:48:55.653727Z",
-    "updated_at": "2026-06-08T12:48:55.653727Z"
+    "updated_at": "2026-06-08T15:39:50.105193Z"
   },
   {
     "ticket_id": "AUDIT-VT-019",
     "file_path": "src/vibe_tracing/architecture_compliance_checker.py",
-    "file_hash": "sha256:87a66e7a578f362a6f305b55e8444edbe3e334d126233c62b5c79f3740ffc518",
+    "file_hash": "sha256:e9ae5e3fe8360fa34d9f591d8ccfb94791d7d69fa3f897994b3e8146fa26c16e",
     "task_id": "TASK-VT-044",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "architecture_compliance_checker.py: accepted_rules 收集逻辑变更，已有 22 个测试覆盖（含 11 个新增测试）",
+    "audit_reason": "architecture_compliance_checker.py: _load_hints + _resolve_hint 函数",
     "created_at": "2026-06-08T12:48:55.658747Z",
-    "updated_at": "2026-06-08T12:48:55.658747Z"
+    "updated_at": "2026-06-08T15:39:50.110015Z"
   },
   {
     "ticket_id": "AUDIT-VT-020",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:7c842cb2620ee45c1b1ce17c2ffcf01fcd248ba19da799e072fe90bb75c80522",
+    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: 多处改动（T5/T7/T9/T12），报告组装、Agent 行动清单、stale WARNING、决策日志加载，已有测试覆盖",
+    "audit_reason": "cli.py: _format_agent_actions 拆分为 5 个独立函数",
     "created_at": "2026-06-08T12:48:55.663738Z",
-    "updated_at": "2026-06-08T12:48:55.663738Z"
+    "updated_at": "2026-06-08T15:39:50.114978Z"
   },
   {
     "ticket_id": "AUDIT-VT-021",
@@ -294,43 +294,413 @@
   {
     "ticket_id": "AUDIT-VT-022",
     "file_path": "src/vibe_tracing/tool_evidence_adapter.py",
-    "file_hash": "sha256:76fe4addbe271ddccfed7192766ec0e26c827eb243dd3b4a3da9b4663acbabb2",
+    "file_hash": "sha256:51d073feaa3daa951a47c1a39222e67c0289d527789f8265a29879a6fcd39025",
     "task_id": "TASK-VT-050",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "tool_evidence_adapter.py: skipped 候选生成逻辑变更，已有 45 个测试通过",
+    "audit_reason": "tool_evidence_adapter.py: _safe_format 处理模板变量冲突",
     "created_at": "2026-06-08T12:48:55.673492Z",
-    "updated_at": "2026-06-08T12:48:55.673492Z"
+    "updated_at": "2026-06-08T15:39:50.119967Z"
   },
   {
     "ticket_id": "AUDIT-VT-023",
     "file_path": "tests/test_architecture_compliance_checker.py",
-    "file_hash": "sha256:b95bb33457df307bbd9afe3470facad227c7189f657b9b08229bd4593b5731b7",
+    "file_hash": "sha256:bac711c4a835dfa2a70d995858396ced2ca9c0e8c6fe2e126f570d279bfef188",
     "task_id": "TASK-VT-044",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "test_architecture_compliance_checker.py: 新增 11 个测试覆盖 accepted_rules 收集和 stale 检测",
+    "audit_reason": "test_architecture_compliance_checker.py: 更新断言适配 hints 文本",
     "created_at": "2026-06-08T12:48:55.678236Z",
-    "updated_at": "2026-06-08T12:48:55.678236Z"
+    "updated_at": "2026-06-08T15:39:50.124854Z"
   },
   {
     "ticket_id": "AUDIT-VT-024",
     "file_path": "tests/test_tool_execution.py",
-    "file_hash": "sha256:1a071284485d2cb1611c0a4f805b11a4a627e2e71240112e488fab74adbe00f9",
+    "file_hash": "sha256:23fb044f838d167a65901b4cee2b6b9c452bbf510a51caead8c75afa764cfff2",
     "task_id": "TASK-VT-062",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "test_tool_execution.py: 更新 3 个测试适配 skipped 证据返回（exit code 5/2 不再返回空列表）",
+    "audit_reason": "test_tool_execution.py: 更新断言适配 hints 文本",
     "created_at": "2026-06-08T12:48:55.682955Z",
-    "updated_at": "2026-06-08T12:48:55.682955Z"
+    "updated_at": "2026-06-08T15:39:50.129604Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-025",
+    "file_path": "decision_server.py",
+    "file_hash": "sha256:aad1b443f862c0b70f8ab4e7f576ba7eb29f446bebb20853c738ff647c12e3c2",
+    "task_id": "TASK-VT-065",
+    "audit_level": "detailed",
+    "ac_ids": [
+      "AC-VT-009-12",
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "decision_server.py: 新增 /api/pending 端点实现，替换占位符返回真实待决策数据",
+    "created_at": "2026-06-08T15:39:49.929971Z",
+    "updated_at": "2026-06-08T15:39:49.929971Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-026",
+    "file_path": "src/vibe_tracing/architecture_change_proposal.py",
+    "file_hash": "sha256:abb63e4a6369b57b5f7d1b55ecc692e2df0b0842d2d44cbd33546b1830dfb218",
+    "task_id": "TASK-VT-063",
+    "audit_level": "detailed",
+    "ac_ids": [
+      "AC-VT-009-12",
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "architecture_change_proposal.py: 添加 Claim 自动失效机制设计文档和 _file_sha256 工具函数",
+    "created_at": "2026-06-08T15:39:49.935007Z",
+    "updated_at": "2026-06-08T15:39:49.935007Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-027",
+    "file_path": "src/vibe_tracing/architecture_compliance_checker.py",
+    "file_hash": "sha256:e9ae5e3fe8360fa34d9f591d8ccfb94791d7d69fa3f897994b3e8146fa26c16e",
+    "task_id": "TASK-VT-044",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "architecture_compliance_checker.py: compliance hints 集成",
+    "created_at": "2026-06-08T15:39:49.940100Z",
+    "updated_at": "2026-06-08T15:39:49.940100Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-028",
+    "file_path": "src/vibe_tracing/claim_loader.py",
+    "file_hash": "sha256:1160560494af0a7ca78bfe64ad979b57dfd68e93e57c647f75ac2a1bacabce53",
+    "task_id": "TASK-VT-035",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-07"
+    ],
+    "status": "passed",
+    "audit_reason": "claim_loader.py: _resolve_hint 三级 verbosity 适配",
+    "created_at": "2026-06-08T15:39:49.945997Z",
+    "updated_at": "2026-06-08T15:39:49.945997Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-029",
+    "file_path": "src/vibe_tracing/cli.py",
+    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
+    "task_id": "TASK-VT-035",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-07"
+    ],
+    "status": "passed",
+    "audit_reason": "cli.py: _load_hints + _resolve_hint + action hints 集成",
+    "created_at": "2026-06-08T15:39:49.951721Z",
+    "updated_at": "2026-06-08T15:39:49.951721Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-030",
+    "file_path": "src/vibe_tracing/dashboard_renderer.py",
+    "file_hash": "sha256:4e2671894a6b9d579ea8adaa950f94d250b36b2b71e0fc69f63ec192b6f052b7",
+    "task_id": "TASK-VT-034",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-006-04"
+    ],
+    "status": "passed",
+    "audit_reason": "dashboard_renderer.py: level2 hints 嵌入到 dashboard HTML",
+    "created_at": "2026-06-08T15:39:49.956579Z",
+    "updated_at": "2026-06-08T15:39:49.956579Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-031",
+    "file_path": "src/vibe_tracing/merge_gate_engine.py",
+    "file_hash": "sha256:178fe0730a0beb999f8092b108bf793704973761e64016372b6894ad91ee41ca",
+    "task_id": "TASK-VT-045",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-13"
+    ],
+    "status": "passed",
+    "audit_reason": "merge_gate_engine.py: gate_decision hints 集成",
+    "created_at": "2026-06-08T15:39:49.961680Z",
+    "updated_at": "2026-06-08T15:39:49.961680Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-032",
+    "file_path": "src/vibe_tracing/risk_advisor.py",
+    "file_hash": "sha256:da229ef2368587b9d958dfce28e1d94d65dfde555f59e848509975d8bd0b3dd4",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "risk_advisor.py: risk hints 集成替换硬编码消息",
+    "created_at": "2026-06-08T15:39:49.966561Z",
+    "updated_at": "2026-06-08T15:39:49.966561Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-033",
+    "file_path": "src/vibe_tracing/task_loader.py",
+    "file_hash": "sha256:801fd6867b78715712cf3d64d9df17e51342442c34295f54a0a0715d82c2f52a",
+    "task_id": "TASK-VT-035",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-07"
+    ],
+    "status": "passed",
+    "audit_reason": "task_loader.py: _resolve_hint 三级 verbosity 适配",
+    "created_at": "2026-06-08T15:39:49.971333Z",
+    "updated_at": "2026-06-08T15:39:49.971333Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-034",
+    "file_path": "src/vibe_tracing/tool_evidence_adapter.py",
+    "file_hash": "sha256:51d073feaa3daa951a47c1a39222e67c0289d527789f8265a29879a6fcd39025",
+    "task_id": "TASK-VT-050",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "tool_evidence_adapter.py: tool hints 集成",
+    "created_at": "2026-06-08T15:39:49.976283Z",
+    "updated_at": "2026-06-08T15:39:49.976283Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-035",
+    "file_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+    "file_hash": "sha256:e360098c67b9c05e11a4392fd7cd4618616deb4036df5afb831c0c7aa32b9349",
+    "task_id": "TASK-VT-033",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-002-04"
+    ],
+    "status": "passed",
+    "audit_reason": "claim_evidence_analyzer.py: Claim 自动失效设计 + _file_sha256 工具函数",
+    "created_at": "2026-06-08T15:39:49.981018Z",
+    "updated_at": "2026-06-08T15:39:49.981018Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-036",
+    "file_path": "tests/test_ac_vt_009_coverage.py",
+    "file_hash": "sha256:fbac8155a83c0eab557fe6b445f9d83e28d59791119cc1697ea5107160cf773f",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_ac_vt_009_coverage.py: 26 个 AC-VT-009 覆盖率测试",
+    "created_at": "2026-06-08T15:39:49.985846Z",
+    "updated_at": "2026-06-08T15:39:49.985846Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-037",
+    "file_path": "tests/test_architecture_compliance_checker.py",
+    "file_hash": "sha256:bac711c4a835dfa2a70d995858396ced2ca9c0e8c6fe2e126f570d279bfef188",
+    "task_id": "TASK-VT-044",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_architecture_compliance_checker.py: hints 文本断言更新",
+    "created_at": "2026-06-08T15:39:49.990789Z",
+    "updated_at": "2026-06-08T15:39:49.990789Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-038",
+    "file_path": "tests/test_claim_credibility.py",
+    "file_hash": "sha256:3856af666f1ad5fff89083b49dea350be82ae5ab9af38ac8ace2023c5297f17d",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_claim_credibility.py: hints 文本断言更新",
+    "created_at": "2026-06-08T15:39:49.995791Z",
+    "updated_at": "2026-06-08T15:39:49.995791Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-039",
+    "file_path": "tests/test_cli_analyze.py",
+    "file_hash": "sha256:9618ab5b6c8bae8cba20c9c7d752ed22351c009ac7897c5a824cf5bb94ca1a67",
+    "task_id": "TASK-VT-044",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_cli_analyze.py: AC 覆盖率 + 变更分离测试",
+    "created_at": "2026-06-08T15:39:50.000649Z",
+    "updated_at": "2026-06-08T15:39:50.000649Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-040",
+    "file_path": "tests/test_dashboard_decisions.py",
+    "file_hash": "sha256:d08bbd95cc54c4dc4696fd4efe2b0172ef32c11e050f8c0c064bae2ad61fef93",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_dashboard_decisions.py: 18 个 Dashboard 决策测试",
+    "created_at": "2026-06-08T15:39:50.005331Z",
+    "updated_at": "2026-06-08T15:39:50.005331Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-041",
+    "file_path": "tests/test_dashboard_renderer.py",
+    "file_hash": "sha256:c54282f21fcda5426d0070a6a1a6c21f8eb368c42dd27bf97ff1f5df9b8ff6dc",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_dashboard_renderer.py: hints 数据嵌入测试",
+    "created_at": "2026-06-08T15:39:50.010042Z",
+    "updated_at": "2026-06-08T15:39:50.010042Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-042",
+    "file_path": "tests/test_decision_server.py",
+    "file_hash": "sha256:ea434e4174e65f86998c2c458a8002c2bfd05e4f35d7bcdb50614d468a15da9b",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_decision_server.py: 8 个 Decision API 测试",
+    "created_at": "2026-06-08T15:39:50.014817Z",
+    "updated_at": "2026-06-08T15:39:50.014817Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-043",
+    "file_path": "tests/test_e2e_finalize_analyze.py",
+    "file_hash": "sha256:dcec2b461422fe63b393035d1e6d271b5bb7f5046bf0784a6d703888f88410b3",
+    "task_id": "TASK-VT-051",
+    "audit_level": "detailed",
+    "ac_ids": [
+      "AC-VT-010-01",
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "test_e2e_finalize_analyze.py: 更新 test_low_confidence_blocks 测试适配变更分离机制",
+    "created_at": "2026-06-08T15:39:50.019685Z",
+    "updated_at": "2026-06-08T15:39:50.019685Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-044",
+    "file_path": "tests/test_e2e_samples.py",
+    "file_hash": "sha256:15612d115a4e32956fd19e4090d5b5e56b89806b5b6a06dbf2cdb2bdc759a858",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_e2e_samples.py: hints 文本断言更新",
+    "created_at": "2026-06-08T15:39:50.024495Z",
+    "updated_at": "2026-06-08T15:39:50.024495Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-045",
+    "file_path": "tests/test_ids_and_enums.py",
+    "file_hash": "sha256:3e7ee1c9c428e49ea7b2998ff0d2a4166a6c4c30da59d2f6d2dd911fbb823b16",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_ids_and_enums.py: skipped 枚举值 + ErrorCode 更新",
+    "created_at": "2026-06-08T15:39:50.029353Z",
+    "updated_at": "2026-06-08T15:39:50.029353Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-046",
+    "file_path": "tests/test_merge_gate_engine.py",
+    "file_hash": "sha256:ede46db7896ece924b6a5bdd21f818dc1d3ae3de41bb3def7b0cb8cb288785a3",
+    "task_id": "TASK-VT-063",
+    "audit_level": "detailed",
+    "ac_ids": [
+      "AC-VT-009-12",
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "test_merge_gate_engine.py: 更新测试断言适配 pre-existing 不阻断的新行为",
+    "created_at": "2026-06-08T15:39:50.034435Z",
+    "updated_at": "2026-06-08T15:39:50.034435Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-047",
+    "file_path": "tests/test_prd_draft_guidance.py",
+    "file_hash": "sha256:2342bdfb1113762834d5cb0fe9af5791443a3b2d329d0ca0fd31756b47ca6aa2",
+    "task_id": "TASK-VT-051",
+    "audit_level": "detailed",
+    "ac_ids": [
+      "AC-VT-010-01",
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "test_prd_draft_guidance.py: 更新测试断言适配 hints 迁移后的消息文本格式",
+    "created_at": "2026-06-08T15:39:50.039100Z",
+    "updated_at": "2026-06-08T15:39:50.039100Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-048",
+    "file_path": "tests/test_quality_gates.py",
+    "file_hash": "sha256:687e3db0f67f94db1d1db625266a655b398dc385a5585fd6658d6862550f1689",
+    "task_id": "TASK-VT-051",
+    "audit_level": "detailed",
+    "ac_ids": [
+      "AC-VT-010-01",
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "test_quality_gates.py: 更新测试断言适配 hints 迁移后的门禁消息文本格式",
+    "created_at": "2026-06-08T15:39:50.043860Z",
+    "updated_at": "2026-06-08T15:39:50.043860Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-049",
+    "file_path": "tests/test_risk_advisor.py",
+    "file_hash": "sha256:c062097e161174a7efa239bc5dd55c772852f715571aaa2e8d738840cdce74a5",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_risk_advisor.py: hints 文本断言更新",
+    "created_at": "2026-06-08T15:39:50.048983Z",
+    "updated_at": "2026-06-08T15:39:50.048983Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-050",
+    "file_path": "tests/test_tool_execution.py",
+    "file_hash": "sha256:23fb044f838d167a65901b4cee2b6b9c452bbf510a51caead8c75afa764cfff2",
+    "task_id": "TASK-VT-062",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_tool_execution.py: hints 文本断言更新",
+    "created_at": "2026-06-08T15:39:50.053922Z",
+    "updated_at": "2026-06-08T15:39:50.053922Z"
   }
 ]

@@ -21,6 +21,35 @@ from typing import Any, Dict, List, Optional, Tuple
 from vibe_tracing.core.enums import CoverageStatus, ErrorCode
 from vibe_tracing.tool_resolver import ToolResolver
 
+_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
+
+
+def _load_hints(category: str) -> Dict[str, Any]:
+    try:
+        data = json.loads(_HINTS_PATH.read_text(encoding="utf-8"))
+        return data.get(category, {})
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _resolve_hint(hint_value: Any, level: str = "level1") -> str:
+    if isinstance(hint_value, str):
+        return hint_value
+    if isinstance(hint_value, dict):
+        return hint_value.get(level, hint_value.get("level3", ""))
+    return ""
+
+
+def _safe_format(template: str, **kwargs: Any) -> str:
+    """Replace only known placeholders, leaving other {token} literals intact."""
+    result = template
+    for key, value in kwargs.items():
+        result = result.replace("{" + key + "}", str(value))
+    return result
+
+
+_tool_hints = _load_hints("tool")
+
 
 @dataclass
 class ToolEvidenceCandidate:
@@ -131,7 +160,9 @@ class ToolExecutionEngine:
             resolved = (self.project_root / path_str).resolve()
             project_resolved = self.project_root.resolve()
             if not (resolved == project_resolved or project_resolved in resolved.parents):
-                return False, f"Path '{path_str}' resolves outside project root: {resolved}"
+                hint = _resolve_hint(_tool_hints.get("path_outside_root", {}), "level1")
+                msg = _safe_format(hint, path_str=path_str, resolved=resolved) if hint else f"Path '{path_str}' resolves outside project root: {resolved}"
+                return False, msg
         except (ValueError, OSError) as exc:
             return False, f"Invalid path '{path_str}': {exc}"
         return True, ""
@@ -155,10 +186,9 @@ class ToolExecutionEngine:
         if not path_str:
             return ""
         if not self._SAFE_PATH_PATTERN.match(path_str):
-            raise ValueError(
-                f"Path '{path_str}' contains unsafe characters. "
-                f"Only alphanumeric, underscore, dot, slash, and hyphen are allowed."
-            )
+            hint = _resolve_hint(_tool_hints.get("unsafe_path_chars", {}), "level1")
+            msg = _safe_format(hint, path_str=path_str) if hint else f"Path '{path_str}' contains unsafe characters. Only alphanumeric, underscore, dot, slash, and hyphen are allowed."
+            raise ValueError(msg)
         return shlex.quote(path_str)
 
     def _build_command(
@@ -187,10 +217,11 @@ class ToolExecutionEngine:
         # Reject if any placeholder-like tokens remain
         remaining = re.findall(r"\{[a-z_]+\}", cmd)
         if remaining:
-            raise ValueError(
-                f"Unresolved placeholders in command: {remaining}. "
-                f"Only {', '.join(sorted(_ALLOWED_PLACEHOLDERS))} are permitted."
-            )
+            hint = _resolve_hint(_tool_hints.get("unresolved_placeholders", {}), "level1")
+            msg = _safe_format(hint,
+                remaining=remaining, allowed_placeholders=', '.join(sorted(_ALLOWED_PLACEHOLDERS)),
+            ) if hint else f"Unresolved placeholders in command: {remaining}. Only {', '.join(sorted(_ALLOWED_PLACEHOLDERS))} are permitted."
+            raise ValueError(msg)
         return cmd
 
     # ------------------------------------------------------------------
@@ -220,13 +251,23 @@ class ToolExecutionEngine:
             )
             return result.returncode, result.stdout, result.stderr, None
         except subprocess.TimeoutExpired:
-            return -1, "", f"Tool execution timed out after {self.timeout}s", "timeout"
+            hint = _resolve_hint(_tool_hints.get("execution_timeout", {}), "level1")
+            source_path = command.split()[0] if command else ""
+            msg = _safe_format(hint, source_path=source_path, timeout_seconds=self.timeout) if hint else f"Tool execution timed out after {self.timeout}s"
+            return -1, "", msg, "timeout"
         except FileNotFoundError:
-            return -1, "", f"Tool binary not found: {command.split()[0]}", "not_found"
+            hint = _resolve_hint(_tool_hints.get("binary_not_found", {}), "level1")
+            cmd_token = command.split()[0] if command else ""
+            msg = _safe_format(hint, command=cmd_token, tool_name=cmd_token) if hint else f"Tool binary not found: {cmd_token}"
+            return -1, "", msg, "not_found"
         except PermissionError:
-            return -1, "", f"Permission denied executing: {command}", "permission"
+            hint = _resolve_hint(_tool_hints.get("permission_denied", {}), "level1")
+            msg = _safe_format(hint, command=command) if hint else f"Permission denied executing: {command}"
+            return -1, "", msg, "permission"
         except OSError as exc:
-            return -1, "", f"OS error executing tool: {exc}", "os_error"
+            hint = _resolve_hint(_tool_hints.get("subprocess_os_error", {}), "level1")
+            msg = _safe_format(hint, exc=exc) if hint else f"OS error executing tool: {exc}"
+            return -1, "", msg, "os_error"
 
     # ------------------------------------------------------------------
     # Output parsers
@@ -428,6 +469,8 @@ class ToolExecutionEngine:
                 pass
 
         if percent_covered is None:
+            hint = _resolve_hint(_tool_hints.get("coverage_not_found", {}), "level1")
+            msg = hint if hint else "Coverage percentage not found in output"
             return [
                 ToolEvidenceCandidate(
                     source_type="tool",
@@ -436,7 +479,7 @@ class ToolExecutionEngine:
                     status=CoverageStatus.BLOCKED.value,
                     command=command,
                     exit_code=exit_code,
-                    stderr="Coverage percentage not found in output",
+                    stderr=msg,
                     error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
                 )
             ]
@@ -700,6 +743,12 @@ class ToolExecutionEngine:
         if tool_config is None:
             tool_config = self.get_tool_config(tool_category)
         if tool_config is None:
+            hint = _resolve_hint(_tool_hints.get("category_not_whitelisted", {}), "level1")
+            allowed = sorted(self._tool_configs.keys())
+            msg = _safe_format(hint,
+                tool_category=tool_category, allowed_categories=', '.join(allowed),
+                language=self.language,
+            ) if hint else f"Tool category '{tool_category}' is not in the whitelist. Allowed: {allowed}"
             candidates = [
                 ToolEvidenceCandidate(
                     source_type="tool",
@@ -707,8 +756,7 @@ class ToolExecutionEngine:
                     covers=[],
                     status=CoverageStatus.BLOCKED.value,
                     error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                    stderr=f"Tool category '{tool_category}' is not in the whitelist. "
-                    f"Allowed: {sorted(self._tool_configs.keys())}",
+                    stderr=msg,
                 )
             ]
             return self._stamp_category(candidates, tool_category)
@@ -833,6 +881,8 @@ class ToolExecutionEngine:
         elif output_format == "bandit_json":
             candidates = self._parse_bandit_output(stdout, stderr, exit_code, command, path)
         else:
+            hint = _resolve_hint(_tool_hints.get("unsupported_output_format", {}), "level1")
+            msg = _safe_format(hint, output_format=output_format) if hint else f"Unsupported output format: {output_format}"
             candidates = [
                 ToolEvidenceCandidate(
                     source_type="tool",
@@ -841,7 +891,7 @@ class ToolExecutionEngine:
                     status=CoverageStatus.BLOCKED.value,
                     command=command,
                     exit_code=exit_code,
-                    stderr=f"Unsupported output format: {output_format}",
+                    stderr=msg,
                     error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
                 )
             ]

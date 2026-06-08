@@ -115,11 +115,16 @@ def test_dashboard_renderer_success(tmp_path: Path):
     assert '<script id="prd-reqs-json" type="application/json">' in html_content
     assert '<script id="evidence-idx-json" type="application/json">' in html_content
     assert '<script id="trace-report-json" type="application/json">' in html_content
+    assert '<script id="hints-json" type="application/json">' in html_content
 
     # Check for embedded data content
     assert "RUN-TEST-001" in html_content
     assert "Test Requirement 1" in html_content
     assert "Test AC 1" in html_content
+
+    # Check that level2 hints are embedded (from field_hints.json)
+    assert "window._hints" in html_content
+    assert "risk.ac_no_evidence" in html_content
 
     # Check for styles and script
     assert "<style>" in html_content

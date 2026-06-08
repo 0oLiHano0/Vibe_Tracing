@@ -1,24 +1,395 @@
 {
   "_comment": "运行时修复指南。校验失败时拼入错误消息，引导 AI Agent 修正输入。修改此处即可调整提示文本，不影响 schema 验证规则。",
-  "task_list": {
-    "task_id": "格式为 TASK-{PROJECT_PREFIX}-NNN，NNN 为三位数字",
-    "title": "简洁描述任务内容，不超过 200 字符",
-    "phase_id": "格式为 PHASE-{PROJECT_PREFIX}-NNN",
-    "priority": "必须为 must / should / could 之一",
-    "status": "必须为 todo / in_progress / blocked / done 之一",
-    "related_requirements": "每个 ID 格式为 REQ-{PROJECT_PREFIX}-NNN",
-    "related_acceptance_criteria": "每个 ID 格式为 AC-{PROJECT_PREFIX}-NNN-NN",
-    "project_id": "格式为 PROJECT-{PROJECT_PREFIX}",
-    "dod_id": "格式为 DOD-{PROJECT_PREFIX}-NNN-NN",
-    "related_modules": "列出任务所属的模块 ID 列表，每个 ID 须在 architecture_constraints.module_boundaries 中存在",
-    "related_architecture_constraints": "列出关联的架构约束 ID 列表，每个 ID 须在 architecture_constraints 对应节中存在"
+  "input": {
+    "task_id": {
+      "level1": "任务 ID 格式错误：应为 TASK-{PROJECT_PREFIX}-NNN（NNN 三位数字）。修复：在 docs/task_list.json 中将 task_id 改为匹配正则 ^(TASK)-[A-Z][a-zA-Z0-9]+-\\d{3,4}$ 的值。",
+      "level2": "任务编号格式不正确。需要使用 \"TASK-项目前缀-三位数字\" 的格式，请检查并修正。",
+      "level3": "格式为 TASK-{PROJECT_PREFIX}-NNN，NNN 为三位数字"
+    },
+    "title": {
+      "level1": "任务标题缺失或不合规：title 为必填字段，字符串类型，不超过 200 字符。修复：在 docs/task_list.json 对应任务中添加 title 字段。",
+      "level2": "任务缺少标题。每个任务需要一个简短的描述来说明任务内容。",
+      "level3": "简洁描述任务内容，不超过 200 字符"
+    },
+    "phase_id": {
+      "level1": "阶段 ID 格式错误：应为 PHASE-{PROJECT_PREFIX}-NNN。修复：在 docs/task_list.json 中将 phase_id 改为匹配正则 ^(PHASE)-[A-Z][a-zA-Z0-9]+-\\d{3,4}$ 的值。",
+      "level2": "阶段编号格式不正确。需要使用 \"PHASE-项目前缀-三位数字\" 的格式。",
+      "level3": "格式为 PHASE-{PROJECT_PREFIX}-NNN"
+    },
+    "priority": {
+      "level1": "优先级值无效：priority 必须为枚举值之一。修复：在 docs/task_list.json 中将 priority 设为 must / should / could 之一。",
+      "level2": "任务优先级填写不正确。可选值为：必须完成(must)、应该完成(should)、可以延后(could)。",
+      "level3": "必须为 must / should / could 之一"
+    },
+    "status": {
+      "level1": "状态值无效：status 必须为枚举值之一。修复：在 docs/task_list.json 中将 status 设为 todo / in_progress / blocked / done 之一。",
+      "level2": "任务状态填写不正确。可选值为：待开始(todo)、进行中(in_progress)、阻塞(blocked)、已完成(done)。",
+      "level3": "必须为 todo / in_progress / blocked / done 之一"
+    },
+    "related_requirements": {
+      "level1": "需求关联缺失或格式错误：related_requirements 为字符串数组，每个 ID 需匹配 REQ-{PROJECT_PREFIX}-NNN 格式，且对应 ID 须在 prd.md 中存在。修复：在 docs/task_list.json 中补充或修正 related_requirements 数组。",
+      "level2": "任务缺少需求关联或关联的编号格式不正确。每个任务必须关联 PRD 中已定义的需求，编号格式为 REQ-项目前缀-数字。",
+      "level3": "每个 ID 格式为 REQ-{PROJECT_PREFIX}-NNN"
+    },
+    "related_acceptance_criteria": {
+      "level1": "验收标准关联缺失或格式错误：related_acceptance_criteria 为字符串数组，每个 ID 需匹配 AC-{PROJECT_PREFIX}-NNN-NN 格式，且对应 ID 须在 prd.md 中存在。修复：在 docs/task_list.json 中补充或修正 related_acceptance_criteria 数组。",
+      "level2": "任务缺少验收标准关联或关联的编号格式不正确。每个任务必须关联 PRD 中已定义的验收标准，编号格式为 AC-项目前缀-数字-数字。",
+      "level3": "每个 ID 格式为 AC-{PROJECT_PREFIX}-NNN-NN"
+    },
+    "project_id": {
+      "level1": "项目 ID 格式错误：应为 PROJECT-{PROJECT_PREFIX}。修复：在 docs/task_list.json 或 docs/architecture_constraints.json 中将 project_id 改为匹配正则 ^(PROJECT)-[A-Z][a-zA-Z0-9]+$ 的值。",
+      "level2": "项目编号格式不正确。需要使用 \"PROJECT-项目前缀\" 的格式。",
+      "level3": "格式为 PROJECT-{PROJECT_PREFIX}"
+    },
+    "dod_id": {
+      "level1": "完成标准 ID 格式错误：应为 DOD-{PROJECT_PREFIX}-NNN-NN。修复：在 docs/task_list.json 的 definition_of_done 数组中将 dod_id 改为匹配正则 ^(DOD)-[A-Z][a-zA-Z0-9]+-\\d{3,4}-\\d{2}$ 的值。",
+      "level2": "完成标准编号格式不正确。需要使用 \"DOD-项目前缀-数字-数字\" 的格式。",
+      "level3": "格式为 DOD-{PROJECT_PREFIX}-NNN-NN"
+    },
+    "related_modules": {
+      "level1": "模块关联缺失或引用不存在：related_modules 为字符串数组，每个 ID 须在 architecture_constraints.json 的 module_boundaries 中存在。修复：在 docs/task_list.json 中补充有效的模块 ID，或先在 docs/architecture_constraints.json 中定义缺失的模块。",
+      "level2": "任务缺少模块关联或引用了不存在的模块。每个任务必须至少关联一个已定义的架构模块。",
+      "level3": "列出任务所属的模块 ID 列表，每个 ID 须在 architecture_constraints.module_boundaries 中存在"
+    },
+    "related_architecture_constraints": {
+      "level1": "架构约束关联缺失或引用不存在：related_architecture_constraints 为字符串数组，每个 ID 须在 architecture_constraints.json 对应节中存在。修复：在 docs/task_list.json 中补充有效的约束 ID，或先在 docs/architecture_constraints.json 中定义缺失的约束。",
+      "level2": "任务引用了不存在的架构约束。请检查关联的约束 ID 是否在架构约束文件中已定义。",
+      "level3": "列出关联的架构约束 ID 列表，每个 ID 须在 architecture_constraints 对应节中存在"
+    },
+    "claim_id": {
+      "level1": "Claim ID 格式错误：应为 CLAIM-{PROJECT_PREFIX}-NNN（NNN 三位数字）。修复：在 .vibetracing/agent_claims.json 中将 claim_id 改为匹配正则 ^(CLAIM)-[A-Z][a-zA-Z0-9]+-\\d{3,4}$ 的值。",
+      "level2": "声明编号格式不正确。需要使用 \"CLAIM-项目前缀-三位数字\" 的格式。",
+      "level3": "格式为 CLAIM-{PROJECT_PREFIX}-NNN，NNN 为三位数字"
+    },
+    "related_task": {
+      "level1": "关联任务 ID 格式错误或引用不存在：related_task 需匹配 TASK-{PROJECT_PREFIX}-NNN 格式，且对应 ID 须在 task_list.json 中存在。修复：在 .vibetracing/agent_claims.json 中将 related_task 改为有效的任务 ID。",
+      "level2": "声明关联的任务编号格式不正确或引用了不存在的任务。请确认任务已在任务列表中定义。",
+      "level3": "格式为 TASK-{PROJECT_PREFIX}-NNN，必须已存在于任务列表"
+    },
+    "evidence_refs": {
+      "level1": "证据引用缺失或仅自引用：已完成的 Claim（claimed_status 为 covered/compliant）须至少引用一条外部证据（如测试用例 ID、commit hash），不能仅引用自身 claim_id。修复：在 .vibetracing/agent_claims.json 中为 evidence_refs 数组添加有效的外部证据引用。",
+      "level2": "已完成的声明缺少外部证据。每个标记为完成的声明必须引用至少一条外部证据（如测试结果、代码提交等），不能只引用自身。",
+      "level3": "已完成的 Claim 须至少引用一条外部证据（如测试用例 ID、commit hash 等），不能仅自引用"
+    }
   },
-  "agent_claims": {
-    "claim_id": "格式为 CLAIM-{PROJECT_PREFIX}-NNN，NNN 为三位数字",
-    "related_task": "格式为 TASK-{PROJECT_PREFIX}-NNN，必须已存在于任务列表",
-    "evidence_refs": "已完成的 Claim 须至少引用一条外部证据（如测试用例 ID、commit hash 等），不能仅自引用"
+  "gate_decision": {
+    "draft_approved": {
+      "level1": "项目处于 PRD 草稿阶段（draft），跳过强阻塞门禁规则校验。门禁结果为 draft_approved，不会阻断。修复：完成 PRD 定稿后通过 `vt finalize` 锁定基线，然后重新运行 `vt analyze` 触发完整门禁校验。",
+      "level2": "项目目前处于需求草稿阶段，质量门禁暂时放宽。完成需求定稿后门禁将恢复正常校验。",
+      "level3": "PRD status=draft，MergeGateEngine 跳过所有 blocked 条件，返回 gate_decision=draft_approved"
+    },
+    "ac_missing_evidence": {
+      "level1": "验收标准 {item_id} 缺失测试证据：{reason}。此为 MUST 级别缺口，门禁将阻断。修复：为该 AC 补充测试用例，在测试函数 docstring 中声明 `covers: {item_id}`，确保 pytest 通过后重新运行 `vt analyze`。",
+      "level2": "验收标准缺少通过的测试证明。必须补充测试来证明该标准已被满足，否则无法合并代码。",
+      "level3": "AC gap (item_id={item_id}, severity=must): {reason}。触发 gate_decision=blocked，该缺口关联到当前暂存的变更（staged）。"
+    },
+    "high_risk_or_self_ref": {
+      "level1": "高风险或自引用违规 (risk_id={risk_id}): {desc}。门禁将阻断。修复：为关联的 Claim 补充外部工具验证证据（如 pytest 测试报告），或将 Claim 的 claimed_status 降级，然后重新运行 `vt analyze`。",
+      "level2": "存在高风险项或声明未经独立验证。需要提供外部证据或修正声明状态。",
+      "level3": "Risk {risk_id} 触发 blocked：severity={severity}, is_self_ref={is_self_ref}, claim_id={claim_id}。该风险关联到当前暂存的变更。"
+    },
+    "high_risk_missing_action": {
+      "level1": "高风险项 (risk_id={risk_id}) 缺失处理建议（suggested_action）或业务影响描述（business_impact）。修复：在 risk_advisor 或相关 analyzer 中为该风险补充 suggested_action 和 business_impact 字段。",
+      "level2": "高风险项缺少处理方案和影响说明。需要补充这两项信息以便评估风险。",
+      "level3": "High-severity risk {risk_id} missing suggested_action={has_action} or business_impact={has_impact}。此为 MUST 级风险的完整性要求。"
+    },
+    "low_confidence_claim": {
+      "level1": "存在低可信度 Claim（无工具验证证据）。Claim 声明任务完成但未被任何验证工具（pytest/ruff/mypy 等）确认。修复：确保关联的测试文件存在、声明了 covers AC、且 pytest 能通过，然后重新运行 `vt analyze`。",
+      "level2": "有声明声称任务完成，但没有通过工具验证。需要运行测试来确认任务确实完成。",
+      "level3": "Claim credibility=low_confidence，item_type=claim_credibility。VT 未找到覆盖该 Claim 的工具执行证据。"
+    },
+    "must_arch_violation": {
+      "level1": "违反 MUST 级别架构约束 (rule_id={rule_id}): {msg_violation}。门禁将阻断。修复：根据 architecture_constraints.json 中规则 {rule_id} 的定义，重构代码以移除禁用的依赖或外部资源引用。",
+      "level2": "代码违反了必须遵守的架构规则。需要修改代码以符合架构约束。",
+      "level3": "Architecture violation: rule_id={rule_id}, message={msg_violation}。该违反来自 ArchitectureComplianceChecker.check()，关联 evidence_id={evidence_id}。"
+    },
+    "arch_rule_violated": {
+      "level1": "架构规则 {rule_id} 被违规触发（compliance_status 中 status=violated, severity=must）。修复：检查该规则在 architecture_constraints.json 中的定义，确认违规的具体导入或依赖关系，然后重构代码。",
+      "level2": "有一条架构规则检测到违规。需要检查并修复代码中的违规项。",
+      "level3": "Architecture compliance status: rule_id={rule_id}, status=violated, severity=must。该规则在 compliance_status 列表中被标记为已违反。"
+    },
+    "unclear_constraint_rule": {
+      "level1": "存在不明确的架构约束规则 (rule_id={rule_id}): {reason}。该约束无法被机器自动验证，门禁降级为 fail。修复：由架构师或人类项目经理对约束 {rule_id} 进行人工核对，并通过 `vt accept {rule_id}` 标记为已接受。",
+      "level2": "有一条架构规则无法自动检查，需要人工确认。请由了解架构设计的人员审核该规则。",
+      "level3": "Unclear constraint: rule_id={rule_id}, reason={reason}。该约束来自 ArchitectureComplianceChecker.unclear_constraints 列表。"
+    },
+    "arch_rule_unclear": {
+      "level1": "架构规则 {rule_id} 状态不明确（compliance_status 中 status=unclear）。门禁降级为 fail。修复：通过 `vt accept {rule_id}` 标记为人工已确认，或在 architecture_constraints.json 中将 verification_method 改为可自动检查的方式。",
+      "level2": "有一条架构规则的状态不确定。需要人工确认或改进自动检查方式。",
+      "level3": "Architecture compliance status: rule_id={rule_id}, status=unclear。需人工介入确认合规性。"
+    },
+    "non_blocking_gap": {
+      "level1": "非阻塞缺口 ({item_type} {item_id}): {reason}。此为 SHOULD 级别缺口，门禁降级为 fail 但不阻断。修复：根据缺口类型补充对应内容（任务/需求/Claim），然后重新运行 `vt analyze`。",
+      "level2": "存在非关键缺口。建议修复但不会阻断合并。",
+      "level3": "Should-level gap: item_type={item_type}, item_id={item_id}, reason={reason}。该缺口不会触发 blocked，仅将门禁从 pass 升级为 fail。"
+    },
+    "low_medium_risk": {
+      "level1": "低/中风险或推测性风险 (risk_id={risk_id}): {desc}。门禁降级为 fail 但不阻断。修复：根据风险描述和 suggested_action 补充证据或修正声明，然后重新运行 `vt analyze`。",
+      "level2": "存在低或中等级别的风险。建议关注但不会阻断合并。",
+      "level3": "Should/could severity or speculative risk: risk_id={risk_id}, severity={severity}, confidence={confidence}, type={type}。该风险不触发 blocked。"
+    },
+    "all_gates_passed": {
+      "level1": "所有质量门禁规则均已通过，无阻塞项或风险项。gate_decision=pass，可以安全合并。",
+      "level2": "所有质量检查均已通过，代码可以合并。",
+      "level3": "MergeGateEngine.evaluate() 返回 gate_decision=pass，reasons 列表仅包含该通过消息，无 blocked_items。"
+    }
   },
-  "architecture_constraints": {
-    "project_id": "格式为 PROJECT-{PROJECT_PREFIX}"
+  "risk": {
+    "default_inconsistency": {
+      "level1": "Claim 内容与证据事实存在不一致（risk_category 未匹配已知类型）。修复：核对 .vibetracing/agent_claims.json 中该 Claim 的 claimed_status 与 evidence_index.json 中对应证据的实际状态，修正不一致的字段。",
+      "level2": "声明内容与实际证据不一致。需要核对声明和证据记录，找出差异并修正。",
+      "level3": "ClaimRisk 未命中已知 risk_category，使用默认 business_impact 和 suggested_action。该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。"
+    },
+    "self_referential_claim": {
+      "level1": "Claim 自引用违规：evidence_refs 仅指向自身 claim_id，违反「Agent 不能自证」原则。修复：在 .vibetracing/agent_claims.json 中为该 Claim 的 evidence_refs 添加独立的外部证据（如 pytest 测试报告 ID、commit hash），并在 test_refs 中添加测试文件路径。",
+      "level2": "声明只引用了自己作为证据，没有独立的验证。必须提供外部测试或其他工具的验证结果。",
+      "level3": "risk_category=self_referential_claim。Claim 的 evidence_refs 仅包含自身路径，无外部工具或人类审查记录。违反 Agent 不能自证原则，可能掩盖未经外部工具或人类审查的低质量代码。"
+    },
+    "non_existent_evidence": {
+      "level1": "Claim 引用的证据 ID 在 evidence_index.json 中不存在。证据链中断，无法核查完成状态。修复：运行 `vt analyze` 重新生成 evidence_index.json，或修正 .vibetracing/agent_claims.json 中 evidence_refs 引用的证据 ID。",
+      "level2": "声明引用的证据在系统中找不到。可能证据未生成或引用 ID 写错。",
+      "level3": "risk_category=non_existent_evidence。evidence_refs 中的 ID 在 evidence_index.json 的 evidences 列表中无匹配项。证据链中断，导致声称的完成状态无法被客观核查。"
+    },
+    "stale_file": {
+      "level1": "Claim 覆盖的文件在 Claim 签发后发生了修改，覆盖状态已失效。修复：重新运行 `vt analyze` 验证该任务，或在代码修改后重新签发 Claim 以更新时间戳。",
+      "level2": "声明覆盖的代码在声明之后被修改过。需要重新验证。",
+      "level3": "risk_category=stale_file, confidence=low_confidence, type=suggestion。文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。"
+    },
+    "non_existent_task": {
+      "level1": "Claim 关联的任务 ID 在 task_list.json 中不存在。修复：检查 .vibetracing/agent_claims.json 中该 Claim 的 related_task 字段，确认 ID 与 docs/task_list.json 中的 task_id 一致，修正拼写或补充缺失的任务。",
+      "level2": "声明关联的任务编号在任务列表中找不到。可能是编号写错或任务未同步。",
+      "level3": "risk_category=non_existent_task。Claim 的 related_task 字段值在 task_list.json 的 tasks 数组中无匹配项。可能由于任务 ID 写错或任务列表未同步。"
+    },
+    "non_existent_ref": {
+      "level1": "Claim 中引用的代码文件或测试文件在工作区中不存在。修复：核实 .vibetracing/agent_claims.json 中 code_refs / test_refs 的文件路径，检查是否有拼写错误、文件被重命名或未提交的情况。",
+      "level2": "声明引用的代码或测试文件在磁盘上找不到。请检查文件路径是否正确。",
+      "level3": "risk_category in (non_existent_code_ref, non_existent_test_ref)。Claim 中引用的物理文件在工作区中不存在，无法建立有效的物理追溯链。"
+    },
+    "no_test_coverage": {
+      "level1": "验收标准 {item_id} 没有通过的测试或测试执行失败，无法提供客观的合格证明。修复：针对该验收标准补充测试用例，在测试函数的 docstring 中声明 `covers: {item_id}`，确保测试通过后重新运行 `vt analyze`。",
+      "level2": "验收标准缺少通过的测试。没有测试就无法证明该标准已被满足。",
+      "level3": "risk_category=no_test_coverage。关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。"
+    },
+    "failed_tests": {
+      "level1": "验收标准 {item_id} 关联的测试执行失败。修复：运行并修复该验收标准关联的失败测试用例，确保所有测试通过后重新运行 `vt analyze`。",
+      "level2": "验收标准的测试没有通过。需要修复失败的测试。",
+      "level3": "risk_category in (failed_tests, violated_evidence)。关联的验收标准测试执行失败，导致无法提供合格证明。"
+    },
+    "requirement_no_task": {
+      "level1": "需求 {item_id} 缺少关联的开发任务。修复：在 docs/task_list.json 中为需求 {item_id} 规划并关联开发任务，设置 related_requirements 字段指向该需求 ID。",
+      "level2": "需求没有对应的开发任务覆盖。如果需求被遗漏，可能导致功能缺失。",
+      "level3": "gap item_type=requirement, item_id={item_id}。需求没有对应的开发任务覆盖，可能导致功能遗漏或开发偏离方向。"
+    },
+    "ac_no_evidence": {
+      "level1": "验收标准 {item_id} 缺失通过的测试证据。修复：针对验收标准 {item_id} 补充测试用例，在测试函数的 docstring 中声明 `covers: {item_id}`，确保测试通过后重新运行 `vt analyze`。",
+      "level2": "验收标准缺少测试证据。无法静态或动态证明该标准已被实现。",
+      "level3": "gap item_type=ac, item_id={item_id}。验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。"
+    },
+    "task_no_claim": {
+      "level1": "任务 {item_id} 缺少 Agent Claim 声明或状态不完整。修复：为任务 {item_id} 签发相应的 Agent Claim，记录其完成状态、关联证据和代码引用。",
+      "level2": "任务已规划但没有执行声明。需要签发 Claim 来记录任务的执行状态。",
+      "level3": "gap item_type=task, item_id={item_id}, severity=should。任务已规划但缺乏执行实体的状态声明，影响合并门禁判定。"
+    },
+    "arch_violation": {
+      "level1": "架构约束违反 (规则 {rule_id}): {msg}。修复：根据规则 {rule_id} 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
+      "level2": "代码违反了架构约束规则。需要修改代码以符合规则要求。",
+      "level3": "Architecture violation risk: rule_id={rule_id}, message={msg}, severity=must。破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。"
+    },
+    "unclear_constraint": {
+      "level1": "架构约束 {rule_id} 状态不明确：{reason}。修复：由架构师或人类项目经理对约束 {rule_id} 进行人工核对，并通过 `vt accept {rule_id}` 标记为已接受。",
+      "level2": "有一条架构约束无法自动验证。需要人工确认是否合规。",
+      "level3": "Unclear constraint risk: rule_id={rule_id}, reason={reason}, severity=should, confidence=low_confidence, type=suggestion。该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。"
+    },
+    "low_confidence_claim": {
+      "level1": "Claim {claim_id} 声明任务完成但无 VT 执行的工具验证证据。修复：确保关联的测试文件存在、声明了 covers AC、且 pytest 能通过，然后重新运行 `vt analyze`。如果项目处于草稿阶段且无法运行测试，请在 Claim 的 evidence_refs 中引用手动验证记录。",
+      "level2": "声明任务完成但没有通过工具验证。需要运行测试来确认。",
+      "level3": "Low-confidence credibility risk: claim_id={claim_id}, severity=must, item_type=claim_credibility。Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险。"
+    }
+  },
+  "compliance": {
+    "forbidden_import": {
+      "level1": "模块 {module_id} ({module_name}) 违反禁止导入规则：文件 {file_name} 在第 {line_number} 行导入了 {forbidden_module_name}（模块 {forbidden_module_id}）。修复：在 architecture_constraints.json 的 module_boundaries.{module_id}.forbidden_to_call 中确认禁止列表，然后重构代码移除该导入。",
+      "level2": "代码导入了被架构规则禁止的模块。需要移除该导入或重构代码。",
+      "level3": "Module boundary violation: module={module_id} ({module_name}), file={file_name}, line={line_number}, imported={forbidden_module_name} ({forbidden_module_id})。该导入在 module_boundaries.{module_id}.forbidden_to_call 中被明确禁止。"
+    },
+    "not_in_allowed_whitelist": {
+      "level1": "模块 {module_id} ({module_name}) 导入了不在白名单中的模块：文件 {file_name} 在第 {line_number} 行导入了 {imported_module_name}（模块 {imported_module_id}）。修复：在 architecture_constraints.json 的 module_boundaries.{module_id}.allowed_to_call 中添加该模块，或移除代码中的导入。",
+      "level2": "代码导入了不在允许列表中的模块。需要将该模块加入允许列表或移除导入。",
+      "level3": "Whitelist violation: module={module_id} ({module_name}), file={file_name}, line={line_number}, imported={imported_module_name} ({imported_module_id})。allowed_to_call 白名单已定义但该模块不在其中。"
+    },
+    "prohibited_runtime_import": {
+      "level1": "禁止导入 Agent Runtime 包：文件 {file_name} 在第 {line_number} 行导入了 {import_name}（如 claude_code/hermes/deepseek_tui）。修复：将该导入移至 adapter 层（MOD-VT-001），或移除对特定 Agent Runtime 的直接依赖。",
+      "level2": "核心代码直接依赖了特定的 AI 编码工具。核心功能应保持独立。",
+      "level3": "DEP-VT-001 violation: file={file_name}, line={line_number}, import={import_name}。Vibe Tracing Core 必须能够在不依赖 Claude Code、Hermes、DeepSeek TUI 或任何特定 Agent Runtime 的情况下被调用。"
+    },
+    "prohibited_adapter_import": {
+      "level1": "禁止非 adapter 模块导入 adapter 子模块：文件 {file_name} 在第 {line_number} 行导入了 {import_name}（模块 MOD-VT-001）。修复：将该导入改为通过 core 接口访问，或将文件移至 adapter 模块。",
+      "level2": "核心代码直接导入了适配器模块。应通过核心接口间接访问。",
+      "level3": "DEP-VT-001 violation: file={file_name}, line={line_number}, import={import_name}, target_module=MOD-VT-001。核心不得依赖特定 Agent Runtime 的 adapter 子模块。"
+    },
+    "dashboard_external_resources": {
+      "level1": "Dashboard 引用了外部前端资源：{external_urls}。修复：移除 dashboard.html 中所有指向 CDN 或外部 URL 的 href/src 属性，将所需资源内联到 HTML 文件中。",
+      "level2": "Dashboard 使用了外部网络资源。必须将所有资源内联，确保离线可用。",
+      "level3": "DEP-VT-002 violation: dashboard.html references external URLs: {external_urls}。dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。"
+    },
+    "prohibited_db_import": {
+      "level1": "禁止导入数据库库：文件 {file_name} 在第 {line_number} 行导入了 {db_package}。修复：移除该导入，改用文件系统存储方案（如 JSON 文件），MVP 阶段不得使用任何数据库。",
+      "level2": "代码使用了数据库。MVP 阶段只允许使用文件存储。",
+      "level3": "STORE-VT-001 violation: file={file_name}, line={line_number}, package={db_package}。MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。"
+    },
+    "missing_required_files": {
+      "level1": "必需输入文件缺失：{missing_files}。修复：确保 docs/prd.md、docs/architecture_constraints.json、docs/task_list.json 均已创建。如果项目刚初始化，请先运行 `vt init`。",
+      "level2": "分析所需的文件不完整。需要确保需求文档、架构约束和任务列表都已创建。",
+      "level3": "GATE-VT-001 violation: missing files={missing_files}。MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。"
+    },
+    "must_constraints_violated": {
+      "level1": "存在 MUST 级架构约束被违反（GATE-VT-006 触发）。修复：检查所有 status=violated 且 severity=must 的规则，逐个修复违规项后重新运行 `vt analyze`。",
+      "level2": "有必须遵守的架构规则被违反。需要逐一修复所有违规项。",
+      "level3": "GATE-VT-006: has_any_violated_must=True。Must 级架构约束不得存在已确认违反项。"
+    },
+    "unclear_must_constraints": {
+      "level1": "存在不明确的 MUST 级架构约束（GATE-VT-007 触发）。修复：对每个 unclear 的约束进行人工审核，通过 `vt accept {rule_id}` 标记为已接受，或在约束定义中添加可机器验证的检查方法。",
+      "level2": "有必须遵守的架构规则无法自动检查。需要人工确认或改进检查方式。",
+      "level3": "GATE-VT-007: has_any_unclear_must=True。如果 Must 级架构约束无法被检查，系统不得输出完全 allow 的合并结论。"
+    }
+  },
+  "tool": {
+    "category_not_whitelisted": {
+      "level1": "工具类别 {tool_category} 不在白名单中。允许的类别：{allowed_categories}。修复：在 docs/architecture_constraints.json 的 language_tool_matrix.{language} 中添加 {tool_category} 的配置，或从 validation_tools 列表中移除该类别。",
+      "level2": "请求运行的验证工具未在配置中注册。需要在架构约束中配置该工具或移除请求。",
+      "level3": "Tool category '{tool_category}' not in whitelist. Allowed: {allowed_categories}。工具执行引擎仅允许 language_tool_matrix 中定义的工具类别。"
+    },
+    "execution_timeout": {
+      "level1": "工具执行超时：{source_path} 在 {timeout_seconds} 秒后超时。修复：增加超时时间（在 ToolExecutionEngine 初始化时设置 timeout 参数），或简化测试用例减少执行时间。",
+      "level2": "验证工具执行超时。可能测试用例太多或太复杂。",
+      "level3": "Tool execution timeout: source_path={source_path}, timeout={timeout_seconds}s, error_type=timeout。subprocess.run() 抛出 subprocess.TimeoutExpired。"
+    },
+    "binary_not_found": {
+      "level1": "工具二进制文件未找到：{command}。修复：运行 `pip install {tool_name}` 安装所需工具，或确认工具已在 PATH 中可用。VT 支持 python3 -m 回退机制。",
+      "level2": "验证工具未安装。需要安装对应的工具。",
+      "level3": "Tool binary not found: command={command}, error_type=not_found。subprocess.run() 抛出 FileNotFoundError，ToolResolver.resolve_command() 回退也未找到。"
+    },
+    "permission_denied": {
+      "level1": "工具执行权限被拒绝：{command}。修复：检查文件权限，确保工具二进制文件可执行（chmod +x），或检查沙箱环境的权限限制。",
+      "level2": "验证工具没有执行权限。需要检查文件权限设置。",
+      "level3": "Permission denied: command={command}, error_type=permission。subprocess.run() 抛出 PermissionError。"
+    },
+    "path_outside_root": {
+      "level1": "路径 {path_str} 解析后位于项目根目录之外：{resolved}。修复：确保 .vibetracing/agent_claims.json 中 code_refs 和 test_refs 的路径均在项目根目录下，使用相对路径。",
+      "level2": "文件路径指向了项目目录之外。路径必须在项目范围内。",
+      "level3": "Path validation failed: path='{path_str}', resolved='{resolved}'。路径必须在 project_root 内部。"
+    },
+    "unsafe_path_chars": {
+      "level1": "路径 {path_str} 包含不安全字符。仅允许字母数字、下划线、点、斜杠和连字符。修复：检查代码或测试文件路径是否包含 shell 特殊字符（如 |, ;, &, $, `, (, ), {, }, <, >），移除或替换这些字符。",
+      "level2": "文件路径包含不安全的字符。请使用简单的路径命名。",
+      "level3": "Path sanitization failed: path='{path_str}'。仅允许 [a-zA-Z0-9_./\\-:] 字符集。防止命令注入攻击。"
+    },
+    "unresolved_placeholders": {
+      "level1": "命令模板中存在未解析的占位符：{remaining}。仅允许 {test_path}, {source_path}, {output_path}。修复：检查 docs/architecture_constraints.json 中 language_tool_matrix 对应工具的 default_command 模板，移除非法占位符。",
+      "level2": "工具命令配置中有未识别的变量。请检查架构约束中的工具命令模板。",
+      "level3": "Command template error: unresolved={remaining}。仅允许 {allowed_placeholders}。_build_command() 检测到模板中残留未替换的占位符。"
+    },
+    "unsupported_output_format": {
+      "level1": "不支持的工具输出格式：{output_format}。修复：在 docs/architecture_constraints.json 的 language_tool_matrix 中将该工具的 output_format 改为支持的格式之一（pytest_json/coverage_json/ruff_json/mypy_json/bandit_json）。",
+      "level2": "工具配置的输出格式不被支持。请检查架构约束中的工具配置。",
+      "level3": "Unsupported output format: '{output_format}'。execute_tool() 的 output_format 分发器未识别该格式，返回 BLOCKED 状态。"
+    },
+    "coverage_not_found": {
+      "level1": "覆盖率输出中未找到百分比数据。修复：确认 coverage 工具的 JSON 输出包含 totals.percent_covered 字段，或检查 -o 参数指定的输出路径是否正确。",
+      "level2": "代码覆盖率工具的输出中没有找到覆盖率数据。",
+      "level3": "Coverage parse error: percent_covered=None。_parse_coverage_output() 在 JSON 输出文件和 stdout 中均未找到 totals.percent_covered 或 percent_covered 字段。"
+    },
+    "subprocess_os_error": {
+      "level1": "工具执行时发生操作系统错误：{exc}。修复：检查工具依赖是否完整、文件系统是否正常，或尝试重新安装工具。",
+      "level2": "运行验证工具时发生系统错误。可能是环境问题。",
+      "level3": "OS error during tool execution: {exc}, error_type=os_error。subprocess.run() 抛出 OSError。"
+    }
+  },
+  "cli": {
+    "constraints_tampered": {
+      "level1": "架构基线已被篡改！预期 Hash: {expected_hash}...，实际 Hash: {actual_hash}...。修复：恢复 docs/architecture_constraints.json 到定稿时的版本（git checkout），或通过 `vt finalize` 提交合法的架构变更。这是 Gate 1（防篡改）检查，不可跳过。",
+      "level2": "架构约束文件被修改过了。必须恢复原文件或走正式的变更流程。",
+      "level3": "Gate 1 (Anti-Tampering) FAILED: stored_hash={expected_hash}..., computed_hash={actual_hash}...。architecture_constraints.json 的 SHA-256 与 config.json 中存储的基线哈希不匹配。"
+    },
+    "prd_drift": {
+      "level1": "PRD 已从基线漂移！预期 Hash: {expected_hash}...，实际 Hash: {actual_hash}...。这是 Gate 1b 警告（不阻断）。修复：如果 PRD 变更是预期的，运行 `vt finalize` 更新基线哈希；如果是意外修改，恢复 docs/prd.md 到定稿版本。",
+      "level2": "需求文档的内容与定稿时不一致。需要确认是否为预期变更。",
+      "level3": "Gate 1b (PRD Drift) WARNING: stored_prd_hash={expected_hash}..., computed_prd_hash={actual_hash}...。PRD 文件的 SHA-256 与 config.json 中存储的基线哈希不匹配，将重新验证 PRD 与 Architecture 的映射关系。"
+    },
+    "dead_link": {
+      "level1": "架构约束引用的需求 ID {link} 在 PRD 中不存在（死链）。修复：在 docs/prd.md 中添加对应的需求定义，或在 docs/architecture_constraints.json 中移除对该 ID 的引用。这是 Gate 1c 检查，不可跳过。",
+      "level2": "架构约束中引用的需求编号在需求文档中找不到。需要修复引用或补充需求。",
+      "level3": "Gate 1c (PRD-Architecture Mapping) FAILED: dead_link={link}。architecture_constraints.json 中引用的需求 ID 在 prd.md 的解析结果中无对应项。"
+    },
+    "must_uncovered": {
+      "level1": "MUST 级需求 {req_id} 无架构支撑。修复：在 docs/architecture_constraints.json 中为需求 {req_id} 规划对应的架构模块或约束规则，确保该需求有架构层面的保障。这是 Gate 1c 检查，不可跳过。",
+      "level2": "必须实现的需求没有对应的架构设计。需要补充架构支撑。",
+      "level3": "Gate 1c (PRD-Architecture Mapping) FAILED: must_uncovered={req_id}。MUST 级别的需求在 architecture_constraints.json 中无对应的模块或规则覆盖。"
+    },
+    "should_uncovered": {
+      "level1": "SHOULD/COULD 级需求 {req_id} 缺失架构映射（警告，不阻断）。修复：建议在 docs/architecture_constraints.json 中为该需求添加架构映射以提高覆盖完整性。",
+      "level2": "非必须的需求缺少架构映射。建议补充但不强制。",
+      "level3": "Gate 1c (PRD-Architecture Mapping) WARNING: should_uncovered={req_id}。SHOULD/COULD 级别需求在 architecture_constraints.json 中无对应映射，仅输出警告不阻断。"
+    },
+    "unconfigured_extension": {
+      "level1": "发现未配置的代码文件类型 {ext}。修复：在 docs/architecture_constraints.json 的 language_tool_matrix 中添加 {ext} 对应的语言配置，然后通过 `vt finalize` 锁定新基线。",
+      "level2": "暂存的文件中有未在配置中注册的代码文件类型。需要更新架构约束配置。",
+      "level3": "Staged extension check WARNING: ext={ext}。暂存文件的扩展名不在 language_tool_matrix 中任何语言的 extensions 列表中。"
+    },
+    "semantic_audit_tickets": {
+      "level1": "语义审计生成了 {count} 个审计单，等待 Agent 填充理由。修复：检查 .vibetracing/semantic_audit/ 目录下的审计单文件，为每个审计单填写审计理由和结论。",
+      "level2": "代码变更触发了语义审计。需要为生成的审计单填写理由。",
+      "level3": "Gate 3 (Semantic Audit): generated {count} audit tickets。SemanticAuditor.generate_tickets() 为暂存的代码文件生成了审计单，等待 verify_tickets() 验证。"
+    },
+    "tool_dependency_missing": {
+      "level1": "VT 依赖的工具缺失：{missing_tools}。修复：运行 `pip install {missing_tools}` 安装缺失的工具。安装后 VT 将自动收集完整的工具验证证据。",
+      "level2": "项目需要的验证工具未安装。请安装后重新运行。",
+      "level3": "Pre-flight dependency check: missing tools={missing_tools}。ToolResolver.is_available() 返回 False，工具执行被跳过。"
+    }
+  },
+  "action": {
+    "cover_gap": {
+      "level1": "补充测试：{ac_id} \"{ac_text}\"。此为 MUST 级别缺口。修复步骤：1) 查看关联的实现文件 {implementation_files}；2) 参考已有测试 {existing_tests}；3) 根据场景 {test_scenarios} 编写测试；4) 在测试函数 docstring 中声明 `covers: {ac_id}`；5) 确保 pytest 通过后运行 `vt analyze` 验证 gap 消失。",
+      "level2": "需要为验收标准补充测试。请查看关联的代码文件和已有测试作为参考。",
+      "level3": "Action: priority=HIGH, type=cover_gap, ac_id={ac_id}, severity=MUST。verification: pytest 中新增覆盖 {ac_id} 的测试，vt analyze 后 gap 消失。stale={stale}。",
+      "verification": "pytest 中新增覆盖 {ac_id} 的测试，vt analyze 后 gap 消失",
+      "stale_note": "此 gap 来自未变更文件（stale），但仍是 MUST 级别"
+    },
+    "fix_violation": {
+      "level1": "修复违规：{rule_id}。违规原因：{violation_reason}。修复方式：完成关联的 gap 修复后自动消除。检查 docs/architecture_constraints.json 中规则 {rule_id} 的定义，重构代码移除违规的导入或依赖。",
+      "level2": "需要修复架构规则违规。请查看规则定义和违规原因。",
+      "level3": "Action: priority=HIGH, type=fix_violation, rule_id={rule_id}。rule_text={rule_text}, violation_reason={violation_reason}。",
+      "fix_via": "完成关联的 gap 修复后自动消除"
+    },
+    "high_risk": {
+      "level1": "高风险项：{risk_id} — {title}。修复方式：补充外部工具验证证据，或降低 claim 覆盖范围。具体操作：{suggested_action}。如果 Claim 已无实际代码对应，将其从 agent_claims.json 中移除。",
+      "level2": "存在高风险项需要处理。请查看建议的修复方式。",
+      "level3": "Action: priority=HIGH, type=high_risk, risk_id={risk_id}, severity={severity}, claim_id={claim_id}。description={description}。",
+      "fix_via": "补充外部工具验证证据，或降低 claim 覆盖范围"
+    },
+    "arch_status_violation": {
+      "level1": "架构规则违规：{rule_id}。修复方式：检查代码是否违反架构约束，修复后重新运行 vt analyze。",
+      "level2": "代码违反了必须遵守的架构规则。需要检查并修复。",
+      "level3": "Action: priority=HIGH, type=arch_status_violation, rule_id={rule_id}, severity={severity}。",
+      "fix_via": "检查代码是否违反架构约束，修复后重新运行 vt analyze"
+    },
+    "stale_debt": {
+      "level1": "预存债务：{title}。该风险来自未变更的文件，已持续 {age}。修复方式：根据风险描述 {description} 补充证据或修正声明。",
+      "level2": "存在长期未解决的技术债务。建议择机处理。",
+      "level3": "Action: priority=LOW, type=stale_debt, title={title}。age={age}。该风险标记为 stale，来自未变更文件。",
+      "age_format": "{age_iterations} 个迭代"
+    },
+    "gate_blocked": {
+      "level1": "门禁阻塞：{reason}。修复方式：根据门禁原因修复对应问题后重新运行 vt analyze。如果被 Gate 1（防篡改）阻断，必须恢复文件或走 vt finalize 流程。",
+      "level2": "合并门禁被阻塞。请查看阻塞原因并修复。",
+      "level3": "Action: priority=HIGH, type=gate_blocked。reason={reason}。gate_decision in (blocked, fail)，无其他具体 action 匹配时的兜底提示。",
+      "fix_via": "根据门禁原因修复对应问题后重新运行 vt analyze"
+    },
+    "test_scenarios": {
+      "invalid_input": "无效输入 → 应输出错误提示并退出",
+      "empty_input": "空输入 → 应有明确的错误提示",
+      "valid_input": "有效输入 → 应正常处理",
+      "default": "根据 AC 描述推导具体测试场景"
+    }
   }
 }

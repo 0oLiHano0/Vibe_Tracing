@@ -1341,6 +1341,7 @@
     <script id="trace-report-json" type="application/json">{trace_report_json}</script>
     <script id="boot-data-json" type="application/json">{boot_data_json}</script>
     <script id="prop-data-json" type="application/json">{prop_data_json}</script>
+    <script id="hints-json" type="application/json">{hints_json}</script>
 
     <!-- FRONTEND JAVASCRIPT -->
     <script>
@@ -1364,6 +1365,13 @@
         // Expose as window globals for decision renderer
         window._report = report;
         window._evidenceIndex = evidenceIndex;
+
+        // Load hints (level2) for decision card text
+        let hints = {};
+        try {
+            hints = JSON.parse(document.getElementById('hints-json').textContent);
+        } catch(e) { console.error("Error parsing hints", e); }
+        window._hints = hints;
 
         // Build mappings for quick lookups
         const reqMap = new Map(prdReqs.map(r => [r.req_id, r]));
@@ -2119,6 +2127,7 @@
 
         function extractPendingDecisions(reportData, evidenceIdx) {
             const decisions = [];
+            const h = window._hints || {};
 
             // A. Accepted rules (expired or valid)
             if (reportData.accepted_rules) {
@@ -2131,14 +2140,14 @@
                         categoryLabel: "已确认规则",
                         icon: isStale ? "warning" : "check",
                         title: `"${rule.title}"规则${isStale ? '已过期' : '有效'}`,
-                        status: isStale ? "已超过30天未重新确认" : "有效",
-                        question: isStale ? "这个规则仍然有效吗？" : "",
+                        status: isStale ? (h["risk.stale_file"] || "已超过30天未重新确认") : "有效",
+                        question: isStale ? (h["risk.stale_file"] || "这个规则仍然有效吗？") : "",
                         actions: isStale ? ["仍然有效", "不再适用"] : [],
                         evidenceChain: [
                             { label: "规则来源", value: rule.rule_id },
                             { label: "规则内容", value: rule.title },
                             { label: "上次确认", value: `${rule.accepted_at || ''} by ${rule.accepted_by || ''}` },
-                            { label: isStale ? "过期原因" : "状态", value: isStale ? "确认时间超过30天" : "有效期内" },
+                            { label: isStale ? "过期原因" : "状态", value: isStale ? (h["risk.stale_file"] || "确认时间超过30天") : "有效期内" },
                         ],
                     });
                 }
@@ -2152,16 +2161,16 @@
                             id: generateDecisionId("uncovered_ac", gap.item_id),
                             category: "uncovered_ac",
                             targetId: gap.item_id,
-                            categoryLabel: "未覆盖的验收标准",
+                            categoryLabel: h["risk.ac_no_evidence"] || "未覆盖的验收标准",
                             icon: "cross",
                             title: `"${gap.title || gap.item_id}"功能没有测试保障`,
-                            status: "有代码实现，但没有测试",
-                            question: "这个功能需要补充测试吗？",
+                            status: h["risk.no_test_coverage"] || "有代码实现，但没有测试",
+                            question: h["risk.ac_no_evidence"] || "这个功能需要补充测试吗？",
                             actions: ["需要补充", "当前可接受"],
                             evidenceChain: [
                                 { label: "验收标准", value: `${gap.item_id} ${gap.title || ''}` },
                                 { label: "关联需求", value: gap.requirement_id || "" },
-                                { label: "门禁判断", value: "GATE-VT-004 MUST级AC必须有测试 → 未通过" },
+                                { label: "门禁判断", value: h["gate_decision.ac_missing_evidence"] || "GATE-VT-004 MUST级AC必须有测试 → 未通过" },
                             ],
                         });
                     }
@@ -2177,16 +2186,16 @@
                             id: generateDecisionId("tool_blind_spot", ev.source_path),
                             category: "tool_blind_spot",
                             targetId: ev.source_path,
-                            categoryLabel: "工具盲区",
+                            categoryLabel: h["tool.execution_timeout"] || "工具盲区",
                             icon: "warning",
                             title: `${ev.source_path} 无法自动检查`,
                             status: skipReason,
-                            question: "这个文件是否需要补充测试？",
+                            question: h["tool.binary_not_found"] || "这个文件是否需要补充测试？",
                             actions: ["需要", "不需要", "不确定"],
                             evidenceChain: [
                                 { label: "工具", value: "pytest" },
                                 { label: "结果", value: skipReason },
-                                { label: "可能原因", value: "纯配置文件不需要测试，或测试被遗漏" },
+                                { label: "可能原因", value: h["tool.binary_not_found"] || "纯配置文件不需要测试，或测试被遗漏" },
                             ],
                         });
                     }
@@ -2201,16 +2210,16 @@
                             id: generateDecisionId("stale_debt", risk.claim_id || "unknown"),
                             category: "stale_debt",
                             targetId: risk.claim_id || 'unknown',
-                            categoryLabel: "预存债务",
+                            categoryLabel: h["action.stale_debt"] || "预存债务",
                             icon: "warning",
                             title: `${risk.title || risk.description || '未知风险'}（预存问题）`,
-                            status: "文件未变更，风险仍存在",
-                            question: "这次要处理吗？",
+                            status: h["risk.stale_file"] || "文件未变更，风险仍存在",
+                            question: h["action.stale_debt"] || "这次要处理吗？",
                             actions: ["本次处理", "继续延后"],
                             evidenceChain: [
                                 { label: "风险来源", value: risk.claim_id || "未知" },
                                 { label: "风险描述", value: risk.title || risk.description || "" },
-                                { label: "状态", value: "文件未变更，风险仍存在" },
+                                { label: "状态", value: h["risk.stale_file"] || "文件未变更，风险仍存在" },
                             ],
                         });
                     }
@@ -2272,7 +2281,10 @@
             }
             container.innerHTML = html;
 
-            // Load decision history from the API
+            // Apply locally persisted decisions to mark cards as decided
+            applyLocalDecisions();
+
+            // Load decision history from the API (merged with localStorage)
             loadDecisionHistory();
         }
 
@@ -2309,7 +2321,12 @@
                     }
                 } else {
                     console.error('Decision API error:', resp.status);
-                    // Fallback: mark as decided locally even if API fails
+                    // Fallback: persist to localStorage and mark locally
+                    localStorage.setItem(`vt_decision_${decId}`, JSON.stringify({
+                        category: category,
+                        action: action,
+                        timestamp: new Date().toISOString(),
+                    }));
                     card.classList.add('decision-made');
                     const actionsDiv = card.querySelector('.decision-actions');
                     if (actionsDiv) {
@@ -2317,8 +2334,13 @@
                     }
                 }
             } catch (e) {
-                // API not available — mark locally
+                // API not available — mark locally and persist to localStorage
                 console.warn('Decision API not available, saving locally:', e.message);
+                localStorage.setItem(`vt_decision_${decId}`, JSON.stringify({
+                    category: category,
+                    action: action,
+                    timestamp: new Date().toISOString(),
+                }));
                 card.classList.add('decision-made');
                 const actionsDiv = card.querySelector('.decision-actions');
                 if (actionsDiv) {
@@ -2350,34 +2372,103 @@
             const container = document.getElementById('decision-history');
             if (!container) return;
 
+            // Collect localStorage decisions first
+            const localDecisions = loadLocalDecisions();
+
             try {
                 const resp = await fetch('http://localhost:5000/api/decisions');
-                if (!resp.ok) return;
-                const data = await resp.json();
-                const decisions = data.decisions || [];
-
-                if (decisions.length === 0) {
-                    container.innerHTML = '<p class="text-muted">暂无决策记录</p>';
+                if (!resp.ok) {
+                    renderDecisionHistoryTable(container, localDecisions);
                     return;
                 }
-
-                let html = '<table class="decision-history-table"><thead><tr>';
-                html += '<th>ID</th><th>时间</th><th>类型</th><th>操作</th><th>原因</th>';
-                html += '</tr></thead><tbody>';
-
-                for (const d of decisions.slice().reverse()) {
-                    html += '<tr>';
-                    html += `<td><code>${escapeHtml(d.decision_id)}</code></td>`;
-                    html += `<td>${d.timestamp ? new Date(d.timestamp).toLocaleString() : ''}</td>`;
-                    html += `<td>${escapeHtml(d.category)}</td>`;
-                    html += `<td>${escapeHtml(d.action)}</td>`;
-                    html += `<td>${escapeHtml(d.reason || '')}</td>`;
-                    html += '</tr>';
-                }
-                html += '</tbody></table>';
-                container.innerHTML = html;
+                const data = await resp.json();
+                const apiDecisions = data.decisions || [];
+                // Merge: API decisions override local ones with same ID
+                const mergedMap = new Map();
+                for (const d of localDecisions) mergedMap.set(d.decision_id, d);
+                for (const d of apiDecisions) mergedMap.set(d.decision_id, d);
+                const merged = Array.from(mergedMap.values());
+                renderDecisionHistoryTable(container, merged);
             } catch (e) {
-                container.innerHTML = '<p class="text-muted">Decision API 未连接</p>';
+                // API unavailable — show localStorage decisions only
+                renderDecisionHistoryTable(container, localDecisions);
+            }
+        }
+
+        function renderDecisionHistoryTable(container, decisions) {
+            if (decisions.length === 0) {
+                container.innerHTML = '<p class="text-muted">暂无决策记录</p>';
+                return;
+            }
+
+            let html = '<table class="decision-history-table"><thead><tr>';
+            html += '<th>ID</th><th>时间</th><th>类型</th><th>操作</th><th>原因</th>';
+            html += '</tr></thead><tbody>';
+
+            for (const d of decisions.slice().reverse()) {
+                html += '<tr>';
+                html += `<td><code>${escapeHtml(d.decision_id)}</code></td>`;
+                html += `<td>${d.timestamp ? new Date(d.timestamp).toLocaleString() : ''}</td>`;
+                html += `<td>${escapeHtml(d.category)}</td>`;
+                html += `<td>${escapeHtml(d.action)}</td>`;
+                html += `<td>${escapeHtml(d.reason || '')}</td>`;
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        /**
+         * Load locally persisted decisions from localStorage.
+         * Restores decisions saved when the Decision API was unavailable.
+         */
+        function loadLocalDecisions() {
+            const decisions = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('vt_decision_')) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        const decId = key.replace('vt_decision_', '');
+                        decisions.push({
+                            decision_id: decId,
+                            category: data.category || '',
+                            action: data.action || '',
+                            reason: '(locally persisted)',
+                            timestamp: data.timestamp || '',
+                            decided_by: 'product_owner',
+                        });
+                    } catch (e) {
+                        // Skip malformed entries
+                    }
+                }
+            }
+            return decisions;
+        }
+
+        /**
+         * Apply locally persisted decisions to the UI on page load.
+         * Marks decision cards as decided if a matching localStorage entry exists.
+         */
+        function applyLocalDecisions() {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('vt_decision_')) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        const decId = key.replace('vt_decision_', '');
+                        const card = document.querySelector(`.decision-card[data-id="${decId}"]`);
+                        if (card) {
+                            card.classList.add('decision-made');
+                            const actionsDiv = card.querySelector('.decision-actions');
+                            if (actionsDiv) {
+                                actionsDiv.innerHTML = `<span class="decision-result">✓ 已决策: ${escapeHtml(data.action || 'unknown')} (本地)</span>`;
+                            }
+                        }
+                    } catch (e) {
+                        // Skip malformed entries
+                    }
+                }
             }
         }
 

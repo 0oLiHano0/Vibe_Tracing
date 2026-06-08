@@ -17,12 +17,24 @@ from vibe_tracing.schema_validator import SchemaValidator
 _HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
 
 
-def _load_field_hints(schema_name: str) -> Dict[str, str]:
+def _load_field_hints(section: str = "input") -> Dict[str, Any]:
     with _HINTS_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f).get(schema_name, {})
+        return json.load(f).get(section, {})
 
 
-_task_field_hints = _load_field_hints("task_list")
+def _resolve_hint(hint_value: Any, level: str = "level3") -> str:
+    """Resolve a hint value to a string at the given verbosity level.
+
+    Backward compatible: if hint_value is a plain string, returns it directly.
+    """
+    if isinstance(hint_value, str):
+        return hint_value
+    if isinstance(hint_value, dict):
+        return hint_value.get(level, hint_value.get("level3", ""))
+    return ""
+
+
+_task_field_hints = _load_field_hints("input")
 
 
 @dataclass
@@ -143,11 +155,11 @@ class TaskLoader:
         is_valid = True
 
 
-        def get_err_msg(field_key: str, base_msg: str) -> str:
-            hint = _task_field_hints.get(field_key)
-            if hint:
+        def get_err_msg(field_key: str, base_msg: str, level: str = "level3") -> str:
+            hint_raw = _task_field_hints.get(field_key)
+            if hint_raw:
                 from vibe_tracing.core import ids
-                hint = hint.replace("{PROJECT_PREFIX}", ids.get_project_prefix())
+                hint = _resolve_hint(hint_raw, level).replace("{PROJECT_PREFIX}", ids.get_project_prefix())
                 return f"{base_msg}【修复指南】{hint}"
             return base_msg
 

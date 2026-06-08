@@ -70,7 +70,7 @@ must
     # 4. Verify stdout guidance output
     captured = capsys.readouterr()
     assert "Analysis complete. Gate decision: DRAFT_APPROVED" in captured.out
-    assert "项目处于需求草稿阶段（draft），跳过强阻塞门禁规则校验。" in captured.out
+    assert "草稿阶段（draft）" in captured.out and "跳过" in captured.out
     assert ".vibetracing/prompts/prd_analysis.md" in captured.out
     assert "7 步分析法" in captured.out
 

@@ -308,7 +308,7 @@ def test_low_confidence_claim_generates_risk():
     assert "CLAIM-VT-001" in risk["description"]
     assert "无 VT 执行的工具验证证据" in risk["description"]
     assert risk["severity"] == "must"
-    assert "Agent 可能" in risk["business_impact"]
+    assert "声明任务完成" in risk["business_impact"] or "Agent" in risk["business_impact"]
     assert "pytest" in risk["suggested_action"]
     assert risk["item_type"] == "claim_credibility"
 

@@ -75,7 +75,7 @@ def test_e2e_missing_tests(tmp_path):
     meta = report["metadata"]
     assert meta["gate_decision"] == "blocked"
     assert meta["exit_code"] == 2
-    assert "验收标准缺失测试证据" in meta["summary"]
+    assert "缺失测试证据" in meta["summary"]
 
 
 def test_e2e_bad_claim(tmp_path):
@@ -97,7 +97,7 @@ def test_e2e_bad_claim(tmp_path):
     assert meta["exit_code"] == 2
     assert any(
         term in meta["summary"]
-        for term in ("不自证违规", "self-referential", "empty evidence")
+        for term in ("不自证违规", "自引用违规", "self-referential", "empty evidence")
     )
 
 

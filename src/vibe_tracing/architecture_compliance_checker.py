@@ -6,12 +6,34 @@ Unverifiable constraints are returned as unclear, per FORBID-VT-007.
 """
 
 import ast
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from vibe_tracing.core import ids
+
+_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
+
+
+def _load_hints(category: str) -> Dict[str, Any]:
+    try:
+        data = json.loads(_HINTS_PATH.read_text(encoding="utf-8"))
+        return data.get(category, {})
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _resolve_hint(hint_value: Any, level: str = "level1") -> str:
+    if isinstance(hint_value, str):
+        return hint_value
+    if isinstance(hint_value, dict):
+        return hint_value.get(level, hint_value.get("level3", ""))
+    return ""
+
+
+_compliance_hints = _load_hints("compliance")
 
 
 def _is_stale_acceptance(accepted_at: str, threshold_days: int = 30) -> bool:
@@ -204,22 +226,26 @@ class ArchitectureComplianceChecker:
 
                     # Check forbidden list
                     if imp_mod_id in forbidden_ids:
+                        hint = _resolve_hint(_compliance_hints.get("forbidden_import", {}), "level1")
+                        msg = hint.format(
+                            module_id=m_id, module_name=m_name,
+                            file_name=f.name, line_number=lineno,
+                            forbidden_module_name=imp_mod_name, forbidden_module_id=imp_mod_id,
+                        ) if hint else f"Forbidden import of '{imp_mod_name}' (module {imp_mod_id}) at line {lineno} in {f.name}"
                         m_violations.append(
-                            (
-                                f,
-                                imp_mod_name,
-                                f"Forbidden import of '{imp_mod_name}' (module {imp_mod_id}) at line {lineno} in {f.name}",
-                            )
+                            (f, imp_mod_name, msg)
                         )
 
                     # Check allowed list (if defined, enforce whitelist except for core/self/standard library)
                     if allowed_ids is not None and imp_mod_id not in allowed_ids:
+                        hint = _resolve_hint(_compliance_hints.get("not_in_allowed_whitelist", {}), "level1")
+                        msg = hint.format(
+                            module_id=m_id, module_name=m_name,
+                            file_name=f.name, line_number=lineno,
+                            imported_module_name=imp_mod_name, imported_module_id=imp_mod_id,
+                        ) if hint else f"Import of '{imp_mod_name}' (module {imp_mod_id}) at line {lineno} in {f.name} is not in allowed_to_call whitelist"
                         m_violations.append(
-                            (
-                                f,
-                                imp_mod_name,
-                                f"Import of '{imp_mod_name}' (module {imp_mod_id}) at line {lineno} in {f.name} is not in allowed_to_call whitelist",
-                            )
+                            (f, imp_mod_name, msg)
                         )
 
             # Determine compliance status for the module boundary
@@ -274,21 +300,19 @@ class ArchitectureComplianceChecker:
                     runtime in imp_name
                     for runtime in ("claude_code", "hermes", "deepseek_tui")
                 ):
-                    dep_vt_001_violations.append(
-                        (
-                            f,
-                            f"Prohibited import of Agent Runtime package '{imp_name}' at line {lineno} in {f.name}",
-                        )
-                    )
+                    hint = _resolve_hint(_compliance_hints.get("prohibited_runtime_import", {}), "level1")
+                    msg = hint.format(
+                        file_name=f.name, line_number=lineno, import_name=imp_name,
+                    ) if hint else f"Prohibited import of Agent Runtime package '{imp_name}' at line {lineno} in {f.name}"
+                    dep_vt_001_violations.append((f, msg))
                 # Check if core imports adapter submodules
                 imp_mod_id, _ = self._get_module_for_import(imp_name)
                 if imp_mod_id == "MOD-VT-001":
-                    dep_vt_001_violations.append(
-                        (
-                            f,
-                            f"Prohibited import of adapter module '{imp_name}' (module {imp_mod_id}) at line {lineno} in {f.name}",
-                        )
-                    )
+                    hint = _resolve_hint(_compliance_hints.get("prohibited_adapter_import", {}), "level1")
+                    msg = hint.format(
+                        file_name=f.name, line_number=lineno, import_name=imp_name,
+                    ) if hint else f"Prohibited import of adapter module '{imp_name}' (module {imp_mod_id}) at line {lineno} in {f.name}"
+                    dep_vt_001_violations.append((f, msg))
 
         if dep_vt_001_violations:
             status_list.append(
@@ -361,12 +385,11 @@ class ArchitectureComplianceChecker:
                 ):
                     external_urls.append(m.group(0))
                 if external_urls:
-                    dash_violations.append(
-                        (
-                            dash_file,
-                            f"Dashboard references external front-end resources: {', '.join(external_urls)}",
-                        )
-                    )
+                    hint = _resolve_hint(_compliance_hints.get("dashboard_external_resources", {}), "level1")
+                    msg = hint.format(
+                        external_urls=', '.join(external_urls),
+                    ) if hint else f"Dashboard references external front-end resources: {', '.join(external_urls)}"
+                    dash_violations.append((dash_file, msg))
             except Exception as exc:
                 dash_violations.append(
                     (dash_file, f"Failed to check dashboard.html: {exc}")
@@ -426,12 +449,11 @@ class ArchitectureComplianceChecker:
                 # Get the root package of import (e.g. sqlalchemy.orm -> sqlalchemy)
                 root_pkg = imp_name.split(".")[0]
                 if root_pkg in db_packages:
-                    db_violations.append(
-                        (
-                            f,
-                            f"Prohibited import of database library '{imp_name}' at line {lineno} in {f.name}",
-                        )
-                    )
+                    hint = _resolve_hint(_compliance_hints.get("prohibited_db_import", {}), "level1")
+                    msg = hint.format(
+                        file_name=f.name, line_number=lineno, db_package=imp_name,
+                    ) if hint else f"Prohibited import of database library '{imp_name}' at line {lineno} in {f.name}"
+                    db_violations.append((f, msg))
 
         if db_violations:
             status_list.append(
@@ -494,11 +516,15 @@ class ArchitectureComplianceChecker:
                     "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。",
                 }
             )
+            hint = _resolve_hint(_compliance_hints.get("missing_required_files", {}), "level1")
+            msg = hint.format(
+                missing_files=', '.join(missing_files),
+            ) if hint else f"Required input files are missing: {', '.join(missing_files)}"
             violations.append(
                 {
                     "rule_id": "GATE-VT-001",
                     "evidence_id": ids.sentinel_evidence_id(),
-                    "message": f"Required input files are missing: {', '.join(missing_files)}",
+                    "message": msg,
                 }
             )
         else:

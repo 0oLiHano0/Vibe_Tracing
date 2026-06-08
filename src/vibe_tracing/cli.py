@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 import importlib.resources as pkg_resources
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from vibe_tracing import __version__
 from vibe_tracing.raw_input_loader import RawInputLoader
@@ -1249,105 +1249,269 @@ def _get_existing_tests(ac_id: str, task_result, claims_list=None) -> list:
     return test_refs
 
 
+# ---------------------------------------------------------------------------
+# Hint loading for action messages (mirrors task_loader.py pattern)
+# ---------------------------------------------------------------------------
+_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
+
+
+def _load_hints(category: str = "action") -> Dict[str, Any]:
+    """Load hints from field_hints.json for the given category."""
+    with _HINTS_PATH.open("r", encoding="utf-8") as f:
+        return json.load(f).get(category, {})
+
+
+def _resolve_hint(hint_value: Any, level: str = "level1") -> str:
+    """Resolve a hint value to a string at the given verbosity level.
+
+    Backward compatible: if hint_value is a plain string, returns it directly.
+    """
+    if isinstance(hint_value, str):
+        return hint_value
+    if isinstance(hint_value, dict):
+        return hint_value.get(level, hint_value.get("level1", ""))
+    return ""
+
+
+# Module-level cache for action hints
+_action_hints: Dict[str, Any] = _load_hints("action")
+
+
+def _hint_title(action_type: str, **kwargs: Any) -> str:
+    """Extract the title portion from the first sentence of a level1 hint."""
+    hint = _action_hints.get(action_type, {})
+    template = _resolve_hint(hint, "level1")
+    # Extract first sentence (before Chinese period 。)
+    idx = template.find("。")
+    if idx > 0:
+        template = template[:idx]
+    try:
+        return template.format(**kwargs)
+    except (KeyError, IndexError):
+        return template
+
+
+def _hint_context(action_type: str, key: str, **kwargs: Any) -> str:
+    """Get a context value from action hints and format with variables."""
+    hint = _action_hints.get(action_type, {})
+    template = hint.get(key, "")
+    if not template:
+        return ""
+    try:
+        return template.format(**kwargs)
+    except (KeyError, IndexError):
+        return template
+
+
 def _derive_test_scenarios(ac_text: str) -> list:
-    """Derive test scenarios from AC title text."""
-    scenarios = []
+    """Derive test scenarios from AC title text using hints."""
+    hints = _action_hints.get("test_scenarios", {})
+    default = hints.get("default", "")
     if not ac_text:
-        return ["根据 AC 描述推导具体测试场景"]
+        return [default]
+    scenarios = []
     if any(kw in ac_text for kw in ["无效", "错误", "invalid", "error"]):
-        scenarios.append("无效输入 → 应输出错误提示并退出")
+        scenarios.append(hints.get("invalid_input", ""))
     if any(kw in ac_text for kw in ["空", "empty"]):
-        scenarios.append("空输入 → 应有明确的错误提示")
+        scenarios.append(hints.get("empty_input", ""))
     if any(kw in ac_text for kw in ["正常", "valid", "正确"]):
-        scenarios.append("有效输入 → 应正常处理")
+        scenarios.append(hints.get("valid_input", ""))
     if not scenarios:
-        scenarios.append("根据 AC 描述推导具体测试场景")
+        scenarios.append(default)
     return scenarios
 
 
-def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
-                          accepted_rules, prd_result=None, task_result=None,
-                          claims_list=None):
-    """Format an Agent-executable action list with full inline context."""
-    lines = [f"GATE DECISION: {gate_decision.upper()}", ""]
+# ---------------------------------------------------------------------------
+# Split action collectors (each returns a list of action dicts)
+# ---------------------------------------------------------------------------
+
+def _collect_gap_actions(
+    merged_gaps: list,
+    prd_result: Any,
+    task_result: Any,
+    claims_list: list,
+) -> list:
+    """Collect gap-related actions for MUST-level gaps."""
     actions = []
+    for gap in merged_gaps:
+        if gap.get("severity") != "must" or gap.get("human_accepted"):
+            continue
+        ac_id = gap.get("item_id", "")
+        ac_text = _get_ac_description(ac_id, prd_result) or gap.get("title", "")
+        related_code = _get_related_code(ac_id, task_result, claims_list)
+        existing_tests = _get_existing_tests(ac_id, task_result, claims_list)
+        test_scenarios = _derive_test_scenarios(ac_text)
 
-    # HIGH: MUST-level gap -- inline full context
-    for gap in active_gaps:
-        if gap.get("severity") == "must" and not gap.get("human_accepted"):
-            ac_id = gap.get("item_id", "")
-            ac_text = _get_ac_description(ac_id, prd_result) or gap.get("title", "")
-            related_code = _get_related_code(ac_id, task_result, claims_list)
-            existing_tests = _get_existing_tests(ac_id, task_result, claims_list)
-            test_scenarios = _derive_test_scenarios(ac_text)
+        ctx: Dict[str, Any] = {
+            "ac_description": ac_text,
+            "severity": gap.get("severity", "MUST"),
+            "requirement_id": gap.get("requirement_id", ""),
+            "requirement_text": _get_req_description(
+                gap.get("requirement_id"), prd_result,
+            ),
+            "test_scenarios": test_scenarios,
+            "verification": _hint_context("cover_gap", "verification", ac_id=ac_id),
+        }
+        if gap.get("stale"):
+            ctx["note"] = _hint_context("cover_gap", "stale_note")
+        if related_code:
+            ctx["implementation_files"] = [r["path"] for r in related_code]
+        if existing_tests:
+            ctx["existing_tests"] = existing_tests
 
-            ctx = {
-                "ac_description": ac_text,
-                "severity": gap.get("severity", "MUST"),
-                "requirement_id": gap.get("requirement_id", ""),
-                "requirement_text": _get_req_description(gap.get("requirement_id"), prd_result),
-                "test_scenarios": test_scenarios,
-                "verification": f"pytest 中新增覆盖 {ac_id} 的测试，vt analyze 后 gap 消失",
-            }
-            if related_code:
-                ctx["implementation_files"] = [r["path"] for r in related_code]
-            if existing_tests:
-                ctx["existing_tests"] = existing_tests
+        actions.append({
+            "priority": "HIGH",
+            "type": "cover_gap",
+            "title": _hint_title("cover_gap", ac_id=ac_id, ac_text=ac_text),
+            "context": ctx,
+        })
+    return actions
 
+
+def _collect_risk_actions(active_risks: list, merged_gaps: list) -> list:
+    """Collect risk-related actions (MUST risks and stale debts)."""
+    actions = []
+    for risk in active_risks:
+        severity = risk.get("severity")
+        desc = risk.get("description", "")
+        is_self_ref = "only self-referential" in desc or "self-referential" in desc
+        if severity == "must" or is_self_ref:
             actions.append({
                 "priority": "HIGH",
-                "type": "cover_gap",
-                "title": f"补充测试：{ac_id} \"{ac_text}\"",
-                "context": ctx,
+                "type": "high_risk",
+                "title": _hint_title(
+                    "high_risk",
+                    risk_id=risk.get("risk_id", ""),
+                    title=risk.get("title", ""),
+                ),
+                "context": {
+                    "risk_id": risk.get("risk_id", ""),
+                    "severity": severity,
+                    "description": desc,
+                    "claim_id": risk.get("claim_id", ""),
+                    "suggested_action": risk.get("suggested_action", ""),
+                    "fix_via": _hint_context("high_risk", "fix_via"),
+                },
             })
 
-    # HIGH: Violations
+    for risk in active_risks:
+        if risk.get("stale") and not risk.get("deferred"):
+            age_val = risk.get("age_iterations", "多个")
+            actions.append({
+                "priority": "LOW",
+                "type": "stale_debt",
+                "title": _hint_title("stale_debt", title=risk.get("title", "")),
+                "context": {
+                    "description": risk.get("description", ""),
+                    "age": _hint_context(
+                        "stale_debt", "age_format", age_iterations=age_val,
+                    ),
+                },
+            })
+    return actions
+
+
+def _collect_violation_actions(violations: list, compliance_status: list) -> list:
+    """Collect architecture violation actions."""
+    actions = []
     for v in violations:
         actions.append({
             "priority": "HIGH",
             "type": "fix_violation",
-            "title": f"修复违规：{v.get('rule_id', '')}",
+            "title": _hint_title("fix_violation", rule_id=v.get("rule_id", "")),
             "context": {
                 "rule_text": v.get("description", ""),
                 "violation_reason": v.get("reason", ""),
-                "fix_via": "完成关联的 gap 修复后自动消除",
+                "fix_via": _hint_context("fix_violation", "fix_via"),
             },
         })
 
-    # LOW: Stale debt
-    for risk in active_risks:
-        if risk.get("stale") and not risk.get("deferred"):
-            actions.append({
-                "priority": "LOW",
-                "type": "stale_debt",
-                "title": f"预存债务：{risk.get('title', '')}",
-                "context": {
-                    "description": risk.get("description", ""),
-                    "age": f"{risk.get('age_iterations', '多个')} 个迭代",
-                },
-            })
+    for status_item in compliance_status:
+        rule_id = status_item.get("rule_id", "")
+        status = status_item.get("status")
+        item_severity = status_item.get("severity", "must")
+        if status == "violated" and item_severity == "must":
+            if not any(v.get("rule_id") == rule_id for v in violations):
+                actions.append({
+                    "priority": "HIGH",
+                    "type": "arch_status_violation",
+                    "title": _hint_title(
+                        "arch_status_violation", rule_id=rule_id,
+                    ),
+                    "context": {
+                        "rule_id": rule_id,
+                        "severity": item_severity,
+                        "fix_via": _hint_context("arch_status_violation", "fix_via"),
+                    },
+                })
+    return actions
 
-    # Render
-    if actions:
-        for i, action in enumerate(actions, 1):
-            lines.append(f"{'=' * 70}")
-            lines.append(f"ACTION {i} [{action['priority']}] {action['title']}")
-            lines.append(f"{'=' * 70}")
-            ctx = action.get("context", {})
-            for key, value in ctx.items():
-                if isinstance(value, list):
-                    lines.append(f"  {key}:")
-                    for item in value:
-                        if isinstance(item, dict):
-                            lines.append(f"    - {item.get('path', '')}")
-                        else:
-                            lines.append(f"    - {item}")
-                else:
-                    lines.append(f"  {key}: {value}")
-            lines.append("")
-    else:
+
+def _collect_gate_reason_actions(
+    gate_decision: str,
+    gate_reasons: list,
+    existing_actions: list,
+) -> list:
+    """Generate fallback actions from gate reasons when no HIGH actions exist."""
+    has_high = any(a["priority"] == "HIGH" for a in existing_actions)
+    if gate_decision not in ("blocked", "fail") or has_high or not gate_reasons:
+        return []
+    actions = []
+    for reason in gate_reasons:
+        actions.append({
+            "priority": "HIGH",
+            "type": "gate_blocked",
+            "title": _hint_title("gate_blocked", reason=reason[:80]),
+            "context": {
+                "reason": reason,
+                "fix_via": _hint_context("gate_blocked", "fix_via"),
+            },
+        })
+    return actions
+
+
+def _render_actions(actions: list) -> list:
+    """Render action dicts to text lines for Agent consumption."""
+    lines: List[str] = []
+    if not actions:
         lines.append("NO ACTION REQUIRED. Gate passed.")
+        return lines
+    for i, action in enumerate(actions, 1):
+        lines.append(f"{'=' * 70}")
+        lines.append(f"ACTION {i} [{action['priority']}] {action['title']}")
+        lines.append(f"{'=' * 70}")
+        ctx = action.get("context", {})
+        for key, value in ctx.items():
+            if isinstance(value, list):
+                lines.append(f"  {key}:")
+                for item in value:
+                    if isinstance(item, dict):
+                        lines.append(f"    - {item.get('path', '')}")
+                    else:
+                        lines.append(f"    - {item}")
+            else:
+                lines.append(f"  {key}: {value}")
+        lines.append("")
+    return lines
 
+
+def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
+                          accepted_rules, prd_result=None, task_result=None,
+                          claims_list=None, gate_reasons=None, merged_gaps=None,
+                          compliance_status=None):
+    """Format an Agent-executable action list with full inline context."""
+    lines = [f"GATE DECISION: {gate_decision.upper()}", ""]
+    gaps_for_actions = merged_gaps if merged_gaps is not None else active_gaps
+    actions: list = []
+    actions.extend(_collect_gap_actions(
+        gaps_for_actions, prd_result, task_result, claims_list,
+    ))
+    actions.extend(_collect_risk_actions(active_risks, merged_gaps or []))
+    actions.extend(_collect_violation_actions(violations, compliance_status or []))
+    actions.extend(_collect_gate_reason_actions(
+        gate_decision, gate_reasons or [], actions,
+    ))
+    lines.extend(_render_actions(actions))
     return "\n".join(lines)
 
 
@@ -1463,10 +1627,14 @@ def _evaluate_and_output(
     active_gaps = [g for g in merged_gaps if not g.get("stale")]
     active_risks = [r for r in final_risks if not r.get("stale")]
 
-    # Build staged_items for debt awareness (EVO-TASK-025)
+    # Build staged_items for debt awareness (EVO-TASK-025 / EVO-TASK-012).
+    # staged_items contains all identifiers that are provably affected by
+    # the current staged changes: claim IDs, task IDs, AC IDs, and
+    # requirement IDs.  The gate engine uses this set to decide whether an
+    # issue should block (current) or merely be displayed (pre-existing).
     staged_items: Optional[Set[str]] = None
     if staged_files:
-        affected_claims, _affected_reqs, _affected_acs = _determine_affected_items(
+        affected_claims, affected_reqs, affected_acs = _determine_affected_items(
             staged_files, claims_list, ctx,
         )
         staged_items = set(affected_claims)
@@ -1478,6 +1646,10 @@ def _evaluate_and_output(
                 if claim.claim_id in affected_claims
             }
             staged_items.update(affected_task_ids)
+        # Include affected AC and requirement IDs so the gate engine can
+        # match AC-level gaps directly to staged changes.
+        staged_items.update(affected_acs)
+        staged_items.update(affected_reqs)
 
     # Merge Gate Engine
     gate_engine = MergeGateEngine(project_root)
@@ -1622,14 +1794,32 @@ def _evaluate_and_output(
         print(f"Error writing traceability report with metadata: {exc}", file=sys.stderr)
         raise _GateBlocked(1)
 
-    # Print summary
+    # Print summary -- when staged_items is provided (pre-commit mode),
+    # separate current issues from pre-existing debt for clarity.
     print(f"Analysis complete. Gate decision: {gate_decision.upper()}")
-    for reason in gate_res["reasons"]:
-        print(f"- {reason}")
+    if staged_items is not None:
+        current_reasons = [r for r in gate_res["reasons"] if r.startswith("[当前]")]
+        pre_existing_reasons = [r for r in gate_res["reasons"] if r.startswith("[预存]")]
+        unprefixed = [r for r in gate_res["reasons"] if not r.startswith("[当前]") and not r.startswith("[预存]")]
+        if current_reasons:
+            print("\nCURRENT ISSUES (blocks commit):")
+            for reason in current_reasons:
+                print(f"- {reason}")
+        if pre_existing_reasons:
+            print("\nPRE-EXISTING DEBT (does not block):")
+            for reason in pre_existing_reasons:
+                print(f"- {reason}")
+        if unprefixed:
+            for reason in unprefixed:
+                print(f"- {reason}")
+    else:
+        for reason in gate_res["reasons"]:
+            print(f"- {reason}")
 
     # Format and print Agent action list (additional output for Agent consumption)
     violations = compliance_res.get("architecture_violations", []) if compliance_res else []
     accepted_rules = compliance_res.get("accepted_rules", []) if compliance_res else []
+    compliance_status = compliance_res.get("architecture_compliance_status", []) if compliance_res else []
     agent_output = _format_agent_actions(
         gate_decision=gate_decision,
         active_gaps=active_gaps,
@@ -1639,6 +1829,9 @@ def _evaluate_and_output(
         prd_result=prd_res,
         task_result=task_res,
         claims_list=claims_list,
+        gate_reasons=gate_res["reasons"],
+        merged_gaps=merged_gaps,
+        compliance_status=compliance_status,
     )
     print(agent_output)
 

@@ -442,10 +442,15 @@ class TestLowConfidenceBlocksGate:
 
         output_dir = tmp_path / "output"
 
-        # No test_refs means no execution paths -> no tool execution at all
+        # No test_refs means no execution paths -> no tool execution at all.
+        # Mock _get_staged_files to return empty so the claim's credibility
+        # risk is treated as "current" (full-analysis mode, not pre-commit).
         with patch(
             "vibe_tracing.tool_evidence_adapter.subprocess.run",
-        ) as mock_run:
+        ) as mock_run, patch(
+            "vibe_tracing.cli._get_staged_files",
+            return_value=set(),
+        ):
             mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
             exit_code = run_analyze(tmp_path, output_dir)
 

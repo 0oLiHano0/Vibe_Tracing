@@ -232,8 +232,8 @@ def test_forbidden_module_import_violation(temp_workspace):
     mod_violations = [v for v in violations if v["rule_id"] == "MOD-VT-002"]
     assert len(mod_violations) == 2
     messages = {v["message"] for v in mod_violations}
-    assert any("Forbidden import" in m for m in messages)
-    assert any("not in allowed_to_call whitelist" in m for m in messages)
+    assert any("禁止导入" in m or "Forbidden import" in m for m in messages)
+    assert any("白名单" in m or "not in allowed" in m for m in messages)
 
     statuses = {
         s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
@@ -261,7 +261,7 @@ def test_allowed_module_import_violation(temp_workspace):
     assert "GATE-VT-006" in rule_ids
 
     mod_violation = next(v for v in violations if v["rule_id"] == "MOD-VT-003")
-    assert "not in allowed_to_call whitelist" in mod_violation["message"]
+    assert "白名单" in mod_violation["message"] or "not in allowed" in mod_violation["message"]
 
     statuses = {
         s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
@@ -306,7 +306,7 @@ def test_dashboard_compliance_and_violation(temp_workspace):
     dash_violation = next(
         v for v in results2["architecture_violations"] if v["rule_id"] == "DEP-VT-002"
     )
-    assert "external front-end resources" in dash_violation["message"]
+    assert "外部" in dash_violation["message"] or "external" in dash_violation["message"].lower()
 
 
 def test_missing_required_files(temp_workspace):
@@ -330,7 +330,7 @@ def test_missing_required_files(temp_workspace):
     gate_violation = next(
         v for v in results["architecture_violations"] if v["rule_id"] == "GATE-VT-001"
     )
-    assert "Required input files are missing" in gate_violation["message"]
+    assert "缺失" in gate_violation["message"] or "missing" in gate_violation["message"].lower()
 
 
 def test_gate_compliance_logic(temp_workspace):

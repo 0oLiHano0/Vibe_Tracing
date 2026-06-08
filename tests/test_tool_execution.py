@@ -109,7 +109,7 @@ class TestWhitelistEnforcement:
         c = candidates[0]
         assert c.status == CoverageStatus.BLOCKED.value
         assert c.error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
-        assert "not in the whitelist" in c.stderr
+        assert "白名单" in c.stderr or "not in the whitelist" in c.stderr
 
     def test_partial_whitelist(self, project_root: Path, python_matrix: dict) -> None:
         """covers: AC-VT-008-01"""
@@ -176,7 +176,7 @@ class TestCommandTemplateSubstitution:
     def test_unresolved_placeholder_raises(self, engine: ToolExecutionEngine) -> None:
         """covers: AC-VT-008-01"""
         template = "pytest {test_path} --config={config_path}"
-        with pytest.raises(ValueError, match="Unresolved placeholders"):
+        with pytest.raises(ValueError, match="未解析|Unresolved"):
             engine._build_command(template, test_path="tests/")
 
     def test_no_placeholders(self, engine: ToolExecutionEngine) -> None:
@@ -195,27 +195,27 @@ class TestShellInjectionPrevention:
 
     def test_semicolon_in_path_rejected(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="unsafe characters"):
+        with pytest.raises(ValueError, match="不安全|unsafe"):
             engine._build_command(template, test_path="tests/; rm -rf /")
 
     def test_pipe_in_path_rejected(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="unsafe characters"):
+        with pytest.raises(ValueError, match="不安全|unsafe"):
             engine._build_command(template, test_path="tests/ | cat /etc/passwd")
 
     def test_backtick_in_path_rejected(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="unsafe characters"):
+        with pytest.raises(ValueError, match="不安全|unsafe"):
             engine._build_command(template, test_path="tests/`whoami`")
 
     def test_dollar_substitution_rejected(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="unsafe characters"):
+        with pytest.raises(ValueError, match="不安全|unsafe"):
             engine._build_command(template, test_path="tests/$(id)")
 
     def test_redirect_in_path_rejected(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="unsafe characters"):
+        with pytest.raises(ValueError, match="不安全|unsafe"):
             engine._build_command(template, test_path="tests/> /tmp/evil")
 
     def test_valid_path_accepted(self, engine: ToolExecutionEngine) -> None:
@@ -253,7 +253,7 @@ class TestTimeoutHandling:
         c = candidates[0]
         assert c.status == CoverageStatus.BLOCKED.value
         assert c.error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
-        assert "timed out" in c.stderr
+        assert "超时" in c.stderr or "timed out" in c.stderr
         assert c.details.get("error_type") == "timeout"
         assert c.details.get("timeout_seconds") == 120
 
@@ -296,7 +296,7 @@ class TestMissingTool:
         c = candidates[0]
         assert c.status == CoverageStatus.BLOCKED.value
         assert c.error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
-        assert "not found" in c.stderr.lower()
+        assert "未找到" in c.stderr or "not found" in c.stderr.lower()
         assert c.details.get("error_type") == "tool_not_found"
 
 
@@ -321,7 +321,7 @@ class TestPathValidation:
         """covers: AC-VT-008-01"""
         ok, err = engine._validate_path("../../etc/passwd")
         assert ok is False
-        assert "outside project root" in err
+        assert "之外" in err or "outside project root" in err
 
     def test_absolute_path_outside_root_is_rejected(
         self, engine: ToolExecutionEngine
@@ -329,7 +329,7 @@ class TestPathValidation:
         """covers: AC-VT-008-01"""
         ok, err = engine._validate_path("/etc/passwd")
         assert ok is False
-        assert "outside project root" in err
+        assert "之外" in err or "outside project root" in err
 
     def test_execute_with_invalid_path_returns_blocked(
         self, engine: ToolExecutionEngine
@@ -342,7 +342,7 @@ class TestPathValidation:
         c = candidates[0]
         assert c.status == CoverageStatus.BLOCKED.value
         assert c.error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
-        assert "outside project root" in c.stderr
+        assert "之外" in c.stderr or "outside project root" in c.stderr
 
     def test_dot_dot_path_resolved_safely(self, engine: ToolExecutionEngine) -> None:
         """covers: AC-VT-008-01"""

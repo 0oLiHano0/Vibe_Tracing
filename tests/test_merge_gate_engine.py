@@ -410,8 +410,9 @@ def test_staged_claim_gets_current_prefix():
 
 def test_non_staged_claim_gets_pre_existing_prefix():
     """
-    Test that a risk from a non-staged claim gets [预存] prefix.
-    covers: EVO-TASK-025
+    Test that a risk from a non-staged claim gets [预存] prefix and does NOT
+    block the gate (pre-existing debt does not block in pre-commit mode).
+    covers: EVO-TASK-025, EVO-TASK-012
     """
     engine = MergeGateEngine(Path("/dummy/project/root"))
 
@@ -436,7 +437,8 @@ def test_non_staged_claim_gets_pre_existing_prefix():
 
     res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
 
-    assert res["gate_decision"] == "blocked"
+    # Pre-existing debt should NOT block in pre-commit mode
+    assert res["gate_decision"] == "pass"
     assert any("[预存]" in msg and "RISK-VT-011" in msg for msg in res["reasons"])
 
 
@@ -471,11 +473,12 @@ def test_no_staged_items_backward_compatible():
     assert not any("[当前]" in msg or "[预存]" in msg for msg in res["reasons"])
 
 
-def test_architecture_violation_gets_current_prefix():
+def test_architecture_violation_gets_pre_existing_prefix():
     """
     Test that architecture violations (not tied to a specific claim/task)
-    get [当前] prefix when staged_items is provided.
-    covers: EVO-TASK-025
+    get [预存] prefix when staged_items is provided, and do NOT block the
+    gate (cannot prove relation to staged changes).
+    covers: EVO-TASK-025, EVO-TASK-012
     """
     engine = MergeGateEngine(Path("/dummy/project/root"))
 
@@ -496,6 +499,241 @@ def test_architecture_violation_gets_current_prefix():
 
     res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
 
+    # Architecture violations cannot be mapped to staged items → pre-existing
+    assert res["gate_decision"] == "pass"
+    assert any("[预存]" in msg and "DEP-VT-001" in msg for msg in res["reasons"])
+
+
+# ---------------------------------------------------------------
+# EVO-TASK-012: Current vs pre-existing gate separation tests
+# ---------------------------------------------------------------
+
+def test_pre_existing_ac_gap_does_not_block():
+    """
+    Test that an AC gap from a non-staged item does NOT block in pre-commit mode.
+    The gap is still reported with [预存] prefix but the gate passes.
+    covers: EVO-TASK-012
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    # AC-VT-001-01 has a gap but it's not in staged_items
+    gaps = [
+        {
+            "item_id": "AC-VT-001-01",
+            "item_type": "ac",
+            "reason": "Must acceptance criterion AC-VT-001-01 is missing passing test coverage.",
+        }
+    ]
+    risks = []
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    staged_items = {"CLAIM-VT-099"}  # unrelated claim
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    # Pre-existing AC gap should NOT block
+    assert res["gate_decision"] == "pass"
+    assert len(res["blocked_items"]) == 0
+    assert any("[预存]" in msg and "AC-VT-001-01" in msg for msg in res["reasons"])
+
+
+def test_current_ac_gap_blocks():
+    """
+    Test that an AC gap from a staged item DOES block in pre-commit mode.
+    covers: EVO-TASK-012
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "AC-VT-001-01",
+            "item_type": "ac",
+            "reason": "Must acceptance criterion AC-VT-001-01 is missing passing test coverage.",
+        }
+    ]
+    risks = []
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    # AC-VT-001-01 is in staged_items (affected by staged changes)
+    staged_items = {"AC-VT-001-01", "CLAIM-VT-001"}
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    # Current AC gap should block
     assert res["gate_decision"] == "blocked"
-    # Architecture violations are conservative → [当前]
-    assert any("[当前]" in msg and "DEP-VT-001" in msg for msg in res["reasons"])
+    assert len(res["blocked_items"]) > 0
+    assert any("[当前]" in msg and "AC-VT-001-01" in msg for msg in res["reasons"])
+
+
+def test_pre_existing_must_risk_does_not_block():
+    """
+    Test that a MUST-severity risk from a non-staged claim does NOT block
+    in pre-commit mode.
+    covers: EVO-TASK-012
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = [
+        {
+            "risk_id": "RISK-VT-020",
+            "claim_id": "CLAIM-VT-002",
+            "description": "Critical vulnerability found.",
+            "severity": "must",
+            "suggested_action": "Patch immediately",
+            "business_impact": "System compromise",
+        }
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    # Only CLAIM-VT-001 is staged
+    staged_items = {"CLAIM-VT-001"}
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    assert res["gate_decision"] == "pass"
+    assert len(res["blocked_items"]) == 0
+    assert any("[预存]" in msg and "RISK-VT-020" in msg for msg in res["reasons"])
+
+
+def test_current_must_risk_blocks():
+    """
+    Test that a MUST-severity risk from a staged claim DOES block.
+    covers: EVO-TASK-012
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = [
+        {
+            "risk_id": "RISK-VT-021",
+            "claim_id": "CLAIM-VT-001",
+            "description": "Critical vulnerability found.",
+            "severity": "must",
+            "suggested_action": "Patch immediately",
+            "business_impact": "System compromise",
+        }
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    staged_items = {"CLAIM-VT-001"}
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    assert res["gate_decision"] == "blocked"
+    assert len(res["blocked_items"]) > 0
+    assert any("[当前]" in msg and "RISK-VT-021" in msg for msg in res["reasons"])
+
+
+def test_mixed_current_and_pre_existing_only_current_blocks():
+    """
+    Test that when both current and pre-existing issues exist, only the
+    current ones determine the gate decision.
+    covers: EVO-TASK-012
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        # Current AC gap (in staged_items)
+        {
+            "item_id": "AC-VT-001-01",
+            "item_type": "ac",
+            "reason": "Missing test coverage for AC-VT-001-01.",
+        },
+        # Pre-existing AC gap (NOT in staged_items)
+        {
+            "item_id": "AC-VT-099-01",
+            "item_type": "ac",
+            "reason": "Missing test coverage for AC-VT-099-01.",
+        },
+    ]
+    risks = []
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    staged_items = {"AC-VT-001-01", "CLAIM-VT-001"}
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    # Should be blocked because of the current AC gap
+    assert res["gate_decision"] == "blocked"
+    # Only the current gap should be in blocked_items
+    assert any("AC-VT-001-01" in item for item in res["blocked_items"])
+    assert not any("AC-VT-099-01" in item for item in res["blocked_items"])
+    # Both should appear in reasons
+    assert any("[当前]" in msg and "AC-VT-001-01" in msg for msg in res["reasons"])
+    assert any("[预存]" in msg and "AC-VT-099-01" in msg for msg in res["reasons"])
+
+
+def test_pre_existing_should_gap_does_not_upgrade_to_fail():
+    """
+    Test that a SHOULD-level gap from a non-staged item does NOT upgrade
+    the gate decision to "fail" in pre-commit mode.
+    covers: EVO-TASK-012
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "REQ-VT-002",
+            "item_type": "requirement",
+            "reason": "No task coverage",
+        }
+    ]
+    risks = []
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    staged_items = {"CLAIM-VT-099"}  # unrelated
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    # Pre-existing SHOULD gap should not upgrade to fail
+    assert res["gate_decision"] == "pass"
+    assert any("[预存]" in msg and "REQ-VT-002" in msg for msg in res["reasons"])
+
+
+def test_staged_ac_in_items_matches_ac_gap():
+    """
+    Test that when staged_items contains an AC ID (not just claim/task IDs),
+    the gate engine correctly identifies the AC gap as current.
+    covers: EVO-TASK-012
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "AC-VT-001-01",
+            "item_type": "ac",
+            "reason": "Missing test coverage.",
+        }
+    ]
+    risks = []
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    # staged_items includes the AC ID directly
+    staged_items = {"AC-VT-001-01"}
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    assert res["gate_decision"] == "blocked"
+    assert any("[当前]" in msg and "AC-VT-001-01" in msg for msg in res["reasons"])

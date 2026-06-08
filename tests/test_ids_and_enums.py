@@ -260,6 +260,7 @@ class TestCoverageStatus:
             "blocked",
             "compliant",
             "violated",
+            "skipped",
         }
         actual = {member.value for member in CoverageStatus}
         assert actual == expected, (
@@ -273,7 +274,7 @@ class TestCoverageStatus:
 
     def test_coverage_status_count(self):
         """covers: AC-VT-002-01"""
-        assert len(CoverageStatus) == 8
+        assert len(CoverageStatus) == 9
 
     @pytest.mark.parametrize(
         "value",
@@ -286,6 +287,7 @@ class TestCoverageStatus:
             "blocked",
             "compliant",
             "violated",
+            "skipped",
         ],
     )
     def test_coverage_status_lookup_by_value(self, value: str):
@@ -343,6 +345,8 @@ class TestErrorCode:
             "tool_execution_failed",
             "missing_evidence",
             "self_attestation",
+            "tool_no_tests_collected",
+            "tool_usage_error",
         }
         actual = {member.value for member in ErrorCode}
         assert actual == expected, (
@@ -356,7 +360,7 @@ class TestErrorCode:
 
     def test_error_code_count(self):
         """covers: AC-VT-008-03"""
-        assert len(ErrorCode) == 8
+        assert len(ErrorCode) == 10
 
     @pytest.mark.parametrize(
         "value",
@@ -369,6 +373,8 @@ class TestErrorCode:
             "tool_execution_failed",
             "missing_evidence",
             "self_attestation",
+            "tool_no_tests_collected",
+            "tool_usage_error",
         ],
     )
     def test_error_code_lookup_by_value(self, value: str):

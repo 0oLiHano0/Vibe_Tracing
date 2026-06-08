@@ -67,11 +67,25 @@ class DashboardRenderer:
                 "proposals": [],
             }
 
+        # Load hints and extract level2 values
+        hints_path = Path(__file__).parent / "templates" / "field_hints.json"
+        hints_data = json.loads(hints_path.read_text(encoding="utf-8"))
+        level2_hints = {}
+        for namespace, entries in hints_data.items():
+            if namespace.startswith("_"):
+                continue
+            for key, value in entries.items():
+                if isinstance(value, dict):
+                    level2_hints[f"{namespace}.{key}"] = value.get("level2", value.get("level3", ""))
+                else:
+                    level2_hints[f"{namespace}.{key}"] = value
+
         # Prepare JSON data to embed
         prd_reqs_json = json.dumps(prd_requirements or [], ensure_ascii=False)
         evidence_idx_json = json.dumps(evidence_index, ensure_ascii=False)
         trace_report_json = json.dumps(traceability_report, ensure_ascii=False)
         prop_data_json = json.dumps(prop_res, ensure_ascii=False)
+        hints_json = json.dumps(level2_hints, ensure_ascii=False)
 
         # Load template from package resources
         try:
@@ -86,6 +100,7 @@ class DashboardRenderer:
             .replace("{trace_report_json}", trace_report_json)
             .replace("{boot_data_json}", "null")
             .replace("{prop_data_json}", prop_data_json)
+            .replace("{hints_json}", hints_json)
         )
 
         # Write file

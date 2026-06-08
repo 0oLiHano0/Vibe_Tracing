@@ -5,6 +5,70 @@ Validates that agent claims are backed by external evidence, checks for mismatch
 with task completeness or test results, and flags nonexistent or outdated file references.
 """
 
+# ============================================================================
+# DESIGN: Claim Auto-Invalidation Mechanism (EVO-TASK-011)
+# ============================================================================
+#
+# Problem:
+#   Currently, ClaimEvidenceAnalyzer detects stale claims by comparing file
+#   modification timestamps against the claim timestamp (Section 4 in analyze()).
+#   This is a passive, runtime-only check. There is no mechanism to proactively
+#   mark claims as "needs re-verification" when their referenced files change
+#   between analysis runs.
+#
+# Proposed Mechanism:
+#   1. File Fingerprint Storage:
+#      - After each successful vt analyze run, store a snapshot of SHA-256
+#        fingerprints for all files referenced in code_refs, test_refs, and
+#        evidence_refs of every claim.
+#      - Store in .vibetracing/claim_fingerprints.json with structure:
+#        {
+#          "CLAIM-VT-005": {
+#            "timestamp": "2026-06-08T13:26:39Z",
+#            "fingerprints": {
+#              "src/vibe_tracing/raw_input_loader.py": "abc123...",
+#              "tests/test_raw_input_loader.py": "def456..."
+#            }
+#          }
+#        }
+#
+#   2. Invalidation Detection (in analyze() or a new pre-analyze step):
+#      - Before claim analysis, load claim_fingerprints.json.
+#      - For each claim, compute current SHA-256 of all referenced files.
+#      - If any file's fingerprint differs from the stored snapshot:
+#        * Set claim status to "needs_reverification" (new CoverageStatus enum).
+#        * Generate a risk with risk_category "claim_invalidated_by_file_change".
+#        * Include which specific files changed and their old/new fingerprints.
+#
+#   3. Integration Points:
+#      - ClaimEvidenceAnalyzer.__init__: accept optional fingerprints_path.
+#      - ClaimEvidenceAnalyzer.analyze: add a _check_invalidation() step that
+#        runs before existing Section 1-4 logic.
+#      - CLI (run_analyze): after analysis, write updated fingerprints to disk.
+#      - Gate 2 (pre-commit hook): can check invalidation to warn about stale
+#        claims in staged files without full analysis.
+#
+#   4. Status Lifecycle:
+#      covered -> needs_reverification (file changed)
+#      needs_reverification -> covered (re-analysis confirms evidence still valid)
+#      needs_reverification -> violated (re-analysis finds evidence broken)
+#      needs_reverification -> blocked (evidence file deleted)
+#
+#   5. Dashboard Impact:
+#      - Add "needs_reverification" badge style (amber/yellow).
+#      - In Decisions tab, auto-generate decision cards for invalidated claims
+#        asking: "Claim evidence may have changed. Re-verify or accept risk?"
+#
+#   6. Files to Modify (implementation phase):
+#      - src/vibe_tracing/traceability/claim_evidence_analyzer.py  (core logic)
+#      - src/vibe_tracing/core/enums.py                            (new status)
+#      - src/vibe_tracing/cli.py                                   (fingerprint I/O)
+#      - src/vibe_tracing/templates/dashboard.template.html        (UI badge)
+#      - tests/test_claim_evidence_analyzer.py                     (tests)
+#
+# ============================================================================
+
+import hashlib
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +76,18 @@ from typing import Any, Dict, List, Optional
 
 from vibe_tracing.core import ids
 from vibe_tracing.core.enums import CoverageStatus
+
+
+def _file_sha256(path: Path) -> Optional[str]:
+    """Compute SHA-256 hex digest of a file. Returns None if file missing."""
+    try:
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except (OSError, IOError):
+        return None
 
 
 class ClaimEvidenceAnalyzer:

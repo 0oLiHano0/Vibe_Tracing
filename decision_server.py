@@ -83,12 +83,76 @@ def post_decision():
 
 @app.route("/api/pending", methods=["GET"])
 def get_pending():
-    """Return pending decisions placeholder.
+    """Return pending decisions by cross-referencing traceability report with recorded decisions.
 
-    Actual pending-decision logic will be implemented in a future task
-    by cross-referencing dashboard evidence with recorded decisions.
+    Reads the traceability report to identify gaps and stale risks, then filters
+    out decisions that have already been recorded.
     """
-    return jsonify({"pending": [], "note": "Use dashboard for pending decisions"})
+    import hashlib
+
+    trace_report_path = Path("output/traceability_report.json")
+    if not trace_report_path.exists():
+        return jsonify({"pending": [], "note": "No traceability report found"})
+
+    report = json.loads(trace_report_path.read_text(encoding="utf-8"))
+    recorded = _load_decisions()
+    recorded_ids = {d.get("decision_id") for d in recorded.get("decisions", [])}
+
+    pending = []
+
+    # A. Uncovered AC gaps
+    for gap in report.get("gaps", []):
+        if gap.get("item_type") == "ac" and not gap.get("stale") and not gap.get("human_accepted"):
+            dec_id = _make_dec_id("uncovered_ac", gap.get("item_id", ""))
+            if dec_id not in recorded_ids:
+                pending.append({
+                    "id": dec_id,
+                    "category": "uncovered_ac",
+                    "target_id": gap.get("item_id", ""),
+                    "title": gap.get("title") or gap.get("item_id", ""),
+                    "reason": gap.get("reason", ""),
+                    "severity": "must",
+                })
+
+    # B. Stale risks (pre-stored debts)
+    for risk in report.get("risks", []):
+        if risk.get("stale") and not risk.get("deferred"):
+            dec_id = _make_dec_id("stale_debt", risk.get("claim_id", "unknown"))
+            if dec_id not in recorded_ids:
+                pending.append({
+                    "id": dec_id,
+                    "category": "stale_debt",
+                    "target_id": risk.get("claim_id", ""),
+                    "title": risk.get("title") or risk.get("description", ""),
+                    "reason": risk.get("description", ""),
+                    "severity": risk.get("severity", "should"),
+                })
+
+    # C. Expired accepted rules
+    for rule in report.get("accepted_rules", []):
+        if rule.get("stale_acceptance"):
+            dec_id = _make_dec_id("accepted_rule", rule.get("rule_id", ""))
+            if dec_id not in recorded_ids:
+                pending.append({
+                    "id": dec_id,
+                    "category": "accepted_rule",
+                    "target_id": rule.get("rule_id", ""),
+                    "title": rule.get("title", ""),
+                    "reason": "Acceptance has expired and needs re-confirmation",
+                    "severity": "should",
+                })
+
+    return jsonify({"pending": pending, "total": len(pending)})
+
+
+def _make_dec_id(category: str, target_id: str) -> str:
+    """Generate a deterministic decision ID matching the dashboard's algorithm."""
+    key = f"{category}:{target_id}"
+    h = 0
+    for ch in key:
+        h = ((h << 5) - h) + ord(ch)
+        h &= 0xFFFFFFFF
+    return f"DEC-{abs(h):04X}"[:8]
 
 
 # ------------------------------------------------------------------

@@ -5,10 +5,32 @@ Generates structured risks and suggested remediation actions from gaps,
 claim inconsistencies, and architecture compliance results.
 """
 
+import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from vibe_tracing.core import ids
+
+_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
+
+
+def _load_hints(category: str) -> Dict[str, Any]:
+    try:
+        data = json.loads(_HINTS_PATH.read_text(encoding="utf-8"))
+        return data.get(category, {})
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _resolve_hint(hint_value: Any, level: str = "level1") -> str:
+    if isinstance(hint_value, str):
+        return hint_value
+    if isinstance(hint_value, dict):
+        return hint_value.get(level, hint_value.get("level3", ""))
+    return ""
+
+
+_risk_hints = _load_hints("risk")
 
 
 class RiskAdvisor:
@@ -46,7 +68,8 @@ class RiskAdvisor:
             r = dict(orig_risk)  # copy to avoid mutability side-effects
 
             # Default values
-            impact = "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。"
+            default_hint = _risk_hints.get("default_inconsistency", {})
+            impact = _resolve_hint(default_hint, "level1") if default_hint else "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。"
             action = "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。"
             evidence_ids: list[str] = []
 
@@ -55,27 +78,34 @@ class RiskAdvisor:
             category = r.get("risk_category", "")
 
             if category == "self_referential_claim":
-                impact = "违反 Agent 不能自证原则，可能掩盖未经外部工具或人类审查的低质量代码。"
+                hint = _risk_hints.get("self_referential_claim", {})
+                impact = _resolve_hint(hint, "level1") if hint else "违反 Agent 不能自证原则，可能掩盖未经外部工具或人类审查的低质量代码。"
                 action = "为关联的开发任务提供独立的外部证据，例如单元测试或人类 Review 记录，并在 Claim 的 `evidence_refs` 中引用该证据 ID。"
             elif category == "non_existent_evidence":
-                impact = "证据链中断，导致声称的完成状态无法被客观核查。"
+                hint = _risk_hints.get("non_existent_evidence", {})
+                impact = _resolve_hint(hint, "level1") if hint else "证据链中断，导致声称的完成状态无法被客观核查。"
                 action = "核对 `evidence_index.json` 或工具报告输出，确保被引用的证据项已正确生成并包含在索引中。"
             elif category == "stale_file":
-                impact = "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。"
+                hint = _risk_hints.get("stale_file", {})
+                impact = _resolve_hint(hint, "level1") if hint else "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。"
                 action = "重新验证该任务以生成包含最新时间戳的 Agent Claim 记录。"
                 r["confidence"] = "low_confidence"
                 r["type"] = "suggestion"
             elif category == "non_existent_task":
-                impact = "Claim 关联到了不存在的任务，可能由于任务 ID 写错或任务列表未同步。"
+                hint = _risk_hints.get("non_existent_task", {})
+                impact = _resolve_hint(hint, "level1") if hint else "Claim 关联到了不存在的任务，可能由于任务 ID 写错或任务列表未同步。"
                 action = "检查该 Claim 的 `related_task` 字段是否与 `task_list.json` 中的任务 ID 一致。"
             elif category in ("non_existent_code_ref", "non_existent_test_ref"):
-                impact = "Claim 中引用的物理文件在工作区中不存在，无法建立有效的物理追溯链。"
+                hint = _risk_hints.get("non_existent_ref", {})
+                impact = _resolve_hint(hint, "level1") if hint else "Claim 中引用的物理文件在工作区中不存在，无法建立有效的物理追溯链。"
                 action = "核实文件路径，检查是否存在拼写错误、文件被重命名或未提交的情况。"
             elif category == "no_test_coverage":
-                impact = "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。"
+                hint = _risk_hints.get("no_test_coverage", {})
+                impact = _resolve_hint(hint, "level1") if hint else "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。"
                 action = "针对该验收标准补充测试用例，并在测试函数的 docstring 中声明 `covers: <ac_id>`。"
             elif category in ("failed_tests", "violated_evidence"):
-                impact = "关联的验收标准测试执行失败，导致无法提供合格证明。"
+                hint = _risk_hints.get("failed_tests", {})
+                impact = _resolve_hint(hint, "level1") if hint else "关联的验收标准测试执行失败，导致无法提供合格证明。"
                 action = "运行并修复该验收标准关联的失败测试用例。"
 
             r["business_impact"] = r.get("business_impact", impact)
@@ -104,37 +134,49 @@ class RiskAdvisor:
             reason = gap.get("reason", "")
 
             if item_type == "requirement":
+                hint = _risk_hints.get("requirement_no_task", {})
+                desc = f"需求 {item_id} 缺少关联的开发任务。"
+                impact = _resolve_hint(hint, "level1").format(item_id=item_id) if hint else "需求没有对应的开发任务覆盖，可能导致功能遗漏或开发偏离方向。"
+                action = f"在 `task_list.json` 中为需求 `{item_id}` 规划并关联开发任务。"
                 enriched_risks.append(
                     {
                         "risk_id": ids.make_risk_id(next_counter),
-                        "description": f"需求 {item_id} 缺少关联的开发任务。",
+                        "description": desc,
                         "severity": "must",
-                        "business_impact": "需求没有对应的开发任务覆盖，可能导致功能遗漏或开发偏离方向。",
-                        "suggested_action": f"在 `task_list.json` 中为需求 `{item_id}` 规划并关联开发任务。",
+                        "business_impact": impact,
+                        "suggested_action": action,
                         "evidence_ids": [ids.sentinel_evidence_id()],
                     }
                 )
                 next_counter += 1
             elif item_type == "ac":
+                hint = _risk_hints.get("ac_no_evidence", {})
+                desc = f"验收标准 {item_id} 缺失通过的测试证据。"
+                impact = _resolve_hint(hint, "level1").format(item_id=item_id) if hint else "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。"
+                action = f"针对验收标准 `{item_id}` 补充测试用例，并在测试函数的 docstring 中声明 `covers: {item_id}`。"
                 enriched_risks.append(
                     {
                         "risk_id": ids.make_risk_id(next_counter),
-                        "description": f"验收标准 {item_id} 缺失通过的测试证据。",
+                        "description": desc,
                         "severity": "must",
-                        "business_impact": "验收标准缺失测试证据，无法静态或动态证明该标准已被合规实现。",
-                        "suggested_action": f"针对验收标准 `{item_id}` 补充测试用例，并在测试函数的 docstring 中声明 `covers: {item_id}`。",
+                        "business_impact": impact,
+                        "suggested_action": action,
                         "evidence_ids": [ids.sentinel_evidence_id()],
                     }
                 )
                 next_counter += 1
             elif item_type == "task":
+                hint = _risk_hints.get("task_no_claim", {})
+                desc = f"任务 {item_id} 缺少 Agent Claim 声明或状态不完整。"
+                impact = _resolve_hint(hint, "level1").format(item_id=item_id) if hint else "任务已规划但缺乏执行实体的状态声明，影响合并门禁判定。"
+                action = f"为任务 `{item_id}` 签发相应的 Agent Claim 并记录其完成状态和关联证据。"
                 enriched_risks.append(
                     {
                         "risk_id": ids.make_risk_id(next_counter),
-                        "description": f"任务 {item_id} 缺少 Agent Claim 声明或状态不完整。",
+                        "description": desc,
                         "severity": "should",
-                        "business_impact": "任务已规划但缺乏执行实体的状态声明，影响合并门禁判定。",
-                        "suggested_action": f"为任务 `{item_id}` 签发相应的 Agent Claim 并记录其完成状态和关联证据。",
+                        "business_impact": impact,
+                        "suggested_action": action,
                         "evidence_ids": [ids.sentinel_evidence_id()],
                     }
                 )
@@ -156,13 +198,17 @@ class RiskAdvisor:
                 ):
                     continue
 
+                hint = _risk_hints.get("arch_violation", {})
+                desc = f"架构约束违反 (规则 {rule_id}): {msg}"
+                impact = _resolve_hint(hint, "level1").format(rule_id=rule_id, msg=msg) if hint else "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。"
+                action = f"根据规则 `{rule_id}` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。"
                 enriched_risks.append(
                     {
                         "risk_id": ids.make_risk_id(next_counter),
-                        "description": f"架构约束违反 (规则 {rule_id}): {msg}",
+                        "description": desc,
                         "severity": "must",
-                        "business_impact": "破坏了既定的架构约束与模块隔离边界，可能导致非预期依赖或代码架构混乱。",
-                        "suggested_action": f"根据规则 `{rule_id}` 的定义，重构相关文件以移除禁用的依赖或外部资源引用。",
+                        "business_impact": impact,
+                        "suggested_action": action,
                         "evidence_ids": [v.get("evidence_id", ids.sentinel_evidence_id())],
                     }
                 )
@@ -173,13 +219,17 @@ class RiskAdvisor:
                 rule_id = uc.get("rule_id", "")
                 reason = uc.get("reason", "")
 
+                hint = _risk_hints.get("unclear_constraint", {})
+                desc = f"架构约束 {rule_id} 状态不明确：{reason}"
+                impact = _resolve_hint(hint, "level1").format(rule_id=rule_id, reason=reason) if hint else "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。"
+                action = f"由架构师或人类项目经理对约束 `{rule_id}` 进行人工核对，并在 Review 流程中确认合规。"
                 enriched_risks.append(
                     {
                         "risk_id": ids.make_risk_id(next_counter),
-                        "description": f"架构约束 {rule_id} 状态不明确：{reason}",
+                        "description": desc,
                         "severity": "should",
-                        "business_impact": "该架构约束无法由机器自动核对，存在未知的合规性隐患，可能需要人工审计。",
-                        "suggested_action": f"由架构师或人类项目经理对约束 `{rule_id}` 进行人工核对，并在 Review 流程中确认合规。",
+                        "business_impact": impact,
+                        "suggested_action": action,
                         "evidence_ids": [ids.sentinel_evidence_id()],
                         "confidence": "low_confidence",
                         "type": "suggestion",
@@ -191,13 +241,17 @@ class RiskAdvisor:
         if claims_list:
             for claim in claims_list:
                 if getattr(claim, "credibility", None) == "low_confidence":
+                    hint = _risk_hints.get("low_confidence_claim", {})
+                    desc = f"Claim {claim.claim_id} 声明任务完成但无 VT 执行的工具验证证据"
+                    impact = _resolve_hint(hint, "level1").format(claim_id=claim.claim_id) if hint else "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险"
+                    action = "确保关联的测试文件存在、声明了 covers AC、且 pytest 能通过。然后重新运行 vibe-tracing analyze。"
                     enriched_risks.append(
                         {
                             "risk_id": ids.make_risk_id(next_counter),
-                            "description": f"Claim {claim.claim_id} 声明任务完成但无 VT 执行的工具验证证据",
+                            "description": desc,
                             "severity": "must",
-                            "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
-                            "suggested_action": "确保关联的测试文件存在、声明了 covers AC、且 pytest 能通过。然后重新运行 vibe-tracing analyze。",
+                            "business_impact": impact,
+                            "suggested_action": action,
                             "evidence_ids": [],
                             "item_type": "claim_credibility",
                         }

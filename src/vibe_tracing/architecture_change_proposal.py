@@ -4,6 +4,42 @@ Architecture Change Proposal Engine for Vibe Tracing.
 Manages loading, drift detection, and documentation auditing for architecture constraints changes.
 """
 
+# ============================================================================
+# EVO-TASK-017: Architecture Evolution Mechanism — Findings
+# ============================================================================
+#
+# GATE-VT-014 ("Architecture Change Governance") in architecture_constraints.json
+# already covers the core architecture evolution scenario:
+#
+#   - Title: "Architecture Change Governance"
+#   - Pass: Architecture constraint changes documented in
+#           architecture_change_log.md with matching timestamps
+#   - Fail: Architecture constraints modified without corresponding
+#           change_log update
+#   - blocks_merge: true
+#   - check_type: hybrid (machine + manual)
+#
+# The gate is implemented by this module (ArchitectureChangeProposalEngine)
+# which provides:
+#   1. Drift detection: compares current constraints against last recorded hash
+#   2. Proposal scanning: reads architecture_change_log.md entries
+#   3. Change auditing: validates timestamps and documentation completeness
+#
+# Coverage assessment:
+#   - WELL COVERED: "constraints modified without documentation" is blocked
+#   - WELL COVERED: human approval signature is tracked per proposal
+#   - WELL COVERED: dashboard renders proposals with status + approval info
+#   - PARTIAL: no automated rollback mechanism if a proposal is rejected
+#              after constraints were already modified (manual recovery)
+#   - PARTIAL: no versioning of constraints beyond SHA hash snapshots;
+#              diff-level change tracking relies on git history
+#
+# Recommendation: GATE-VT-014 is sufficient for v0.1 MVP. For future
+# versions, consider adding constraint versioning (v1 -> v2 diff) and
+# an automated revert path when proposals are rejected post-merge.
+#
+# ============================================================================
+
 import hashlib
 import json
 from pathlib import Path

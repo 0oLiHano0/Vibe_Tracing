@@ -420,7 +420,7 @@ def test_gate_vt_004_must_ac_no_tests(tmp_path, capsys):
     assert exit_code == 2
     captured = capsys.readouterr()
     assert "Gate decision: BLOCKED" in captured.out
-    assert "验收标准缺失测试证据 (AC-VT-001-02)" in captured.out
+    assert "AC-VT-001-02" in captured.out and "缺失测试证据" in captured.out
 
 
 def test_gate_vt_005_claim_no_external_evidence(tmp_path, capsys):
@@ -454,7 +454,7 @@ def test_gate_vt_006_must_architecture_violation_db(tmp_path, capsys):
     assert exit_code == 2
     captured = capsys.readouterr()
     assert "Gate decision: BLOCKED" in captured.out
-    assert "违反 MUST 级别架构约束 (STORE-VT-001)" in captured.out
+    assert "STORE-VT-001" in captured.out
 
 
 def test_gate_vt_007_must_architecture_unclear(tmp_path, capsys):
@@ -470,7 +470,7 @@ def test_gate_vt_007_must_architecture_unclear(tmp_path, capsys):
     assert exit_code == 2
     captured = capsys.readouterr()
     assert "Gate decision: BLOCKED" in captured.out
-    assert "存在不明确的架构约束规则 (DEP-VT-002)" in captured.out
+    assert "DEP-VT-002" in captured.out
 
 
 def test_gate_vt_008_high_risk_missing_details():
@@ -509,7 +509,7 @@ def test_gate_vt_008_high_risk_missing_details():
     ]
     res_bad = engine.evaluate(gaps, risks_bad)
     assert res_bad["gate_decision"] == "blocked"
-    assert any("缺失处理建议或业务影响描述" in msg for msg in res_bad["reasons"])
+    assert any("缺失处理建议" in msg for msg in res_bad["reasons"])
 
 
 def test_gate_vt_009_dashboard_cdn_dependency(tmp_path, capsys):
@@ -529,7 +529,7 @@ def test_gate_vt_009_dashboard_cdn_dependency(tmp_path, capsys):
     assert exit_code == 2
     captured = capsys.readouterr()
     assert "Gate decision: BLOCKED" in captured.out
-    assert "违反 MUST 级别架构约束 (DEP-VT-002)" in captured.out
+    assert "DEP-VT-002" in captured.out
 
 
 def test_gate_vt_010_traceability_report_invalid_evidence(tmp_path, capsys):

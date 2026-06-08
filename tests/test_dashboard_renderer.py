@@ -169,7 +169,7 @@ def test_cli_analyze_generates_dashboard(tmp_path: Path):
     """
     covers: AC-VT-006-01
     Verify that executing the CLI analyze command automatically generates the dashboard.html,
-    and updates run_metadata.json to include the dashboard's output path.
+    and embeds dashboard output path in the traceability report metadata section.
     """
     setup_mock_project(
         tmp_path,
@@ -187,10 +187,11 @@ def test_cli_analyze_generates_dashboard(tmp_path: Path):
     dashboard_file = tmp_path / "output" / "dashboard.html"
     assert dashboard_file.exists()
 
-    run_metadata_path = tmp_path / "output" / "run_metadata.json"
-    assert run_metadata_path.exists()
+    traceability_report_path = tmp_path / "output" / "traceability_report.json"
+    assert traceability_report_path.exists()
 
-    meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
+    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
+    meta = report["metadata"]
     assert "dashboard" in meta["output_files"]
     assert meta["output_files"]["dashboard"] == "output/dashboard.html"
 

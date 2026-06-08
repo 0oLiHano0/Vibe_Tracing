@@ -14,25 +14,24 @@ import os
 from typing import Any, Dict, List, Optional
 
 
-def load_dimensions(template_path: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Load reflection dimensions from the JSON template.
-
-    Args:
-        template_path: Optional explicit path to the template JSON file.
-            Defaults to templates/reflection_prompts.template.json adjacent
-            to this module.
-
-    Returns:
-        List of dimension dicts, each with keys: id, index, title, prompt,
-        conditional_hints.
-    """
+def _load_template(template_path: Optional[str] = None) -> Dict[str, Any]:
+    """Load the full reflection template JSON."""
     if template_path is None:
         template_path = os.path.join(
             os.path.dirname(__file__), "templates", "reflection_prompts.template.json"
         )
     with open(template_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return data["dimensions"]
+        return json.load(f)
+
+
+def load_dimensions(template_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Load reflection dimensions from the JSON template."""
+    return _load_template(template_path)["dimensions"]
+
+
+def load_guiding_principles(template_path: Optional[str] = None) -> str:
+    """Load guiding principles from the JSON template."""
+    return _load_template(template_path).get("guiding_principles", "")
 
 
 def _evaluate_condition(
@@ -107,24 +106,13 @@ def render_reflection_prompts(
     affected_files: List[str],
     compliance_result: Optional[Dict[str, Any]] = None,
     dimensions: Optional[List[Dict[str, Any]]] = None,
+    guiding_principles: Optional[str] = None,
 ) -> str:
-    """Render the 8-dimension reflection prompt block.
-
-    Args:
-        gate_decision: The final gate decision string.
-        gaps: Identified gaps from analyzers.
-        risks: Enriched risks from RiskAdvisor.
-        task_list: Raw task_list.json dict (required, not Optional).
-        affected_files: File paths from the analysis context (required).
-        compliance_result: Result from ArchitectureComplianceChecker.
-        dimensions: Optional list of dimension dicts to render. When None,
-            loads from the default JSON template via ``load_dimensions()``.
-
-    Returns:
-        Formatted reflection prompt string for console output.
-    """
+    """Render the 8-dimension reflection prompt block."""
     if dimensions is None:
         dimensions = load_dimensions()
+    if guiding_principles is None:
+        guiding_principles = load_guiding_principles()
 
     # Gather context for conditional prompts
     has_blocked = gate_decision == "blocked"
@@ -157,9 +145,13 @@ def render_reflection_prompts(
         "  VT 架构自省 — 元认知反思提示 (Meta-Cognitive Reflection)",
         "═══════════════════════════════════════════════════════════════",
         "",
-        "请基于本轮 vt analyze 的结果，对以下 8 个维度进行反思与优化：",
-        "",
     ]
+
+    if guiding_principles:
+        lines.append(guiding_principles)
+        lines.append("")
+        lines.append("基于以上立场与原则，逐项反思以下 8 个维度：")
+        lines.append("")
 
     for dim in dimensions:
         idx = dim["index"]

@@ -424,6 +424,30 @@ class TestPytestOutputParsing:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.VIOLATED.value
 
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_pytest_exit5_no_tests_collected_returns_empty(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: EVO-TASK-017 — pytest exit 5 (no tests collected) produces no evidence."""
+        mock_run.return_value = MagicMock(
+            returncode=5, stdout="", stderr="no tests ran"
+        )
+
+        candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
+        assert candidates == []
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_pytest_exit2_usage_error_returns_empty(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: EVO-TASK-017 — pytest exit 2 (usage error) produces no evidence."""
+        mock_run.return_value = MagicMock(
+            returncode=2, stdout="", stderr="unrecognized arguments: --invalid"
+        )
+
+        candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
+        assert candidates == []
+
 
 # ---------------------------------------------------------------------------
 # Test: Output parsing (ruff_json)
@@ -590,6 +614,18 @@ class TestMypyOutputParsing:
         assert candidates[0].status == CoverageStatus.VIOLATED.value
         assert candidates[0].details["errors_count"] == 2
 
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_mypy_exit2_usage_error_returns_empty(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: EVO-TASK-017 — mypy exit 2 (usage error) produces no evidence."""
+        mock_run.return_value = MagicMock(
+            returncode=2, stdout="", stderr="error: invalid configuration"
+        )
+
+        candidates = engine.execute_tool(tool_category="type_check", path="src/")
+        assert candidates == []
+
 
 # ---------------------------------------------------------------------------
 # Test: execute_all
@@ -612,10 +648,104 @@ class TestExecuteAll:
             "lint": engine._tool_configs["lint"]
         }
 
-        candidates = engine.execute_all(["src/vibe_tracing/"])
+        candidates = engine.execute_all(["src/vibe_tracing/foo.py"])
         assert len(candidates) >= 1
         # Should have run at least once
         mock_run.assert_called()
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_execute_all_skips_non_python_for_lint(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: AC-VT-015a — .md files are skipped by lint tool."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="[]", stderr=""
+        )
+
+        engine._tool_configs = {
+            "lint": engine._tool_configs["lint"]
+        }
+
+        candidates = engine.execute_all(["docs/README.md"])
+        assert len(candidates) == 0
+        mock_run.assert_not_called()
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_execute_all_skips_non_python_for_test(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: AC-VT-015a — .md files are skipped by test tool."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="[]", stderr=""
+        )
+
+        engine._tool_configs = {
+            "test": engine._tool_configs["test"]
+        }
+
+        candidates = engine.execute_all(["docs/README.md"])
+        assert len(candidates) == 0
+        mock_run.assert_not_called()
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_execute_all_skips_non_python_for_all_categories(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: AC-VT-015a — .json file skipped by all python-only tools."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="[]", stderr=""
+        )
+
+        # Keep all tool configs
+        candidates = engine.execute_all(["config/settings.json"])
+        assert len(candidates) == 0
+        mock_run.assert_not_called()
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_execute_all_runs_python_files_for_all_categories(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: AC-VT-015a — .py files run on all tool categories."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="[]", stderr=""
+        )
+
+        candidates = engine.execute_all(["src/module.py"])
+        # All 5 tool categories should execute (one subprocess call each)
+        assert mock_run.call_count == 5
+        # Each category produces at least one candidate (coverage, lint,
+        # type_check, security return 1 each; test returns 0 from empty parse)
+        assert len(candidates) >= 4
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_execute_all_mixed_paths_filters_correctly(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: AC-VT-015a — mixed .py and .md paths filter per category."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="[]", stderr=""
+        )
+
+        # Only lint is active
+        engine._tool_configs = {
+            "lint": engine._tool_configs["lint"]
+        }
+
+        candidates = engine.execute_all(["src/module.py", "docs/README.md"])
+        # Only the .py path should be linted
+        assert len(candidates) == 1
+        assert mock_run.call_count == 1
+
+    def test_tool_file_type_map_default_values(self) -> None:
+        """covers: AC-VT-015a — TOOL_FILE_TYPE_MAP has expected structure."""
+        expected = {
+            "test": {".py"},
+            "lint": {".py"},
+            "type_check": {".py"},
+            "security": {".py"},
+            "coverage": {".py"},
+        }
+        assert ToolExecutionEngine.TOOL_FILE_TYPE_MAP == expected
 
 
 # ---------------------------------------------------------------------------

@@ -33,12 +33,10 @@ def test_e2e_good_project(tmp_path):
     # Verify output files exist
     evidence_index_path = output_dir / "evidence_index.json"
     traceability_report_path = output_dir / "traceability_report.json"
-    run_metadata_path = output_dir / "run_metadata.json"
     dashboard_path = output_dir / "dashboard.html"
 
     assert evidence_index_path.exists()
     assert traceability_report_path.exists()
-    assert run_metadata_path.exists()
     assert dashboard_path.exists()
 
     # Validate output files schemas
@@ -49,8 +47,9 @@ def test_e2e_good_project(tmp_path):
     val_rep = validator.validate_file(traceability_report_path, "traceability_report")
     assert val_rep.is_valid is True, val_rep.message
 
-    # Validate run metadata
-    meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
+    # Validate run metadata embedded in traceability report
+    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
+    meta = report["metadata"]
     assert meta["gate_decision"] == "blocked"
     assert meta["exit_code"] == 2
     assert (
@@ -71,10 +70,9 @@ def test_e2e_missing_tests(tmp_path):
     exit_code = main(["analyze", "--project-root", str(project_root)])
     assert exit_code == 2
 
-    run_metadata_path = output_dir / "run_metadata.json"
-    assert run_metadata_path.exists()
-
-    meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
+    traceability_report_path = output_dir / "traceability_report.json"
+    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
+    meta = report["metadata"]
     assert meta["gate_decision"] == "blocked"
     assert meta["exit_code"] == 2
     assert "验收标准缺失测试证据" in meta["summary"]
@@ -92,10 +90,9 @@ def test_e2e_bad_claim(tmp_path):
     exit_code = main(["analyze", "--project-root", str(project_root)])
     assert exit_code == 2
 
-    run_metadata_path = output_dir / "run_metadata.json"
-    assert run_metadata_path.exists()
-
-    meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
+    traceability_report_path = output_dir / "traceability_report.json"
+    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
+    meta = report["metadata"]
     assert meta["gate_decision"] == "blocked"
     assert meta["exit_code"] == 2
     assert any(
@@ -116,10 +113,9 @@ def test_e2e_arch_unclear(tmp_path):
     exit_code = main(["analyze", "--project-root", str(project_root)])
     assert exit_code == 2
 
-    run_metadata_path = output_dir / "run_metadata.json"
-    assert run_metadata_path.exists()
-
-    meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
+    traceability_report_path = output_dir / "traceability_report.json"
+    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
+    meta = report["metadata"]
     assert meta["gate_decision"] == "blocked"
     assert meta["exit_code"] == 2
     assert (

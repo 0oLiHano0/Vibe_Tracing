@@ -897,34 +897,65 @@ def _execute_tools(
         project_root=project_root,
     )
 
-    # Collect paths to execute tools against (code files only)
+    # Collect paths to execute tools against (code files only), separated
+    # into test paths and source paths for semantic tool routing.
     code_extensions = _get_code_extensions(ltm)
     if not code_extensions:
         print("Skipping tool execution: no file extensions defined in language_tool_matrix.", file=sys.stderr)
         return []
-    execution_paths: List[str] = []
+    test_paths: List[str] = []
+    source_paths: List[str] = []
+    seen_paths: Set[str] = set()
+
     for claim in claims_list:
         for ref in claim.test_refs:
             path_only = ref.split("#")[0]
-            if path_only and Path(path_only).suffix in code_extensions and path_only not in execution_paths and (project_root / path_only).exists():
-                execution_paths.append(path_only)
+            if path_only and Path(path_only).suffix in code_extensions and path_only not in seen_paths and (project_root / path_only).exists():
+                test_paths.append(path_only)
+                seen_paths.add(path_only)
         for ref in claim.code_refs:
             path_only = ref.split("#")[0]
-            if path_only and Path(path_only).suffix in code_extensions and path_only not in execution_paths and (project_root / path_only).exists():
-                execution_paths.append(path_only)
+            if path_only and Path(path_only).suffix in code_extensions and path_only not in seen_paths and (project_root / path_only).exists():
+                source_paths.append(path_only)
+                seen_paths.add(path_only)
 
     if task_res:
         for task in task_res.tasks:
             for ref in task.evidence_refs if hasattr(task, 'evidence_refs') else []:
                 path_only = ref.split("#")[0]
-                if path_only and path_only not in execution_paths:
-                    execution_paths.append(path_only)
+                if path_only and path_only not in seen_paths:
+                    source_paths.append(path_only)
+                    seen_paths.add(path_only)
 
-    if not execution_paths:
+    if not test_paths and not source_paths:
         return []
 
-    print(f"Executing validation tools for {len(execution_paths)} path(s)...")
-    tool_evidence_candidates = engine.execute_all(execution_paths)
+    # Filter to only staged files (EVO-TASK-016)
+    try:
+        staged_result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if staged_result.returncode == 0 and staged_result.stdout.strip():
+            staged_files = set(
+                f for f in staged_result.stdout.splitlines() if f.strip()
+            )
+            test_paths = [p for p in test_paths if p in staged_files]
+            source_paths = [p for p in source_paths if p in staged_files]
+    except Exception:
+        pass  # If git is unavailable or fails, run on all paths (fallback)
+
+    total_paths = len(test_paths) + len(source_paths)
+    if total_paths == 0:
+        print("Skipping tool execution: no staged files match claim references.", file=sys.stderr)
+        return []
+
+    print(f"Executing validation tools for {total_paths} staged path(s)...")
+    typed_paths = {"test": test_paths, "source": source_paths}
+    tool_evidence_candidates = engine.execute_all(typed_paths)
     executed_count = len(tool_evidence_candidates)
     blocked_count = sum(1 for c in tool_evidence_candidates if c.error_code is not None)
 
@@ -953,10 +984,73 @@ def _execute_tools(
     return tool_evidence_candidates
 
 
+def _get_staged_files(project_root: Path) -> Set[str]:
+    """Get the set of staged file paths from ``git diff --cached``.
+
+    Returns an empty set if git is unavailable or no files are staged.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return {f for f in result.stdout.splitlines() if f.strip()}
+    except Exception:
+        pass
+    return set()
+
+
+def _determine_affected_items(
+    staged_files: Set[str],
+    claims_list: list,
+    ctx: UnifiedContext,
+) -> Tuple[Set[str], Set[str], Set[str]]:
+    """Determine which claims, requirements, and ACs are affected by staged changes.
+
+    A claim is *affected* if any of its ``code_refs`` or ``test_refs`` paths
+    appear in *staged_files*.  A requirement / AC is affected when it is
+    covered by a task that has at least one affected claim.
+
+    Returns ``(affected_claim_ids, affected_req_ids, affected_ac_ids)``.
+    """
+    affected_claims: Set[str] = set()
+    affected_reqs: Set[str] = set()
+    affected_acs: Set[str] = set()
+
+    for claim in claims_list:
+        claim_id = claim.claim_id
+        for ref in (claim.code_refs or []) + (claim.test_refs or []):
+            path = ref.split("#")[0]
+            if path in staged_files:
+                affected_claims.add(claim_id)
+                break
+
+    # Map affected claims -> tasks -> requirements / ACs
+    if affected_claims and ctx.task_result and ctx.task_result.tasks:
+        affected_task_ids = {
+            claim.related_task
+            for claim in claims_list
+            if claim.claim_id in affected_claims
+        }
+        for task in ctx.task_result.tasks:
+            if task.task_id in affected_task_ids:
+                for req_id in (task.related_requirements or []):
+                    affected_reqs.add(req_id)
+                for ac_id in (task.related_acceptance_criteria or []):
+                    affected_acs.add(ac_id)
+
+    return affected_claims, affected_reqs, affected_acs
+
+
 def _run_analyzers(
     ctx: UnifiedContext,
     evidence_list: list,
     project_root: Path,
+    staged_files: Optional[Set[str]] = None,
 ) -> Tuple[list, list, Optional[dict], dict, dict]:
     """Run all analyzers and return (merged_gaps, final_risks, compliance_res, claim_res, req_res)."""
     prd_res = ctx.prd
@@ -1012,6 +1106,32 @@ def _run_analyzers(
             if key not in seen_gaps:
                 seen_gaps.add(key)
                 merged_gaps.append(gap)
+
+    # ------------------------------------------------------------------
+    # Incremental staleness tracking: mark gaps / risks from unchanged
+    # items as ``stale`` so that gate evaluation can skip them while the
+    # report still includes them for full visibility.
+    # ------------------------------------------------------------------
+    has_staged = staged_files is not None and len(staged_files) > 0
+    if has_staged:
+        affected_claims, affected_reqs, affected_acs = _determine_affected_items(
+            staged_files, claims_list, ctx,
+        )
+
+        for gap in merged_gaps:
+            item_type = gap.get("item_type")
+            item_id = gap.get("item_id")
+            if item_type == "claim" and item_id not in affected_claims:
+                gap["stale"] = True
+            elif item_type == "requirement" and item_id not in affected_reqs:
+                gap["stale"] = True
+            elif item_type == "ac" and item_id not in affected_acs:
+                gap["stale"] = True
+
+        for risk in final_risks:
+            claim_id = risk.get("claim_id")
+            if claim_id is not None and claim_id not in affected_claims:
+                risk["stale"] = True
 
     # Staged file extension coverage check (WARNING only)
     _check_staged_extensions(project_root, ctx.constraints)
@@ -1081,10 +1201,15 @@ def _evaluate_and_output(
     claims_list = ctx.claims_list
     task_res = ctx.task_result
 
+    # Filter out stale gaps / risks for gate evaluation.  Stale items are
+    # still included in the full report for visibility.
+    active_gaps = [g for g in merged_gaps if not g.get("stale")]
+    active_risks = [r for r in final_risks if not r.get("stale")]
+
     # Merge Gate Engine
     gate_engine = MergeGateEngine(project_root)
     gate_res = gate_engine.evaluate(
-        merged_gaps, final_risks, compliance_res, prd_status=prd_res.status
+        active_gaps, active_risks, compliance_res, prd_status=prd_res.status
     )
     gate_decision = gate_res["gate_decision"]
 
@@ -1107,19 +1232,9 @@ def _evaluate_and_output(
         if compliance_res else [],
     }
 
-    # Build and save traceability report
-    report_builder = TraceabilityReportBuilder(project_root)
-    report_path = output_dir / "traceability_report.json"
-    try:
-        report_doc = report_builder.build(report_doc, output_path=report_path)
-    except Exception as exc:
-        print(f"Error building traceability report: {exc}", file=sys.stderr)
-        raise _GateBlocked(1)
-
-    # Write run_metadata.json
-    run_id = report_doc.get("run_id")
-    project_id = report_doc.get("project_id")
-    scan_time = report_doc.get("scan_time")
+    # Build evidence index path (already written by caller)
+    index_path = output_dir / "evidence_index.json"
+    exit_code = 2 if gate_decision == "blocked" else 0
 
     def rel_path_str(p: Path) -> str:
         try:
@@ -1129,25 +1244,14 @@ def _evaluate_and_output(
             pass
         return str(p)
 
-    # Reconstruct input_files metadata from manifest
-    records_dict = {r.file_key: r for r in manifest.inputs_used}
-    prd_record = records_dict.get("prd")
-    constraints_path = project_root / "docs" / "architecture_constraints.json"
-    task_list_path = project_root / "docs" / "task_list.json"
-    claims_record = records_dict.get("agent_claims")
-
-    input_files_meta = {
-        "prd": rel_path_str(Path(prd_record.file_path)) if prd_record else "",
-        "architecture_constraints": rel_path_str(constraints_path) if constraints_path.exists() else "",
-        "task_list": rel_path_str(task_list_path),
-    }
-    if claims_list and claims_record:
-        input_files_meta["agent_claims"] = rel_path_str(Path(claims_record.file_path))
-
-    exit_code = 2 if gate_decision == "blocked" else 0
-
-    # Build evidence index path (already written by caller)
-    index_path = output_dir / "evidence_index.json"
+    # Build and save traceability report
+    report_builder = TraceabilityReportBuilder(project_root)
+    report_path = output_dir / "traceability_report.json"
+    try:
+        report_doc = report_builder.build(report_doc, output_path=report_path)
+    except Exception as exc:
+        print(f"Error building traceability report: {exc}", file=sys.stderr)
+        raise _GateBlocked(1)
 
     # Render dashboard
     dashboard_path = output_dir / "dashboard.html"
@@ -1181,6 +1285,26 @@ def _evaluate_and_output(
         print(f"Error rendering dashboard: {exc}", file=sys.stderr)
         raise _GateBlocked(1)
 
+    # Build metadata section and embed in traceability_report.json
+    run_id = report_doc.get("run_id")
+    project_id = report_doc.get("project_id")
+    scan_time = report_doc.get("scan_time")
+
+    # Reconstruct input_files metadata from manifest
+    records_dict = {r.file_key: r for r in manifest.inputs_used}
+    prd_record = records_dict.get("prd")
+    constraints_path = project_root / "docs" / "architecture_constraints.json"
+    task_list_path = project_root / "docs" / "task_list.json"
+    claims_record = records_dict.get("agent_claims")
+
+    input_files_meta = {
+        "prd": rel_path_str(Path(prd_record.file_path)) if prd_record else "",
+        "architecture_constraints": rel_path_str(constraints_path) if constraints_path.exists() else "",
+        "task_list": rel_path_str(task_list_path),
+    }
+    if claims_list and claims_record:
+        input_files_meta["agent_claims"] = rel_path_str(Path(claims_record.file_path))
+
     metadata_doc = {
         "run_id": run_id,
         "project_id": project_id,
@@ -1196,12 +1320,13 @@ def _evaluate_and_output(
         "summary": "; ".join(gate_res["reasons"]),
     }
 
-    metadata_path = output_dir / "run_metadata.json"
+    # Write metadata section into traceability_report.json
+    report_doc["metadata"] = metadata_doc
     try:
-        with metadata_path.open("w", encoding="utf-8") as f:
-            json.dump(metadata_doc, f, indent=2, ensure_ascii=False)
+        with report_path.open("w", encoding="utf-8") as f:
+            json.dump(report_doc, f, indent=2, ensure_ascii=False)
     except Exception as exc:
-        print(f"Error writing run metadata: {exc}", file=sys.stderr)
+        print(f"Error writing traceability report with metadata: {exc}", file=sys.stderr)
         raise _GateBlocked(1)
 
     # Print summary
@@ -1316,6 +1441,7 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
 
         merged_gaps, final_risks, compliance_res, claim_res, req_res = _run_analyzers(
             ctx, evidence_list, project_root,
+            staged_files=_get_staged_files(project_root),
         )
 
         return _evaluate_and_output(

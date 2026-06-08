@@ -2,15 +2,18 @@
 Protocol-Based Self-Semantic Audit for Vibe Tracing.
 
 VT stays deterministic (no LLM) but generates audit tickets that the Coding Agent
-fills in with LLM-generated reasons.  Only code changes linked to
-``quality_evolution`` tasks trigger semantic audit.
+fills in with LLM-generated reasons.  All code changes linked to tasks trigger
+semantic audit, with different audit levels based on task category.
 
 Two-phase flow:
   1. ``generate_tickets()`` -- creates pending tickets for staged code files
-     whose covering claim links to a quality_evolution task.
+     whose covering claim links to a task.  Each ticket carries an
+     ``audit_level``: ``"detailed"`` for quality_evolution tasks (requires >=50
+     chars + filename + change motivation) or ``"standard"`` for all other
+     tasks (requires >=20 chars + filename).
   2. ``verify_tickets()`` -- checks that all tickets for staged files are in
-     ``passed`` status with a non-empty ``audit_reason`` and a matching
-     ``file_hash``.
+     ``passed`` status with a non-empty ``audit_reason`` that satisfies the
+     validation rules for its ``audit_level``, and a matching ``file_hash``.
 """
 
 import hashlib
@@ -63,17 +66,17 @@ class SemanticAuditor:
         tasks: List[dict],
         requirements: Optional[List[dict]] = None,
     ) -> List[dict]:
-        """Generate pending audit tickets for *quality_evolution* code changes.
+        """Generate pending audit tickets for all task categories.
 
         For each staged code file:
         1. Find a covering claim (via ``code_refs``).
         2. Find the linked task (via the claim's ``related_task``).
-        3. Check if the task is a quality_evolution task by:
-           a. task.get("category") == "quality_evolution", OR
-           b. Any of task's related_requirements has category "quality_evolution"
-              (looked up from *requirements* list).
-        4. If yes and no existing ticket with a matching hash already exists,
-           generate a new pending ticket.
+        3. Determine audit level:
+           - ``"detailed"`` if the task is quality_evolution (task category or
+             any related requirement category).
+           - ``"standard"`` for all other task categories.
+        4. If no existing ticket with a matching hash already exists,
+           generate a new pending ticket with the appropriate ``audit_level``.
 
         Returns the list of **newly** generated tickets.
         """
@@ -119,15 +122,14 @@ class SemanticAuditor:
             if task is None:
                 continue
 
-            # 3. Check category (task-level or via related requirements)
+            # 3. Determine audit level (task-level or via related requirements)
             is_quality_evolution = task.get("category") == "quality_evolution"
             if not is_quality_evolution:
                 for req_id in task.get("related_requirements", []):
                     if req_categories.get(req_id) == "quality_evolution":
                         is_quality_evolution = True
                         break
-            if not is_quality_evolution:
-                continue
+            audit_level = "detailed" if is_quality_evolution else "standard"
 
             # 4. Compute hash and check for existing ticket
             file_hash = self._compute_staged_file_hash(file_path)
@@ -151,6 +153,7 @@ class SemanticAuditor:
                 "file_path": file_path,
                 "file_hash": file_hash,
                 "task_id": task_id,
+                "audit_level": audit_level,
                 "ac_ids": ac_ids,
                 "status": "pending",
                 "audit_reason": "",
@@ -227,10 +230,12 @@ class SemanticAuditor:
                 blocked = True
             else:
                 filename = Path(fp).name
-                if len(reason) < 20:
+                audit_level = t.get("audit_level", "standard")
+                min_len = 50 if audit_level == "detailed" else 20
+                if len(reason) < min_len:
                     issues.append(
                         f"Ticket {t['ticket_id']} for {fp}: audit_reason too short "
-                        f"({len(reason)} chars, need >= 20)"
+                        f"({len(reason)} chars, need >= {min_len} for {audit_level} audit)"
                     )
                     blocked = True
                 if filename not in reason:

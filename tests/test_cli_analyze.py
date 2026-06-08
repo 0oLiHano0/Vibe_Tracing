@@ -249,11 +249,9 @@ def test_cli_analyze_pass(tmp_path, capsys):
     traceability_report_path = (
         tmp_path / "output" / "traceability_report.json"
     )
-    run_metadata_path = tmp_path / "output" / "run_metadata.json"
 
     assert evidence_index_path.exists()
     assert traceability_report_path.exists()
-    assert run_metadata_path.exists()
 
     # Validate schema compliance
     validator = SchemaValidator()
@@ -263,8 +261,10 @@ def test_cli_analyze_pass(tmp_path, capsys):
     val_rep = validator.validate_file(traceability_report_path, "traceability_report")
     assert val_rep.is_valid is True, val_rep.message
 
-    # Validate run metadata structure
-    meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
+    # Validate run metadata embedded in traceability report
+    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
+    assert "metadata" in report
+    meta = report["metadata"]
     assert "run_id" in meta
     assert meta["project_id"] == "PROJECT-VT"
     assert "scan_time" in meta
@@ -301,15 +301,13 @@ def test_cli_analyze_blocked(tmp_path, capsys):
     traceability_report_path = (
         tmp_path / "output" / "traceability_report.json"
     )
-    run_metadata_path = tmp_path / "output" / "run_metadata.json"
 
     assert traceability_report_path.exists()
-    assert run_metadata_path.exists()
 
     rep = json.loads(traceability_report_path.read_text(encoding="utf-8"))
     assert rep["gate_decision"] == "blocked"
 
-    meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
+    meta = rep["metadata"]
     assert meta["gate_decision"] == "blocked"
     assert meta["exit_code"] == 2
 
@@ -340,15 +338,13 @@ def test_cli_analyze_fail_conditional(tmp_path, capsys):
     traceability_report_path = (
         tmp_path / "output" / "traceability_report.json"
     )
-    run_metadata_path = tmp_path / "output" / "run_metadata.json"
 
     assert traceability_report_path.exists()
-    assert run_metadata_path.exists()
 
     rep = json.loads(traceability_report_path.read_text(encoding="utf-8"))
     assert rep["gate_decision"] == "fail"
 
-    meta = json.loads(run_metadata_path.read_text(encoding="utf-8"))
+    meta = rep["metadata"]
     assert meta["gate_decision"] == "fail"
     assert meta["exit_code"] == 0
 
@@ -409,7 +405,6 @@ def test_cli_analyze_custom_output_dir(tmp_path):
 
     assert (custom_out / "evidence_index.json").exists()
     assert (custom_out / "traceability_report.json").exists()
-    assert (custom_out / "run_metadata.json").exists()
 
 
 def test_prd_drift_detection(tmp_path, capsys):
@@ -588,7 +583,6 @@ def test_gates_only_skips_analysis(tmp_path, capsys):
     output_dir = tmp_path / "output"
     assert not (output_dir / "evidence_index.json").exists()
     assert not (output_dir / "traceability_report.json").exists()
-    assert not (output_dir / "run_metadata.json").exists()
 
 
 @pytest.mark.no_mock_which
@@ -685,3 +679,153 @@ def test_staged_extension_warning(tmp_path, capsys, monkeypatch):
     assert "Analysis complete. Gate decision:" in captured.out
     # Must warn about the unrecognized extension
     assert "WARNING: 发现未配置的代码文件类型 .rb" in captured.err
+
+
+def test_incremental_analysis_marks_stale_gaps(tmp_path, capsys, monkeypatch):
+    """
+    covers: EVO-TASK-020
+    Test that when staged files are present, gaps/risks from unchanged claims
+    are marked as ``stale`` and do not affect the gate decision.
+    """
+    import subprocess as sp
+
+    # Initialize a git repo so git diff --cached works
+    sp.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+    sp.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=tmp_path, capture_output=True, check=True,
+    )
+    sp.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=tmp_path, capture_output=True, check=True,
+    )
+
+    # Set up a project with a CLAIM that references a file we will NOT stage.
+    # The claim has code_refs pointing to src/vibe_tracing/core/ids.py.
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # Stage only a README (not referenced by any claim) so the claim is
+    # considered "unchanged" and its gaps/risks should be marked stale.
+    readme = tmp_path / "README.md"
+    readme.write_text("# Test", encoding="utf-8")
+    sp.run(["git", "add", str(readme)], cwd=tmp_path, capture_output=True, check=True)
+
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+
+    # The analysis should still produce a report
+    assert exit_code == 0 or exit_code == 2  # depends on coverage
+
+    traceability_report_path = tmp_path / "output" / "traceability_report.json"
+    assert traceability_report_path.exists()
+
+    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
+
+    # Gaps and risks should be present in the report
+    gaps = report.get("gaps", [])
+    risks = report.get("risks", [])
+
+    # At least some gaps/risks should be marked stale
+    stale_gaps = [g for g in gaps if g.get("stale")]
+    stale_risks = [r for r in risks if r.get("stale")]
+
+    # Since we only staged README.md (not referenced by any claim), all
+    # claim-related gaps/risks should be stale.
+    if gaps:
+        assert len(stale_gaps) > 0, (
+            "Expected at least one stale gap when only unrelated files are staged"
+        )
+    if risks:
+        # Risks with claim_id from unchanged claims should be stale
+        claim_risks = [r for r in risks if r.get("claim_id")]
+        stale_claim_risks = [r for r in claim_risks if r.get("stale")]
+        if claim_risks:
+            assert len(stale_claim_risks) > 0, (
+                "Expected at least one stale risk from unchanged claims"
+            )
+
+
+def test_incremental_analysis_no_stale_without_staged(tmp_path, capsys):
+    """
+    covers: EVO-TASK-020
+    Test that when no files are staged (non-git repo), no gaps/risks are
+    marked as stale (full analysis mode).
+    """
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # No git repo, no staged files -> nothing should be stale
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+    assert exit_code == 0
+
+    traceability_report_path = tmp_path / "output" / "traceability_report.json"
+    assert traceability_report_path.exists()
+
+    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
+    gaps = report.get("gaps", [])
+    risks = report.get("risks", [])
+
+    # Nothing should be marked stale
+    stale_gaps = [g for g in gaps if g.get("stale")]
+    stale_risks = [r for r in risks if r.get("stale")]
+    assert len(stale_gaps) == 0, "No gaps should be stale without staged files"
+    assert len(stale_risks) == 0, "No risks should be stale without staged files"
+
+
+def test_incremental_analysis_affected_files_not_stale(tmp_path, capsys, monkeypatch):
+    """
+    covers: EVO-TASK-020
+    Test that gaps/risks from claims whose files ARE staged are NOT marked stale.
+    """
+    import subprocess as sp
+
+    # Initialize a git repo
+    sp.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+    sp.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=tmp_path, capture_output=True, check=True,
+    )
+    sp.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=tmp_path, capture_output=True, check=True,
+    )
+
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # Stage the file referenced by the claim's code_refs
+    code_file = tmp_path / "src" / "vibe_tracing" / "core" / "ids.py"
+    sp.run(["git", "add", str(code_file)], cwd=tmp_path, capture_output=True, check=True)
+
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+
+    traceability_report_path = tmp_path / "output" / "traceability_report.json"
+    assert traceability_report_path.exists()
+
+    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
+    gaps = report.get("gaps", [])
+    risks = report.get("risks", [])
+
+    # No gaps/risks should be stale since the staged file IS referenced by the claim
+    stale_gaps = [g for g in gaps if g.get("stale")]
+    stale_risks = [r for r in risks if r.get("stale")]
+    assert len(stale_gaps) == 0, "No gaps should be stale when claim files are staged"
+    assert len(stale_risks) == 0, "No risks should be stale when claim files are staged"

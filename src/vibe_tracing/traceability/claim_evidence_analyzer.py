@@ -122,6 +122,7 @@ class ClaimEvidenceAnalyzer:
                             "description": reason,
                             "severity": "must",
                             "risk_category": "self_referential_claim",
+                            "claim_id": claim_id,
                         }
                     )
                     risk_counter += 1
@@ -175,6 +176,7 @@ class ClaimEvidenceAnalyzer:
                                         "description": conflict_msg,
                                         "severity": "should",
                                         "risk_category": "conflicting_statuses",
+                                        "claim_id": claim_id,
                                     }
                                 )
                                 risk_counter += 1
@@ -190,6 +192,7 @@ class ClaimEvidenceAnalyzer:
                                         "description": reason,
                                         "severity": "must",
                                         "risk_category": "violated_evidence",
+                                        "claim_id": claim_id,
                                     }
                                 )
                                 risk_counter += 1
@@ -203,6 +206,7 @@ class ClaimEvidenceAnalyzer:
                                         "description": reason,
                                         "severity": "must",
                                         "risk_category": "unclear_evidence_status",
+                                        "claim_id": claim_id,
                                     }
                                 )
                                 risk_counter += 1
@@ -215,6 +219,7 @@ class ClaimEvidenceAnalyzer:
                                     "risk_id": ids.make_risk_id(risk_counter),
                                     "description": reason,
                                     "severity": "must",
+                                    "claim_id": claim_id,
                                 }
                             )
                             risk_counter += 1
@@ -236,6 +241,7 @@ class ClaimEvidenceAnalyzer:
                                 "description": reason,
                                 "severity": "must",
                                 "risk_category": "task_not_completed",
+                                "claim_id": claim_id,
                             }
                         )
                         risk_counter += 1
@@ -259,6 +265,7 @@ class ClaimEvidenceAnalyzer:
                                     "description": reason,
                                     "severity": "must",
                                     "risk_category": "no_test_coverage",
+                                    "claim_id": claim_id,
                                 }
                             )
                             risk_counter += 1
@@ -275,6 +282,7 @@ class ClaimEvidenceAnalyzer:
                                             "description": reason,
                                             "severity": "must",
                                             "risk_category": "failed_tests",
+                                            "claim_id": claim_id,
                                         }
                                     )
                                     risk_counter += 1
@@ -306,6 +314,7 @@ class ClaimEvidenceAnalyzer:
                                         "description": reason,
                                         "severity": "must",
                                         "risk_category": "test_covers_mismatch",
+                                        "claim_id": claim_id,
                                     }
                                 )
                                 risk_counter += 1
@@ -321,6 +330,7 @@ class ClaimEvidenceAnalyzer:
                             "description": reason,
                             "severity": "must",
                             "risk_category": "non_existent_task",
+                            "claim_id": claim_id,
                         }
                     )
                     risk_counter += 1
@@ -346,6 +356,7 @@ class ClaimEvidenceAnalyzer:
                                 "description": reason,
                                 "severity": "must",
                                 "risk_category": f"non_existent_{ref_type}_ref",
+                                "claim_id": claim_id,
                             }
                         )
                         risk_counter += 1
@@ -368,6 +379,7 @@ class ClaimEvidenceAnalyzer:
                                             "description": reason,
                                             "severity": "should",
                                             "risk_category": "stale_file",
+                                            "claim_id": claim_id,
                                         }
                                     )
                                     risk_counter += 1

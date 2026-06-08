@@ -28,11 +28,11 @@ def test_vt_can_analyze_itself():
     output_dir = PROJECT_ROOT / "output"
     assert (output_dir / "evidence_index.json").exists()
     assert (output_dir / "traceability_report.json").exists()
-    assert (output_dir / "run_metadata.json").exists()
     assert (output_dir / "dashboard.html").exists()
 
-    # Gate decision must be a valid value
-    meta = json.loads((output_dir / "run_metadata.json").read_text(encoding="utf-8"))
+    # Gate decision must be a valid value (metadata embedded in traceability report)
+    report = json.loads((output_dir / "traceability_report.json").read_text(encoding="utf-8"))
+    meta = report["metadata"]
     assert meta["gate_decision"] in ("pass", "fail", "blocked")
     assert meta["exit_code"] in (0, 2)
 

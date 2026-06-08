@@ -52,6 +52,27 @@ class ToolExecutionEngine:
 
     DEFAULT_TIMEOUT = 120  # seconds
 
+    # Map of tool category -> set of file extensions the tool should run on.
+    # Used by execute_all() to skip paths that a tool cannot handle.
+    # An empty set or missing category means "run on all files" (no filtering).
+    TOOL_FILE_TYPE_MAP: Dict[str, set] = {
+        "test": {".py"},
+        "lint": {".py"},
+        "type_check": {".py"},
+        "security": {".py"},
+        "coverage": {".py"},
+    }
+
+    # Map of path type ("test" or "source") -> set of tool categories that
+    # should run on that path type.  Used by execute_all() when typed paths
+    # are provided, replacing the extension-based heuristic with a semantic
+    # classification: pytest/coverage run only on test files, while
+    # ruff/mypy/bandit run only on source files.
+    PATH_TYPE_TOOL_MAP: Dict[str, set] = {
+        "test": {"test", "coverage"},
+        "source": {"lint", "type_check", "security"},
+    }
+
     def __init__(
         self,
         language_tool_matrix: Dict[str, Dict[str, Any]],
@@ -209,14 +230,30 @@ class ToolExecutionEngine:
     # Output parsers
     # ------------------------------------------------------------------
 
+    # Exit codes that indicate "tool cannot handle this file" rather than real
+    # failures.  When one of these is returned we produce no evidence at all.
+    PYTEST_SKIP_EXIT_CODES = {2, 5}  # 2 = usage error, 5 = no tests collected
+    MYPY_SKIP_EXIT_CODES = {2}  # 2 = usage error
+
     def _parse_pytest_output(
         self, stdout: str, stderr: str, exit_code: int, command: str, path: str
     ) -> List[ToolEvidenceCandidate]:
-        """Parse pytest --json-report output."""
+        """Parse pytest --json-report output.
+
+        Exit code classification:
+        - 0: success
+        - 1: test failure (real, record as evidence)
+        - 2: usage error (skip, not a real failure)
+        - 5: no tests collected (skip, not a real failure)
+        """
         candidates: List[ToolEvidenceCandidate] = []
 
+        # Skip exit codes that indicate "tool cannot handle this file"
+        if exit_code in self.PYTEST_SKIP_EXIT_CODES:
+            return []
+
         # Check for execution failure (not test failure)
-        if exit_code not in (0, 1, 2):
+        if exit_code not in (0, 1):
             return [
                 ToolEvidenceCandidate(
                     source_type="tool",
@@ -253,9 +290,8 @@ class ToolExecutionEngine:
             pass
 
         # Last resort: return a single candidate based on exit code
+        # (exit_code is guaranteed to be 0 or 1 at this point due to early returns)
         status = CoverageStatus.COVERED.value if exit_code == 0 else CoverageStatus.VIOLATED.value
-        if exit_code == 2:
-            status = CoverageStatus.BLOCKED.value
 
         return [
             ToolEvidenceCandidate(
@@ -458,7 +494,17 @@ class ToolExecutionEngine:
     def _parse_mypy_output(
         self, stdout: str, stderr: str, exit_code: int, command: str, path: str
     ) -> List[ToolEvidenceCandidate]:
-        """Parse mypy output."""
+        """Parse mypy output.
+
+        Exit code classification:
+        - 0: success
+        - 1: type errors found (real, record as evidence)
+        - 2: usage error (skip, not a real failure)
+        """
+        # Skip exit codes that indicate "tool cannot handle this file"
+        if exit_code in self.MYPY_SKIP_EXIT_CODES:
+            return []
+
         if exit_code not in (0, 1):
             return [
                 ToolEvidenceCandidate(
@@ -751,27 +797,58 @@ class ToolExecutionEngine:
 
     def execute_all(
         self,
-        paths: List[str],
+        paths,
     ) -> List[ToolEvidenceCandidate]:
         """
         Execute all whitelisted tools for the given paths.
 
         Args:
-            paths: List of paths (test files or source directories).
+            paths: Either:
+                - A flat ``List[str]`` of paths (legacy, backward-compatible).
+                  Tool/category filtering uses ``TOOL_FILE_TYPE_MAP``.
+                - A ``Dict[str, List[str]]`` mapping path types ("test" or
+                  "source") to path lists.  Tool/category filtering uses
+                  ``PATH_TYPE_TOOL_MAP`` so that only semantically
+                  appropriate tools run on each path type.
 
         Returns:
             Flat list of all ToolEvidenceCandidate objects.
         """
         all_candidates: List[ToolEvidenceCandidate] = []
 
-        for category, config in self._tool_configs.items():
-            for path in paths:
-                candidates = self.execute_tool(
-                    tool_category=category,
-                    path=path,
-                    tool_config=config,
-                )
-                all_candidates.extend(candidates)
+        # Normalise to a list of (category, path) pairs to execute.
+        if isinstance(paths, dict):
+            # Typed path dict -- use PATH_TYPE_TOOL_MAP for filtering.
+            pairs: List[Tuple[str, str]] = []
+            for path_type, path_list in paths.items():
+                allowed_categories = self.PATH_TYPE_TOOL_MAP.get(path_type)
+                if allowed_categories is None:
+                    # Unknown path type -- skip entirely.
+                    continue
+                for path in path_list:
+                    for category in allowed_categories:
+                        if category in self._tool_configs:
+                            pairs.append((category, path))
+        else:
+            # Flat list -- fall back to TOOL_FILE_TYPE_MAP (legacy mode).
+            pairs = []
+            for category, config in self._tool_configs.items():
+                allowed_extensions = self.TOOL_FILE_TYPE_MAP.get(category)
+                for path in paths:
+                    if allowed_extensions is not None and len(allowed_extensions) > 0:
+                        path_suffix = Path(path).suffix
+                        if path_suffix not in allowed_extensions:
+                            continue
+                    pairs.append((category, path))
+
+        for category, path in pairs:
+            config = self._tool_configs[category]
+            candidates = self.execute_tool(
+                tool_category=category,
+                path=path,
+                tool_config=config,
+            )
+            all_candidates.extend(candidates)
 
         return all_candidates
 

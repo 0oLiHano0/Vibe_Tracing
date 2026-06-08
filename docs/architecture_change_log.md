@@ -13,6 +13,12 @@
   - `src/vibe_tracing/templates/architecture_constraints.template.json`：模板示例规则添加 accepted_by / accepted_at。
   - `src/vibe_tracing/cli.py`：新增 `vt accept <rule_id>` 子命令，自动设置 accepted_by 和 accepted_at。
 
+## [2026-06-08] GATE-VT-002~012 改为 manual 并确认
+
+### quality_gates 中无检查器实现的 machine 规则
+* **变更规则**：GATE-VT-002, 003, 004, 005, 008, 009, 010, 011, 012 从 `verification_method: "machine"` 改为 `"manual"`，并设置 `accepted_by: "human"`。
+* **变更原因**：这些规则标记为 machine 但无实际检查器实现，每次 hook 运行时被标记为 "unclear" 产生噪音。改为 manual 后通过 accepted_by 机制确认，消除噪音。
+
 ## [2026-06-08] verification_method 字段引入 — 消除手动规则门禁噪声
 
 ### 所有规则新增 verification_method 字段

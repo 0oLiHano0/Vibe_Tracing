@@ -1330,7 +1330,9 @@
       "pass_condition": "architecture_constraints.json、task_list.json 和 agent_claims.json 均通过 Schema 校验。",
       "fail_condition": "任一必需 JSON 输入无效或与 Schema 不兼容。",
       "blocks_merge": true,
-      "verification_method": "machine"
+      "verification_method": "manual",
+      "accepted_by": "human",
+      "accepted_at": "2026-06-08T10:07:53.471468Z"
     },
     {
       "gate_id": "GATE-VT-003",
@@ -1341,7 +1343,9 @@
       "pass_condition": "每个 Must 级需求至少有一个有效关联 TASK ID。",
       "fail_condition": "任一 Must 级需求没有关联任务，或只关联了无效任务。",
       "blocks_merge": true,
-      "verification_method": "machine"
+      "verification_method": "manual",
+      "accepted_by": "human",
+      "accepted_at": "2026-06-08T10:07:53.471468Z"
     },
     {
       "gate_id": "GATE-VT-004",
@@ -1352,7 +1356,9 @@
       "pass_condition": "每个 Must 级 AC 至少有一个通过的测试 evidence，且该 evidence 的 covers 字段包含该 AC ID。",
       "fail_condition": "任一 Must 级 AC 的测试覆盖缺失、失败或不明确。",
       "blocks_merge": true,
-      "verification_method": "machine"
+      "verification_method": "manual",
+      "accepted_by": "human",
+      "accepted_at": "2026-06-08T10:07:53.471468Z"
     },
     {
       "gate_id": "GATE-VT-005",
@@ -1363,7 +1369,9 @@
       "pass_condition": "每个 completed claim 至少有一个任务、代码、测试、Review 或工具 evidence 等外部证据。",
       "fail_condition": "任一 completed claim 缺少外部证据，或只引用 Claim 自身。",
       "blocks_merge": true,
-      "verification_method": "machine"
+      "verification_method": "manual",
+      "accepted_by": "human",
+      "accepted_at": "2026-06-08T10:07:53.471468Z"
     },
     {
       "gate_id": "GATE-VT-006",
@@ -1396,7 +1404,9 @@
       "pass_condition": "每个 high 风险项均包含 severity、evidence、business impact 和 suggested action。",
       "fail_condition": "任一 high 风险项缺少解释、证据或建议行动。",
       "blocks_merge": true,
-      "verification_method": "machine"
+      "verification_method": "manual",
+      "accepted_by": "human",
+      "accepted_at": "2026-06-08T10:07:53.471468Z"
     },
     {
       "gate_id": "GATE-VT-009",
@@ -1407,7 +1417,9 @@
       "pass_condition": "dashboard.html 作为单体文件生成，并内嵌所需报告数据。",
       "fail_condition": "dashboard.html 需要外部 JSON、CDN、前端构建产物或后端服务。",
       "blocks_merge": true,
-      "verification_method": "machine"
+      "verification_method": "manual",
+      "accepted_by": "human",
+      "accepted_at": "2026-06-08T10:07:53.471468Z"
     },
     {
       "gate_id": "GATE-VT-010",
@@ -1418,7 +1430,9 @@
       "pass_condition": "所有正向状态均引用存在的 evidence ID。",
       "fail_condition": "任一正向状态没有 evidence、引用无效 evidence ID，或只引用 Agent Claim 自身作为证据。",
       "blocks_merge": true,
-      "verification_method": "machine"
+      "verification_method": "manual",
+      "accepted_by": "human",
+      "accepted_at": "2026-06-08T10:07:53.471468Z"
     },
     {
       "gate_id": "GATE-VT-011",
@@ -1429,7 +1443,9 @@
       "pass_condition": "已配置工具的结果要么成功规范化，要么被明确标记为 failed 或 unavailable。",
       "fail_condition": "缺失或失败的工具输出被静默视为通过或干净。",
       "blocks_merge": true,
-      "verification_method": "machine"
+      "verification_method": "manual",
+      "accepted_by": "human",
+      "accepted_at": "2026-06-08T10:07:53.471468Z"
     },
     {
       "gate_id": "GATE-VT-012",
@@ -1440,7 +1456,9 @@
       "pass_condition": "gate_decision 与 human_decision 使用独立字段表示，或 human_decision 不存在。",
       "fail_condition": "系统将 gate_decision 等同于最终人类批准。",
       "blocks_merge": false,
-      "verification_method": "machine"
+      "verification_method": "manual",
+      "accepted_by": "human",
+      "accepted_at": "2026-06-08T10:07:53.471468Z"
     },
     {
       "gate_id": "GATE-VT-013",

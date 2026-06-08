@@ -60,7 +60,7 @@ class ClaimEvidenceAnalyzer:
         risk_counter = 1
 
         # Quick lookup for evidences by evidence_id, source_path, and nodeid
-        ev_map = {}
+        ev_map: dict[str, list] = {}
         for ev in evidences:
             if "evidence_id" in ev:
                 ev_map.setdefault(ev["evidence_id"], []).append(ev)

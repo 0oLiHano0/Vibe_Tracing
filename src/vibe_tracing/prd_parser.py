@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, cast
 from collections import Counter
 
 import mistune
@@ -39,7 +39,7 @@ _md = mistune.create_markdown(renderer="ast")
 
 def parse_front_matter(text: str) -> dict:
     """Parse YAML-like front matter from the top of the markdown text."""
-    metadata = {}
+    metadata: dict = {}
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return metadata
@@ -166,7 +166,7 @@ class PrdParser:
 
         # Build AST from body (front matter stripped so mistune won't misparse ---)
         body_text = _strip_front_matter(text)
-        tokens = _md(body_text) or []
+        tokens: list = cast(list, _md(body_text) or [])
 
         requirements: List[Requirement] = []
         errors: List[str] = []

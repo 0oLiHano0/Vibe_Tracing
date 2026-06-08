@@ -247,8 +247,6 @@ class ToolExecutionEngine:
         - 2: usage error (skip, not a real failure)
         - 5: no tests collected (skip, not a real failure)
         """
-        candidates: List[ToolEvidenceCandidate] = []
-
         # Skip exit codes that indicate "tool cannot handle this file"
         if exit_code in self.PYTEST_SKIP_EXIT_CODES:
             return []
@@ -724,7 +722,7 @@ class ToolExecutionEngine:
         # Fallback: if tool binary not on PATH, try python3 -m <tool>
         import shutil as _shutil
         segments = command.split(";")
-        resolved_segments = []
+        resolved_segments: list[str] = []
         for seg in segments:
             seg = seg.strip()
             if not seg:
@@ -884,7 +882,7 @@ class ToolExecutionEngine:
             with file_path.open("r", encoding="utf-8") as f:
                 tree = ast.parse(f.read(), filename=str(file_path))
 
-            current_node = tree
+            current_node: ast.AST = tree
             target_names = parts[1:]
 
             for name in target_names:

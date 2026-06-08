@@ -48,7 +48,7 @@ class RiskAdvisor:
             # Default values
             impact = "该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。"
             action = "请核对该 Agent Claim 的内容以及外部证据记录，修正不一致的字段。"
-            evidence_ids = []
+            evidence_ids: list[str] = []
 
             # Match on structured risk_category (set by ClaimEvidenceAnalyzer)
             # Falls back to defaults if category is absent or unrecognised.

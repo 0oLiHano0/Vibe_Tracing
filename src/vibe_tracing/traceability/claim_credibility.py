@@ -43,13 +43,22 @@ def assess_claim_credibility(
         for task in task_result.tasks:
             task_map[task.task_id] = task
 
-    # Build evidence_id -> source_type mapping
+    # Build evidence_id -> source_type and source_path -> source_type mappings
     ev_id_to_source_type: Dict[str, str] = {}
+    ev_path_to_source_type: Dict[str, str] = {}
     for ev in evidence_list:
         ev_id = ev.get("evidence_id", "")
         source_type = ev.get("source_type", "")
         if ev_id:
             ev_id_to_source_type[ev_id] = source_type
+        source_path = ev.get("source_path", "")
+        if source_path:
+            # Prefer "tool" or "test" source types over "code"
+            existing = ev_path_to_source_type.get(source_path, "")
+            if source_type in ("test", "tool"):
+                ev_path_to_source_type[source_path] = source_type
+            elif not existing:
+                ev_path_to_source_type[source_path] = source_type
 
     all_warnings: List[str] = []
 
@@ -57,8 +66,14 @@ def assess_claim_credibility(
         has_tool_evidence = False
 
         # Check if evidence_refs point to evidence with source_type "test" or "tool"
+        # Try lookup by evidence_id first, then by source_path
         for ref in claim.evidence_refs:
             source_type = ev_id_to_source_type.get(ref, "")
+            if source_type in ("test", "tool"):
+                has_tool_evidence = True
+                break
+            # Also try lookup by source_path (claims may reference source_path values)
+            source_type = ev_path_to_source_type.get(ref, "")
             if source_type in ("test", "tool"):
                 has_tool_evidence = True
                 break
@@ -68,13 +83,13 @@ def assess_claim_credibility(
         else:
             # Check for medium credibility: non-code claim with existing deliverable
             is_medium = False
-            task = task_map.get(claim.related_task)
+            related_task = task_map.get(claim.related_task)
 
-            if task:
+            if related_task:
                 # Determine if task is non-code by checking for test path indicators
                 has_test_paths = bool(
-                    task.related_acceptance_criteria
-                    or task.definition_of_done
+                    related_task.related_acceptance_criteria
+                    or related_task.definition_of_done
                 )
 
                 if not has_test_paths and project_root and claim.test_refs:

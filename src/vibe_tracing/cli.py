@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 import importlib.resources as pkg_resources
 
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple
 
 from vibe_tracing import __version__
 from vibe_tracing.raw_input_loader import RawInputLoader
@@ -466,7 +466,7 @@ def _load_context(
     claims_record = records_dict.get("agent_claims")
 
     # Schema validation
-    if task_list_record and task_list_record.status == "ok":
+    if task_list_record and task_list_record.status == "ok" and task_list_record.content is not None:
         val_task = validator.validate_dict(
             task_list_record.content, "task_list",
             source_label=task_list_record.file_path,
@@ -480,7 +480,7 @@ def _load_context(
                 print(val_task.hint, file=sys.stderr)
             raise _GateBlocked(1)
 
-    if constraints_record and constraints_record.status == "ok":
+    if constraints_record and constraints_record.status == "ok" and constraints_record.content is not None:
         val_constraints = validator.validate_dict(
             constraints_record.content, "architecture_constraints",
             source_label=constraints_record.file_path,
@@ -494,7 +494,7 @@ def _load_context(
                 print(val_constraints.hint, file=sys.stderr)
             raise _GateBlocked(1)
 
-    if claims_record and claims_record.status == "ok":
+    if claims_record and claims_record.status == "ok" and claims_record.content is not None:
         val_claims = validator.validate_dict(
             claims_record.content, "agent_claims",
             source_label=claims_record.file_path,
@@ -593,6 +593,8 @@ def _gate1_constraints_hash(ctx: UnifiedContext, project_root: Path) -> Optional
     """
     import hashlib
 
+    if not ctx.manifest:
+        return None
     records_dict = {r.file_key: r for r in ctx.manifest.inputs_used}
     constraints_record = records_dict.get("architecture_constraints")
     if not (constraints_record and constraints_record.status == "ok"):
@@ -622,6 +624,9 @@ def _gate1b_prd_drift(ctx: UnifiedContext) -> None:
     If they differ, prints a warning to stderr but does not block the pipeline.
     """
     import hashlib
+
+    if not ctx.manifest:
+        return
 
     # Resolve PRD path from manifest
     prd_record = None
@@ -883,7 +888,7 @@ def _execute_tools(
 
     missing = sorted(t for t in required_binaries if not _tool_available(t))
     if missing:
-        print(f"\n[AI Agent Repair Guide]", file=sys.stderr)
+        print("\n[AI Agent Repair Guide]", file=sys.stderr)
         print(
             f"VT depends on tools that are missing in the environment: {', '.join(missing)}",
             file=sys.stderr,
@@ -1083,7 +1088,7 @@ def _run_analyzers(
     # Architecture compliance check
     compliance_res = None
     constraints_path = project_root / "docs" / "architecture_constraints.json"
-    if constraints_path.exists():
+    if constraints_path.exists() and ctx.constraints is not None:
         compliance_checker = ArchitectureComplianceChecker(
             project_root, constraints_path=constraints_path
         )
@@ -1115,7 +1120,7 @@ def _run_analyzers(
     # report still includes them for full visibility.
     # ------------------------------------------------------------------
     has_staged = staged_files is not None and len(staged_files) > 0
-    if has_staged:
+    if has_staged and staged_files is not None:
         affected_claims, affected_reqs, affected_acs = _determine_affected_items(
             staged_files, claims_list, ctx,
         )
@@ -1200,6 +1205,8 @@ def _evaluate_and_output(
     """Run MergeGateEngine, output all reports, and return exit code."""
     prd_res = ctx.prd
     manifest = ctx.manifest
+    if not manifest:
+        return 1
     claims_list = ctx.claims_list
     task_res = ctx.task_result
 
@@ -1397,7 +1404,6 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
         prd_res = ctx.prd
         is_draft = (prd_res.status == "draft")
         config_prefix = ctx.config_prefix
-        records_dict = {r.file_key: r for r in ctx.manifest.inputs_used}
 
         exit_code = _run_integrity_gates(
             ctx, project_root, is_pre_commit, config_prefix,

@@ -4,13 +4,18 @@
     "related_task": "TASK-VT-005",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/raw_input_loader.py"
+      "src/vibe_tracing/raw_input_loader.py",
+      "tests/test_raw_input_loader.py"
     ],
     "code_refs": [
       "src/vibe_tracing/raw_input_loader.py"
     ],
     "test_refs": [
-      "tests/test_raw_input_loader.py"
+      "tests/test_raw_input_loader.py",
+      "tests/test_claim_evidence_analyzer.py",
+      "tests/test_evidence_index_builder.py",
+      "tests/test_prd_parser.py",
+      "tests/test_task_loader.py"
     ],
     "timestamp": "2026-06-08T12:30:00Z"
   },
@@ -19,7 +24,11 @@
     "related_task": "TASK-VT-030",
     "claimed_status": "covered",
     "evidence_refs": [
-      "docs/prd.md"
+      "docs/prd.md",
+      "docs/architecture_constraints.json",
+      "docs/task_list.json",
+      "docs/task_execution_rules.md",
+      "tests/test_raw_input_loader.py"
     ],
     "code_refs": [
       "docs/prd.md",
@@ -37,7 +46,8 @@
     "related_task": "TASK-VT-031",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/raw_input_loader.py"
+      "src/vibe_tracing/raw_input_loader.py",
+      "tests/test_raw_input_loader.py"
     ],
     "code_refs": [
       "src/vibe_tracing/raw_input_loader.py"
@@ -52,7 +62,8 @@
     "related_task": "TASK-VT-033",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "tests/test_claim_evidence_analyzer.py"
     ],
     "code_refs": [
       "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
@@ -67,7 +78,8 @@
     "related_task": "TASK-VT-034",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/dashboard_renderer.py"
+      "src/vibe_tracing/dashboard_renderer.py",
+      "tests/test_dashboard_renderer.py"
     ],
     "code_refs": [
       "src/vibe_tracing/dashboard_renderer.py"
@@ -82,7 +94,12 @@
     "related_task": "TASK-VT-035",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/schema_validator.py"
+      "src/vibe_tracing/schema_validator.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_scaffolding.py",
+      "tests/test_dynamic_hints.py"
     ],
     "code_refs": [
       "src/vibe_tracing/schema_validator.py",
@@ -101,7 +118,12 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/context.py"
+      "src/vibe_tracing/context.py",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_unified_context.py",
+      "tests/test_evidence_index_builder.py",
+      "tests/test_cli_analyze.py"
     ],
     "code_refs": [
       "src/vibe_tracing/context.py",
@@ -121,7 +143,8 @@
     "related_task": "TASK-VT-045",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/merge_gate_engine.py"
+      "src/vibe_tracing/merge_gate_engine.py",
+      "tests/test_merge_gate_engine.py"
     ],
     "code_refs": [
       "src/vibe_tracing/merge_gate_engine.py"
@@ -137,7 +160,9 @@
     "related_task": "TASK-VT-046",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/cli.py"
+      "src/vibe_tracing/cli.py",
+      "tests/test_finalize.py",
+      "tests/test_cli_analyze.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py"
@@ -154,7 +179,10 @@
     "related_task": "TASK-VT-047",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/prd_arch_validator.py"
+      "src/vibe_tracing/prd_arch_validator.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_prd_arch_validator.py",
+      "tests/test_cli_analyze.py"
     ],
     "code_refs": [
       "src/vibe_tracing/prd_arch_validator.py",
@@ -172,7 +200,8 @@
     "related_task": "TASK-VT-048",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "tests/test_claim_evidence_analyzer.py"
     ],
     "code_refs": [
       "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
@@ -188,7 +217,11 @@
     "related_task": "TASK-VT-049",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/cli.py"
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "tests/test_scaffolding.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_ghost_code_reconciler.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",
@@ -207,7 +240,11 @@
     "related_task": "TASK-VT-050",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_task_loader.py"
+      "tests/test_task_loader.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/tool_evidence_adapter.py",
@@ -226,7 +263,9 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_reflection_prompts.py"
+      "tests/test_reflection_prompts.py",
+      "src/vibe_tracing/reflection_prompts.py",
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/reflection_prompts.py",
@@ -244,7 +283,9 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_evidence_index_builder.py"
+      "tests/test_evidence_index_builder.py",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "tests/conftest.py"
     ],
     "code_refs": [
       "src/vibe_tracing/evidence_index_builder.py",
@@ -262,7 +303,8 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_architecture_compliance_checker.py"
+      "tests/test_architecture_compliance_checker.py",
+      "src/vibe_tracing/architecture_compliance_checker.py"
     ],
     "code_refs": [
       "src/vibe_tracing/architecture_compliance_checker.py",
@@ -279,7 +321,10 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_task_loader.py"
+      "tests/test_task_loader.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/task_loader.py",
@@ -297,7 +342,8 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_cli_analyze.py"
+      "tests/test_cli_analyze.py",
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",
@@ -314,7 +360,8 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/cli.py"
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",
@@ -331,7 +378,10 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_reflection_prompts.py"
+      "tests/test_reflection_prompts.py",
+      "src/vibe_tracing/reflection_prompts.py",
+      "src/vibe_tracing/templates/reflection_prompts.template.json",
+      "pyproject.toml"
     ],
     "code_refs": [
       "src/vibe_tracing/reflection_prompts.py",
@@ -353,7 +403,23 @@
       "tests/test_prd_parser.py",
       "tests/test_reflection_prompts.py",
       "tests/test_cli_analyze.py",
-      "tests/test_e2e_finalize_analyze.py"
+      "tests/test_e2e_finalize_analyze.py",
+      "src/vibe_tracing/prd_parser.py",
+      "src/vibe_tracing/templates/prd.template.md",
+      "src/vibe_tracing/reflection_prompts.py",
+      "src/vibe_tracing/templates/reflection_prompts.template.json",
+      "src/vibe_tracing/cli.py",
+      "docs/prd.md",
+      "tests/test_requirement_task_analyzer.py",
+      "tests/test_task_loader.py",
+      "tests/test_ac_test_analyzer.py",
+      "tests/test_evidence_index_builder.py",
+      "tests/test_prd_draft_guidance.py",
+      "tests/test_quality_gates.py",
+      "tests/fixtures/examples/sample_project_arch_unclear/docs/prd.md",
+      "tests/fixtures/examples/sample_project_bad_claim/docs/prd.md",
+      "tests/fixtures/examples/sample_project_good/docs/prd.md",
+      "tests/fixtures/examples/sample_project_missing_tests/docs/prd.md"
     ],
     "code_refs": [
       "src/vibe_tracing/prd_parser.py",
@@ -407,7 +473,10 @@
     "related_task": "TASK-VT-053",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_semantic_auditor.py"
+      "tests/test_semantic_auditor.py",
+      "src/vibe_tracing/semantic_auditor.py",
+      "src/vibe_tracing/cli.py",
+      ".vibetracing/semantic_audit.json"
     ],
     "code_refs": [
       "src/vibe_tracing/semantic_auditor.py",
@@ -426,7 +495,8 @@
     "related_task": "TASK-VT-054",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_cli_analyze.py"
+      "tests/test_cli_analyze.py",
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py"
@@ -440,7 +510,9 @@
     "related_task": "TASK-VT-049",
     "claimed_status": "covered",
     "evidence_refs": [
-      "src/vibe_tracing/cli.py"
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_scaffolding.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",
@@ -459,7 +531,9 @@
     "claimed_status": "covered",
     "evidence_refs": [
       "tests/test_ghost_code_reconciler.py",
-      "tests/test_semantic_auditor.py"
+      "tests/test_semantic_auditor.py",
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/semantic_auditor.py"
     ],
     "code_refs": [
       "src/vibe_tracing/ghost_code_reconciler.py",
@@ -480,16 +554,15 @@
     "claimed_status": "covered",
     "evidence_refs": [
       "tests/test_ghost_code_reconciler.py",
-      "tests/test_quality_gates.py"
+      "tests/test_quality_gates.py",
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/ghost_code_reconciler.py",
       "src/vibe_tracing/cli.py",
       "tests/test_ghost_code_reconciler.py",
-      "tests/test_quality_gates.py",
-      "src/vibe_tracing/ac_freshness_checker.py",
-      "tests/test_ac_freshness.py",
-      "src/vibe_tracing/ghost_code_reconciler.py"
+      "tests/test_quality_gates.py"
     ],
     "test_refs": [
       "tests/test_ghost_code_reconciler.py",
@@ -503,7 +576,11 @@
     "related_task": "TASK-VT-057",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_cli_analyze.py"
+      "tests/test_cli_analyze.py",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/templates/architecture_constraints.template.json",
+      "src/vibe_tracing/schemas/architecture_constraints.schema.json",
+      "tests/test_e2e_finalize_analyze.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",
@@ -525,7 +602,8 @@
     "claimed_status": "covered",
     "evidence_refs": [
       "tests/test_cli_analyze.py",
-      "tests/test_quality_gates.py"
+      "tests/test_quality_gates.py",
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",

@@ -13,7 +13,9 @@
       "module_id": "MOD-{{PROJECT_PREFIX}}-001",
       "name": "Core Module",
       "responsibility": "Core feature implementation",
-      "related_requirements": ["REQ-{{PROJECT_PREFIX}}-9999"]
+      "related_requirements": ["REQ-{{PROJECT_PREFIX}}-9999"],
+      "accepted_by": null,
+      "accepted_at": null
     }
   ],
   "dependency_rules": [],

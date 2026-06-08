@@ -8,7 +8,7 @@ Evaluates quality gate conditions to produce a machine gate decision:
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 
 class MergeGateEngine:
@@ -18,12 +18,35 @@ class MergeGateEngine:
         """Initialize the engine with project root."""
         self.project_root = project_root
 
+    @staticmethod
+    def _tag_reason(
+        msg: str,
+        related_ids: Optional[Set[str]] = None,
+        staged_items: Optional[Set[str]] = None,
+    ) -> str:
+        """Prefix *msg* with a source tag based on staged_items.
+
+        If *staged_items* is ``None``, the message is returned unchanged
+        (backward-compatible).  Otherwise:
+        - If any of *related_ids* is in *staged_items* → ``[当前]``
+        - If none of *related_ids* is in *staged_items* → ``[预存]``
+        - If *related_ids* is empty/None → ``[当前]`` (conservative default)
+        """
+        if staged_items is None:
+            return msg
+        if related_ids and related_ids & staged_items:
+            return f"[当前] {msg}"
+        if related_ids:
+            return f"[预存] {msg}"
+        return f"[当前] {msg}"
+
     def evaluate(
         self,
         gaps: List[Dict[str, Any]],
         risks: List[Dict[str, Any]],
         compliance_result: Optional[Dict[str, Any]] = None,
         prd_status: str = "active",
+        staged_items: Optional[Set[str]] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate merge gate criteria based on gaps, risks, and compliance checker results.
@@ -33,6 +56,9 @@ class MergeGateEngine:
             risks: Enriched risks from RiskAdvisor.
             compliance_result: Result from ArchitectureComplianceChecker.
             prd_status: Current PRD status ('draft', 'active', 'frozen', 'deprecated').
+            staged_items: Set of claim/task IDs modified in the current commit.
+                When provided, reasons are tagged with [当前] or [预存] prefixes
+                to distinguish current-change issues from pre-existing debt.
 
         Returns:
             A dict containing:
@@ -63,7 +89,7 @@ class MergeGateEngine:
             if item_type == "ac":
                 msg = f"验收标准缺失测试证据 ({item_id}): {reason}"
                 blocked_items.append(msg)
-                reasons.append(msg)
+                reasons.append(self._tag_reason(msg, {item_id} if item_id else None, staged_items))
                 gate_decision = "blocked"
 
         # 1.2 Check Must severity risks, completed claims without external evidence,
@@ -83,23 +109,29 @@ class MergeGateEngine:
             is_high_risk = severity == "must"
 
             if is_high_risk or is_self_ref:
+                risk_related: Set[str] = set()
+                if risk_id:
+                    risk_related.add(risk_id)
+                claim_id = risk.get("claim_id")
+                if claim_id:
+                    risk_related.add(claim_id)
                 msg = f"高风险或不自证违规 ({risk_id}): {desc}"
                 blocked_items.append(msg)
-                reasons.append(msg)
+                reasons.append(self._tag_reason(msg, risk_related or None, staged_items))
                 gate_decision = "blocked"
 
                 # Check if high risk is lacking action or business impact
                 if is_high_risk and (not suggested_action or not business_impact):
                     msg_missing = f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
                     blocked_items.append(msg_missing)
-                    reasons.append(msg_missing)
+                    reasons.append(self._tag_reason(msg_missing, risk_related or None, staged_items))
 
                 # Add specific reason for low-confidence claims
                 if item_type == "claim_credibility":
                     msg_credibility = "存在低可信度 Claim（无工具验证证据）"
                     if msg_credibility not in blocked_items:
                         blocked_items.append(msg_credibility)
-                        reasons.append(msg_credibility)
+                        reasons.append(self._tag_reason(msg_credibility, risk_related or None, staged_items))
 
         # 1.3 Check Must architecture violations
         if compliance_result:
@@ -109,7 +141,7 @@ class MergeGateEngine:
                 msg_violation = v.get("message", "")
                 msg = f"违反 MUST 级别架构约束 ({rule_id}): {msg_violation}"
                 blocked_items.append(msg)
-                reasons.append(msg)
+                reasons.append(self._tag_reason(msg, None, staged_items))
                 gate_decision = "blocked"
 
             # Check status list for any MUST violated
@@ -123,7 +155,7 @@ class MergeGateEngine:
                     # Avoid duplicate warnings if already caught in violations
                     if not any(rule_id in item for item in blocked_items):
                         blocked_items.append(msg)
-                        reasons.append(msg)
+                        reasons.append(self._tag_reason(msg, None, staged_items))
                         gate_decision = "blocked"
 
         # ----------------------------------------------------
@@ -141,7 +173,7 @@ class MergeGateEngine:
                 rule_id = uc.get("rule_id", "")
                 reason = uc.get("reason", "")
                 msg = f"存在不明确的架构约束规则 ({rule_id}): {reason}"
-                reasons.append(msg)
+                reasons.append(self._tag_reason(msg, None, staged_items))
                 fail_detected = True
 
             # Check status list for any MUST/SHOULD unclear
@@ -154,7 +186,7 @@ class MergeGateEngine:
                 if status == "unclear":
                     msg = f"架构规则状态不明确 ({rule_id})"
                     if not any(msg in item for item in reasons):
-                        reasons.append(msg)
+                        reasons.append(self._tag_reason(msg, None, staged_items))
                         fail_detected = True
 
         # 2.2 Check Should-level gaps (e.g. requirement or task gaps, which are non-blocking)
@@ -164,7 +196,7 @@ class MergeGateEngine:
             reason = gap.get("reason", "")
             if item_type != "ac":
                 msg = f"非阻塞缺口 ({item_type} {item_id}): {reason}"
-                reasons.append(msg)
+                reasons.append(self._tag_reason(msg, {item_id} if item_id else None, staged_items))
                 fail_detected = True
 
         # 2.3 Check Should/Could severity risks or speculative risks
@@ -181,8 +213,14 @@ class MergeGateEngine:
             is_should_could = severity in ("should", "could")
 
             if is_should_could or is_speculative:
+                risk_related_fs: Set[str] = set()
+                if risk_id:
+                    risk_related_fs.add(risk_id)
+                claim_id = risk.get("claim_id")
+                if claim_id:
+                    risk_related_fs.add(claim_id)
                 msg = f"低/中风险或推测性风险 ({risk_id}): {desc}"
-                reasons.append(msg)
+                reasons.append(self._tag_reason(msg, risk_related_fs or None, staged_items))
                 fail_detected = True
 
         # Only upgrade to "fail" if not already "blocked"

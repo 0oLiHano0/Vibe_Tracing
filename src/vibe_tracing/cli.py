@@ -9,7 +9,6 @@ and output the evidence index, traceability report, and run metadata.
 import argparse
 import hashlib
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -34,6 +33,7 @@ from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnaly
 from vibe_tracing.risk_advisor import RiskAdvisor
 from vibe_tracing.dashboard_renderer import DashboardRenderer
 from vibe_tracing.context import UnifiedContext
+from vibe_tracing.tool_resolver import ToolResolver
 
 
 def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[str] = None) -> int:
@@ -873,20 +873,7 @@ def _execute_tools(
         if tool_name:
             required_binaries.add(tool_name)
 
-    def _tool_available(name: str) -> bool:
-        """Check if a tool is available as a binary or as a Python module."""
-        if shutil.which(name):
-            return True
-        try:
-            subprocess.run(
-                [sys.executable, "-m", name, "--version"],
-                capture_output=True, timeout=10,
-            )
-            return True
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            return False
-
-    missing = sorted(t for t in required_binaries if not _tool_available(t))
+    missing = sorted(t for t in required_binaries if not ToolResolver.is_available(t))
     if missing:
         print("\n[AI Agent Repair Guide]", file=sys.stderr)
         print(
@@ -1201,6 +1188,7 @@ def _evaluate_and_output(
     req_res: dict,
     project_root: Path,
     is_draft: bool,
+    staged_files: Optional[Set[str]] = None,
 ) -> int:
     """Run MergeGateEngine, output all reports, and return exit code."""
     prd_res = ctx.prd
@@ -1215,10 +1203,27 @@ def _evaluate_and_output(
     active_gaps = [g for g in merged_gaps if not g.get("stale")]
     active_risks = [r for r in final_risks if not r.get("stale")]
 
+    # Build staged_items for debt awareness (EVO-TASK-025)
+    staged_items: Optional[Set[str]] = None
+    if staged_files:
+        affected_claims, _affected_reqs, _affected_acs = _determine_affected_items(
+            staged_files, claims_list, ctx,
+        )
+        staged_items = set(affected_claims)
+        # Also include related task IDs
+        if ctx.task_result and ctx.task_result.tasks:
+            affected_task_ids = {
+                claim.related_task
+                for claim in claims_list
+                if claim.claim_id in affected_claims
+            }
+            staged_items.update(affected_task_ids)
+
     # Merge Gate Engine
     gate_engine = MergeGateEngine(project_root)
     gate_res = gate_engine.evaluate(
-        active_gaps, active_risks, compliance_res, prd_status=prd_res.status
+        active_gaps, active_risks, compliance_res,
+        prd_status=prd_res.status, staged_items=staged_items,
     )
     gate_decision = gate_res["gate_decision"]
 
@@ -1447,15 +1452,17 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
             for warning in credibility_warnings:
                 print(f"Warning: {warning}", file=sys.stderr)
 
+        staged_files = _get_staged_files(project_root)
+
         merged_gaps, final_risks, compliance_res, claim_res, req_res = _run_analyzers(
             ctx, evidence_list, project_root,
-            staged_files=_get_staged_files(project_root),
+            staged_files=staged_files,
         )
 
         return _evaluate_and_output(
             ctx, merged_gaps, final_risks, compliance_res,
             output_dir, evidences_index, claim_res, req_res,
-            project_root, is_draft,
+            project_root, is_draft, staged_files=staged_files,
         )
 
     except _GateBlocked as exc:
@@ -1463,6 +1470,316 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
     except Exception as exc:
         print(f"Unexpected error running analyze command: {exc}", file=sys.stderr)
         return 1
+
+
+def run_accept(project_root: Path, rule_id: str, accepted_by: str = "human") -> int:
+    """Accept a manual architecture constraint rule.
+
+    Reads architecture_constraints.json, finds the rule by rule_id across
+    all sections, sets ``accepted_by`` and ``accepted_at``, and writes back.
+    """
+    import datetime
+
+    constraints_path = project_root / "docs" / "architecture_constraints.json"
+    if not constraints_path.exists():
+        print(f"Error: {constraints_path} not found.", file=sys.stderr)
+        return 1
+
+    try:
+        with constraints_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as exc:
+        print(f"Error reading {constraints_path}: {exc}", file=sys.stderr)
+        return 1
+
+    # All rule array keys to search
+    rule_keys = [
+        "architecture_principles",
+        "module_boundaries",
+        "dependency_rules",
+        "data_flow_rules",
+        "storage_rules",
+        "error_handling_rules",
+        "logging_rules",
+        "security_rules",
+        "technology_constraints",
+        "forbidden_patterns",
+        "quality_gates",
+        "interface_contracts",
+        "performance_constraints",
+        "deployment_constraints",
+        "test_constraints",
+    ]
+
+    found = False
+    for key in rule_keys:
+        for rule in data.get(key, []):
+            r_id = (
+                rule.get("rule_id")
+                or rule.get("principle_id")
+                or rule.get("constraint_id")
+                or rule.get("pattern_id")
+                or rule.get("gate_id")
+                or rule.get("contract_id")
+            )
+            if r_id == rule_id:
+                # Check if already accepted
+                if rule.get("accepted_by"):
+                    print(
+                        f"Rule {rule_id} is already accepted by "
+                        f"{rule['accepted_by']} at {rule.get('accepted_at', 'N/A')}."
+                    )
+                    return 0
+
+                # Set acceptance fields
+                rule["accepted_by"] = accepted_by
+                rule["accepted_at"] = datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat()
+                found = True
+                break
+        if found:
+            break
+
+    if not found:
+        print(
+            f"Error: Rule {rule_id} not found in architecture_constraints.json.",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Write back
+    try:
+        with constraints_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+    except Exception as exc:
+        print(f"Error writing {constraints_path}: {exc}", file=sys.stderr)
+        return 1
+
+    print(
+        f"Rule {rule_id} accepted by '{accepted_by}' at "
+        f"{rule['accepted_at']}."
+    )
+    return 0
+
+
+def run_doctor(project_root: Path) -> int:
+    """Run governance data health checks and output a JSON report.
+
+    Checks:
+      1. evidence_refs_integrity -- each claim's evidence_refs exist in evidence index or on disk
+      2. file_refs_integrity -- each claim's code_refs and test_refs exist on disk
+      3. requirement_mapping -- each task's related_requirements exist in the PRD
+      4. ac_mapping -- each task's related_acceptance_criteria exist in the PRD
+      5. machine_rule_coverage -- architecture rules with verification_method=="machine" have no obvious checker
+    """
+    checks: List[Dict[str, Any]] = []
+
+    # ---- Load governance data ----
+    claims_path = project_root / ".vibetracing" / "agent_claims.json"
+    task_list_path = project_root / "docs" / "task_list.json"
+    prd_path = project_root / "docs" / "prd.md"
+    constraints_path = project_root / "docs" / "architecture_constraints.json"
+    evidence_index_path = project_root / "output" / "evidence_index.json"
+
+    # Load claims (tolerate missing files)
+    claims_data: List[Dict[str, Any]] = []
+    if claims_path.exists():
+        try:
+            with claims_path.open("r", encoding="utf-8") as f:
+                claims_data = json.load(f)
+            if not isinstance(claims_data, list):
+                claims_data = []
+        except Exception:
+            claims_data = []
+
+    # Load tasks
+    tasks_data: List[Dict[str, Any]] = []
+    if task_list_path.exists():
+        try:
+            with task_list_path.open("r", encoding="utf-8") as f:
+                tldata = json.load(f)
+            tasks_data = tldata.get("tasks", []) if isinstance(tldata, dict) else []
+        except Exception:
+            tasks_data = []
+
+    # Load PRD requirement and AC IDs
+    prd_req_ids: Set[str] = set()
+    prd_ac_ids: Set[str] = set()
+    if prd_path.exists():
+        try:
+            from vibe_tracing.prd_parser import PrdParser
+            prd_parser = PrdParser()
+            prd_res = prd_parser.parse_file(prd_path)
+            for req in prd_res.requirements:
+                prd_req_ids.add(req.req_id)
+                for ac in req.acceptance_criteria:
+                    prd_ac_ids.add(ac.ac_id)
+        except Exception:
+            pass
+
+    # Load architecture constraints
+    constraints_data: Dict[str, Any] = {}
+    if constraints_path.exists():
+        try:
+            with constraints_path.open("r", encoding="utf-8") as f:
+                constraints_data = json.load(f)
+        except Exception:
+            constraints_data = {}
+
+    # Load evidence index (optional)
+    evidence_index: Dict[str, Any] = {}
+    if evidence_index_path.exists():
+        try:
+            with evidence_index_path.open("r", encoding="utf-8") as f:
+                evidence_index = json.load(f)
+        except Exception:
+            evidence_index = {}
+
+    # Collect all evidence_ids from the index
+    evidence_ids_in_index: Set[str] = set()
+    for ev in evidence_index.get("evidences", []):
+        eid = ev.get("evidence_id", "")
+        if eid:
+            evidence_ids_in_index.add(eid)
+
+    # ---- Check 1: evidence_refs_integrity ----
+    issues_1: List[Dict[str, Any]] = []
+    for claim in claims_data:
+        claim_id = claim.get("claim_id", "")
+        for ref in claim.get("evidence_refs", []):
+            # Check if the ref is in the evidence index
+            if ref in evidence_ids_in_index:
+                continue
+            # Check if a file with that name exists on disk
+            ref_path = project_root / ref
+            if ref_path.exists():
+                continue
+            issues_1.append({
+                "claim_id": claim_id,
+                "evidence_ref": ref,
+                "message": f"Evidence ref '{ref}' not found in evidence index or on disk",
+            })
+    checks.append({"name": "evidence_refs_integrity", "issues": issues_1})
+
+    # ---- Check 2: file_refs_integrity ----
+    issues_2: List[Dict[str, Any]] = []
+    for claim in claims_data:
+        claim_id = claim.get("claim_id", "")
+        for ref_type in ("code_refs", "test_refs"):
+            for ref in claim.get(ref_type, []):
+                # Strip fragment identifiers (e.g., "#L1-L10")
+                path_part = ref.split("#")[0]
+                if not path_part:
+                    continue
+                ref_path = project_root / path_part
+                if not ref_path.exists():
+                    issues_2.append({
+                        "claim_id": claim_id,
+                        "ref_type": ref_type,
+                        "ref": ref,
+                        "message": f"Referenced file '{path_part}' does not exist on disk",
+                    })
+    checks.append({"name": "file_refs_integrity", "issues": issues_2})
+
+    # ---- Check 3: requirement_mapping ----
+    issues_3: List[Dict[str, Any]] = []
+    for task in tasks_data:
+        task_id = task.get("task_id", "")
+        for req_id in task.get("related_requirements", []):
+            if req_id not in prd_req_ids:
+                issues_3.append({
+                    "task_id": task_id,
+                    "requirement_id": req_id,
+                    "message": f"Requirement '{req_id}' referenced by task '{task_id}' not found in PRD",
+                })
+    checks.append({"name": "requirement_mapping", "issues": issues_3})
+
+    # ---- Check 4: ac_mapping ----
+    issues_4: List[Dict[str, Any]] = []
+    for task in tasks_data:
+        task_id = task.get("task_id", "")
+        for ac_id in task.get("related_acceptance_criteria", []):
+            if ac_id not in prd_ac_ids:
+                issues_4.append({
+                    "task_id": task_id,
+                    "ac_id": ac_id,
+                    "message": f"AC '{ac_id}' referenced by task '{task_id}' not found in PRD",
+                })
+    checks.append({"name": "ac_mapping", "issues": issues_4})
+
+    # ---- Check 5: machine_rule_coverage ----
+    issues_5: List[Dict[str, Any]] = []
+    if constraints_data:
+        rule_keys = [
+            "architecture_principles",
+            "module_boundaries",
+            "dependency_rules",
+            "data_flow_rules",
+            "storage_rules",
+            "error_handling_rules",
+            "logging_rules",
+            "security_rules",
+            "technology_constraints",
+            "forbidden_patterns",
+            "quality_gates",
+            "interface_contracts",
+            "performance_constraints",
+            "deployment_constraints",
+            "test_constraints",
+        ]
+        # Collect all module_ids from module_boundaries for heuristic matching
+        module_ids: Set[str] = set()
+        for mod in constraints_data.get("module_boundaries", []):
+            mid = mod.get("module_id", "")
+            if mid:
+                module_ids.add(mid)
+
+        for key in rule_keys:
+            for rule in constraints_data.get(key, []):
+                if rule.get("verification_method") != "machine":
+                    continue
+                rule_id = (
+                    rule.get("rule_id")
+                    or rule.get("principle_id")
+                    or rule.get("constraint_id")
+                    or rule.get("pattern_id")
+                    or rule.get("gate_id")
+                    or rule.get("contract_id")
+                    or "unknown"
+                )
+                # Heuristic: if the rule references a module that exists in
+                # module_boundaries, assume there *may* be a checker.  Otherwise
+                # flag it.  Also check for common verification keywords.
+                related_modules = rule.get("related_modules", [])
+                has_module_support = any(m in module_ids for m in related_modules)
+
+                # Check for explicit checker references
+                has_checker = has_module_support or bool(
+                    rule.get("checker") or rule.get("verification_command")
+                )
+
+                if not has_checker:
+                    issues_5.append({
+                        "rule_id": rule_id,
+                        "section": key,
+                        "message": (
+                            f"Rule '{rule_id}' in '{key}' has verification_method=machine "
+                            "but no obvious checker implementation found"
+                        ),
+                    })
+    checks.append({"name": "machine_rule_coverage", "issues": issues_5})
+
+    # ---- Assemble report ----
+    total_issues = sum(len(c["issues"]) for c in checks)
+    report = {
+        "checks": checks,
+        "total_issues": total_issues,
+    }
+
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    return 0
 
 
 def main(argv=None):
@@ -1524,6 +1841,33 @@ def main(argv=None):
         help="Path to the project workspace root (default: current working directory)",
     )
 
+    accept_parser = subparsers.add_parser(
+        "accept", help="Accept a manual architecture constraint rule"
+    )
+    accept_parser.add_argument(
+        "rule_id",
+        help="The rule ID to accept (e.g. PRINCIPLE-VT-001)",
+    )
+    accept_parser.add_argument(
+        "--project-root",
+        default=".",
+        help="Path to the project workspace root (default: current working directory)",
+    )
+    accept_parser.add_argument(
+        "--by",
+        default="human",
+        help="Accepter identifier (default: 'human')",
+    )
+
+    doctor_parser = subparsers.add_parser(
+        "doctor", help="Scan governance data health and report issues"
+    )
+    doctor_parser.add_argument(
+        "--project-root",
+        default=".",
+        help="Path to the project workspace root (default: current working directory)",
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "analyze":
@@ -1543,6 +1887,12 @@ def main(argv=None):
     elif args.command == "finalize":
         project_root = Path(args.project_root).resolve()
         return run_finalize(project_root)
+    elif args.command == "accept":
+        project_root = Path(args.project_root).resolve()
+        return run_accept(project_root, args.rule_id, accepted_by=args.by)
+    elif args.command == "doctor":
+        project_root = Path(args.project_root).resolve()
+        return run_doctor(project_root)
     else:
         parser.print_help()
         return 0

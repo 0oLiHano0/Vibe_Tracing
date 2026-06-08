@@ -195,6 +195,8 @@ class EvidenceIndexBuilder:
                 evidence_dict["details"]["exit_code"] = cand.exit_code
             if cand.stderr:
                 evidence_dict["details"]["stderr"] = cand.stderr
+            if cand.tool_category:
+                evidence_dict["details"]["tool_category"] = cand.tool_category
 
             evidences.append(evidence_dict)
 

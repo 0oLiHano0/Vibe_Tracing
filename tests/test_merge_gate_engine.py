@@ -371,3 +371,131 @@ def test_blocked_only_ac_gap():
     # Only blocked reasons, no fail reasons
     assert len(res["reasons"]) == 1
     assert len(res["blocked_items"]) == 1
+
+
+# ---------------------------------------------------------------
+# EVO-TASK-025: Debt awareness tests
+# ---------------------------------------------------------------
+
+def test_staged_claim_gets_current_prefix():
+    """
+    Test that a risk from a staged (modified) claim gets [当前] prefix.
+    covers: EVO-TASK-025
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = [
+        {
+            "risk_id": "RISK-VT-010",
+            "claim_id": "CLAIM-VT-001",
+            "description": "Critical vulnerability found.",
+            "severity": "must",
+            "suggested_action": "Patch immediately",
+            "business_impact": "System compromise",
+        }
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    staged_items = {"CLAIM-VT-001"}
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    assert res["gate_decision"] == "blocked"
+    assert any("[当前]" in msg and "RISK-VT-010" in msg for msg in res["reasons"])
+
+
+def test_non_staged_claim_gets_pre_existing_prefix():
+    """
+    Test that a risk from a non-staged claim gets [预存] prefix.
+    covers: EVO-TASK-025
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = [
+        {
+            "risk_id": "RISK-VT-011",
+            "claim_id": "CLAIM-VT-002",
+            "description": "Critical vulnerability found.",
+            "severity": "must",
+            "suggested_action": "Patch immediately",
+            "business_impact": "System compromise",
+        }
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    # Only CLAIM-VT-001 is staged, not CLAIM-VT-002
+    staged_items = {"CLAIM-VT-001"}
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    assert res["gate_decision"] == "blocked"
+    assert any("[预存]" in msg and "RISK-VT-011" in msg for msg in res["reasons"])
+
+
+def test_no_staged_items_backward_compatible():
+    """
+    Test that without staged_items, all reasons have no prefix (backward compatible).
+    covers: EVO-TASK-025
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = [
+        {
+            "risk_id": "RISK-VT-012",
+            "claim_id": "CLAIM-VT-001",
+            "description": "Critical vulnerability found.",
+            "severity": "must",
+            "suggested_action": "Patch immediately",
+            "business_impact": "System compromise",
+        }
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+
+    res = engine.evaluate(gaps, risks, compliance)
+
+    assert res["gate_decision"] == "blocked"
+    # No prefix when staged_items is None
+    assert not any("[当前]" in msg or "[预存]" in msg for msg in res["reasons"])
+
+
+def test_architecture_violation_gets_current_prefix():
+    """
+    Test that architecture violations (not tied to a specific claim/task)
+    get [当前] prefix when staged_items is provided.
+    covers: EVO-TASK-025
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = []
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [
+            {
+                "rule_id": "DEP-VT-001",
+                "evidence_id": "EVIDENCE-VT-005",
+                "message": "Forbidden dependency found",
+            }
+        ],
+        "unclear_constraints": [],
+    }
+    staged_items = {"CLAIM-VT-001"}
+
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    assert res["gate_decision"] == "blocked"
+    # Architecture violations are conservative → [当前]
+    assert any("[当前]" in msg and "DEP-VT-001" in msg for msg in res["reasons"])

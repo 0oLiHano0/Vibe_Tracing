@@ -13,13 +13,13 @@ import json
 import re
 import shlex
 import subprocess
-import sys
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from vibe_tracing.core.enums import CoverageStatus, ErrorCode
+from vibe_tracing.tool_resolver import ToolResolver
 
 
 @dataclass
@@ -30,6 +30,7 @@ class ToolEvidenceCandidate:
     source_path: str  # Path to the source report file or test nodeid
     covers: List[str]  # AC or REQ IDs that this evidence covers
     status: str  # CoverageStatus enum value
+    tool_category: str = ""  # Tool category (e.g., "test", "lint", "type_check", "security", "coverage")
     command: str = ""
     exit_code: int = 0
     stderr: str = ""
@@ -630,6 +631,15 @@ class ToolExecutionEngine:
     # Public execution API
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _stamp_category(
+        candidates: List["ToolEvidenceCandidate"], tool_category: str
+    ) -> List["ToolEvidenceCandidate"]:
+        """Stamp tool_category on every candidate in the list."""
+        for c in candidates:
+            c.tool_category = tool_category
+        return candidates
+
     def execute_tool(
         self,
         tool_category: str,
@@ -653,11 +663,13 @@ class ToolExecutionEngine:
         Returns:
             List of ToolEvidenceCandidate objects.
         """
+        candidates: List[ToolEvidenceCandidate] = []
+
         # Whitelist check
         if tool_config is None:
             tool_config = self.get_tool_config(tool_category)
         if tool_config is None:
-            return [
+            candidates = [
                 ToolEvidenceCandidate(
                     source_type="tool",
                     source_path=path,
@@ -668,6 +680,7 @@ class ToolExecutionEngine:
                     f"Allowed: {sorted(self._tool_configs.keys())}",
                 )
             ]
+            return self._stamp_category(candidates, tool_category)
 
         # Resolve paths
         effective_test = test_path or path
@@ -678,7 +691,7 @@ class ToolExecutionEngine:
             if p:
                 ok, err = self._validate_path(p)
                 if not ok:
-                    return [
+                    candidates = [
                         ToolEvidenceCandidate(
                             source_type="tool",
                             source_path=path,
@@ -688,6 +701,7 @@ class ToolExecutionEngine:
                             stderr=err,
                         )
                     ]
+                    return self._stamp_category(candidates, tool_category)
 
         # Generate a temporary output path if not provided
         effective_output = output_path
@@ -708,7 +722,7 @@ class ToolExecutionEngine:
                 output_path=effective_output or "",
             )
         except ValueError as exc:
-            return [
+            candidates = [
                 ToolEvidenceCandidate(
                     source_type="tool",
                     source_path=path,
@@ -718,27 +732,16 @@ class ToolExecutionEngine:
                     stderr=str(exc),
                 )
             ]
+            return self._stamp_category(candidates, tool_category)
 
         # Fallback: if tool binary not on PATH, try python3 -m <tool>
-        import shutil as _shutil
-        segments = command.split(";")
-        resolved_segments: list[str] = []
-        for seg in segments:
-            seg = seg.strip()
-            if not seg:
-                resolved_segments.append(seg)
-                continue
-            tool_name = seg.split()[0]
-            if tool_name and not _shutil.which(tool_name):
-                seg = f"{sys.executable} -m {seg}"
-            resolved_segments.append(seg)
-        command = " ; ".join(resolved_segments)
+        command = ToolResolver.resolve_command(command)
 
         # Execute the command
         exit_code, stdout, stderr, exec_error = self._run_subprocess(command)
 
         if exec_error == "timeout":
-            return [
+            candidates = [
                 ToolEvidenceCandidate(
                     source_type="tool",
                     source_path=path,
@@ -751,9 +754,10 @@ class ToolExecutionEngine:
                     details={"error_type": "timeout", "timeout_seconds": self.timeout},
                 )
             ]
+            return self._stamp_category(candidates, tool_category)
 
         if exec_error == "not_found":
-            return [
+            candidates = [
                 ToolEvidenceCandidate(
                     source_type="tool",
                     source_path=path,
@@ -766,9 +770,10 @@ class ToolExecutionEngine:
                     details={"error_type": "tool_not_found"},
                 )
             ]
+            return self._stamp_category(candidates, tool_category)
 
         if exec_error:
-            return [
+            candidates = [
                 ToolEvidenceCandidate(
                     source_type="tool",
                     source_path=path,
@@ -781,22 +786,23 @@ class ToolExecutionEngine:
                     details={"error_type": exec_error},
                 )
             ]
+            return self._stamp_category(candidates, tool_category)
 
         # Parse output based on output_format
         output_format = tool_config.get("output_format", "")
 
         if output_format == "pytest_json":
-            return self._parse_pytest_output(stdout, stderr, exit_code, command, path)
+            candidates = self._parse_pytest_output(stdout, stderr, exit_code, command, path)
         elif output_format == "coverage_json":
-            return self._parse_coverage_output(stdout, stderr, exit_code, command, path)
+            candidates = self._parse_coverage_output(stdout, stderr, exit_code, command, path)
         elif output_format == "ruff_json":
-            return self._parse_ruff_output(stdout, stderr, exit_code, command, path)
+            candidates = self._parse_ruff_output(stdout, stderr, exit_code, command, path)
         elif output_format == "mypy_json":
-            return self._parse_mypy_output(stdout, stderr, exit_code, command, path)
+            candidates = self._parse_mypy_output(stdout, stderr, exit_code, command, path)
         elif output_format == "bandit_json":
-            return self._parse_bandit_output(stdout, stderr, exit_code, command, path)
+            candidates = self._parse_bandit_output(stdout, stderr, exit_code, command, path)
         else:
-            return [
+            candidates = [
                 ToolEvidenceCandidate(
                     source_type="tool",
                     source_path=path,
@@ -808,6 +814,8 @@ class ToolExecutionEngine:
                     error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
                 )
             ]
+
+        return self._stamp_category(candidates, tool_category)
 
     def execute_all(
         self,

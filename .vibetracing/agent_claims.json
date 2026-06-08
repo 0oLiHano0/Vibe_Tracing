@@ -615,5 +615,57 @@
     ],
     "timestamp": "2026-06-08T02:00:00Z",
     "notes": "EVO-013: 门禁函数拆分 + 编排函数简化"
+  },
+  {
+    "claim_id": "CLAIM-VT-062",
+    "related_task": "TASK-VT-062",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_tool_execution.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/tool_resolver.py",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "tests/test_tool_execution.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_tool_execution.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "timestamp": "2026-06-08T15:00:00Z",
+    "notes": "ToolResolver 统一工具解析层"
+  },
+  {
+    "claim_id": "CLAIM-VT-063",
+    "related_task": "TASK-VT-063",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_architecture_compliance_checker.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/merge_gate_engine.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_architecture_compliance_checker.py",
+      "src/vibe_tracing/schemas/architecture_constraints.schema.json",
+      "src/vibe_tracing/templates/architecture_constraints.template.json",
+      "docs/architecture_change_log.md"
+    ],
+    "test_refs": [
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_architecture_compliance_checker.py"
+    ],
+    "timestamp": "2026-06-08T15:00:00Z",
+    "notes": "vt doctor + evidence tool_category + hook 债务感知 + vt accept"
   }
 ]

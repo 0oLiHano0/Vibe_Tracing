@@ -2,6 +2,17 @@
 
 本项目的所有架构约束变更均在此记录，供项目经理（PM）进行日常审计与追溯。
 
+## [2026-06-08] 人类接受机制 — manual 规则 accepted_by/accepted_at 字段
+
+### 所有规则类型新增 accepted_by / accepted_at 字段
+* **变更规则**：为 architecture_constraints.json 中所有规则类型（architecture_principles、module_boundaries、dependency_rules、data_flow_rules、storage_rules、error_handling_rules、logging_rules、security_rules、technology_constraints、forbidden_patterns、quality_gates、interface_contracts、performance_constraints、deployment_constraints、test_constraints）添加 `accepted_by` 和 `accepted_at` 可选字段。
+* **变更原因**：manual 规则此前仅被标记为 "unclear" 后静默忽略，无任何人类确认记录。通过显式接受机制，人类可在 architecture_constraints.json 中设置 `accepted_by`（接受者标识）和 `accepted_at`（ISO 8601 时间戳），已接受的 manual 规则不再出现在 unclear 警告中。
+* **影响范围**：
+  - `docs/architecture_constraints.json`：所有规则类型 schema 新增 accepted_by / accepted_at 属性。
+  - `src/vibe_tracing/architecture_compliance_checker.py`：manual 规则处理逻辑增加 accepted_by 检查，已接受的规则跳过。
+  - `src/vibe_tracing/templates/architecture_constraints.template.json`：模板示例规则添加 accepted_by / accepted_at。
+  - `src/vibe_tracing/cli.py`：新增 `vt accept <rule_id>` 子命令，自动设置 accepted_by 和 accepted_at。
+
 ## [2026-06-08] verification_method 字段引入 — 消除手动规则门禁噪声
 
 ### 所有规则新增 verification_method 字段

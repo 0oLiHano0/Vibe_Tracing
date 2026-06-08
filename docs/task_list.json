@@ -3382,6 +3382,97 @@
         }
       ],
       "ai_coding_guidance": []
+    },
+    {
+      "task_id": "TASK-VT-062",
+      "phase_id": "PHASE-VT-05",
+      "title": "ToolResolver 统一工具解析层",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-003",
+        "MOD-VT-004"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "统一工具可用性检测和命令解析，消除 cli.py 和 tool_evidence_adapter.py 的分散逻辑",
+      "atomic_scope": "新建 tool_resolver.py，修改 cli.py、tool_evidence_adapter.py",
+      "out_of_scope": [],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-059"
+      ],
+      "expected_deliverables": [
+        "tool_resolver.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-062-01",
+          "description": "ToolResolver.is_available 检查二进制和 Python 模块"
+        },
+        {
+          "dod_id": "DOD-VT-062-02",
+          "description": "ToolResolver.resolve_command 处理复合命令回退"
+        }
+      ],
+      "ai_coding_guidance": []
+    },
+    {
+      "task_id": "TASK-VT-063",
+      "phase_id": "PHASE-VT-05",
+      "title": "vt doctor + evidence tool_category + hook 债务感知",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12",
+        "AC-VT-010-02"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "vt doctor 全量扫描、evidence tool_category 字段、hook 区分当前/预存问题、vt accept 手动规则确认",
+      "atomic_scope": "cli.py, tool_evidence_adapter.py, evidence_index_builder.py, merge_gate_engine.py, architecture_compliance_checker.py",
+      "out_of_scope": [
+        "测试覆盖率调查"
+      ],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-062"
+      ],
+      "expected_deliverables": [
+        "vt doctor",
+        "vt accept",
+        "hook 债务感知"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-063-01",
+          "description": "vt doctor 输出 5 项健康度检查"
+        },
+        {
+          "dod_id": "DOD-VT-063-02",
+          "description": "evidence 条目包含 tool_category"
+        },
+        {
+          "dod_id": "DOD-VT-063-03",
+          "description": "hook 输出区分 [当前] 和 [预存]"
+        },
+        {
+          "dod_id": "DOD-VT-063-04",
+          "description": "vt accept 填充 accepted_by/accepted_at"
+        }
+      ],
+      "ai_coding_guidance": []
     }
   ]
 }

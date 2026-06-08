@@ -700,10 +700,16 @@ class ArchitectureComplianceChecker:
                 verification = rule.get("verification_method", "machine")
 
                 if verification == "manual":
-                    # Manual rules are acknowledged as unclear but do NOT
-                    # block the gate.  They are recorded for audit purposes
-                    # but excluded from the unclear_constraints list that
-                    # feeds GATE-VT-007.
+                    accepted_by = rule.get("accepted_by")
+                    if accepted_by:
+                        # Rule has been explicitly accepted by a human;
+                        # skip it entirely -- no unclear status emitted.
+                        continue
+                    # Manual rules that have NOT been accepted are
+                    # acknowledged as unclear but do NOT block the gate.
+                    # They are recorded for audit purposes but excluded
+                    # from the unclear_constraints list that feeds
+                    # GATE-VT-007.
                     status_list.append(
                         {
                             "rule_id": r_id,
@@ -712,6 +718,12 @@ class ArchitectureComplianceChecker:
                             "title": rule.get("title", ""),
                             "description": rule.get("description", ""),
                             "verification_method": "manual",
+                        }
+                    )
+                    unclear_list.append(
+                        {
+                            "rule_id": r_id,
+                            "reason": f"规则 {r_id} 需要人类确认，请在 architecture_constraints.json 中设置 accepted_by 和 accepted_at",
                         }
                     )
                 else:

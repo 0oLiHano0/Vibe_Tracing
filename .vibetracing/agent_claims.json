@@ -554,8 +554,8 @@
       "tests/test_cli_analyze.py",
       "tests/test_e2e_finalize_analyze.py"
     ],
-    "timestamp": "2026-06-08T02:00:00Z",
-    "notes": "EVO-012: 配置驱动扩展名 + 未配置扩展名 WARNING"
+    "timestamp": "2026-06-08T02:30:00Z",
+    "notes": "EVO-012: 配置驱动扩展名 + 工具执行跳过已删除文件"
   },
   {
     "claim_id": "CLAIM-VT-058",

@@ -906,11 +906,11 @@ def _execute_tools(
     for claim in claims_list:
         for ref in claim.test_refs:
             path_only = ref.split("#")[0]
-            if path_only and Path(path_only).suffix in code_extensions and path_only not in execution_paths:
+            if path_only and Path(path_only).suffix in code_extensions and path_only not in execution_paths and (project_root / path_only).exists():
                 execution_paths.append(path_only)
         for ref in claim.code_refs:
             path_only = ref.split("#")[0]
-            if path_only and Path(path_only).suffix in code_extensions and path_only not in execution_paths:
+            if path_only and Path(path_only).suffix in code_extensions and path_only not in execution_paths and (project_root / path_only).exists():
                 execution_paths.append(path_only)
 
     if task_res:

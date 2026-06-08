@@ -65,7 +65,8 @@
               "low_confidence",
               "blocked",
               "compliant",
-              "violated"
+              "violated",
+              "skipped"
             ],
             "description": "Coverage status represented by this evidence."
           }

@@ -111,7 +111,7 @@
       "tests/test_scaffolding.py",
       "tests/test_dynamic_hints.py"
     ],
-    "timestamp": "2026-06-08T12:00:00Z"
+    "timestamp": "2026-06-08T14:00:00Z"
   },
   {
     "claim_id": "CLAIM-VT-036",
@@ -135,7 +135,7 @@
       "tests/test_evidence_index_builder.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T12:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "UnifiedContext 强类型领域模型，EvidenceIndexBuilder 单次加载"
   },
   {
@@ -171,7 +171,7 @@
       "tests/test_finalize.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T12:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "finalize 存储 prd_hash，analyze 检测 PRD 漂移"
   },
   {
@@ -192,7 +192,7 @@
       "tests/test_prd_arch_validator.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T12:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "PRD↔Arch 映射校验提取为独立模块，analyze 时持续校验"
   },
   {
@@ -232,7 +232,7 @@
       "tests/test_cli_analyze.py",
       "tests/test_ghost_code_reconciler.py"
     ],
-    "timestamp": "2026-06-08T12:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "hook set -e + --gates-only + staged claims 读取"
   },
   {
@@ -255,7 +255,7 @@
     "test_refs": [
       "tests/test_task_loader.py"
     ],
-    "timestamp": "2026-06-08T12:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "删除 ToolEvidenceAdapter、移除 tests/ 兜底、hashlib 顶部导入、skip_schema"
   },
   {
@@ -275,7 +275,7 @@
     "test_refs": [
       "tests/test_reflection_prompts.py"
     ],
-    "timestamp": "2026-06-07T19:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "vt analyze 结束时输出 8 维度元认知反思提示"
   },
   {
@@ -313,7 +313,7 @@
     "test_refs": [
       "tests/test_architecture_compliance_checker.py"
     ],
-    "timestamp": "2026-06-07T20:00:00Z",
+    "timestamp": "2026-06-08T12:52:53.082451+00:00",
     "notes": "EVO-002: 删除 constraints_data=None fallback"
   },
   {
@@ -334,7 +334,7 @@
     "test_refs": [
       "tests/test_task_loader.py"
     ],
-    "timestamp": "2026-06-08T12:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "EVO-003: 移除 skip_schema 参数"
   },
   {
@@ -352,7 +352,7 @@
     "test_refs": [
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-07T20:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "EVO-004: run_analyze 拆分为 5 个子函数"
   },
   {
@@ -370,7 +370,7 @@
     "test_refs": [
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T12:30:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "EVO-005: 工具依赖检查失败注入 BLOCKED 证据而非硬退出"
   },
   {
@@ -449,7 +449,7 @@
       "tests/test_cli_analyze.py",
       "tests/test_e2e_finalize_analyze.py"
     ],
-    "timestamp": "2026-06-07T22:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "GOV: PRD quality_evolution REQ 类别 + 反思覆盖校验 WARNING"
   },
   {
@@ -487,7 +487,7 @@
     "test_refs": [
       "tests/test_semantic_auditor.py"
     ],
-    "timestamp": "2026-06-08T00:30:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "Gate 3: SemanticAuditor 两阶段协议（generate → verify）"
   },
   {
@@ -502,7 +502,7 @@
       "src/vibe_tracing/cli.py"
     ],
     "test_refs": [],
-    "timestamp": "2026-06-08T12:30:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "Gate 2.5 反向覆盖校验升级：无覆盖 task → BLOCKED"
   },
   {
@@ -522,7 +522,7 @@
       "tests/test_scaffolding.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T12:30:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "hook 模板去除 --gates-only + 工具执行过滤非代码文件"
   },
   {
@@ -568,7 +568,7 @@
       "tests/test_ghost_code_reconciler.py",
       "tests/test_quality_gates.py"
     ],
-    "timestamp": "2026-06-08T06:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "EVO-011: Gate 2+2.5 合并 + 反向覆盖检查跳过 done 任务"
   },
   {
@@ -593,7 +593,7 @@
       "tests/test_cli_analyze.py",
       "tests/test_e2e_finalize_analyze.py"
     ],
-    "timestamp": "2026-06-08T12:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "EVO-012: 配置驱动扩展名 + 工具未安装提醒安装"
   },
   {
@@ -613,7 +613,7 @@
       "tests/test_cli_analyze.py",
       "tests/test_quality_gates.py"
     ],
-    "timestamp": "2026-06-08T02:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "EVO-013: 门禁函数拆分 + 编排函数简化"
   },
   {
@@ -635,7 +635,7 @@
       "tests/test_tool_execution.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "ToolResolver 统一工具解析层"
   },
   {
@@ -665,7 +665,58 @@
       "tests/test_cli_analyze.py",
       "tests/test_architecture_compliance_checker.py"
     ],
-    "timestamp": "2026-06-08T15:00:00Z",
+    "timestamp": "2026-06-08T14:00:00Z",
     "notes": "vt doctor + evidence tool_category + hook 债务感知 + vt accept"
+  },
+  {
+    "claim_id": "CLAIM-VT-064",
+    "related_task": "TASK-VT-064",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "src/vibe_tracing/core/enums.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/schemas/evidence_index.schema.json",
+      "tests/test_architecture_compliance_checker.py",
+      "tests/test_tool_execution.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "src/vibe_tracing/core/enums.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/schemas/evidence_index.schema.json",
+      "tests/test_tool_execution.py",
+      "tests/test_architecture_compliance_checker.py"
+    ],
+    "test_refs": [
+      "tests/test_architecture_compliance_checker.py",
+      "tests/test_tool_execution.py"
+    ],
+    "timestamp": "2026-06-08T12:52:53.082451+00:00",
+    "notes": "噪音消除措施改进：accepted_rules 可见化 + skipped 证据 + stale WARNING + Agent 行动清单 + 决策日志加载"
+  },
+  {
+    "claim_id": "CLAIM-VT-065",
+    "related_task": "TASK-VT-065",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "src/vibe_tracing/templates/dashboard.template.html",
+      "decision_server.py",
+      ".vibetracing/human_decisions.json",
+      "output/vt_noise_reduction_improvement_plan_20260608.md",
+      "output/vt_pending_issues_20260608.md",
+      "pyproject.toml"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/templates/dashboard.template.html",
+      "decision_server.py",
+      ".vibetracing/human_decisions.json",
+      "pyproject.toml"
+    ],
+    "test_refs": [],
+    "timestamp": "2026-06-08T12:52:53.082451+00:00",
+    "notes": "决策平台：Dashboard 待决策标签页 + 交互按钮 + Decision API + 决策日志"
   }
 ]

@@ -679,6 +679,12 @@
             border-color: rgba(245, 158, 11, 0.3);
         }
 
+        .badge-status-skipped {
+            background-color: rgba(100, 116, 139, 0.15);
+            color: #94a3b8;
+            border-color: rgba(100, 116, 139, 0.3);
+        }
+
         /* General UI Elements */
         .section-subtitle {
             font-size: 14px;
@@ -801,6 +807,174 @@
             outline: none;
             border-color: var(--accent-blue);
         }
+
+        /* Decision Cards */
+        .decision-card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            background-color: var(--bg-card);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all var(--transition-speed) ease;
+        }
+        .decision-card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        .decision-card.decision-made {
+            opacity: 0.5;
+            border-color: var(--status-pass);
+        }
+        .decision-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .decision-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .decision-id {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            background-color: var(--bg-primary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+        .decision-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .decision-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .decision-question {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        .decision-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .btn-decision {
+            padding: 6px 16px;
+            border: 1px solid var(--accent-blue);
+            background: transparent;
+            color: var(--accent-blue);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all var(--transition-speed) ease;
+        }
+        .btn-decision:hover {
+            background: var(--accent-blue);
+            color: var(--text-primary);
+            box-shadow: 0 0 12px var(--accent-blue-glow);
+        }
+        .decision-result {
+            color: var(--status-pass);
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .evidence-chain-details {
+            margin-top: 8px;
+        }
+        .evidence-chain-details summary {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            transition: color var(--transition-speed) ease;
+        }
+        .evidence-chain-details summary:hover {
+            color: var(--text-primary);
+        }
+        .evidence-chain {
+            margin-top: 8px;
+            padding: 12px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        .chain-item {
+            margin-bottom: 4px;
+            color: var(--text-secondary);
+        }
+        .chain-label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Stale item styles */
+        .stale-item {
+            opacity: 0.6;
+            border-left: 3px dashed var(--text-muted, #94a3b8);
+        }
+        .stale-item.collapsible-item {
+            border-left: 3px dashed var(--text-muted, #94a3b8);
+        }
+        .stale-badge {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 1px 6px;
+            border-radius: 4px;
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-muted, #94a3b8);
+            margin-left: 8px;
+        }
+        .stale-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 12px;
+            padding: 6px 12px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            transition: all var(--transition-speed) ease;
+        }
+        .stale-toggle:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+        .stale-toggle input[type="checkbox"] {
+            accent-color: var(--accent-blue);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* Decision History Table */
+        .decision-history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        .decision-history-table th,
+        .decision-history-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color, #e0e0e0);
+        }
+        .decision-history-table th {
+            font-weight: 600;
+            color: var(--text-muted, #666);
+        }
     </style>
 </head>
 <body>
@@ -834,6 +1008,10 @@
             <a class="nav-item" onclick="switchTab('evidence')">
                 <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
                 <span>证据索引 / Evidences</span>
+            </a>
+            <a class="nav-item" onclick="switchTab('decisions')">
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                <span>待决策 / Decisions</span>
             </a>
         </ul>
         <div class="sidebar-footer">
@@ -952,6 +1130,10 @@
                         <input type="text" class="search-input" id="risk-search" placeholder="搜索风险描述或关联 ID / Search risks..." oninput="onRiskFilterChange()">
                     </div>
                 </div>
+                <label class="stale-toggle">
+                    <input type="checkbox" id="show-stale-toggle" onchange="toggleStaleItems()">
+                    显示预存债务 / Show stale items
+                </label>
                 <div id="risks-list">
                     <!-- Risks will be rendered here -->
                 </div>
@@ -1115,6 +1297,9 @@
                     <option value="covered">COVERED</option>
                     <option value="partial">PARTIAL</option>
                     <option value="missing">MISSING</option>
+                    <option value="blocked">BLOCKED</option>
+                    <option value="skipped">SKIPPED</option>
+                    <option value="compliant">COMPLIANT</option>
                     <option value="unclear">UNCLEAR</option>
                 </select>
             </div>
@@ -1137,6 +1322,16 @@
                     </table>
                 </div>
             </div>
+        </div>
+
+        <!-- TAB: PENDING DECISIONS -->
+        <div class="tab-content" id="tab-decisions">
+            <p class="section-subtitle">以下事项需要人工决策以推进项目治理。每项均附带证据链供参考。</p>
+            <div id="decisions-container">
+                <!-- Decisions will be rendered here -->
+            </div>
+            <h3 style="margin-top: 24px;">决策历史 / Decision History</h3>
+            <div id="decision-history">加载中...</div>
         </div>
     </div>
 
@@ -1165,6 +1360,10 @@
         try {
             report = JSON.parse(document.getElementById('trace-report-json').textContent);
         } catch(e) { console.error("Error parsing report", e); }
+
+        // Expose as window globals for decision renderer
+        window._report = report;
+        window._evidenceIndex = evidenceIndex;
 
         // Build mappings for quick lookups
         const reqMap = new Map(prdReqs.map(r => [r.req_id, r]));
@@ -1326,12 +1525,17 @@
         const totalRisks = risks.length;
         document.getElementById('stat-risk-total').textContent = totalRisks;
         let riskMust = 0, riskShould = 0, riskCould = 0;
+        let riskActive = 0, riskStale = 0;
         risks.forEach(r => {
             if (r.severity === 'must') riskMust++;
             else if (r.severity === 'should') riskShould++;
             else if (r.severity === 'could') riskCould++;
+            if (r.stale === true) riskStale++;
+            else riskActive++;
         });
-        document.getElementById('stat-risk-breakdown').innerHTML = 
+        document.getElementById('stat-risk-breakdown').innerHTML =
+            `活动: <span style="color:var(--status-fail)">${riskActive}</span> | ` +
+            `预存: <span style="color:var(--text-muted)">${riskStale}</span> | ` +
             `高: <span style="color:var(--status-fail)">${riskMust}</span> | ` +
             `中: <span style="color:var(--status-blocked)">${riskShould}</span> | ` +
             `低: <span style="color:var(--accent-blue)">${riskCould}</span>`;
@@ -1386,7 +1590,7 @@
                 clickedItem.classList.add('active');
             } else {
                 // Fallback selection by index/text
-                const idxMap = {'overview':0, 'requirements':1, 'risks':2, 'architecture':3, 'bootstrap':4, 'evidence':5};
+                const idxMap = {'overview':0, 'requirements':1, 'risks':2, 'architecture':3, 'bootstrap':4, 'evidence':5, 'decisions':6};
                 const items = document.querySelectorAll('.sidebar .nav-item');
                 if (items[idxMap[tabName]]) items[idxMap[tabName]].classList.add('active');
             }
@@ -1398,7 +1602,8 @@
                 'risks': '缺陷与治理风险 / Risks & Gaps',
                 'architecture': '架构规约检查 / Architecture Compliance',
                 'bootstrap': 'Claude Code 自举状态与治理 / Bootstrap Status',
-                'evidence': '收集的证据清单 / Gathered Evidences'
+                'evidence': '收集的证据清单 / Gathered Evidences',
+                'decisions': '待决策事项 / Pending Decisions'
             };
             document.getElementById('page-title').textContent = titlesMap[tabName];
 
@@ -1414,6 +1619,7 @@
             else if (tabName === 'architecture') renderArchitecture();
             else if (tabName === 'evidence') renderEvidences();
             else if (tabName === 'bootstrap') renderBootstrap();
+            else if (tabName === 'decisions') renderDecisions();
         }
 
         // HTML Escape Helper
@@ -1430,6 +1636,14 @@
         // Collapse toggle helper
         function toggleCollapse(element) {
             element.closest('.collapsible-item').classList.toggle('open');
+        }
+
+        // Stale items toggle helper
+        function toggleStaleItems() {
+            const show = document.getElementById('show-stale-toggle').checked;
+            document.querySelectorAll('.stale-item').forEach(el => {
+                el.style.display = show ? '' : 'none';
+            });
         }
 
         // ==========================================
@@ -1586,11 +1800,13 @@
             } else {
                 filteredRisks.forEach(r => {
                     const card = document.createElement('div');
-                    card.className = 'collapsible-item';
-                    
+                    const isStale = r.stale === true;
+                    card.className = 'collapsible-item' + (isStale ? ' stale-item' : '');
+                    if (isStale) card.style.display = 'none';
+
                     let refEvs = '<i>无 / None</i>';
                     if (r.evidence_ids && r.evidence_ids.length > 0) {
-                        refEvs = r.evidence_ids.map(id => 
+                        refEvs = r.evidence_ids.map(id =>
                             `<a class="ref-link" onclick="jumpToEvidence('${id}')">${id}</a>`
                         ).join(', ');
                     }
@@ -1599,7 +1815,7 @@
                         <div class="collapsible-header" onclick="toggleCollapse(this)">
                             <div class="collapsible-title-block">
                                 <span class="collapsible-id">${r.risk_id}</span>
-                                <span class="collapsible-title">${escapeHtml(r.description)}</span>
+                                <span class="collapsible-title">${escapeHtml(r.description)}${isStale ? ' <span class="stale-badge">[预存]</span>' : ''}</span>
                             </div>
                             <div class="collapsible-badge-block">
                                 <span class="badge badge-severity-${r.severity}">${r.severity}</span>
@@ -1633,7 +1849,12 @@
             } else {
                 gaps.forEach(g => {
                     const row = document.createElement('tr');
-                    
+                    const isGapStale = g.stale === true;
+                    if (isGapStale) {
+                        row.className = 'stale-item';
+                        row.style.display = 'none';
+                    }
+
                     let linkHtml = escapeHtml(g.item_id);
                     if (g.item_id.startsWith('REQ-VT-')) {
                         linkHtml = `<a class="ref-link" onclick="jumpToRequirement('${g.item_id}')">${escapeHtml(g.item_id)}</a>`;
@@ -1642,8 +1863,10 @@
                         linkHtml = `<a class="ref-link" onclick="jumpToRequirement('${parentReqId}')">${escapeHtml(g.item_id)}</a>`;
                     }
 
+                    const staleBadgeHtml = isGapStale ? ' <span class="stale-badge">[预存]</span>' : '';
+
                     row.innerHTML = `
-                        <td><b>${linkHtml}</b></td>
+                        <td><b>${linkHtml}${staleBadgeHtml}</b></td>
                         <td><span class="badge badge-priority-could">${escapeHtml(g.item_type)}</span></td>
                         <td>${escapeHtml(g.reason)}</td>
                     `;
@@ -1879,6 +2102,283 @@
                     }
                 }
             }, 200);
+        }
+
+        // ==========================================
+        // TAB 7: PENDING DECISIONS RENDERER
+        // ==========================================
+        function generateDecisionId(category, targetId) {
+            const key = `${category}:${targetId}`;
+            let hash = 0;
+            for (let i = 0; i < key.length; i++) {
+                hash = ((hash << 5) - hash) + key.charCodeAt(i);
+                hash |= 0;
+            }
+            return `DEC-${Math.abs(hash).toString(16).padStart(4, '0').slice(0, 4).toUpperCase()}`;
+        }
+
+        function extractPendingDecisions(reportData, evidenceIdx) {
+            const decisions = [];
+
+            // A. Accepted rules (expired or valid)
+            if (reportData.accepted_rules) {
+                for (const rule of reportData.accepted_rules) {
+                    const isStale = rule.stale_acceptance;
+                    decisions.push({
+                        id: generateDecisionId("accepted_rule", rule.rule_id),
+                        category: "accepted_rule",
+                        targetId: rule.rule_id,
+                        categoryLabel: "已确认规则",
+                        icon: isStale ? "warning" : "check",
+                        title: `"${rule.title}"规则${isStale ? '已过期' : '有效'}`,
+                        status: isStale ? "已超过30天未重新确认" : "有效",
+                        question: isStale ? "这个规则仍然有效吗？" : "",
+                        actions: isStale ? ["仍然有效", "不再适用"] : [],
+                        evidenceChain: [
+                            { label: "规则来源", value: rule.rule_id },
+                            { label: "规则内容", value: rule.title },
+                            { label: "上次确认", value: `${rule.accepted_at || ''} by ${rule.accepted_by || ''}` },
+                            { label: isStale ? "过期原因" : "状态", value: isStale ? "确认时间超过30天" : "有效期内" },
+                        ],
+                    });
+                }
+            }
+
+            // B. Uncovered ACs (gaps)
+            if (reportData.gaps) {
+                for (const gap of reportData.gaps) {
+                    if (gap.item_type === "ac" && !gap.stale && !gap.human_accepted) {
+                        decisions.push({
+                            id: generateDecisionId("uncovered_ac", gap.item_id),
+                            category: "uncovered_ac",
+                            targetId: gap.item_id,
+                            categoryLabel: "未覆盖的验收标准",
+                            icon: "cross",
+                            title: `"${gap.title || gap.item_id}"功能没有测试保障`,
+                            status: "有代码实现，但没有测试",
+                            question: "这个功能需要补充测试吗？",
+                            actions: ["需要补充", "当前可接受"],
+                            evidenceChain: [
+                                { label: "验收标准", value: `${gap.item_id} ${gap.title || ''}` },
+                                { label: "关联需求", value: gap.requirement_id || "" },
+                                { label: "门禁判断", value: "GATE-VT-004 MUST级AC必须有测试 → 未通过" },
+                            ],
+                        });
+                    }
+                }
+            }
+
+            // C. Tool blind spots (skipped evidence)
+            if (evidenceIdx && evidenceIdx.evidences) {
+                for (const ev of evidenceIdx.evidences) {
+                    if (ev.status === "skipped") {
+                        const skipReason = (ev.details && ev.details.skip_reason) || "未知原因";
+                        decisions.push({
+                            id: generateDecisionId("tool_blind_spot", ev.source_path),
+                            category: "tool_blind_spot",
+                            targetId: ev.source_path,
+                            categoryLabel: "工具盲区",
+                            icon: "warning",
+                            title: `${ev.source_path} 无法自动检查`,
+                            status: skipReason,
+                            question: "这个文件是否需要补充测试？",
+                            actions: ["需要", "不需要", "不确定"],
+                            evidenceChain: [
+                                { label: "工具", value: "pytest" },
+                                { label: "结果", value: skipReason },
+                                { label: "可能原因", value: "纯配置文件不需要测试，或测试被遗漏" },
+                            ],
+                        });
+                    }
+                }
+            }
+
+            // D. Stale debts (risks)
+            if (reportData.risks) {
+                for (const risk of reportData.risks) {
+                    if (risk.stale && !risk.deferred) {
+                        decisions.push({
+                            id: generateDecisionId("stale_debt", risk.claim_id || "unknown"),
+                            category: "stale_debt",
+                            targetId: risk.claim_id || 'unknown',
+                            categoryLabel: "预存债务",
+                            icon: "warning",
+                            title: `${risk.title || risk.description || '未知风险'}（预存问题）`,
+                            status: "文件未变更，风险仍存在",
+                            question: "这次要处理吗？",
+                            actions: ["本次处理", "继续延后"],
+                            evidenceChain: [
+                                { label: "风险来源", value: risk.claim_id || "未知" },
+                                { label: "风险描述", value: risk.title || risk.description || "" },
+                                { label: "状态", value: "文件未变更，风险仍存在" },
+                            ],
+                        });
+                    }
+                }
+            }
+
+            return decisions;
+        }
+
+        function renderDecisions() {
+            const container = document.getElementById('decisions-container');
+            if (!container || !window._report) return;
+
+            const decisions = extractPendingDecisions(window._report, window._evidenceIndex);
+            if (decisions.length === 0) {
+                container.innerHTML = '<div class="empty-state">没有待决策事项</div>';
+                return;
+            }
+
+            let html = '';
+            for (const dec of decisions) {
+                const iconMap = { warning: SVG_INLINE.warning, cross: SVG_INLINE.alert, check: SVG_INLINE.check };
+                const icon = iconMap[dec.icon] || '<span class="inline-icon">•</span>';
+
+                html += `<div class="decision-card" data-id="${dec.id}" data-target-id="${dec.targetId || ''}">`;
+                html += `  <div class="decision-header">`;
+                html += `    <span class="decision-icon">${icon}</span>`;
+                html += `    <span class="decision-id">${dec.id}</span>`;
+                html += `    <span class="decision-title">${escapeHtml(dec.title)}</span>`;
+                html += `  </div>`;
+                html += `  <div class="decision-meta">`;
+                html += `    <span class="decision-category">${escapeHtml(dec.categoryLabel)}</span>`;
+                html += `    <span class="decision-status">${escapeHtml(dec.status)}</span>`;
+                html += `  </div>`;
+
+                if (dec.question) {
+                    html += `  <div class="decision-question">${escapeHtml(dec.question)}</div>`;
+                }
+
+                if (dec.actions.length > 0) {
+                    html += `  <div class="decision-actions">`;
+                    for (const action of dec.actions) {
+                        html += `    <button class="btn-decision" onclick="submitDecision('${dec.id}', '${dec.category}', '${escapeHtml(action)}')">${escapeHtml(action)}</button>`;
+                    }
+                    html += `  </div>`;
+                }
+
+                // Collapsible evidence chain
+                html += `  <details class="evidence-chain-details">`;
+                html += `    <summary>查看证据链 / View Evidence Chain</summary>`;
+                html += `    <div class="evidence-chain">`;
+                for (const item of dec.evidenceChain) {
+                    html += `      <div class="chain-item"><span class="chain-label">${escapeHtml(item.label)}:</span> ${escapeHtml(item.value)}</div>`;
+                }
+                html += `    </div>`;
+                html += `  </details>`;
+
+                html += `</div>`;
+            }
+            container.innerHTML = html;
+
+            // Load decision history from the API
+            loadDecisionHistory();
+        }
+
+        async function submitDecision(decId, category, action) {
+            const card = document.querySelector(`.decision-card[data-id="${decId}"]`);
+            if (!card) return;
+
+            // Determine the API endpoint
+            const apiUrl = 'http://localhost:5000/api/decisions';
+
+            // Find the target_id from the card data
+            const targetId = card.dataset.targetId || '';
+            const reason = `Human decided: ${action}`;
+
+            try {
+                const resp = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        decision_id: decId,
+                        category: category,
+                        target_id: targetId,
+                        action: mapActionToApi(action),
+                        reason: reason,
+                        decided_by: 'product_owner',
+                    }),
+                });
+
+                if (resp.ok) {
+                    card.classList.add('decision-made');
+                    const actionsDiv = card.querySelector('.decision-actions');
+                    if (actionsDiv) {
+                        actionsDiv.innerHTML = `<span class="decision-result">✓ 已决策: ${escapeHtml(action)}</span>`;
+                    }
+                } else {
+                    console.error('Decision API error:', resp.status);
+                    // Fallback: mark as decided locally even if API fails
+                    card.classList.add('decision-made');
+                    const actionsDiv = card.querySelector('.decision-actions');
+                    if (actionsDiv) {
+                        actionsDiv.innerHTML = `<span class="decision-result">✓ 已决策: ${escapeHtml(action)} (本地)</span>`;
+                    }
+                }
+            } catch (e) {
+                // API not available — mark locally
+                console.warn('Decision API not available, saving locally:', e.message);
+                card.classList.add('decision-made');
+                const actionsDiv = card.querySelector('.decision-actions');
+                if (actionsDiv) {
+                    actionsDiv.innerHTML = `<span class="decision-result">✓ 已决策: ${escapeHtml(action)} (本地)</span>`;
+                }
+            }
+
+            // Refresh decision history after a successful decision
+            loadDecisionHistory();
+        }
+
+        function mapActionToApi(actionLabel) {
+            const map = {
+                '仍然有效': 'reconfirm',
+                '不再适用': 'reject',
+                '需要补充': 'request_action',
+                '当前可接受': 'accept_gap',
+                '需要': 'request_action',
+                '不需要': 'accept_gap',
+                '不确定': 'defer',
+                '本次处理': 'request_action',
+                '继续延后': 'defer',
+                '确认完成': 'accept_gap',
+            };
+            return map[actionLabel] || actionLabel;
+        }
+
+        async function loadDecisionHistory() {
+            const container = document.getElementById('decision-history');
+            if (!container) return;
+
+            try {
+                const resp = await fetch('http://localhost:5000/api/decisions');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const decisions = data.decisions || [];
+
+                if (decisions.length === 0) {
+                    container.innerHTML = '<p class="text-muted">暂无决策记录</p>';
+                    return;
+                }
+
+                let html = '<table class="decision-history-table"><thead><tr>';
+                html += '<th>ID</th><th>时间</th><th>类型</th><th>操作</th><th>原因</th>';
+                html += '</tr></thead><tbody>';
+
+                for (const d of decisions.slice().reverse()) {
+                    html += '<tr>';
+                    html += `<td><code>${escapeHtml(d.decision_id)}</code></td>`;
+                    html += `<td>${d.timestamp ? new Date(d.timestamp).toLocaleString() : ''}</td>`;
+                    html += `<td>${escapeHtml(d.category)}</td>`;
+                    html += `<td>${escapeHtml(d.action)}</td>`;
+                    html += `<td>${escapeHtml(d.reason || '')}</td>`;
+                    html += '</tr>';
+                }
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<p class="text-muted">Decision API 未连接</p>';
+            }
         }
 
         function renderBootstrap() {

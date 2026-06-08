@@ -16,9 +16,16 @@ from vibe_tracing import templates
 class DashboardRenderer:
     """Renders a premium, single-file HTML report with zero external dependencies."""
 
-    def __init__(self, project_root: Path) -> None:
+    def __init__(
+        self,
+        project_root: Path,
+        constraints_hash: Optional[str] = None,
+        config_data: Optional[dict] = None,
+    ) -> None:
         """Initialize the renderer with project root."""
         self.project_root = project_root
+        self.constraints_hash = constraints_hash
+        self.config_data = config_data
 
     def render(
         self,
@@ -44,8 +51,12 @@ class DashboardRenderer:
             ArchitectureChangeProposalEngine,
         )
         try:
-            proposal_engine = ArchitectureChangeProposalEngine(self.project_root)
-            prop_res = proposal_engine.check_governance()
+            proposal_engine = ArchitectureChangeProposalEngine(
+                self.project_root, config_data=self.config_data,
+            )
+            prop_res = proposal_engine.check_governance(
+                constraints_hash=self.constraints_hash,
+            )
         except Exception as exc:
             prop_res = {
                 "is_valid": False,

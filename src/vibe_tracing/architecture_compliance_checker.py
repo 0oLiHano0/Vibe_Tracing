@@ -6,6 +6,7 @@ Unverifiable constraints are returned as unclear, per FORBID-VT-007.
 """
 
 import ast
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional, Tuple
@@ -13,11 +14,26 @@ from typing import Any, Dict, List, Optional, Tuple
 from vibe_tracing.core import ids
 
 
+def _is_stale_acceptance(accepted_at: str, threshold_days: int = 30) -> bool:
+    """Return True if the acceptance is older than threshold_days."""
+    if not accepted_at:
+        return False
+    try:
+        accepted_time = datetime.fromisoformat(accepted_at.replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - accepted_time).days > threshold_days
+    except (ValueError, TypeError):
+        return False
+
+
 class ArchitectureComplianceChecker:
     """Statically verifies architectural constraints in the Vibe Tracing project."""
 
     def __init__(
-        self, project_root: Path, constraints_path: Optional[Path] = None
+        self,
+        project_root: Path,
+        constraints_path: Optional[Path] = None,
+        constraints_hash: Optional[str] = None,
+        config_data: Optional[dict] = None,
     ) -> None:
         """Initialize the checker."""
         self.project_root = Path(project_root)
@@ -27,6 +43,8 @@ class ArchitectureComplianceChecker:
             self.constraints_path = (
                 self.project_root / "docs" / "architecture_constraints.json"
             )
+        self.constraints_hash = constraints_hash
+        self.config_data = config_data
 
     def _get_python_imports(self, file_path: Path) -> List[Tuple[str, int]]:
         """Statically extract import statement module names and their line numbers from a python file."""
@@ -158,6 +176,7 @@ class ArchitectureComplianceChecker:
         status_list: List[Dict[str, Any]] = []
         violations: List[Dict[str, Any]] = []
         unclear_list: List[Dict[str, Any]] = []
+        accepted_rules: List[Dict[str, Any]] = []
 
         # ----------------------------------------------------
         # 1. Check Module Boundaries (MOD-VT-xxx)
@@ -590,8 +609,13 @@ class ArchitectureComplianceChecker:
             )
 
             try:
-                proposal_engine = ArchitectureChangeProposalEngine(self.project_root)
-                prop_res = proposal_engine.check_governance(start_counter=200)
+                proposal_engine = ArchitectureChangeProposalEngine(
+                    self.project_root, config_data=self.config_data,
+                )
+                prop_res = proposal_engine.check_governance(
+                    start_counter=200,
+                    constraints_hash=self.constraints_hash,
+                )
                 proposal_risks = prop_res.get("risks", [])
                 proposal_gaps = prop_res.get("gaps", [])
                 warnings = prop_res.get("warnings", [])
@@ -702,8 +726,17 @@ class ArchitectureComplianceChecker:
                 if verification == "manual":
                     accepted_by = rule.get("accepted_by")
                     if accepted_by:
-                        # Rule has been explicitly accepted by a human;
-                        # skip it entirely -- no unclear status emitted.
+                        accepted_at = rule.get("accepted_at", "")
+                        is_stale = _is_stale_acceptance(accepted_at, threshold_days=30)
+                        accepted_rules.append({
+                            "rule_id": r_id,
+                            "title": rule.get("title", ""),
+                            "severity": severity,
+                            "verification_method": "manual",
+                            "accepted_by": accepted_by,
+                            "accepted_at": accepted_at,
+                            "stale_acceptance": is_stale,
+                        })
                         continue
                     # Manual rules that have NOT been accepted are
                     # acknowledged as unclear but do NOT block the gate.
@@ -718,12 +751,6 @@ class ArchitectureComplianceChecker:
                             "title": rule.get("title", ""),
                             "description": rule.get("description", ""),
                             "verification_method": "manual",
-                        }
-                    )
-                    unclear_list.append(
-                        {
-                            "rule_id": r_id,
-                            "reason": f"规则 {r_id} 需要人类确认，请在 architecture_constraints.json 中设置 accepted_by 和 accepted_at",
                         }
                     )
                 else:
@@ -750,6 +777,7 @@ class ArchitectureComplianceChecker:
             "architecture_compliance_status": status_list,
             "architecture_violations": violations,
             "unclear_constraints": unclear_list,
+            "accepted_rules": accepted_rules,
             "proposal_risks": proposal_risks,
             "proposal_gaps": proposal_gaps,
         }

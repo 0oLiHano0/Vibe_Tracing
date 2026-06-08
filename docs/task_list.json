@@ -3473,6 +3473,97 @@
         }
       ],
       "ai_coding_guidance": []
+    },
+    {
+      "task_id": "TASK-VT-064",
+      "phase_id": "PHASE-VT-05",
+      "title": "噪音消除措施改进：accepted_rules + skipped 证据 + Agent 行动清单",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "accepted_by 可见化、skipped 证据生成、stale WARNING、Agent 可执行行动清单、决策日志加载",
+      "atomic_scope": "architecture_compliance_checker.py, core/enums.py, tool_evidence_adapter.py, cli.py, schemas/evidence_index.schema.json",
+      "out_of_scope": [],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-063"
+      ],
+      "expected_deliverables": [
+        "accepted_rules 收集",
+        "skipped 证据",
+        "Agent 行动清单",
+        "stale WARNING"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-064-01",
+          "description": "accepted_rules 出现在 traceability_report.json"
+        },
+        {
+          "dod_id": "DOD-VT-064-02",
+          "description": "pytest exit 5 产生 skipped 证据"
+        },
+        {
+          "dod_id": "DOD-VT-064-03",
+          "description": "vt analyze 输出 Agent 行动清单"
+        }
+      ],
+      "ai_coding_guidance": []
+    },
+    {
+      "task_id": "TASK-VT-065",
+      "phase_id": "PHASE-VT-05",
+      "title": "决策平台：Dashboard 待决策标签页 + 交互按钮 + Decision API",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12",
+        "AC-VT-010-02"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "Dashboard 待决策标签页（业务语言+折叠证据链）、交互决策按钮、Flask Decision API、决策日志",
+      "atomic_scope": "dashboard.template.html, decision_server.py, .vibetracing/human_decisions.json, pyproject.toml",
+      "out_of_scope": [],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-064"
+      ],
+      "expected_deliverables": [
+        "待决策标签页",
+        "Decision API",
+        "决策日志"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-065-01",
+          "description": "Dashboard 显示待决策卡片"
+        },
+        {
+          "dod_id": "DOD-VT-065-02",
+          "description": "Decision API 可接收决策"
+        },
+        {
+          "dod_id": "DOD-VT-065-03",
+          "description": "决策写入 human_decisions.json"
+        }
+      ],
+      "ai_coding_guidance": []
     }
   ]
 }

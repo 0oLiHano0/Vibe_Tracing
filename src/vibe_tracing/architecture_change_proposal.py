@@ -23,9 +23,16 @@ class ArchitectureChangeProposalEngine:
         schema_validator: Optional[Any] = None,
         proposals_dir: Optional[Path] = None,
         constraints_path: Optional[Path] = None,
+        config_data: Optional[dict] = None,
     ) -> None:
         self.project_root = Path(project_root)
-        self.raw_loader = RawInputLoader(self.project_root)
+        if config_data is not None:
+            # Reuse pre-loaded config to avoid re-reading from disk
+            self.raw_loader = RawInputLoader.__new__(RawInputLoader)
+            self.raw_loader.project_root = self.project_root
+            self.raw_loader.config_data = config_data
+        else:
+            self.raw_loader = RawInputLoader(self.project_root)
         self.constraints_path = constraints_path or self.raw_loader.get_path(
             "architecture_constraints"
         )
@@ -145,11 +152,17 @@ class ArchitectureChangeProposalEngine:
     def check_governance(
         self,
         start_counter: int = 1,
+        constraints_hash: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Read-only detection of architecture constraints drift.
 
         Never determines pass/fail — always returns ``is_valid=True``.
         Only produces warnings with diff details and fix guidance.
+
+        Args:
+            start_counter: Starting value for risk/gap ID counters.
+            constraints_hash: Pre-computed SHA-256 of the constraints file.
+                When provided, avoids re-reading the file from disk.
         """
         warnings: List[str] = []
         risks: List[Dict[str, Any]] = []
@@ -172,9 +185,13 @@ class ArchitectureChangeProposalEngine:
             return _empty_result()
 
         # Step 2: Compute current SHA256 of constraints file.
-        current_hash = hashlib.sha256(
-            self.constraints_path.read_bytes()
-        ).hexdigest()
+        # Use pre-computed hash if provided to avoid re-reading from disk.
+        if constraints_hash:
+            current_hash = constraints_hash
+        else:
+            current_hash = hashlib.sha256(
+                self.constraints_path.read_bytes()
+            ).hexdigest()
         if current_hash == stored_hash:
             # No drift — fast path.
             return _empty_result()

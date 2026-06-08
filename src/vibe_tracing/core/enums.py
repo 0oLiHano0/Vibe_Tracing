@@ -16,6 +16,7 @@ class CoverageStatus(str, Enum):
     BLOCKED = "blocked"
     COMPLIANT = "compliant"
     VIOLATED = "violated"
+    SKIPPED = "skipped"
 
 
 class Severity(str, Enum):
@@ -37,3 +38,5 @@ class ErrorCode(str, Enum):
     TOOL_EXECUTION_FAILED = "tool_execution_failed"
     MISSING_EVIDENCE = "missing_evidence"
     SELF_ATTESTATION = "self_attestation"
+    TOOL_NO_TESTS_COLLECTED = "tool_no_tests_collected"
+    TOOL_USAGE_ERROR = "tool_usage_error"

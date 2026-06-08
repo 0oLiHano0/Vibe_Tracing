@@ -2,15 +2,15 @@
   {
     "ticket_id": "AUDIT-VT-001",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:75d6f01bf2e368f43fda137eb274b400e4c7c875f9599098392791af64455a08",
+    "file_hash": "sha256:7c842cb2620ee45c1b1ce17c2ffcf01fcd248ba19da799e072fe90bb75c80522",
     "task_id": "TASK-VT-058",
     "ac_ids": [
       "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "cli.py 新增 vt doctor 和 vt accept 子命令，集成 ToolResolver 替代 _tool_available，传递 staged_items 给 gate engine 实现债务感知。run_doctor 扫描 5 项治理健康度，run_accept 填充 manual 规则的 accepted_by/accepted_at。",
+    "audit_reason": "cli.py: 噪音消除措施改进，新增 Agent 行动清单格式化、stale WARNING、非代码文件 skipped 证据、决策日志加载",
     "created_at": "2026-06-08T01:38:30.163828Z",
-    "updated_at": "2026-06-08T09:55:11.291045Z"
+    "updated_at": "2026-06-08T12:48:55.688817Z"
   },
   {
     "ticket_id": "AUDIT-VT-002",
@@ -96,16 +96,16 @@
   {
     "ticket_id": "AUDIT-VT-008",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:75d6f01bf2e368f43fda137eb274b400e4c7c875f9599098392791af64455a08",
+    "file_hash": "sha256:7c842cb2620ee45c1b1ce17c2ffcf01fcd248ba19da799e072fe90bb75c80522",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py 新增 vt doctor 和 vt accept 子命令，集成 ToolResolver 替代 _tool_available，传递 staged_items 给 gate engine 实现债务感知。run_doctor 扫描 5 项治理健康度，run_accept 填充 manual 规则的 accepted_by/accepted_at。",
+    "audit_reason": "cli.py: 报告组装扩展，新增 accepted_rules 字段和 skipped_count 统计",
     "created_at": "2026-06-08T03:06:28.667333Z",
-    "updated_at": "2026-06-08T09:55:11.291045Z"
+    "updated_at": "2026-06-08T12:48:55.694686Z"
   },
   {
     "ticket_id": "AUDIT-VT-009",
@@ -138,30 +138,30 @@
   {
     "ticket_id": "AUDIT-VT-011",
     "file_path": "src/vibe_tracing/architecture_compliance_checker.py",
-    "file_hash": "sha256:1c3bcc494442b72a65f0eb580a6ff0fda2f417669ea8492d80203c368e57b1a8",
+    "file_hash": "sha256:87a66e7a578f362a6f305b55e8444edbe3e334d126233c62b5c79f3740ffc518",
     "task_id": "TASK-VT-044",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "architecture_compliance_checker.py 新增 manual 规则人类确认机制：accepted_by 非 null 时跳过 unclear 检查，未确认时输出提示引导 Agent 使用 vt accept。",
+    "audit_reason": "architecture_compliance_checker.py: accepted_by 可见化，accepted_rules 收集替代静默跳过，修复注释/代码矛盾，新增 _is_stale_acceptance 检测函数",
     "created_at": "2026-06-08T09:54:49.173342Z",
-    "updated_at": "2026-06-08T09:55:11.291045Z"
+    "updated_at": "2026-06-08T12:48:55.699734Z"
   },
   {
     "ticket_id": "AUDIT-VT-012",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:75d6f01bf2e368f43fda137eb274b400e4c7c875f9599098392791af64455a08",
+    "file_hash": "sha256:7c842cb2620ee45c1b1ce17c2ffcf01fcd248ba19da799e072fe90bb75c80522",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py 新增 vt doctor 和 vt accept 子命令，集成 ToolResolver 替代 _tool_available，传递 staged_items 给 gate engine 实现债务感知。run_doctor 扫描 5 项治理健康度，run_accept 填充 manual 规则的 accepted_by/accepted_at。",
+    "audit_reason": "cli.py: Agent 行动清单，_format_agent_actions 函数输出可执行指令（含内联 AC 描述、代码片段、测试场景）",
     "created_at": "2026-06-08T09:54:49.178453Z",
-    "updated_at": "2026-06-08T09:55:11.291045Z"
+    "updated_at": "2026-06-08T12:48:55.704859Z"
   },
   {
     "ticket_id": "AUDIT-VT-013",
@@ -194,16 +194,16 @@
   {
     "ticket_id": "AUDIT-VT-015",
     "file_path": "src/vibe_tracing/tool_evidence_adapter.py",
-    "file_hash": "sha256:312f0f6f2313dee04f6b87360c7739eaa64bea172375ef87c13fc5c8d5fe0f06",
+    "file_hash": "sha256:76fe4addbe271ddccfed7192766ec0e26c827eb243dd3b4a3da9b4663acbabb2",
     "task_id": "TASK-VT-050",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "tool_evidence_adapter.py 新增 tool_category 字段到 ToolEvidenceCandidate，execute_tool 中通过 _stamp_category 设置来源工具类别。命令回退逻辑替换为 ToolResolver.resolve_command。",
+    "audit_reason": "tool_evidence_adapter.py: skipped 证据生成，pytest exit 5/2 和 mypy exit 2 返回 status=skipped 的 ToolEvidenceCandidate",
     "created_at": "2026-06-08T09:54:49.193736Z",
-    "updated_at": "2026-06-08T09:55:11.291045Z"
+    "updated_at": "2026-06-08T12:48:55.709902Z"
   },
   {
     "ticket_id": "AUDIT-VT-016",
@@ -233,5 +233,104 @@
     "audit_reason": "test_merge_gate_engine.py 新增 4 个测试：staged claim 标记 [当前]、non-staged claim 标记 [预存]、无 staged_items 向后兼容、架构违规标记 [当前]。",
     "created_at": "2026-06-08T09:54:49.203513Z",
     "updated_at": "2026-06-08T09:55:11.291045Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-018",
+    "file_path": "decision_server.py",
+    "file_hash": "sha256:06a2da13526877251408e9457eaa327527771865aca706bae34614c0dd6d9964",
+    "task_id": "TASK-VT-065",
+    "audit_level": "detailed",
+    "ac_ids": [
+      "AC-VT-009-12",
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "decision_server.py: 新增 Flask Decision API，3 个端点（GET/POST /api/decisions, GET /api/pending），写入 .vibetracing/human_decisions.json",
+    "created_at": "2026-06-08T12:48:55.653727Z",
+    "updated_at": "2026-06-08T12:48:55.653727Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-019",
+    "file_path": "src/vibe_tracing/architecture_compliance_checker.py",
+    "file_hash": "sha256:87a66e7a578f362a6f305b55e8444edbe3e334d126233c62b5c79f3740ffc518",
+    "task_id": "TASK-VT-044",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "architecture_compliance_checker.py: accepted_rules 收集逻辑变更，已有 22 个测试覆盖（含 11 个新增测试）",
+    "created_at": "2026-06-08T12:48:55.658747Z",
+    "updated_at": "2026-06-08T12:48:55.658747Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-020",
+    "file_path": "src/vibe_tracing/cli.py",
+    "file_hash": "sha256:7c842cb2620ee45c1b1ce17c2ffcf01fcd248ba19da799e072fe90bb75c80522",
+    "task_id": "TASK-VT-035",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-07"
+    ],
+    "status": "passed",
+    "audit_reason": "cli.py: 多处改动（T5/T7/T9/T12），报告组装、Agent 行动清单、stale WARNING、决策日志加载，已有测试覆盖",
+    "created_at": "2026-06-08T12:48:55.663738Z",
+    "updated_at": "2026-06-08T12:48:55.663738Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-021",
+    "file_path": "src/vibe_tracing/core/enums.py",
+    "file_hash": "sha256:bb5964f49dc806330efd9647016865d03a07251ac34f0eb08176c22c1c51e113",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "enums.py: 新增 CoverageStatus.SKIPPED 和 ErrorCode.TOOL_NO_TESTS_COLLECTED/TOOL_USAGE_ERROR 枚举值",
+    "created_at": "2026-06-08T12:48:55.668611Z",
+    "updated_at": "2026-06-08T12:48:55.668611Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-022",
+    "file_path": "src/vibe_tracing/tool_evidence_adapter.py",
+    "file_hash": "sha256:76fe4addbe271ddccfed7192766ec0e26c827eb243dd3b4a3da9b4663acbabb2",
+    "task_id": "TASK-VT-050",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "tool_evidence_adapter.py: skipped 候选生成逻辑变更，已有 45 个测试通过",
+    "created_at": "2026-06-08T12:48:55.673492Z",
+    "updated_at": "2026-06-08T12:48:55.673492Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-023",
+    "file_path": "tests/test_architecture_compliance_checker.py",
+    "file_hash": "sha256:b95bb33457df307bbd9afe3470facad227c7189f657b9b08229bd4593b5731b7",
+    "task_id": "TASK-VT-044",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_architecture_compliance_checker.py: 新增 11 个测试覆盖 accepted_rules 收集和 stale 检测",
+    "created_at": "2026-06-08T12:48:55.678236Z",
+    "updated_at": "2026-06-08T12:48:55.678236Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-024",
+    "file_path": "tests/test_tool_execution.py",
+    "file_hash": "sha256:1a071284485d2cb1611c0a4f805b11a4a627e2e71240112e488fab74adbe00f9",
+    "task_id": "TASK-VT-062",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_tool_execution.py: 更新 3 个测试适配 skipped 证据返回（exit code 5/2 不再返回空列表）",
+    "created_at": "2026-06-08T12:48:55.682955Z",
+    "updated_at": "2026-06-08T12:48:55.682955Z"
   }
 ]

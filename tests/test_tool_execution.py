@@ -425,28 +425,34 @@ class TestPytestOutputParsing:
         assert candidates[0].status == CoverageStatus.VIOLATED.value
 
     @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
-    def test_pytest_exit5_no_tests_collected_returns_empty(
+    def test_pytest_exit5_no_tests_collected_returns_skipped(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
-        """covers: EVO-TASK-017 — pytest exit 5 (no tests collected) produces no evidence."""
+        """covers: EVO-TASK-017 — pytest exit 5 (no tests collected) produces skipped evidence."""
         mock_run.return_value = MagicMock(
             returncode=5, stdout="", stderr="no tests ran"
         )
 
         candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
-        assert candidates == []
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.SKIPPED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_NO_TESTS_COLLECTED.value
+        assert candidates[0].details["skip_reason"] == "no tests collected"
 
     @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
-    def test_pytest_exit2_usage_error_returns_empty(
+    def test_pytest_exit2_usage_error_returns_skipped(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
-        """covers: EVO-TASK-017 — pytest exit 2 (usage error) produces no evidence."""
+        """covers: EVO-TASK-017 — pytest exit 2 (usage error) produces skipped evidence."""
         mock_run.return_value = MagicMock(
             returncode=2, stdout="", stderr="unrecognized arguments: --invalid"
         )
 
         candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
-        assert candidates == []
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.SKIPPED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_USAGE_ERROR.value
+        assert candidates[0].details["skip_reason"] == "usage error"
 
 
 # ---------------------------------------------------------------------------
@@ -615,16 +621,19 @@ class TestMypyOutputParsing:
         assert candidates[0].details["errors_count"] == 2
 
     @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
-    def test_mypy_exit2_usage_error_returns_empty(
+    def test_mypy_exit2_usage_error_returns_skipped(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
-        """covers: EVO-TASK-017 — mypy exit 2 (usage error) produces no evidence."""
+        """covers: EVO-TASK-017 — mypy exit 2 (usage error) produces skipped evidence."""
         mock_run.return_value = MagicMock(
             returncode=2, stdout="", stderr="error: invalid configuration"
         )
 
         candidates = engine.execute_tool(tool_category="type_check", path="src/")
-        assert candidates == []
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.SKIPPED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_USAGE_ERROR.value
+        assert candidates[0].details["skip_reason"] == "usage error"
 
 
 # ---------------------------------------------------------------------------

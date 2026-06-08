@@ -512,9 +512,9 @@ def _load_context(
         print("Error: PRD file missing or failed to load.", file=sys.stderr)
         raise _GateBlocked(1)
 
-    # Parse PRD
+    # Parse PRD — use already-loaded content to avoid re-reading from disk
     prd_parser = PrdParser()
-    prd_res = prd_parser.parse_file(Path(prd_record.file_path))
+    prd_res = prd_parser.parse_text(prd_record.content)
     if not prd_res.is_valid:
         print(f"PRD parsing error: {'; '.join(prd_res.errors)}", file=sys.stderr)
         raise _GateBlocked(1)
@@ -591,8 +591,6 @@ def _gate1_constraints_hash(ctx: UnifiedContext, project_root: Path) -> Optional
         None if the gate passes (hash matches or no baseline stored).
         1 (exit code) if the hash has been tampered with.
     """
-    import hashlib
-
     if not ctx.manifest:
         return None
     records_dict = {r.file_key: r for r in ctx.manifest.inputs_used}
@@ -600,9 +598,10 @@ def _gate1_constraints_hash(ctx: UnifiedContext, project_root: Path) -> Optional
     if not (constraints_record and constraints_record.status == "ok"):
         return None
 
-    computed_hash = hashlib.sha256(
-        Path(constraints_record.file_path).read_bytes()
-    ).hexdigest()
+    # Use hash computed during loading instead of re-reading from disk
+    computed_hash = constraints_record.sha256_hash
+    if not computed_hash:
+        return None
     stored_hash = ctx.config.get("architecture_constraints_hash")
     if stored_hash and stored_hash != computed_hash:
         print(
@@ -623,23 +622,23 @@ def _gate1b_prd_drift(ctx: UnifiedContext) -> None:
     Compares the current PRD file hash against the baseline stored in config.
     If they differ, prints a warning to stderr but does not block the pipeline.
     """
-    import hashlib
-
     if not ctx.manifest:
         return
 
-    # Resolve PRD path from manifest
+    # Resolve PRD record from manifest
     prd_record = None
     for r in ctx.manifest.inputs_used:
         if r.file_key == "prd":
             prd_record = r
             break
 
-    prd_path = Path(prd_record.file_path) if prd_record and prd_record.file_path else None
-    if prd_path is None or not prd_path.exists():
+    if prd_record is None or prd_record.status != "ok":
         return
 
-    computed_p_hash = hashlib.sha256(prd_path.read_bytes()).hexdigest()
+    # Use hash computed during loading instead of re-reading from disk
+    computed_p_hash = prd_record.sha256_hash
+    if not computed_p_hash:
+        return
     stored_p_hash = ctx.config.get("prd_hash")
     if stored_p_hash and stored_p_hash != computed_p_hash:
         print(
@@ -862,7 +861,7 @@ def _execute_tools(
     if not (config_language and ltm):
         return []
 
-    from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+    from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
 
     # Pre-flight dependency check
     required_binaries = set()
@@ -900,6 +899,14 @@ def _execute_tools(
     test_paths: List[str] = []
     source_paths: List[str] = []
     seen_paths: Set[str] = set()
+
+    # Collect non-code file references for skipped evidence
+    non_code_refs: Set[str] = set()
+    for claim in claims_list:
+        for ref in list(claim.test_refs or []) + list(claim.code_refs or []):
+            path_only = ref.split("#")[0]
+            if path_only and Path(path_only).suffix and Path(path_only).suffix not in code_extensions:
+                non_code_refs.add(path_only)
 
     for claim in claims_list:
         for ref in claim.test_refs:
@@ -950,8 +957,27 @@ def _execute_tools(
     print(f"Executing validation tools for {total_paths} staged path(s)...")
     typed_paths = {"test": test_paths, "source": source_paths}
     tool_evidence_candidates = engine.execute_all(typed_paths)
+
+    # Generate skipped evidence for non-code files
+    for ref_path in non_code_refs:
+        tool_evidence_candidates.append(
+            ToolEvidenceCandidate(
+                source_type="tool",
+                source_path=ref_path,
+                covers=[],
+                status="skipped",
+                command="",
+                exit_code=0,
+                stderr="",
+                details={"skip_reason": "non-code file, tools not applicable"},
+            )
+        )
+
     executed_count = len(tool_evidence_candidates)
     blocked_count = sum(1 for c in tool_evidence_candidates if c.error_code is not None)
+    skipped_count = sum(1 for c in tool_evidence_candidates if hasattr(c, 'status') and c.status == "skipped")
+    if skipped_count > 0:
+        print(f"  ({skipped_count} files skipped -- no tests collected or usage error)", file=sys.stderr)
 
     for c in tool_evidence_candidates:
         if c.error_code is not None:
@@ -1076,8 +1102,18 @@ def _run_analyzers(
     compliance_res = None
     constraints_path = project_root / "docs" / "architecture_constraints.json"
     if constraints_path.exists() and ctx.constraints is not None:
+        # Extract pre-computed hash from manifest to avoid re-reading file
+        _constraints_hash = None
+        if ctx.manifest:
+            for _r in ctx.manifest.inputs_used:
+                if _r.file_key == "architecture_constraints" and _r.sha256_hash:
+                    _constraints_hash = _r.sha256_hash
+                    break
         compliance_checker = ArchitectureComplianceChecker(
-            project_root, constraints_path=constraints_path
+            project_root,
+            constraints_path=constraints_path,
+            constraints_hash=_constraints_hash,
+            config_data=ctx.config,
         )
         compliance_res = compliance_checker.check(
             evidence_list, constraints_data=ctx.constraints
@@ -1127,10 +1163,192 @@ def _run_analyzers(
             if claim_id is not None and claim_id not in affected_claims:
                 risk["stale"] = True
 
+        stale_gap_count = sum(1 for g in merged_gaps if g.get("stale"))
+        stale_risk_count = sum(1 for r in final_risks if r.get("stale"))
+        if stale_gap_count > 0 or stale_risk_count > 0:
+            print(f"  Note: {stale_gap_count} gaps and {stale_risk_count} risks from unchanged files (marked stale).", file=sys.stderr)
+
     # Staged file extension coverage check (WARNING only)
     _check_staged_extensions(project_root, ctx.constraints)
 
     return merged_gaps, final_risks, compliance_res, claim_res, req_res
+
+
+def _get_ac_description(ac_id: str, prd_result) -> str:
+    """Extract AC title from PrdParseResult."""
+    if not prd_result or not hasattr(prd_result, "requirements"):
+        return ""
+    for req in prd_result.requirements:
+        for ac in req.acceptance_criteria:
+            if ac.ac_id == ac_id:
+                return ac.title
+    return ""
+
+
+def _get_req_description(req_id: str, prd_result) -> str:
+    """Extract requirement title from PrdParseResult."""
+    if not prd_result or not hasattr(prd_result, "requirements") or not req_id:
+        return ""
+    for req in prd_result.requirements:
+        if req.req_id == req_id:
+            return req.title
+    return ""
+
+
+def _get_related_code(ac_id: str, task_result, claims_list=None) -> list:
+    """Extract code file paths related to an AC from claims (not tasks)."""
+    code_refs = []
+    if not claims_list:
+        return code_refs
+
+    # Collect task IDs that reference this AC
+    task_ids = set()
+    if task_result and hasattr(task_result, "tasks"):
+        for task in task_result.tasks:
+            if ac_id in (task.related_acceptance_criteria or []):
+                task_ids.add(task.task_id)
+
+    # Find claims referencing those tasks and collect their code_refs
+    for claim in claims_list:
+        related = getattr(claim, "related_task", None)
+        if related in task_ids:
+            for ref in (getattr(claim, "code_refs", None) or []):
+                path_only = ref.split("#")[0]
+                if path_only and Path(path_only).exists():
+                    try:
+                        content = Path(path_only).read_text()[:500]
+                        code_refs.append({"path": path_only, "content": content})
+                    except Exception:
+                        pass
+                    if len(code_refs) >= 3:
+                        break
+    return code_refs
+
+
+def _get_existing_tests(ac_id: str, task_result, claims_list=None) -> list:
+    """Get test file paths related to an AC from claims (not tasks)."""
+    test_refs = []
+    if not claims_list:
+        return test_refs
+
+    # Collect task IDs that reference this AC
+    task_ids = set()
+    if task_result and hasattr(task_result, "tasks"):
+        for task in task_result.tasks:
+            if ac_id in (task.related_acceptance_criteria or []):
+                task_ids.add(task.task_id)
+
+    # Find claims referencing those tasks and collect their test_refs
+    for claim in claims_list:
+        related = getattr(claim, "related_task", None)
+        if related in task_ids:
+            for ref in (getattr(claim, "test_refs", None) or []):
+                test_refs.append(ref)
+                if len(test_refs) >= 2:
+                    break
+    return test_refs
+
+
+def _derive_test_scenarios(ac_text: str) -> list:
+    """Derive test scenarios from AC title text."""
+    scenarios = []
+    if not ac_text:
+        return ["根据 AC 描述推导具体测试场景"]
+    if any(kw in ac_text for kw in ["无效", "错误", "invalid", "error"]):
+        scenarios.append("无效输入 → 应输出错误提示并退出")
+    if any(kw in ac_text for kw in ["空", "empty"]):
+        scenarios.append("空输入 → 应有明确的错误提示")
+    if any(kw in ac_text for kw in ["正常", "valid", "正确"]):
+        scenarios.append("有效输入 → 应正常处理")
+    if not scenarios:
+        scenarios.append("根据 AC 描述推导具体测试场景")
+    return scenarios
+
+
+def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
+                          accepted_rules, prd_result=None, task_result=None,
+                          claims_list=None):
+    """Format an Agent-executable action list with full inline context."""
+    lines = [f"GATE DECISION: {gate_decision.upper()}", ""]
+    actions = []
+
+    # HIGH: MUST-level gap -- inline full context
+    for gap in active_gaps:
+        if gap.get("severity") == "must" and not gap.get("human_accepted"):
+            ac_id = gap.get("item_id", "")
+            ac_text = _get_ac_description(ac_id, prd_result) or gap.get("title", "")
+            related_code = _get_related_code(ac_id, task_result, claims_list)
+            existing_tests = _get_existing_tests(ac_id, task_result, claims_list)
+            test_scenarios = _derive_test_scenarios(ac_text)
+
+            ctx = {
+                "ac_description": ac_text,
+                "severity": gap.get("severity", "MUST"),
+                "requirement_id": gap.get("requirement_id", ""),
+                "requirement_text": _get_req_description(gap.get("requirement_id"), prd_result),
+                "test_scenarios": test_scenarios,
+                "verification": f"pytest 中新增覆盖 {ac_id} 的测试，vt analyze 后 gap 消失",
+            }
+            if related_code:
+                ctx["implementation_files"] = [r["path"] for r in related_code]
+            if existing_tests:
+                ctx["existing_tests"] = existing_tests
+
+            actions.append({
+                "priority": "HIGH",
+                "type": "cover_gap",
+                "title": f"补充测试：{ac_id} \"{ac_text}\"",
+                "context": ctx,
+            })
+
+    # HIGH: Violations
+    for v in violations:
+        actions.append({
+            "priority": "HIGH",
+            "type": "fix_violation",
+            "title": f"修复违规：{v.get('rule_id', '')}",
+            "context": {
+                "rule_text": v.get("description", ""),
+                "violation_reason": v.get("reason", ""),
+                "fix_via": "完成关联的 gap 修复后自动消除",
+            },
+        })
+
+    # LOW: Stale debt
+    for risk in active_risks:
+        if risk.get("stale") and not risk.get("deferred"):
+            actions.append({
+                "priority": "LOW",
+                "type": "stale_debt",
+                "title": f"预存债务：{risk.get('title', '')}",
+                "context": {
+                    "description": risk.get("description", ""),
+                    "age": f"{risk.get('age_iterations', '多个')} 个迭代",
+                },
+            })
+
+    # Render
+    if actions:
+        for i, action in enumerate(actions, 1):
+            lines.append(f"{'=' * 70}")
+            lines.append(f"ACTION {i} [{action['priority']}] {action['title']}")
+            lines.append(f"{'=' * 70}")
+            ctx = action.get("context", {})
+            for key, value in ctx.items():
+                if isinstance(value, list):
+                    lines.append(f"  {key}:")
+                    for item in value:
+                        if isinstance(item, dict):
+                            lines.append(f"    - {item.get('path', '')}")
+                        else:
+                            lines.append(f"    - {item}")
+                else:
+                    lines.append(f"  {key}: {value}")
+            lines.append("")
+    else:
+        lines.append("NO ACTION REQUIRED. Gate passed.")
+
+    return "\n".join(lines)
 
 
 def _check_staged_extensions(project_root: Path, constraints: Optional[dict]) -> None:
@@ -1175,6 +1393,48 @@ def _check_staged_extensions(project_root: Path, constraints: Optional[dict]) ->
             "请更新 architecture_constraints.json 的 language_tool_matrix 并通过 vt finalize 锁定。",
             file=sys.stderr,
         )
+
+
+def _load_human_decisions() -> dict:
+    """读取人类决策日志"""
+    decisions_path = Path(".vibetracing/human_decisions.json")
+    if not decisions_path.exists():
+        return {"version": "1.0", "decisions": []}
+    try:
+        return json.loads(decisions_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"version": "1.0", "decisions": []}
+
+
+def _apply_human_decisions(report_doc: dict, decisions: dict) -> dict:
+    """将人类决策应用到报告中"""
+    for decision in decisions.get("decisions", []):
+        category = decision.get("category")
+        target_id = decision.get("target_id")
+        action = decision.get("action")
+
+        if category == "accepted_rule" and action == "reconfirm":
+            for rule in report_doc.get("accepted_rules", []):
+                if rule.get("rule_id") == target_id:
+                    rule["accepted_at"] = decision.get("timestamp", "")
+                    rule["stale_acceptance"] = False
+
+        elif category == "uncovered_ac" and action == "accept_gap":
+            for gap in report_doc.get("gaps", []):
+                if gap.get("item_id") == target_id:
+                    gap["human_accepted"] = True
+
+        elif category == "stale_debt" and action == "defer":
+            for risk in report_doc.get("risks", []):
+                if risk.get("claim_id") == target_id:
+                    risk["deferred"] = True
+
+        elif category == "accepted_rule" and action == "reject":
+            for rule in report_doc.get("accepted_rules", []):
+                if rule.get("rule_id") == target_id:
+                    rule["rejected"] = True
+
+    return report_doc
 
 
 def _evaluate_and_output(
@@ -1244,7 +1504,15 @@ def _evaluate_and_output(
         ) if compliance_res else [],
         "unclear_constraints": compliance_res.get("unclear_constraints", [])
         if compliance_res else [],
+        "accepted_rules": compliance_res.get("accepted_rules", [])
+        if compliance_res else [],
     }
+
+    # Apply human decisions
+    human_decisions = _load_human_decisions()
+    if human_decisions.get("decisions"):
+        report_doc = _apply_human_decisions(report_doc, human_decisions)
+        print(f"  Applied {len(human_decisions['decisions'])} human decision(s).", file=sys.stderr)
 
     # Build evidence index path (already written by caller)
     index_path = output_dir / "evidence_index.json"
@@ -1270,7 +1538,18 @@ def _evaluate_and_output(
     # Render dashboard
     dashboard_path = output_dir / "dashboard.html"
     try:
-        renderer = DashboardRenderer(project_root)
+        # Extract pre-computed hash from manifest to avoid re-reading file
+        _dash_constraints_hash = None
+        if manifest:
+            for _r in manifest.inputs_used:
+                if _r.file_key == "architecture_constraints" and _r.sha256_hash:
+                    _dash_constraints_hash = _r.sha256_hash
+                    break
+        renderer = DashboardRenderer(
+            project_root,
+            constraints_hash=_dash_constraints_hash,
+            config_data=ctx.config,
+        )
         prd_reqs_serialized = []
         for req in prd_res.requirements:
             ac_list = [
@@ -1348,6 +1627,21 @@ def _evaluate_and_output(
     for reason in gate_res["reasons"]:
         print(f"- {reason}")
 
+    # Format and print Agent action list (additional output for Agent consumption)
+    violations = compliance_res.get("architecture_violations", []) if compliance_res else []
+    accepted_rules = compliance_res.get("accepted_rules", []) if compliance_res else []
+    agent_output = _format_agent_actions(
+        gate_decision=gate_decision,
+        active_gaps=active_gaps,
+        active_risks=active_risks,
+        violations=violations,
+        accepted_rules=accepted_rules,
+        prd_result=prd_res,
+        task_result=task_res,
+        claims_list=claims_list,
+    )
+    print(agent_output)
+
     if is_draft and (not task_res or not task_res.tasks) and not claims_list:
         print("\n【零提示词引导】当前项目处于 PRD 草稿阶段（draft），且未发现任何开发任务。请让 AI Agent 读取项目内的 .vibetracing/prompts/prd_analysis.md 并按照其中的 7 步分析法对 PRD 进行分析与补充，逐步生成对应的架构约束和任务列表。")
 
@@ -1382,13 +1676,14 @@ def _evaluate_and_output(
     return exit_code
 
 
-def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = False, gates_only: bool = False) -> int:
+def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_commit: bool = False, gates_only: bool = False) -> int:
     """
     Execute the full Vibe Tracing analysis pipeline.
 
     Args:
         project_root: The workspace root path.
-        output_dir: The target output directory.
+        output_dir: The target output directory. If None, resolved from
+            config.json paths.output_dir (default: "output").
         is_pre_commit: Whether running in pre-commit hook mode.
         gates_only: If True, run only integrity gates (1, 2, 2.5) and skip
             tool execution and full analysis (fast mode for pre-commit).
@@ -1409,6 +1704,11 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
         prd_res = ctx.prd
         is_draft = (prd_res.status == "draft")
         config_prefix = ctx.config_prefix
+
+        # Resolve output_dir from config if not explicitly provided
+        if output_dir is None:
+            _out_rel = ctx.config.get("paths", {}).get("output_dir", "output")
+            output_dir = (project_root / _out_rel).resolve()
 
         exit_code = _run_integrity_gates(
             ctx, project_root, is_pre_commit, config_prefix,
@@ -1872,13 +2172,12 @@ def main(argv=None):
 
     if args.command == "analyze":
         project_root = Path(args.project_root).resolve()
-        raw_loader = RawInputLoader(project_root)
         if args.out:
             output_dir = Path(args.out)
             if not output_dir.is_absolute():
                 output_dir = (project_root / output_dir).resolve()
         else:
-            output_dir = raw_loader.get_path("output_dir").resolve()
+            output_dir = None  # Resolved inside run_analyze from config
 
         return run_analyze(project_root, output_dir, is_pre_commit=args.pre_commit, gates_only=args.gates_only)
     elif args.command == "init":

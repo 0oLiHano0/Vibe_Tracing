@@ -6,6 +6,7 @@ It does NOT make any governance, gate, coverage, or risk decisions.
 It only reads files and reports their load status.
 """
 
+import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,6 +26,7 @@ class InputFileRecord:
     error_code: Optional[str] = None  # ErrorCode value if failed
     error_message: str = ""
     content: Optional[Any] = None  # parsed content (dict, list, or str for md)
+    sha256_hash: Optional[str] = None  # SHA-256 of raw file bytes
 
 
 @dataclass
@@ -138,7 +140,9 @@ class RawInputLoader:
             )
 
         try:
-            raw_text = abs_path.read_text(encoding="utf-8")
+            raw_bytes = abs_path.read_bytes()
+            file_hash = hashlib.sha256(raw_bytes).hexdigest()
+            raw_text = raw_bytes.decode("utf-8")
         except Exception as exc:
             return InputFileRecord(
                 file_key=file_key,
@@ -173,5 +177,6 @@ class RawInputLoader:
             is_required=is_required,
             status="ok",
             content=content,
+            sha256_hash=file_hash,
         )
 

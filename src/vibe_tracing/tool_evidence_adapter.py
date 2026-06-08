@@ -248,9 +248,27 @@ class ToolExecutionEngine:
         - 2: usage error (skip, not a real failure)
         - 5: no tests collected (skip, not a real failure)
         """
-        # Skip exit codes that indicate "tool cannot handle this file"
+        # Return a "skipped" evidence candidate for exit codes that indicate
+        # "tool cannot handle this file" rather than real failures.
         if exit_code in self.PYTEST_SKIP_EXIT_CODES:
-            return []
+            reason = "no tests collected" if exit_code == 5 else "usage error"
+            error_code = (
+                ErrorCode.TOOL_NO_TESTS_COLLECTED.value if exit_code == 5
+                else ErrorCode.TOOL_USAGE_ERROR.value
+            )
+            return [
+                ToolEvidenceCandidate(
+                    source_type="tool",
+                    source_path=path,
+                    covers=[],
+                    status=CoverageStatus.SKIPPED.value,
+                    command=command,
+                    exit_code=exit_code,
+                    stderr=f"pytest {reason} (exit code {exit_code})",
+                    error_code=error_code,
+                    details={"skip_reason": reason},
+                )
+            ]
 
         # Check for execution failure (not test failure)
         if exit_code not in (0, 1):
@@ -501,9 +519,22 @@ class ToolExecutionEngine:
         - 1: type errors found (real, record as evidence)
         - 2: usage error (skip, not a real failure)
         """
-        # Skip exit codes that indicate "tool cannot handle this file"
+        # Return a "skipped" evidence candidate for exit codes that indicate
+        # "tool cannot handle this file" rather than real failures.
         if exit_code in self.MYPY_SKIP_EXIT_CODES:
-            return []
+            return [
+                ToolEvidenceCandidate(
+                    source_type="tool",
+                    source_path=path,
+                    covers=[],
+                    status=CoverageStatus.SKIPPED.value,
+                    command=command,
+                    exit_code=exit_code,
+                    stderr=f"mypy usage error (exit code {exit_code})",
+                    error_code=ErrorCode.TOOL_USAGE_ERROR.value,
+                    details={"skip_reason": "usage error"},
+                )
+            ]
 
         if exit_code not in (0, 1):
             return [

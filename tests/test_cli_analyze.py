@@ -445,6 +445,70 @@ def test_prd_drift_detection(tmp_path, capsys):
     assert "PRD 已从基线漂移" in captured.err
 
 
+def test_finalize_stores_prd_hash(tmp_path):
+    """AC-VT-009-14: vt finalize must store prd_hash in config.json."""
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    cfg_path = tmp_path / ".vibetracing" / "config.json"
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+
+    # Verify both hashes are present after finalize
+    assert "prd_hash" in cfg, "config.json must contain prd_hash after finalize"
+    assert "architecture_constraints_hash" in cfg, (
+        "config.json must contain architecture_constraints_hash after finalize"
+    )
+
+    # Verify prd_hash is a valid SHA256 hex string
+    assert len(cfg["prd_hash"]) == 64, "prd_hash must be a 64-char hex SHA256 digest"
+    assert all(c in "0123456789abcdef" for c in cfg["prd_hash"]), (
+        "prd_hash must be a valid hex string"
+    )
+
+    # Verify prd_hash matches the actual PRD file
+    prd_path = tmp_path / "docs" / "prd.md"
+    expected = hashlib.sha256(prd_path.read_bytes()).hexdigest()
+    assert cfg["prd_hash"] == expected, (
+        "prd_hash must equal SHA256 of docs/prd.md at finalize time"
+    )
+
+
+def test_analyze_detects_prd_drift(tmp_path, capsys):
+    """AC-VT-009-14: vt analyze must detect PRD hash mismatch and output a WARNING."""
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # At this point run_finalize has stored prd_hash in config.json.
+    # Modify the PRD to trigger drift detection.
+    prd_path = tmp_path / "docs" / "prd.md"
+    prd_path.write_text(
+        prd_path.read_text(encoding="utf-8") + "\n<!-- drift-detected -->\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+
+    # PRD drift is a WARNING, not a blocker -- exit code must be 0
+    assert exit_code == 0
+
+    captured = capsys.readouterr()
+    assert "PRD" in captured.err and "漂移" in captured.err, (
+        "vt analyze must emit a WARNING about PRD drift when prd_hash mismatches"
+    )
+
+
 def test_mapping_dead_link_blocks(tmp_path, capsys):
     """
     Test that architecture constraints referencing a non-existent PRD requirement
@@ -837,3 +901,73 @@ def test_incremental_analysis_affected_files_not_stale(tmp_path, capsys, monkeyp
     stale_risks = [r for r in risks if r.get("stale")]
     assert len(stale_gaps) == 0, "No gaps should be stale when claim files are staged"
     assert len(stale_risks) == 0, "No risks should be stale when claim files are staged"
+
+
+def test_input_files_loaded_once(tmp_path, capsys):
+    """
+    covers: AC-VT-009-12
+    Input files (config.json, prd.md, architecture_constraints.json,
+    task_list.json, agent_claims.json) should be read from disk only once
+    during the analyze pipeline. Parsed results should be passed through
+    UnifiedContext rather than re-read.
+    """
+    import collections
+    from unittest.mock import patch
+
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # Paths to track — only these specific governance input files
+    tracked_paths = {
+        "prd": str(tmp_path / "docs" / "prd.md"),
+        "architecture_constraints": str(tmp_path / "docs" / "architecture_constraints.json"),
+        "task_list": str(tmp_path / "docs" / "task_list.json"),
+        "agent_claims": str(tmp_path / ".vibetracing" / "agent_claims.json"),
+        "config": str(tmp_path / ".vibetracing" / "config.json"),
+    }
+    # Invert: file_path_string -> file_key for lookup in spies
+    path_to_key = {v: k for k, v in tracked_paths.items()}
+
+    # Track all file reads for the input files via Path.open.
+    # Both Path.read_bytes and Path.read_text delegate to Path.open,
+    # so patching only Path.open avoids double-counting.
+    # RawInputLoader._load_config also uses Path.open directly.
+    open_counts: collections.Counter = collections.Counter()
+    _orig_path_open = Path.open
+
+    def _spy_path_open(self_path, *args, **kwargs):
+        key = path_to_key.get(str(self_path))
+        if key is not None:
+            open_counts[key] += 1
+        return _orig_path_open(self_path, *args, **kwargs)
+
+    with patch.object(Path, "open", _spy_path_open):
+        exit_code = main(["analyze", "--project-root", str(tmp_path)])
+
+    assert exit_code == 0, "Analyze should succeed for a valid project"
+
+    # Each input file should be opened/read from disk exactly once.
+    # RawInputLoader loads all governance files in a single pass and the
+    # parsed content is passed through UnifiedContext — downstream consumers
+    # (PrdParser, TaskLoader, ClaimLoader, gate checks) must reuse the
+    # already-loaded content instead of re-reading from disk.
+    for file_key, expected_count in [
+        ("prd", 1),
+        ("architecture_constraints", 1),
+        ("task_list", 1),
+        ("agent_claims", 1),
+        ("config", 1),
+    ]:
+        actual = open_counts[file_key]
+        assert actual == expected_count, (
+            f"{file_key} was opened {actual} time(s) from disk, "
+            f"expected exactly {expected_count}. "
+            f"Input files must be loaded once via RawInputLoader and passed "
+            f"through UnifiedContext."
+        )

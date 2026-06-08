@@ -47,97 +47,113 @@
       "principle_id": "PRINCIPLE-VT-001",
       "title": "证据优先",
       "description": "没有明确证据支持时，任何需求、验收标准、任务、Claim、风险或门禁结论都不得标记为完成、覆盖、合规或允许。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-002",
       "title": "Agent 不能自证完成",
       "description": "Agent Claim 不能作为任务完成的充分证据。完成状态必须由任务记录、代码路径、测试证据、Review 结果或工具输出等外部证据支持。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-003",
       "title": "面向人类的治理表达",
       "description": "报告和 Dashboard 必须使用非开发背景用户能够理解的业务语言或项目管理语言，解释状态、缺口、风险和门禁结论。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-004",
       "title": "规则引擎负责门禁判定",
       "description": "Merge Gate 结论必须由确定性规则基于结构化证据计算得出。Agent 可以提供发现项、解释和建议，但不能直接批准合并。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-005",
       "title": "人类负责最终项目决策",
       "description": "系统可以输出 allow、conditional 或 block 等门禁结论，但最终项目决策必须由人类项目负责人或项目经理作出。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-006",
       "title": "插件优先，核心独立",
       "description": "Vibe Tracing v0.1 可以由 Claude Code、Hermes、DeepSeek TUI 等成熟 Agent Runtime 调用，但核心规则、Schema、证据模型和报告生成能力必须保持独立可运行。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-007",
       "title": "MVP 不自研完整 Agent Harness",
       "description": "MVP 阶段不得尝试自研完整 Agent Runtime 或编排平台。应复用成熟 Agent Runtime 作为执行环境，同时保持 Vibe Tracing Core 独立。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-008",
       "title": "核心语言无关，MVP 适配 Python",
       "description": "核心数据模型必须保持语言无关。pytest、coverage、ruff、bandit 等 Python 工具仅作为 MVP 阶段的工具适配器，不得写死进核心对象模型。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-009",
       "title": "MVP 不使用数据库",
       "description": "MVP 阶段不得依赖数据库。所有输入和输出必须以文件形式存在，以保证系统简单、可检查、可移植。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-010",
       "title": "Dashboard 必须是单体 HTML",
       "description": "Dashboard 必须是一个可独立打开的 HTML 文件，内嵌 JSON、CSS 和 JavaScript。不得依赖前端构建系统、CDN、后端服务或浏览时外部 JSON 文件。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-011",
       "title": "Dashboard 只负责渲染",
       "description": "Dashboard 只能渲染 evidence_index.json 和 traceability_report.json 中已经存在的内容。不得重新解释事实、编造结论或重新计算治理状态。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-012",
       "title": "测试覆盖必须显式关联 AC",
       "description": "只有测试证据明确声明关联的 AC ID 时，该测试才可算作覆盖对应验收标准。文件名相似、自然语言相似或 Agent 推断均不得作为已确认覆盖。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-013",
       "title": "保守判定",
       "description": "当证据缺失、含糊、冲突或无法读取时，系统必须输出 unclear、low_confidence、missing 或 blocked，而不是假设完成或合规。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-014",
       "title": "机器契约必须通过 Schema 校验",
       "description": "architecture_constraints.json、task_list.json、agent_claims.json、evidence_index.json、traceability_report.json 等机器可读文件必须通过明确的 Schema 校验。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-015",
       "title": "MVP 范围受控",
       "description": "MVP 必须聚焦需求覆盖、验收标准测试覆盖、Agent Claim 证据和架构约束状态。不得承诺完整自动重建业务流程、完整理解代码或建设企业级平台能力。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     },
     {
       "principle_id": "PRINCIPLE-VT-018",
       "title": "工具执行主权",
       "description": "VT 只采信自己执行的工具结果作为高可信度证据。Agent 自报的完成状态、自行放置的报告文件，不得作为门禁判定的充分依据。",
-      "severity": "must"
+      "severity": "must",
+      "verification_method": "manual"
     }
   ],
   "module_boundaries": [
@@ -303,7 +319,10 @@
       ],
       "related_requirements": [
         "REQ-VT-001",
-        "REQ-VT-002"
+        "REQ-VT-002",
+        "REQ-VT-003",
+        "REQ-VT-004",
+        "REQ-VT-005"
       ],
       "owned_files": [
         "traceability_report_builder.py"
@@ -479,7 +498,8 @@
         "MOD-VT-005",
         "MOD-VT-006",
         "MOD-VT-007"
-      ]
+      ],
+      "verification_method": "machine"
     },
     {
       "rule_id": "DEP-VT-002",
@@ -501,7 +521,8 @@
       "rationale": "Dashboard 是可移植的人类审查交付物，不应要求部署基础设施。",
       "related_modules": [
         "MOD-VT-008"
-      ]
+      ],
+      "verification_method": "machine"
     },
     {
       "rule_id": "DEP-VT-003",
@@ -520,7 +541,8 @@
         "MOD-VT-002",
         "MOD-VT-006",
         "MOD-VT-009"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "DEP-VT-004",
@@ -541,7 +563,8 @@
       "related_modules": [
         "MOD-VT-004",
         "MOD-VT-005"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "DEP-VT-005",
@@ -561,7 +584,8 @@
       "related_modules": [
         "MOD-VT-007",
         "MOD-VT-010"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "DEP-VT-007",
@@ -578,7 +602,8 @@
       "rationale": "mistune 提供稳定的 AST 输出，可保证 Markdown 结构提取的准确性和可维护性，避免正则表达式的脆弱性。",
       "related_modules": [
         "MOD-VT-002"
-      ]
+      ],
+      "verification_method": "machine"
     },
     {
       "rule_id": "DEP-VT-008",
@@ -597,7 +622,8 @@
       "rationale": "防止 Agent 通过工具执行注入任意命令，保证 VT 执行安全性。",
       "related_modules": [
         "MOD-VT-012"
-      ]
+      ],
+      "verification_method": "manual"
     }
   ],
   "data_flow_rules": [
@@ -613,7 +639,8 @@
       "related_requirements": [
         "REQ-VT-001",
         "REQ-VT-002"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "FLOW-VT-002",
@@ -628,7 +655,8 @@
         "REQ-VT-001",
         "REQ-VT-002",
         "REQ-VT-008"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "FLOW-VT-003",
@@ -641,7 +669,8 @@
       "rationale": "Dashboard 是可独立查看的单体审查交付物。",
       "related_requirements": [
         "REQ-VT-006"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "FLOW-VT-004",
@@ -654,7 +683,8 @@
       "rationale": "Dashboard 是展示层，不是事实来源或分析层。",
       "related_requirements": [
         "REQ-VT-006"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "FLOW-VT-005",
@@ -669,7 +699,8 @@
         "REQ-VT-002",
         "REQ-VT-007",
         "REQ-VT-008"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "FLOW-VT-006",
@@ -684,7 +715,8 @@
         "REQ-VT-001",
         "REQ-VT-007",
         "REQ-VT-008"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "FLOW-VT-009",
@@ -697,7 +729,8 @@
       "rationale": "保证配置来源单一化，避免多源写入导致的数据不一致。",
       "related_requirements": [
         "REQ-VT-009"
-      ]
+      ],
+      "verification_method": "manual"
     }
   ],
   "storage_rules": [
@@ -715,7 +748,8 @@
         "traceability_report",
         "dashboard"
       ],
-      "rationale": "文件化存储可以让 MVP 更容易调试、迁移和嵌入本地 Agent 工作流。"
+      "rationale": "文件化存储可以让 MVP 更容易调试、迁移和嵌入本地 Agent 工作流。",
+      "verification_method": "machine"
     },
     {
       "rule_id": "STORE-VT-002",
@@ -725,7 +759,8 @@
       "data_objects": [
         "evidence_index.json"
       ],
-      "rationale": "Evidence Index 后续可被 inspection report、Dashboard、Review 工作流和历史对比复用。"
+      "rationale": "Evidence Index 后续可被 inspection report、Dashboard、Review 工作流和历史对比复用。",
+      "verification_method": "manual"
     },
     {
       "rule_id": "STORE-VT-003",
@@ -737,7 +772,8 @@
         "evidence_index.json",
         "traceability_report.json"
       ],
-      "rationale": "Dashboard 必须可移植、可归档，并且不依赖后端或本地文件读取权限。"
+      "rationale": "Dashboard 必须可移植、可归档，并且不依赖后端或本地文件读取权限。",
+      "verification_method": "manual"
     },
     {
       "rule_id": "STORE-VT-004",
@@ -751,7 +787,8 @@
         ".vibetracing/agent_claims.json",
         ".vibetracing/tool_reports"
       ],
-      "rationale": "Raw Layer 是审计事实源，必须在一次运行中保持稳定。"
+      "rationale": "Raw Layer 是审计事实源，必须在一次运行中保持稳定。",
+      "verification_method": "manual"
     }
   ],
   "error_handling_rules": [
@@ -767,7 +804,8 @@
         "agent_claims.json"
       ],
       "expected_behavior": "输出明确的 missing_input 错误，将相关状态标记为 missing 或 unclear，并在必需证据不可用时降低门禁结论。",
-      "forbidden_behavior": "静默忽略缺失输入，或假设相关工作已经完成。"
+      "forbidden_behavior": "静默忽略缺失输入，或假设相关工作已经完成。",
+      "verification_method": "manual"
     },
     {
       "rule_id": "ERR-VT-002",
@@ -782,7 +820,8 @@
         "traceability_report.json"
       ],
       "expected_behavior": "报告 Schema 校验错误，包含文件路径、字段路径和清晰的修复建议。",
-      "forbidden_behavior": "在没有明确用户指令的情况下推断缺失字段，或自动改写无效源文件。"
+      "forbidden_behavior": "在没有明确用户指令的情况下推断缺失字段，或自动改写无效源文件。",
+      "verification_method": "manual"
     },
     {
       "rule_id": "ERR-VT-003",
@@ -795,7 +834,8 @@
         "merge_gate_engine"
       ],
       "expected_behavior": "使用 unclear 或 low_confidence 状态，并解释缺失的关联关系。",
-      "forbidden_behavior": "将含糊证据当作已确认覆盖。"
+      "forbidden_behavior": "将含糊证据当作已确认覆盖。",
+      "verification_method": "manual"
     },
     {
       "rule_id": "ERR-VT-004",
@@ -810,7 +850,8 @@
         "architecture_constraints"
       ],
       "expected_behavior": "生成 conflict 类型的 gap 或 risk，并关联相关 evidence。",
-      "forbidden_behavior": "静默偏向最新、最乐观或 Agent 提供的说法。"
+      "forbidden_behavior": "静默偏向最新、最乐观或 Agent 提供的说法。",
+      "verification_method": "manual"
     },
     {
       "rule_id": "ERR-VT-005",
@@ -824,7 +865,8 @@
         "bandit"
       ],
       "expected_behavior": "记录命令、退出码、stderr 摘要和受影响的 evidence 状态。",
-      "forbidden_behavior": "将缺失或失败的工具输出视为干净证据。"
+      "forbidden_behavior": "将缺失或失败的工具输出视为干净证据。",
+      "verification_method": "manual"
     }
   ],
   "logging_rules": [
@@ -845,7 +887,8 @@
         "api_key",
         "secret_token",
         "password"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "LOG-VT-002",
@@ -861,7 +904,8 @@
       ],
       "forbidden_fields": [
         "unreferenced_done_status"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "LOG-VT-003",
@@ -878,7 +922,8 @@
       "forbidden_fields": [
         "raw_secret",
         "full_sensitive_prompt"
-      ]
+      ],
+      "verification_method": "manual"
     }
   ],
   "security_rules": [
@@ -897,7 +942,8 @@
       "related_risks": [
         "prompt_injection",
         "unsafe_tool_execution"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "SEC-VT-002",
@@ -915,7 +961,8 @@
       "related_risks": [
         "secret_leakage",
         "dashboard_sensitive_data_exposure"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "SEC-VT-003",
@@ -934,7 +981,8 @@
         "false_positive",
         "false_negative",
         "unreviewed_security_risk"
-      ]
+      ],
+      "verification_method": "manual"
     },
     {
       "rule_id": "SEC-VT-004",
@@ -952,7 +1000,8 @@
         "agent_self_proving",
         "hallucinated_completion",
         "missing_test_evidence"
-      ]
+      ],
+      "verification_method": "manual"
     }
   ],
   "technology_constraints": [
@@ -973,7 +1022,8 @@
         "required backend service",
         "required frontend build system"
       ],
-      "rationale": "该约束可以保证 MVP 简单、可移植、易检查。"
+      "rationale": "该约束可以保证 MVP 简单、可移植、易检查。",
+      "verification_method": "manual"
     },
     {
       "constraint_id": "TECH-VT-002",
@@ -990,7 +1040,8 @@
         "tool_output_as_unstructured_only",
         "tool_result_without_normalization"
       ],
-      "rationale": "这些工具可以为测试证据、覆盖率、基础代码质量和基础安全风险提供事实支撑。"
+      "rationale": "这些工具可以为测试证据、覆盖率、基础代码质量和基础安全风险提供事实支撑。",
+      "verification_method": "manual"
     },
     {
       "constraint_id": "TECH-VT-003",
@@ -1007,7 +1058,8 @@
         "llm_only_coverage_decision",
         "llm_only_compliance_decision"
       ],
-      "rationale": "LLM 的价值在于语义解释和 bookkeeping，而不是未经验证的最终判断。"
+      "rationale": "LLM 的价值在于语义解释和 bookkeeping，而不是未经验证的最终判断。",
+      "verification_method": "manual"
     },
     {
       "constraint_id": "TECH-VT-004",
@@ -1021,7 +1073,8 @@
         "mvp_required_graphify",
         "mvp_required_graph_database"
       ],
-      "rationale": "第一版应先验证治理闭环，再增加基于图谱的代码上下文能力。"
+      "rationale": "第一版应先验证治理闭环，再增加基于图谱的代码上下文能力。",
+      "verification_method": "manual"
     },
     {
       "constraint_id": "TECH-VT-005",
@@ -1037,7 +1090,8 @@
         "agent_runtime_only_execution",
         "manual_copy_paste_only_workflow"
       ],
-      "rationale": "独立 Core 可以提升可测试性、可移植性，并为后续 CI 集成预留空间。"
+      "rationale": "独立 Core 可以提升可测试性、可移植性，并为后续 CI 集成预留空间。",
+      "verification_method": "manual"
     },
     {
       "constraint_id": "TECH-VT-007",
@@ -1053,7 +1107,8 @@
         "arbitrary_command_execution",
         "tool_execution_outside_matrix"
       ],
-      "rationale": "通过白名单机制保证 VT 执行安全性，同时支持多语言扩展。"
+      "rationale": "通过白名单机制保证 VT 执行安全性，同时支持多语言扩展。",
+      "verification_method": "manual"
     }
   ],
   "forbidden_patterns": [
@@ -1066,7 +1121,8 @@
         "Coding Agent 声称 TASK-VT-001 已完成，系统在没有测试或 Review 证据的情况下直接标记 done。",
         "Agent Claim 声称所有 AC 已覆盖，但没有任何测试证据声明 covers。"
       ],
-      "reason": "这违反 Agent Cannot Self-Prove 原则。"
+      "reason": "这违反 Agent Cannot Self-Prove 原则。",
+      "verification_method": "manual"
     },
     {
       "pattern_id": "FORBID-VT-002",
@@ -1077,7 +1133,8 @@
         "因为 tests/test_importer.py 存在，所以将 AC-VT-001-01 标记为 covered。",
         "LLM 判断某个测试大概率覆盖 AC-VT-001-02。"
       ],
-      "reason": "测试覆盖必须显式、可审计。"
+      "reason": "测试覆盖必须显式、可审计。",
+      "verification_method": "manual"
     },
     {
       "pattern_id": "FORBID-VT-003",
@@ -1088,7 +1145,8 @@
         "Dashboard 根据前端逻辑将 blocked 改成 conditional。",
         "Dashboard 因为相关 task 状态为 done 而隐藏 missing tests。"
       ],
-      "reason": "Dashboard 是展示交付物，不是分析引擎。"
+      "reason": "Dashboard 是展示交付物，不是分析引擎。",
+      "verification_method": "manual"
     },
     {
       "pattern_id": "FORBID-VT-004",
@@ -1099,7 +1157,8 @@
         "evidence 为空的 AC 被显示为 covered。",
         "没有外部证据的 Claim 被显示为 completed。"
       ],
-      "reason": "这违反 Evidence First 和 Conservative Judgment 原则。"
+      "reason": "这违反 Evidence First 和 Conservative Judgment 原则。",
+      "verification_method": "manual"
     },
     {
       "pattern_id": "FORBID-VT-005",
@@ -1110,7 +1169,8 @@
         "Merge Gate 规则只存在于 Claude subagent prompt 中。",
         "Schema 校验只靠 Agent 指令完成，没有确定性代码实现。"
       ],
-      "reason": "Agent Runtime 应可替换，Core 必须保持权威。"
+      "reason": "Agent Runtime 应可替换，Core 必须保持权威。",
+      "verification_method": "manual"
     },
     {
       "pattern_id": "FORBID-VT-006",
@@ -1121,7 +1181,8 @@
         "Gate Engine 直接解析随机终端文本来判断测试覆盖。",
         "安全状态直接从未结构化的 bandit 控制台输出中判断。"
       ],
-      "reason": "规则逻辑需要结构化、可审计的证据。"
+      "reason": "规则逻辑需要结构化、可审计的证据。",
+      "verification_method": "manual"
     },
     {
       "pattern_id": "FORBID-VT-007",
@@ -1132,7 +1193,8 @@
         "因为没有自动检查器，所以忽略某条架构约束。",
         "没有发现违规证据，就把约束标记为 compliant。"
       ],
-      "reason": "没有违规证据，不等于存在合规证据。"
+      "reason": "没有违规证据，不等于存在合规证据。",
+      "verification_method": "manual"
     }
   ],
   "quality_gates": [
@@ -1144,7 +1206,8 @@
       "check_type": "automated",
       "pass_condition": "prd.md、architecture_constraints.json、task_list.json 和 agent_claims.json 均存在且可读取。",
       "fail_condition": "任一必需输入文件缺失或不可读取。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-002",
@@ -1154,7 +1217,8 @@
       "check_type": "automated",
       "pass_condition": "architecture_constraints.json、task_list.json 和 agent_claims.json 均通过 Schema 校验。",
       "fail_condition": "任一必需 JSON 输入无效或与 Schema 不兼容。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-003",
@@ -1164,7 +1228,8 @@
       "check_type": "automated",
       "pass_condition": "每个 Must 级需求至少有一个有效关联 TASK ID。",
       "fail_condition": "任一 Must 级需求没有关联任务，或只关联了无效任务。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-004",
@@ -1174,7 +1239,8 @@
       "check_type": "automated",
       "pass_condition": "每个 Must 级 AC 至少有一个通过的测试 evidence，且该 evidence 的 covers 字段包含该 AC ID。",
       "fail_condition": "任一 Must 级 AC 的测试覆盖缺失、失败或不明确。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-005",
@@ -1184,7 +1250,8 @@
       "check_type": "automated",
       "pass_condition": "每个 completed claim 至少有一个任务、代码、测试、Review 或工具 evidence 等外部证据。",
       "fail_condition": "任一 completed claim 缺少外部证据，或只引用 Claim 自身。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-006",
@@ -1194,7 +1261,8 @@
       "check_type": "automated",
       "pass_condition": "没有任何 Must 级架构约束的状态为 violated。",
       "fail_condition": "任一 Must 级架构约束的状态为 violated。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-007",
@@ -1204,7 +1272,8 @@
       "check_type": "automated",
       "pass_condition": "所有 Must 级架构约束均为 compliant，或 unclear 的约束已明确列出并要求人工复核。",
       "fail_condition": "不明确的 Must 级架构约束被隐藏或忽略。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-008",
@@ -1214,7 +1283,8 @@
       "check_type": "automated",
       "pass_condition": "每个 high 风险项均包含 severity、evidence、business impact 和 suggested action。",
       "fail_condition": "任一 high 风险项缺少解释、证据或建议行动。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-009",
@@ -1224,7 +1294,8 @@
       "check_type": "automated",
       "pass_condition": "dashboard.html 作为单体文件生成，并内嵌所需报告数据。",
       "fail_condition": "dashboard.html 需要外部 JSON、CDN、前端构建产物或后端服务。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-010",
@@ -1234,7 +1305,8 @@
       "check_type": "automated",
       "pass_condition": "所有正向状态均引用存在的 evidence ID。",
       "fail_condition": "任一正向状态没有 evidence、引用无效 evidence ID，或只引用 Agent Claim 自身作为证据。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-011",
@@ -1244,7 +1316,8 @@
       "check_type": "automated",
       "pass_condition": "已配置工具的结果要么成功规范化，要么被明确标记为 failed 或 unavailable。",
       "fail_condition": "缺失或失败的工具输出被静默视为通过或干净。",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-012",
@@ -1254,7 +1327,8 @@
       "check_type": "automated",
       "pass_condition": "gate_decision 与 human_decision 使用独立字段表示，或 human_decision 不存在。",
       "fail_condition": "系统将 gate_decision 等同于最终人类批准。",
-      "blocks_merge": false
+      "blocks_merge": false,
+      "verification_method": "machine"
     },
     {
       "gate_id": "GATE-VT-013",
@@ -1264,7 +1338,8 @@
       "check_type": "manual",
       "pass_condition": "Agent runtime bootstrap configuration (if present) must be reviewed and approved",
       "fail_condition": "Bootstrap configuration exists but has not been reviewed",
-      "blocks_merge": false
+      "blocks_merge": false,
+      "verification_method": "manual"
     },
     {
       "gate_id": "GATE-VT-014",
@@ -1274,7 +1349,8 @@
       "check_type": "hybrid",
       "pass_condition": "Architecture constraint changes are documented in architecture_change_log.md with matching timestamps",
       "fail_condition": "Architecture constraints modified without corresponding change_log update",
-      "blocks_merge": true
+      "blocks_merge": true,
+      "verification_method": "machine"
     }
   ]
 }

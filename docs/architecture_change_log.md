@@ -2,6 +2,23 @@
 
 本项目的所有架构约束变更均在此记录，供项目经理（PM）进行日常审计与追溯。
 
+## [2026-06-08] verification_method 字段引入 — 消除手动规则门禁噪声
+
+### 所有规则新增 verification_method 字段
+* **变更规则**：为 architecture_constraints.json 中所有规则（architecture_principles、dependency_rules、data_flow_rules、storage_rules、error_handling_rules、logging_rules、security_rules、technology_constraints、forbidden_patterns、quality_gates）添加 `verification_method` 字段，值为 `"machine"` 或 `"manual"`。
+* **变更原因**：约 60 条"不可机器验证"的治理规则（PRINCIPLE-*、FORBID-*、FLOW-* 等）在每次 hook 运行时触发 BLOCKED（GATE-VT-007），产生大量噪声，掩盖真正的问题。通过显式声明 `verification_method`，手动规则在 audit 时被记录但不再阻断门禁，仅机器可验证规则的 unclear 状态才触发保守门禁。
+* **影响范围**：
+  - `docs/architecture_constraints.json`：所有规则添加 verification_method 字段。
+  - `src/vibe_tracing/architecture_compliance_checker.py`：section 7 逻辑改为根据 verification_method 决定是否加入 unclear_constraints。
+  - `src/vibe_tracing/schemas/architecture_constraints.schema.json`：所有 rule 类型的 schema 添加 verification_method 属性。
+  - `src/vibe_tracing/templates/architecture_constraints.template.json`：模板示例规则添加 verification_method。
+
+## [2026-06-08] MOD-VT-006 新增 REQ-VT-003/004/005 架构映射
+
+### MOD-VT-006 related_requirements 新增 REQ-VT-003, REQ-VT-004, REQ-VT-005
+* **变更规则**：MOD-VT-006 (traceability_analyzer) 的 `related_requirements` 新增 `REQ-VT-003`、`REQ-VT-004`、`REQ-VT-005`。
+* **变更原因**：三个 SHOULD/COULD 级需求此前缺少架构映射。REQ-VT-003（业务流程图生成与检查）、REQ-VT-004（输入输出表与跨模块衔接检查）、REQ-VT-005（数据结构列表与业务解释）均为追踪分析职责，归属 MOD-VT-006。
+
 ## [2026-06-08] 语言工具矩阵新增 extensions 字段
 
 ### language_tool_matrix.python.extensions

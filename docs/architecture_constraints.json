@@ -9,6 +9,7 @@
   },
   "language_tool_matrix": {
     "python": {
+      "extensions": [".py"],
       "test": {
         "tool": "pytest",
         "default_command": "pytest {test_path} --tb=short -q --json-report --json-report-file={output_path}",

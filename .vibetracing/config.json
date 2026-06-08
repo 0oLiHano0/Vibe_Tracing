@@ -16,8 +16,8 @@
     "type_check",
     "security"
   ],
-  "architecture_constraints_hash": "ee9f2b1559679f5366eeb491e083e6c16d175c8397648eb79a83f8c14b76c320",
-  "finalize_git_commit": "35a56ae7ddd5d52db2579c3c6d16299c73bd1dbd",
+  "architecture_constraints_hash": "ffa17bbff769c8507cea4f3ec71031b0c02017daf0a2fedf83f9cc46ba07606c",
+  "finalize_git_commit": "c63e181f46240a1debabf28c467cec0840468143",
   "finalize_constraints_path": "docs/architecture_constraints.json",
   "prd_hash": "a36ad9a3e1dd7bc5eb6677cefad552330b035b593c20d8b6d957754c892fd42b"
 }

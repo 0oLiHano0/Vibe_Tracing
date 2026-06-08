@@ -2,6 +2,12 @@
 
 本项目的所有架构约束变更均在此记录，供项目经理（PM）进行日常审计与追溯。
 
+## [2026-06-08] 语言工具矩阵新增 extensions 字段
+
+### language_tool_matrix.python.extensions
+* **变更规则**：新增 `extensions: [".py"]` 字段，显式声明该语言的代码文件扩展名。
+* **变更原因**：工具执行从配置读取扩展名替代硬编码，使 VT 对不同项目的文件类型支持由配置驱动。
+
 ## [2026-06-08] mypy 工具配置修复
 
 ### language_tool_matrix.python.type_check 命令模板

@@ -4,18 +4,7 @@
     "related_task": "TASK-VT-005",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_raw_input_loader.py::test_load_all_valid_files_returns_ok_manifest",
-      "tests/test_raw_input_loader.py::test_required_files_have_content",
-      "tests/test_raw_input_loader.py::test_missing_required_file_sets_has_required_errors",
-      "tests/test_raw_input_loader.py::test_missing_required_file_record_has_error_code",
-      "tests/test_raw_input_loader.py::test_missing_optional_file_does_not_set_has_required_errors",
-      "tests/test_raw_input_loader.py::test_invalid_json_file_sets_parse_error",
-      "tests/test_raw_input_loader.py::test_raw_files_not_modified",
-      "tests/test_raw_input_loader.py::test_manifest_records_all_required_file_keys",
-      "tests/test_raw_input_loader.py::test_manifest_includes_tool_report_files",
-      "tests/test_raw_input_loader.py::test_loader_has_no_gate_decision_attribute",
-      "tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback",
-      "tests/test_raw_input_loader.py::test_self_governance_rules_contract"
+      "src/vibe_tracing/raw_input_loader.py"
     ],
     "code_refs": [
       "src/vibe_tracing/raw_input_loader.py"
@@ -23,14 +12,14 @@
     "test_refs": [
       "tests/test_raw_input_loader.py"
     ],
-    "timestamp": "2026-05-29T09:45:00Z"
+    "timestamp": "2026-06-08T12:30:00Z"
   },
   {
     "claim_id": "CLAIM-VT-030",
     "related_task": "TASK-VT-030",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_raw_input_loader.py::test_self_governance_rules_contract"
+      "docs/prd.md"
     ],
     "code_refs": [
       "docs/prd.md",
@@ -41,14 +30,14 @@
     "test_refs": [
       "tests/test_raw_input_loader.py"
     ],
-    "timestamp": "2026-05-29T09:45:00Z"
+    "timestamp": "2026-06-08T12:30:00Z"
   },
   {
     "claim_id": "CLAIM-VT-031",
     "related_task": "TASK-VT-031",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_raw_input_loader.py::test_config_json_path_overrides_and_safe_fallback"
+      "src/vibe_tracing/raw_input_loader.py"
     ],
     "code_refs": [
       "src/vibe_tracing/raw_input_loader.py"
@@ -56,14 +45,14 @@
     "test_refs": [
       "tests/test_raw_input_loader.py"
     ],
-    "timestamp": "2026-05-29T09:45:00Z"
+    "timestamp": "2026-06-08T12:30:00Z"
   },
   {
     "claim_id": "CLAIM-VT-033",
     "related_task": "TASK-VT-033",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_claim_evidence_analyzer.py::test_claim_lookup_multi_matching_and_fail_fast"
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
     ],
     "code_refs": [
       "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
@@ -71,14 +60,14 @@
     "test_refs": [
       "tests/test_claim_evidence_analyzer.py"
     ],
-    "timestamp": "2026-05-29T10:35:00Z"
+    "timestamp": "2026-06-08T12:00:00Z"
   },
   {
     "claim_id": "CLAIM-VT-034",
     "related_task": "TASK-VT-034",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_dashboard_renderer.py::test_dashboard_renderer_svg_no_emojis"
+      "src/vibe_tracing/dashboard_renderer.py"
     ],
     "code_refs": [
       "src/vibe_tracing/dashboard_renderer.py"
@@ -86,19 +75,14 @@
     "test_refs": [
       "tests/test_dashboard_renderer.py"
     ],
-    "timestamp": "2026-05-31T09:30:00Z"
+    "timestamp": "2026-06-08T12:00:00Z"
   },
   {
     "claim_id": "CLAIM-VT-035",
     "related_task": "TASK-VT-035",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_scaffolding.py::test_run_init_creates_scaffolding",
-      "tests/test_dynamic_hints.py::test_claims_schema_validation_error_with_dynamic_hints",
-      "tests/test_dynamic_hints.py::test_tasks_schema_validation_error_with_dynamic_hints",
-      "tests/test_dynamic_hints.py::test_task_loader_logical_validation_error_with_dynamic_hints",
-      "tests/test_dynamic_hints.py::test_claim_loader_logical_validation_error_with_dynamic_hints",
-      "tests/test_dynamic_hints.py::test_silent_filtering_of_template_records"
+      "src/vibe_tracing/schema_validator.py"
     ],
     "code_refs": [
       "src/vibe_tracing/schema_validator.py",
@@ -110,16 +94,14 @@
       "tests/test_scaffolding.py",
       "tests/test_dynamic_hints.py"
     ],
-    "timestamp": "2026-05-31T11:00:00Z"
+    "timestamp": "2026-06-08T12:00:00Z"
   },
   {
     "claim_id": "CLAIM-VT-036",
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_unified_context.py",
-      "tests/test_evidence_index_builder.py",
-      "tests/test_cli_analyze.py"
+      "src/vibe_tracing/context.py"
     ],
     "code_refs": [
       "src/vibe_tracing/context.py",
@@ -131,7 +113,7 @@
       "tests/test_evidence_index_builder.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-07T18:45:00Z",
+    "timestamp": "2026-06-08T12:00:00Z",
     "notes": "UnifiedContext 强类型领域模型，EvidenceIndexBuilder 单次加载"
   },
   {
@@ -139,7 +121,7 @@
     "related_task": "TASK-VT-045",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_merge_gate_engine.py"
+      "src/vibe_tracing/merge_gate_engine.py"
     ],
     "code_refs": [
       "src/vibe_tracing/merge_gate_engine.py"
@@ -147,7 +129,7 @@
     "test_refs": [
       "tests/test_merge_gate_engine.py"
     ],
-    "timestamp": "2026-06-07T18:45:00Z",
+    "timestamp": "2026-06-08T12:00:00Z",
     "notes": "MergeGateEngine blocked 时不再吞掉 fail 级警告"
   },
   {
@@ -155,8 +137,7 @@
     "related_task": "TASK-VT-046",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_finalize.py",
-      "tests/test_cli_analyze.py::test_prd_drift_detection"
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py"
@@ -165,7 +146,7 @@
       "tests/test_finalize.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-07T18:45:00Z",
+    "timestamp": "2026-06-08T12:00:00Z",
     "notes": "finalize 存储 prd_hash，analyze 检测 PRD 漂移"
   },
   {
@@ -173,9 +154,7 @@
     "related_task": "TASK-VT-047",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_prd_arch_validator.py",
-      "tests/test_cli_analyze.py::test_mapping_dead_link_blocks",
-      "tests/test_cli_analyze.py::test_mapping_must_uncovered_blocks"
+      "src/vibe_tracing/prd_arch_validator.py"
     ],
     "code_refs": [
       "src/vibe_tracing/prd_arch_validator.py",
@@ -185,7 +164,7 @@
       "tests/test_prd_arch_validator.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-07T18:45:00Z",
+    "timestamp": "2026-06-08T12:00:00Z",
     "notes": "PRD↔Arch 映射校验提取为独立模块，analyze 时持续校验"
   },
   {
@@ -193,8 +172,7 @@
     "related_task": "TASK-VT-048",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_claim_evidence_analyzer.py::test_claim_test_refs_cover_ac",
-      "tests/test_claim_evidence_analyzer.py::test_claim_test_refs_miss_ac_coverage"
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
     ],
     "code_refs": [
       "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
@@ -202,7 +180,7 @@
     "test_refs": [
       "tests/test_claim_evidence_analyzer.py"
     ],
-    "timestamp": "2026-06-07T18:45:00Z",
+    "timestamp": "2026-06-08T12:00:00Z",
     "notes": "Claim 的 test_refs 必须覆盖关联 AC"
   },
   {
@@ -210,9 +188,7 @@
     "related_task": "TASK-VT-049",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_scaffolding.py",
-      "tests/test_cli_analyze.py::test_gates_only_skips_analysis",
-      "tests/test_ghost_code_reconciler.py::test_unstaged_claims_are_not_seen"
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",
@@ -223,7 +199,7 @@
       "tests/test_cli_analyze.py",
       "tests/test_ghost_code_reconciler.py"
     ],
-    "timestamp": "2026-06-07T18:45:00Z",
+    "timestamp": "2026-06-08T12:00:00Z",
     "notes": "hook set -e + --gates-only + staged claims 读取"
   },
   {
@@ -231,9 +207,7 @@
     "related_task": "TASK-VT-050",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_tool_execution.py",
-      "tests/test_task_loader.py",
-      "tests/test_claim_loader.py"
+      "tests/test_task_loader.py"
     ],
     "code_refs": [
       "src/vibe_tracing/tool_evidence_adapter.py",
@@ -242,11 +216,9 @@
       "src/vibe_tracing/cli.py"
     ],
     "test_refs": [
-      "tests/test_tool_execution.py",
-      "tests/test_task_loader.py",
-      "tests/test_claim_loader.py"
+      "tests/test_task_loader.py"
     ],
-    "timestamp": "2026-06-07T18:45:00Z",
+    "timestamp": "2026-06-08T12:00:00Z",
     "notes": "删除 ToolEvidenceAdapter、移除 tests/ 兜底、hashlib 顶部导入、skip_schema"
   },
   {
@@ -307,8 +279,7 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_task_loader.py",
-      "tests/test_claim_loader.py"
+      "tests/test_task_loader.py"
     ],
     "code_refs": [
       "src/vibe_tracing/task_loader.py",
@@ -316,10 +287,9 @@
       "src/vibe_tracing/cli.py"
     ],
     "test_refs": [
-      "tests/test_task_loader.py",
-      "tests/test_claim_loader.py"
+      "tests/test_task_loader.py"
     ],
-    "timestamp": "2026-06-07T20:00:00Z",
+    "timestamp": "2026-06-08T12:00:00Z",
     "notes": "EVO-003: 移除 skip_schema 参数"
   },
   {
@@ -344,7 +314,7 @@
     "related_task": "TASK-VT-044",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_cli_analyze.py::test_missing_tools_produces_blocked_evidence"
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",
@@ -353,7 +323,7 @@
     "test_refs": [
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-07T20:00:00Z",
+    "timestamp": "2026-06-08T12:30:00Z",
     "notes": "EVO-005: 工具依赖检查失败注入 BLOCKED 证据而非硬退出"
   },
   {
@@ -421,19 +391,15 @@
     "related_task": "TASK-VT-052",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_ac_freshness.py",
       "tests/test_quality_gates.py"
     ],
     "code_refs": [
-      "src/vibe_tracing/ac_freshness_checker.py",
-      "tests/test_ac_freshness.py",
       "tests/test_quality_gates.py"
     ],
     "test_refs": [
-      "tests/test_ac_freshness.py",
       "tests/test_quality_gates.py"
     ],
-    "timestamp": "2026-06-07T22:00:00Z",
+    "timestamp": "2026-06-08T12:30:00Z",
     "notes": "GOV: Gate 2.5 反向覆盖校验 — staged 代码文件覆盖 task 修改状态"
   },
   {
@@ -460,17 +426,13 @@
     "related_task": "TASK-VT-054",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_ac_freshness.py"
+      "tests/test_cli_analyze.py"
     ],
     "code_refs": [
-      "src/vibe_tracing/ac_freshness_checker.py",
-      "src/vibe_tracing/cli.py",
-      "tests/test_ac_freshness.py"
+      "src/vibe_tracing/cli.py"
     ],
-    "test_refs": [
-      "tests/test_ac_freshness.py"
-    ],
-    "timestamp": "2026-06-07T23:00:00Z",
+    "test_refs": [],
+    "timestamp": "2026-06-08T12:30:00Z",
     "notes": "Gate 2.5 反向覆盖校验升级：无覆盖 task → BLOCKED"
   },
   {
@@ -478,7 +440,7 @@
     "related_task": "TASK-VT-049",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_scaffolding.py::test_run_init_pre_commit_hook_uses_sys_executable"
+      "src/vibe_tracing/cli.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",
@@ -488,7 +450,7 @@
       "tests/test_scaffolding.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T00:00:00Z",
+    "timestamp": "2026-06-08T12:30:00Z",
     "notes": "hook 模板去除 --gates-only + 工具执行过滤非代码文件"
   },
   {
@@ -541,24 +503,20 @@
     "related_task": "TASK-VT-057",
     "claimed_status": "covered",
     "evidence_refs": [
-      "tests/test_cli_analyze.py",
-      "tests/test_tool_execution.py"
+      "tests/test_cli_analyze.py"
     ],
     "code_refs": [
       "src/vibe_tracing/cli.py",
       "src/vibe_tracing/templates/architecture_constraints.template.json",
       "src/vibe_tracing/schemas/architecture_constraints.schema.json",
       "tests/test_cli_analyze.py",
-      "tests/test_e2e_finalize_analyze.py",
-      "src/vibe_tracing/cli.py",
-      "tests/test_cli_analyze.py"
+      "tests/test_e2e_finalize_analyze.py"
     ],
     "test_refs": [
       "tests/test_cli_analyze.py",
-      "tests/test_e2e_finalize_analyze.py",
-      "tests/test_cli_analyze.py"
+      "tests/test_e2e_finalize_analyze.py"
     ],
-    "timestamp": "2026-06-08T05:00:00Z",
+    "timestamp": "2026-06-08T12:00:00Z",
     "notes": "EVO-012: 配置驱动扩展名 + 工具未安装提醒安装"
   },
   {

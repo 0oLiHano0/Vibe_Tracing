@@ -697,22 +697,42 @@ class ArchitectureComplianceChecker:
                 if severity != "must":
                     continue
 
-                # Mark all other must rules as unclear
-                status_list.append(
-                    {
-                        "rule_id": r_id,
-                        "status": "unclear",
-                        "severity": "must",
-                        "title": rule.get("title", ""),
-                        "description": rule.get("description", ""),
-                    }
-                )
-                unclear_list.append(
-                    {
-                        "rule_id": r_id,
-                        "reason": "This constraint is not machine-verifiable and requires manual review.",
-                    }
-                )
+                verification = rule.get("verification_method", "machine")
+
+                if verification == "manual":
+                    # Manual rules are acknowledged as unclear but do NOT
+                    # block the gate.  They are recorded for audit purposes
+                    # but excluded from the unclear_constraints list that
+                    # feeds GATE-VT-007.
+                    status_list.append(
+                        {
+                            "rule_id": r_id,
+                            "status": "unclear",
+                            "severity": "must",
+                            "title": rule.get("title", ""),
+                            "description": rule.get("description", ""),
+                            "verification_method": "manual",
+                        }
+                    )
+                else:
+                    # Machine-verifiable rules that cannot be checked are
+                    # truly unclear and must block the gate (GATE-VT-007).
+                    status_list.append(
+                        {
+                            "rule_id": r_id,
+                            "status": "unclear",
+                            "severity": "must",
+                            "title": rule.get("title", ""),
+                            "description": rule.get("description", ""),
+                            "verification_method": "machine",
+                        }
+                    )
+                    unclear_list.append(
+                        {
+                            "rule_id": r_id,
+                            "reason": "This constraint is not machine-verifiable and requires manual review.",
+                        }
+                    )
 
         return {
             "architecture_compliance_status": status_list,

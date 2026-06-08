@@ -83,6 +83,11 @@
               "type": "string",
               "pattern": "^[a-zA-Z0-9_-]+$"
             }
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -203,6 +208,11 @@
               "type": "string",
               "pattern": "^[a-zA-Z0-9_-]+$"
             }
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -274,6 +284,11 @@
               "type": "string",
               "pattern": "^[a-zA-Z0-9_-]+$"
             }
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -332,6 +347,11 @@
           },
           "rationale": {
             "type": "string"
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -384,6 +404,11 @@
           },
           "retry_policy": {
             "type": "string"
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -442,6 +467,11 @@
           },
           "rate_control": {
             "type": "string"
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -500,6 +530,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -555,6 +590,11 @@
           },
           "rationale": {
             "type": "string"
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -601,6 +641,11 @@
           },
           "reason": {
             "type": "string"
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -659,6 +704,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -710,6 +760,11 @@
           },
           "versioning_policy": {
             "type": "string"
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -762,6 +817,11 @@
           },
           "violation_consequence": {
             "type": "string"
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }
@@ -913,6 +973,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "verification_method": {
+            "type": "string",
+            "enum": ["machine", "manual"],
+            "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
           }
         }
       }

@@ -15,15 +15,15 @@
   {
     "ticket_id": "AUDIT-VT-002",
     "file_path": "src/vibe_tracing/ghost_code_reconciler.py",
-    "file_hash": "sha256:510ce05f5b4354a57251731175b686bff43bfc4f7ee04827a8247f73611824e7",
+    "file_hash": "sha256:51a683f87f8559d4175cca657a5c004d6ebc409c326e246033ddd8618735ab2d",
     "task_id": "TASK-VT-056",
     "ac_ids": [
       "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "ghost_code_reconciler.py 合并原 AcFreshnessChecker 的反向覆盖检查和 AC 新鲜度检查。新增 _check_task_coverage 和 _check_ac_freshness 方法。semantic_audit.json 加入白名单。Gate 2 成为完整的代码-声明对账检查。",
+    "audit_reason": "ghost_code_reconciler.py 反向覆盖检查优化：status=done 的历史任务不再产生噪音 WARNING，仅对活跃任务（todo/in_progress）检查 task 是否同步更新。新增 _get_task_statuses 辅助方法。",
     "created_at": "2026-06-08T01:38:30.163828Z",
-    "updated_at": "2026-06-08T02:00:00.000000Z"
+    "updated_at": "2026-06-08T03:17:35.492358Z"
   },
   {
     "ticket_id": "AUDIT-VT-003",
@@ -120,5 +120,19 @@
     "audit_reason": "test_cli_analyze.py 更新 test_missing_tools 测试：从验证 BLOCKED 证据改为验证 WARNING 输出和跳过行为。",
     "created_at": "2026-06-08T03:06:28.672473Z",
     "updated_at": "2026-06-08T03:06:35.703294Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-010",
+    "file_path": "src/vibe_tracing/ghost_code_reconciler.py",
+    "file_hash": "sha256:51a683f87f8559d4175cca657a5c004d6ebc409c326e246033ddd8618735ab2d",
+    "task_id": "TASK-VT-049",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-17"
+    ],
+    "status": "passed",
+    "audit_reason": "ghost_code_reconciler.py 反向覆盖检查优化：status=done 的历史任务不再产生噪音 WARNING，仅对活跃任务（todo/in_progress）检查 task 是否同步更新。新增 _get_task_statuses 辅助方法。",
+    "created_at": "2026-06-08T03:17:20.682587Z",
+    "updated_at": "2026-06-08T03:17:35.492358Z"
   }
 ]

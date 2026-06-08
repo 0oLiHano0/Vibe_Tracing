@@ -526,14 +526,15 @@
       "tests/test_ghost_code_reconciler.py",
       "tests/test_quality_gates.py",
       "src/vibe_tracing/ac_freshness_checker.py",
-      "tests/test_ac_freshness.py"
+      "tests/test_ac_freshness.py",
+      "src/vibe_tracing/ghost_code_reconciler.py"
     ],
     "test_refs": [
       "tests/test_ghost_code_reconciler.py",
       "tests/test_quality_gates.py"
     ],
-    "timestamp": "2026-06-08T02:00:00Z",
-    "notes": "EVO-011: Gate 2+2.5 合并，删除 AcFreshnessChecker"
+    "timestamp": "2026-06-08T06:00:00Z",
+    "notes": "EVO-011: Gate 2+2.5 合并 + 反向覆盖检查跳过 done 任务"
   },
   {
     "claim_id": "CLAIM-VT-057",

@@ -269,6 +269,7 @@ class GhostCodeReconciler:
 
         modified_task_ids = self._get_modified_task_ids()
         all_task_ids = self._get_all_task_ids()
+        task_statuses = self._get_task_statuses()
 
         blocked: List[str] = []
         warnings: List[str] = []
@@ -284,9 +285,9 @@ class GhostCodeReconciler:
                         f"  - 代码文件 {code_file} 关联的 Claim 引用任务 {task_id}，"
                         f"但该任务不存在于 task_list.json 中。"
                     )
-                elif task_id not in modified_task_ids:
+                elif task_id not in modified_task_ids and task_statuses.get(task_id) != "done":
                     warnings.append(
-                        f"  - 代码文件 {code_file} 被任务 {task_id} 覆盖，"
+                        f"  - 代码文件 {code_file} 被活跃任务 {task_id} 覆盖，"
                         f"但该任务未在本次提交中修改。"
                         f"请确认是否需要更新任务状态或提交 Claim。"
                     )
@@ -318,6 +319,13 @@ class GhostCodeReconciler:
         if not staged_data:
             return set()
         return {t.get("task_id") for t in staged_data.get("tasks", []) if t.get("task_id")}
+
+    def _get_task_statuses(self) -> Dict[str, str]:
+        """Return mapping of task_id -> status from staged task_list.json."""
+        staged_data = self._get_staged_tasks()
+        if not staged_data:
+            return {}
+        return {t.get("task_id"): t.get("status", "") for t in staged_data.get("tasks", []) if t.get("task_id")}
 
     # ------------------------------------------------------------------
     # Gate 2.5 -- Forward AC freshness check

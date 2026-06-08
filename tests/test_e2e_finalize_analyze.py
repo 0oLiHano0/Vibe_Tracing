@@ -104,6 +104,7 @@ def _make_constraints(include_language=True):
         ],
         "language_tool_matrix": {
             "python": {
+                "extensions": [".py"],
                 "test": {
                     "tool": "pytest",
                     "default_command": (

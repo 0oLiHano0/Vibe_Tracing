@@ -3219,6 +3219,169 @@
       "ai_coding_guidance": [
         "_reverse_check 返回 (blocked, warnings) 元组"
       ]
+    },
+    {
+      "task_id": "TASK-VT-055",
+      "phase_id": "PHASE-VT-05",
+      "title": "治理文件白名单扩展 + audit_reason 质量校验",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-02"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "semantic_audit.json 加入 Gate 2 白名单，audit_reason 增加长度和文件名校验",
+      "atomic_scope": "ghost_code_reconciler.py, semantic_auditor.py",
+      "out_of_scope": [],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-053"
+      ],
+      "expected_deliverables": [
+        "修改后的 ghost_code_reconciler.py",
+        "修改后的 semantic_auditor.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-055-01",
+          "description": "semantic_audit.json 在白名单中"
+        },
+        {
+          "dod_id": "DOD-VT-055-02",
+          "description": "audit_reason 长度 >= 20 且包含文件名"
+        }
+      ],
+      "ai_coding_guidance": []
+    },
+    {
+      "task_id": "TASK-VT-056",
+      "phase_id": "PHASE-VT-05",
+      "title": "Gate 2+2.5 合并为代码-声明对账",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-17"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "合并 AcFreshnessChecker 到 GhostCodeReconciler，删除独立模块",
+      "atomic_scope": "ghost_code_reconciler.py, cli.py, 删除 ac_freshness_checker.py",
+      "out_of_scope": [],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-055"
+      ],
+      "expected_deliverables": [
+        "扩展后的 ghost_code_reconciler.py",
+        "删除 ac_freshness_checker.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-056-01",
+          "description": "AcFreshnessChecker 类不存在"
+        },
+        {
+          "dod_id": "DOD-VT-056-02",
+          "description": "task 覆盖检查在 reconciler 中"
+        },
+        {
+          "dod_id": "DOD-VT-056-03",
+          "description": "AC 新鲜度检查在 reconciler 中"
+        }
+      ],
+      "ai_coding_guidance": []
+    },
+    {
+      "task_id": "TASK-VT-057",
+      "phase_id": "PHASE-VT-05",
+      "title": "配置驱动代码扩展名 + 未配置扩展名检测",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "工具执行从 language_tool_matrix.extensions 读取扩展名，移除硬编码",
+      "atomic_scope": "cli.py, architecture_constraints.template.json, schema",
+      "out_of_scope": [],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-056"
+      ],
+      "expected_deliverables": [
+        "修改后的 cli.py",
+        "修改后的模板和 schema"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-057-01",
+          "description": "_CODE_EXTENSIONS 硬编码不存在"
+        },
+        {
+          "dod_id": "DOD-VT-057-02",
+          "description": "extensions 从配置读取"
+        },
+        {
+          "dod_id": "DOD-VT-057-03",
+          "description": "未配置扩展名输出 WARNING"
+        }
+      ],
+      "ai_coding_guidance": []
+    },
+    {
+      "task_id": "TASK-VT-058",
+      "phase_id": "PHASE-VT-05",
+      "title": "门禁函数拆分 + 编排函数简化",
+      "priority": "should",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-17"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "_run_integrity_gates 拆分为 5 个独立 Gate 函数，编排函数不超过 30 行",
+      "atomic_scope": "cli.py",
+      "out_of_scope": [],
+      "related_architecture_constraints": [],
+      "depends_on": [
+        "TASK-VT-057"
+      ],
+      "expected_deliverables": [
+        "重构后的 cli.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-058-01",
+          "description": "5 个独立 Gate 函数"
+        },
+        {
+          "dod_id": "DOD-VT-058-02",
+          "description": "编排函数不超过 30 行"
+        }
+      ],
+      "ai_coding_guidance": []
     }
   ]
 }

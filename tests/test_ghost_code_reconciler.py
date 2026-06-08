@@ -76,9 +76,12 @@ class TestMalformedClaimsWarning:
         reconciler = GhostCodeReconciler(project)
 
         # Mock _get_staged_files and _get_active_claims_code_refs directly
-        # to isolate the reconcile gate from git subprocess complexity
+        # to isolate the reconcile gate from git subprocess complexity.
+        # Also mock the new Gate 2.5 checks to avoid git repo dependency.
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}), \
-             patch.object(reconciler, "_get_active_claims_code_refs", return_value={"src/foo.py"}):
+             patch.object(reconciler, "_get_active_claims_code_refs", return_value={"src/foo.py"}), \
+             patch.object(reconciler, "_check_task_coverage", return_value=([], [])), \
+             patch.object(reconciler, "_check_ac_freshness", return_value=[]):
             ok, msg = reconciler.reconcile()
 
         assert ok is True
@@ -137,7 +140,9 @@ class TestClaimsCoverCodeRefs:
         )
         reconciler = GhostCodeReconciler(project)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py", "src/bar.py"}), \
-             patch.object(reconciler, "_get_active_claims_code_refs", return_value={"src/foo.py", "src/bar.py"}):
+             patch.object(reconciler, "_get_active_claims_code_refs", return_value={"src/foo.py", "src/bar.py"}), \
+             patch.object(reconciler, "_check_task_coverage", return_value=([], [])), \
+             patch.object(reconciler, "_check_ac_freshness", return_value=[]):
             ok, msg = reconciler.reconcile()
         assert ok is True
         assert msg == ""
@@ -150,7 +155,9 @@ class TestClaimsCoverCodeRefs:
         )
         reconciler = GhostCodeReconciler(project)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}), \
-             patch.object(reconciler, "_get_active_claims_code_refs", return_value={"src/foo.py", "src/bar.py", "src/baz.py"}):
+             patch.object(reconciler, "_get_active_claims_code_refs", return_value={"src/foo.py", "src/bar.py", "src/baz.py"}), \
+             patch.object(reconciler, "_check_task_coverage", return_value=([], [])), \
+             patch.object(reconciler, "_check_ac_freshness", return_value=[]):
             ok, msg = reconciler.reconcile()
         assert ok is True
         assert msg == ""
@@ -181,7 +188,9 @@ class TestClaimsReferenceNonExistentFile:
         )
         reconciler = GhostCodeReconciler(project)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}), \
-             patch.object(reconciler, "_get_active_claims_code_refs", return_value={"src/foo.py", "src/ghost.py"}):
+             patch.object(reconciler, "_get_active_claims_code_refs", return_value={"src/foo.py", "src/ghost.py"}), \
+             patch.object(reconciler, "_check_task_coverage", return_value=([], [])), \
+             patch.object(reconciler, "_check_ac_freshness", return_value=[]):
             ok, msg = reconciler.reconcile()
         assert ok is True
         assert msg == ""
@@ -327,7 +336,7 @@ class TestWhitelistLogic:
 
     def test_exact_whitelist_paths(self, project):
         reconciler = GhostCodeReconciler(project)
-        for path in [".vibetracing/agent_claims.json", ".vibetracing/config.json", "docs/task_list.json"]:
+        for path in [".vibetracing/agent_claims.json", ".vibetracing/config.json", ".vibetracing/semantic_audit.json", "docs/task_list.json"]:
             assert reconciler._is_whitelisted(path) is True
 
     def test_prefix_whitelist(self, project):
@@ -391,3 +400,428 @@ class TestGitNotInstalled:
 
         assert ok is True
         assert msg == ""
+
+
+# ------------------------------------------------------------------
+# Helper to create a real git repo for integration-style tests
+# ------------------------------------------------------------------
+
+def _init_git_repo(project: Path):
+    """Initialize a git repo with an initial commit so HEAD exists."""
+    subprocess.run(["git", "init"], cwd=project, capture_output=True, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=project, capture_output=True, check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=project, capture_output=True, check=True,
+    )
+    (project / "docs").mkdir(exist_ok=True)
+    (project / ".vibetracing").mkdir(exist_ok=True)
+    (project / "src").mkdir(exist_ok=True)
+    (project / "placeholder.txt").write_text("init")
+    subprocess.run(["git", "add", "placeholder.txt"], cwd=project, capture_output=True, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=project, capture_output=True, check=True)
+
+
+# ------------------------------------------------------------------
+# EVO-TASK-011a: Reverse coverage check tests
+# ------------------------------------------------------------------
+
+class TestTaskCoverageCheck:
+    """Tests for _check_task_coverage: staged code vs covering tasks."""
+
+    def test_task_missing_blocks(self, project):
+        """Claim references a task that does not exist in task_list.json -> BLOCKED."""
+        _init_git_repo(project)
+
+        # Write staged claims referencing a task
+        claims = [{"claim_id": "C-0001", "related_task": "TASK-MISSING", "code_refs": ["src/foo.py"]}]
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.parent.mkdir(parents=True, exist_ok=True)
+        claims_path.write_text(json.dumps(claims), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Write staged task_list.json WITHOUT the referenced task
+        task_list = {"tasks": [{"task_id": "TASK-OTHER", "title": "Other"}]}
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        blocked, warnings = reconciler._check_task_coverage({"src/foo.py"}, {"src/foo.py"})
+        assert len(blocked) == 1
+        assert "TASK-MISSING" in blocked[0]
+        assert len(warnings) == 0
+
+    def test_task_not_modified_warns(self, project):
+        """Claim references a task that exists but was not modified -> WARNING."""
+        _init_git_repo(project)
+
+        # Commit task_list with TASK-001
+        task_list = {"tasks": [{"task_id": "TASK-001", "title": "Original"}]}
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "add tasks"], cwd=project, capture_output=True, check=True)
+
+        # Stage claims referencing TASK-001
+        claims = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.parent.mkdir(parents=True, exist_ok=True)
+        claims_path.write_text(json.dumps(claims), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Stage task_list WITHOUT modifying TASK-001 (same content)
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        blocked, warnings = reconciler._check_task_coverage({"src/foo.py"}, {"src/foo.py"})
+        assert len(blocked) == 0
+        assert len(warnings) == 1
+        assert "TASK-001" in warnings[0]
+
+    def test_task_modified_no_warning(self, project):
+        """Claim references a task that WAS modified -> no warning."""
+        _init_git_repo(project)
+
+        # Commit task_list with TASK-001
+        task_list_old = {"tasks": [{"task_id": "TASK-001", "title": "Original"}]}
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list_old), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "add tasks"], cwd=project, capture_output=True, check=True)
+
+        # Stage claims referencing TASK-001
+        claims = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.parent.mkdir(parents=True, exist_ok=True)
+        claims_path.write_text(json.dumps(claims), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Modify TASK-001 in staged task_list
+        task_list_new = {"tasks": [{"task_id": "TASK-001", "title": "Modified"}]}
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list_new), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        blocked, warnings = reconciler._check_task_coverage({"src/foo.py"}, {"src/foo.py"})
+        assert len(blocked) == 0
+        assert len(warnings) == 0
+
+    def test_file_not_covered_skipped(self, project):
+        """File not covered by any claim is skipped (ghost code check handles it)."""
+        _init_git_repo(project)
+
+        reconciler = GhostCodeReconciler(project)
+        blocked, warnings = reconciler._check_task_coverage({"src/uncovered.py"}, set())
+        assert len(blocked) == 0
+        assert len(warnings) == 0
+
+    def test_new_task_no_warning(self, project):
+        """A new task (not in HEAD) is treated as modified, so no warning."""
+        _init_git_repo(project)
+
+        # Stage claims referencing TASK-NEW
+        claims = [{"claim_id": "C-0001", "related_task": "TASK-NEW", "code_refs": ["src/foo.py"]}]
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.parent.mkdir(parents=True, exist_ok=True)
+        claims_path.write_text(json.dumps(claims), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Stage task_list with TASK-NEW (does not exist in HEAD)
+        task_list = {"tasks": [{"task_id": "TASK-NEW", "title": "New Task"}]}
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        blocked, warnings = reconciler._check_task_coverage({"src/foo.py"}, {"src/foo.py"})
+        assert len(blocked) == 0
+        assert len(warnings) == 0
+
+    def test_code_ref_with_line_range(self, project):
+        """code_refs with #L1-L10 suffix should be stripped for matching."""
+        _init_git_repo(project)
+
+        # Stage claims with line range
+        claims = [{"claim_id": "C-001", "related_task": "TASK-001", "code_refs": ["src/foo.py#L1-L10"]}]
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.parent.mkdir(parents=True, exist_ok=True)
+        claims_path.write_text(json.dumps(claims), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Stage task_list with TASK-001 (modified)
+        task_list = {"tasks": [{"task_id": "TASK-001", "title": "Modified"}]}
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        # src/foo.py should match despite line range in claim
+        blocked, warnings = reconciler._check_task_coverage({"src/foo.py"}, {"src/foo.py"})
+        assert len(blocked) == 0
+        assert len(warnings) == 0
+
+    def test_no_task_list_file_blocks(self, project):
+        """When task_list.json doesn't exist, tasks are treated as missing -> BLOCKED."""
+        _init_git_repo(project)
+
+        # Stage claims referencing TASK-001
+        claims = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.parent.mkdir(parents=True, exist_ok=True)
+        claims_path.write_text(json.dumps(claims), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # No task_list.json staged
+        reconciler = GhostCodeReconciler(project)
+        blocked, warnings = reconciler._check_task_coverage({"src/foo.py"}, {"src/foo.py"})
+        assert len(blocked) == 1
+        assert "TASK-001" in blocked[0]
+
+    def test_reconcile_blocks_on_task_coverage_failure(self, project):
+        """reconcile() returns False when _check_task_coverage returns BLOCKED.
+
+        The ghost code check and _check_task_coverage read from different git
+        states (index vs HEAD), so we must commit the claims file first, then
+        modify it to reference a missing task. The ghost code check sees the
+        staged (modified) claims and passes; _check_task_coverage sees the
+        staged claims (via HEAD comparison) and finds the missing task.
+        """
+        _init_git_repo(project)
+
+        # Commit initial claims referencing TASK-EXISTING (so HEAD has claims)
+        claims_old = [{"claim_id": "C-0001", "related_task": "TASK-EXISTING", "code_refs": ["src/foo.py"]}]
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.write_text(json.dumps(claims_old), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Commit code file
+        (project / "src" / "foo.py").write_text("print('hello')", encoding="utf-8")
+        subprocess.run(["git", "add", "src/foo.py"], cwd=project, capture_output=True, check=True)
+
+        task_list = {"tasks": [{"task_id": "TASK-EXISTING", "title": "Existing"}]}
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        subprocess.run(["git", "commit", "-m", "initial claims, tasks, and code"], cwd=project, capture_output=True, check=True)
+
+        # Now modify claims to reference TASK-MISSING and stage
+        claims_new = [{"claim_id": "C-0001", "related_task": "TASK-MISSING", "code_refs": ["src/foo.py"]}]
+        claims_path.write_text(json.dumps(claims_new), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Stage task_list WITHOUT TASK-MISSING
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        # Modify and stage the code file so ghost code check sees it as active
+        (project / "src" / "foo.py").write_text("print('modified')", encoding="utf-8")
+        subprocess.run(["git", "add", "src/foo.py"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        ok, msg = reconciler.reconcile()
+        assert ok is False
+        assert "TASK-MISSING" in msg
+
+    def test_reconcile_warns_on_unchanged_task(self, project):
+        """reconcile() returns True with warning when task is not modified.
+
+        The ghost code check reads claims from the index, while _check_task_coverage
+        reads from HEAD. We commit claims+tasks first, then stage a modified claims
+        file (adding a second claim for the same code file) to make the ghost code
+        check pass. The coverage check then validates all claims' tasks.
+        """
+        _init_git_repo(project)
+
+        # Commit initial claims referencing TASK-001
+        claims_old = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.write_text(json.dumps(claims_old), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Commit code file
+        (project / "src" / "foo.py").write_text("print('hello')", encoding="utf-8")
+        subprocess.run(["git", "add", "src/foo.py"], cwd=project, capture_output=True, check=True)
+
+        # Commit task_list with TASK-001
+        task_list = {"tasks": [{"task_id": "TASK-001", "title": "Original"}]}
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        subprocess.run(["git", "commit", "-m", "initial state"], cwd=project, capture_output=True, check=True)
+
+        # Stage modified claims (add a second claim for the same code file)
+        claims_new = [
+            {"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]},
+            {"claim_id": "C-0002", "related_task": "TASK-001", "code_refs": ["src/foo.py"]},
+        ]
+        claims_path.write_text(json.dumps(claims_new), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Stage task_list WITHOUT modifying TASK-001 (same content as HEAD)
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        # Modify and stage the code file so ghost code check sees it as active
+        (project / "src" / "foo.py").write_text("print('modified')", encoding="utf-8")
+        subprocess.run(["git", "add", "src/foo.py"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        ok, msg = reconciler.reconcile()
+        assert ok is True
+        assert "TASK-001" in msg
+        assert "未在本次提交中修改" in msg
+
+
+# ------------------------------------------------------------------
+# EVO-TASK-011b: Forward AC freshness check tests
+# ------------------------------------------------------------------
+
+class TestACFreshnessCheck:
+    """Tests for _check_ac_freshness: new tasks referencing ACs not in staged PRD."""
+
+    def test_new_task_with_stale_ac_warns(self, project):
+        """New task referencing an AC not in staged PRD -> WARNING."""
+        _init_git_repo(project)
+
+        # Stage task_list with a new task referencing AC-VT-999-01
+        task_list = {
+            "tasks": [
+                {"task_id": "TASK-001", "title": "T1", "related_acceptance_criteria": ["AC-VT-999-01"]}
+            ]
+        }
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        # Stage PRD WITHOUT AC-VT-999-01
+        prd = "# PRD\n### REQ-VT-001\n##### AC-VT-001-01: Basic\n"
+        (project / "docs" / "prd.md").write_text(prd, encoding="utf-8")
+        subprocess.run(["git", "add", "docs/prd.md"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        warnings = reconciler._check_ac_freshness()
+        assert len(warnings) == 1
+        assert "TASK-001" in warnings[0]
+        assert "AC-VT-999-01" in warnings[0]
+
+    def test_new_task_with_fresh_ac_no_warning(self, project):
+        """New task referencing an AC present in staged PRD -> no warning."""
+        _init_git_repo(project)
+
+        # Stage task_list with a new task referencing AC-VT-001-01
+        task_list = {
+            "tasks": [
+                {"task_id": "TASK-001", "title": "T1", "related_acceptance_criteria": ["AC-VT-001-01"]}
+            ]
+        }
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        # Stage PRD WITH AC-VT-001-01
+        prd = "# PRD\n### REQ-VT-001\n##### AC-VT-001-01: Basic\n"
+        (project / "docs" / "prd.md").write_text(prd, encoding="utf-8")
+        subprocess.run(["git", "add", "docs/prd.md"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        warnings = reconciler._check_ac_freshness()
+        assert len(warnings) == 0
+
+    def test_no_new_tasks_no_warning(self, project):
+        """When all tasks already exist in HEAD, no warnings."""
+        _init_git_repo(project)
+
+        # Commit task_list
+        task_list = {"tasks": [{"task_id": "TASK-001", "title": "T1", "related_acceptance_criteria": ["AC-VT-999-01"]}]}
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "add tasks"], cwd=project, capture_output=True, check=True)
+
+        # Stage same task_list (no new tasks)
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        warnings = reconciler._check_ac_freshness()
+        assert len(warnings) == 0
+
+    def test_prd_not_staged_warns(self, project):
+        """When PRD is not staged but new tasks reference ACs -> WARNING."""
+        _init_git_repo(project)
+
+        # Stage task_list with a new task referencing AC-VT-001-01
+        task_list = {
+            "tasks": [
+                {"task_id": "TASK-001", "title": "T1", "related_acceptance_criteria": ["AC-VT-001-01"]}
+            ]
+        }
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        # PRD exists but NOT staged
+        (project / "docs" / "prd.md").write_text("# PRD\n", encoding="utf-8")
+
+        reconciler = GhostCodeReconciler(project)
+        warnings = reconciler._check_ac_freshness()
+        assert len(warnings) == 1
+        assert "未更新 PRD" in warnings[0]
+
+    def test_task_without_ac_no_warning(self, project):
+        """New task with empty related_acceptance_criteria -> no warning."""
+        _init_git_repo(project)
+
+        task_list = {
+            "tasks": [
+                {"task_id": "TASK-001", "title": "T1", "related_acceptance_criteria": []}
+            ]
+        }
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        warnings = reconciler._check_ac_freshness()
+        assert len(warnings) == 0
+
+    def test_no_task_list_no_warning(self, project):
+        """When task_list.json doesn't exist, no warnings."""
+        _init_git_repo(project)
+
+        reconciler = GhostCodeReconciler(project)
+        warnings = reconciler._check_ac_freshness()
+        assert len(warnings) == 0
+
+    def test_reconcile_appends_ac_warnings(self, project):
+        """reconcile() appends AC freshness warnings to the result message."""
+        _init_git_repo(project)
+
+        # Stage claims that pass ghost code check
+        claims = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
+        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path.parent.mkdir(parents=True, exist_ok=True)
+        claims_path.write_text(json.dumps(claims), encoding="utf-8")
+        subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
+
+        # Stage task_list with new TASK-001 referencing AC-VT-999-01
+        task_list = {
+            "tasks": [
+                {"task_id": "TASK-001", "title": "T1", "related_acceptance_criteria": ["AC-VT-999-01"]}
+            ]
+        }
+        (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
+        subprocess.run(["git", "add", "docs/task_list.json"], cwd=project, capture_output=True, check=True)
+
+        # Stage PRD WITHOUT AC-VT-999-01
+        prd = "# PRD\n### REQ-VT-001\n##### AC-VT-001-01: Basic\n"
+        (project / "docs" / "prd.md").write_text(prd, encoding="utf-8")
+        subprocess.run(["git", "add", "docs/prd.md"], cwd=project, capture_output=True, check=True)
+
+        # Stage the code file
+        (project / "src" / "foo.py").write_text("print('hello')", encoding="utf-8")
+        subprocess.run(["git", "add", "src/foo.py"], cwd=project, capture_output=True, check=True)
+
+        reconciler = GhostCodeReconciler(project)
+        # Mock _get_staged_files to only report business code files (not PRD/docs)
+        # so the ghost code check passes, while PRD stays staged for AC freshness
+        with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}):
+            ok, msg = reconciler.reconcile()
+        assert ok is True
+        assert "AC-VT-999-01" in msg
+        assert "AC 新鲜度提醒" in msg

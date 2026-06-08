@@ -490,5 +490,90 @@
     ],
     "timestamp": "2026-06-08T00:00:00Z",
     "notes": "hook 模板去除 --gates-only + 工具执行过滤非代码文件"
+  },
+  {
+    "claim_id": "CLAIM-VT-055",
+    "related_task": "TASK-VT-055",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_semantic_auditor.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/semantic_auditor.py",
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_semantic_auditor.py"
+    ],
+    "test_refs": [
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_semantic_auditor.py"
+    ],
+    "timestamp": "2026-06-08T02:00:00Z",
+    "notes": "EVO-010: 白名单扩展 + EVO-014: audit_reason 质量校验"
+  },
+  {
+    "claim_id": "CLAIM-VT-056",
+    "related_task": "TASK-VT-056",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_quality_gates.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_quality_gates.py",
+      "src/vibe_tracing/ac_freshness_checker.py",
+      "tests/test_ac_freshness.py"
+    ],
+    "test_refs": [
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_quality_gates.py"
+    ],
+    "timestamp": "2026-06-08T02:00:00Z",
+    "notes": "EVO-011: Gate 2+2.5 合并，删除 AcFreshnessChecker"
+  },
+  {
+    "claim_id": "CLAIM-VT-057",
+    "related_task": "TASK-VT-057",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_cli_analyze.py",
+      "tests/test_tool_execution.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/templates/architecture_constraints.template.json",
+      "src/vibe_tracing/schemas/architecture_constraints.schema.json",
+      "tests/test_cli_analyze.py",
+      "tests/test_e2e_finalize_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_cli_analyze.py",
+      "tests/test_e2e_finalize_analyze.py"
+    ],
+    "timestamp": "2026-06-08T02:00:00Z",
+    "notes": "EVO-012: 配置驱动扩展名 + 未配置扩展名 WARNING"
+  },
+  {
+    "claim_id": "CLAIM-VT-058",
+    "related_task": "TASK-VT-058",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "tests/test_cli_analyze.py",
+      "tests/test_quality_gates.py"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_cli_analyze.py",
+      "tests/test_quality_gates.py"
+    ],
+    "timestamp": "2026-06-08T02:00:00Z",
+    "notes": "EVO-013: 门禁函数拆分 + 编排函数简化"
   }
 ]

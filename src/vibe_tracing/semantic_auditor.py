@@ -225,6 +225,20 @@ class SemanticAuditor:
             if not reason:
                 issues.append(f"Ticket {t['ticket_id']} for {fp}: audit_reason is empty")
                 blocked = True
+            else:
+                filename = Path(fp).name
+                if len(reason) < 20:
+                    issues.append(
+                        f"Ticket {t['ticket_id']} for {fp}: audit_reason too short "
+                        f"({len(reason)} chars, need >= 20)"
+                    )
+                    blocked = True
+                if filename not in reason:
+                    issues.append(
+                        f"Ticket {t['ticket_id']} for {fp}: audit_reason does not "
+                        f"contain filename '{filename}'"
+                    )
+                    blocked = True
 
         # Persist any hash resets
         self._save_tickets(tickets)

@@ -1,30 +1,96 @@
 [
   {
     "ticket_id": "AUDIT-VT-001",
-    "file_path": "src/vibe_tracing/semantic_auditor.py",
-    "file_hash": "sha256:07bef5c5ca07933881ebb862c0d3433f15d73812512233ea322e3a90bebd94ba",
-    "task_id": "TASK-VT-053",
+    "file_path": "src/vibe_tracing/cli.py",
+    "file_hash": "sha256:559045f9f3214365e5c9c5d20f29ee618a47ed7a307546474f9639ac8460c6aa",
+    "task_id": "TASK-VT-058",
     "ac_ids": [
-      "AC-VT-010-02",
-      "AC-VT-010-03"
+      "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "新建 SemanticAuditor 模块实现两阶段语义审计协议。generate_tickets() 扫描 staged 代码文件，通过 claims 关联 quality_evolution task，生成 pending 审计单。verify_tickets() 验证 status=passed + reason 非空 + file_hash 匹配。支持从 task 直接字段或 related_requirements 回溯查找 category。48h 自动清理 archived tickets。纯确定性逻辑，零 LLM 依赖。",
-    "created_at": "2026-06-07T13:46:59.446178Z",
-    "updated_at": "2026-06-07T13:48:00.000000Z"
+    "audit_reason": "cli.py 门禁函数拆分为 5 个独立 Gate 函数（_gate1_constraints_hash, _gate1b_prd_drift, _gate1c_mapping, _gate2_code_claim_alignment, _gate3_semantic_audit），编排函数 _run_integrity_gates 简化为 10 行。工具执行从 language_tool_matrix.extensions 配置读取扩展名，移除硬编码 _CODE_EXTENSIONS。新增未配置扩展名 WARNING 检测。",
+    "created_at": "2026-06-08T01:38:30.163828Z",
+    "updated_at": "2026-06-08T02:00:00.000000Z"
   },
   {
     "ticket_id": "AUDIT-VT-002",
-    "file_path": "tests/test_semantic_auditor.py",
-    "file_hash": "sha256:8958081d6d9ad02e2ffcaffdd87b3ff00870ac1300f814994d6a6f4a463e8dfa",
+    "file_path": "src/vibe_tracing/ghost_code_reconciler.py",
+    "file_hash": "sha256:510ce05f5b4354a57251731175b686bff43bfc4f7ee04827a8247f73611824e7",
+    "task_id": "TASK-VT-056",
+    "ac_ids": [
+      "AC-VT-009-17"
+    ],
+    "status": "passed",
+    "audit_reason": "ghost_code_reconciler.py 合并原 AcFreshnessChecker 的反向覆盖检查和 AC 新鲜度检查。新增 _check_task_coverage 和 _check_ac_freshness 方法。semantic_audit.json 加入白名单。Gate 2 成为完整的代码-声明对账检查。",
+    "created_at": "2026-06-08T01:38:30.163828Z",
+    "updated_at": "2026-06-08T02:00:00.000000Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-003",
+    "file_path": "src/vibe_tracing/semantic_auditor.py",
+    "file_hash": "sha256:d3a1cdbeab6e9052f80902777c5d64a0a3541ac0e35aa9753fec27aaefe758f0",
+    "task_id": "TASK-VT-055",
+    "ac_ids": [
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "semantic_auditor.py verify_tickets 新增结构化校验：audit_reason 长度 >= 20 字符且必须包含被审计文件的文件名。短理由或不含文件名的敷衍理由将被阻断。",
+    "created_at": "2026-06-08T01:38:30.163828Z",
+    "updated_at": "2026-06-08T02:00:00.000000Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-004",
+    "file_path": "src/vibe_tracing/semantic_auditor.py",
+    "file_hash": "sha256:d3a1cdbeab6e9052f80902777c5d64a0a3541ac0e35aa9753fec27aaefe758f0",
     "task_id": "TASK-VT-053",
     "ac_ids": [
       "AC-VT-010-02",
       "AC-VT-010-03"
     ],
     "status": "passed",
-    "audit_reason": "15 个测试覆盖 SemanticAuditor 全部路径：quality_evolution 生成 ticket、functional 不生成、pending 阻断、passed+reason 放行、hash 不匹配重置、48h 清理、requirements 回溯查找。所有测试使用真实 git repo（tmp_path），非 mock。",
-    "created_at": "2026-06-07T13:46:59.451318Z",
-    "updated_at": "2026-06-07T13:48:00.000000Z"
+    "audit_reason": "semantic_auditor.py 实现两阶段语义审计协议：generate_tickets 生成 pending 审计单，verify_tickets 验证 Agent 填充结果。支持从 task 或 requirement 回溯查找 category。新增结构化 audit_reason 校验（长度+文件名）。",
+    "created_at": "2026-06-08T01:38:57.211415Z",
+    "updated_at": "2026-06-08T02:00:00.000000Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-005",
+    "file_path": "tests/test_e2e_finalize_analyze.py",
+    "file_hash": "sha256:34e0cd6547125d7a0638fe77dcb9aea84d330ae7c4870a9988a6fb0722333cba",
+    "task_id": "TASK-VT-051",
+    "ac_ids": [
+      "AC-VT-010-01",
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "test_e2e_finalize_analyze.py mock 配置补充 extensions 字段以适配配置驱动扩展名变更。language_tool_matrix.python 新增 extensions: [.py]。",
+    "created_at": "2026-06-08T01:38:57.216444Z",
+    "updated_at": "2026-06-08T02:00:00.000000Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-006",
+    "file_path": "tests/test_ghost_code_reconciler.py",
+    "file_hash": "sha256:33f30dfb3cfca5194fca33e1de881ae0a1e910a77b4f91484337a4fe4dc023dd",
+    "task_id": "TASK-VT-055",
+    "ac_ids": [
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "test_ghost_code_reconciler.py 新增 TestTaskCoverageCheck（10 测试）和 TestACFreshnessCheck（7 测试），覆盖从 AcFreshnessChecker 迁移的全部场景。删除 test_ac_freshness.py。",
+    "created_at": "2026-06-08T01:38:57.221270Z",
+    "updated_at": "2026-06-08T02:00:00.000000Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-007",
+    "file_path": "tests/test_semantic_auditor.py",
+    "file_hash": "sha256:de1a9b8b64eacff9d11b0bc65aa264216f50aa0d238a096f8b121206261c6d90",
+    "task_id": "TASK-VT-053",
+    "ac_ids": [
+      "AC-VT-010-02",
+      "AC-VT-010-03"
+    ],
+    "status": "passed",
+    "audit_reason": "test_semantic_auditor.py 新增 TestShortReasonBlocks、TestReasonWithoutFilenameBlocks、TestReasonWithFilenameAndLengthPasses 三个测试类，覆盖 audit_reason 结构化校验路径。",
+    "created_at": "2026-06-08T01:38:57.226098Z",
+    "updated_at": "2026-06-08T02:00:00.000000Z"
   }
 ]

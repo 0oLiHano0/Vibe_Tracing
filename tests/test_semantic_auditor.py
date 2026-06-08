@@ -152,7 +152,7 @@ class TestPassedTicketWithReasonPasses:
             "task_id": "TASK-VT-001",
             "ac_ids": [],
             "status": "passed",
-            "audit_reason": "Semantic review completed: no issues found.",
+            "audit_reason": "Semantic review of foo.py completed: no issues found.",
             "created_at": now,
             "updated_at": now,
         }
@@ -461,3 +461,102 @@ class TestRequirementsBasedCategoryLookup:
         tickets = auditor.generate_tickets(staged, [claim], [task], requirements)
 
         assert len(tickets) == 0
+
+
+class TestShortReasonBlocks:
+    """A passed ticket with an audit_reason shorter than 20 chars must be blocked."""
+
+    def test_short_reason_blocks(self, tmp_path: Path) -> None:
+        _init_git(tmp_path)
+
+        code_file = tmp_path / "src" / "foo.py"
+        code_file.parent.mkdir(parents=True)
+        code_file.write_text("print('a')\n")
+        subprocess.run(["git", "add", str(code_file)], cwd=tmp_path, capture_output=True, check=True)
+
+        auditor = SemanticAuditor(tmp_path)
+        file_hash = auditor._compute_staged_file_hash("src/foo.py")
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        ticket = {
+            "ticket_id": "AUDIT-VT-001",
+            "file_path": "src/foo.py",
+            "file_hash": file_hash,
+            "task_id": "TASK-VT-001",
+            "ac_ids": [],
+            "status": "passed",
+            "audit_reason": "ok",  # < 20 chars
+            "created_at": now,
+            "updated_at": now,
+        }
+        auditor._save_tickets([ticket])
+
+        staged = auditor.get_staged_code_files()
+        ok, msg = auditor.verify_tickets(staged)
+        assert ok is False
+        assert "too short" in msg.lower()
+
+
+class TestReasonWithoutFilenameBlocks:
+    """A passed ticket with an audit_reason that does not contain the filename must be blocked."""
+
+    def test_reason_without_filename_blocks(self, tmp_path: Path) -> None:
+        _init_git(tmp_path)
+
+        code_file = tmp_path / "src" / "foo.py"
+        code_file.parent.mkdir(parents=True)
+        code_file.write_text("print('a')\n")
+        subprocess.run(["git", "add", str(code_file)], cwd=tmp_path, capture_output=True, check=True)
+
+        auditor = SemanticAuditor(tmp_path)
+        file_hash = auditor._compute_staged_file_hash("src/foo.py")
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        ticket = {
+            "ticket_id": "AUDIT-VT-001",
+            "file_path": "src/foo.py",
+            "file_hash": file_hash,
+            "task_id": "TASK-VT-001",
+            "ac_ids": [],
+            "status": "passed",
+            "audit_reason": "This reason is long enough but does not mention the file.",
+            "created_at": now,
+            "updated_at": now,
+        }
+        auditor._save_tickets([ticket])
+
+        staged = auditor.get_staged_code_files()
+        ok, msg = auditor.verify_tickets(staged)
+        assert ok is False
+        assert "filename" in msg.lower()
+
+
+class TestReasonWithFilenameAndLengthPasses:
+    """A passed ticket with a reason >= 20 chars containing the filename must pass."""
+
+    def test_valid_reason_passes(self, tmp_path: Path) -> None:
+        _init_git(tmp_path)
+
+        code_file = tmp_path / "src" / "foo.py"
+        code_file.parent.mkdir(parents=True)
+        code_file.write_text("print('a')\n")
+        subprocess.run(["git", "add", str(code_file)], cwd=tmp_path, capture_output=True, check=True)
+
+        auditor = SemanticAuditor(tmp_path)
+        file_hash = auditor._compute_staged_file_hash("src/foo.py")
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        ticket = {
+            "ticket_id": "AUDIT-VT-001",
+            "file_path": "src/foo.py",
+            "file_hash": file_hash,
+            "task_id": "TASK-VT-001",
+            "ac_ids": [],
+            "status": "passed",
+            "audit_reason": "Reviewed foo.py and confirmed semantic correctness.",
+            "created_at": now,
+            "updated_at": now,
+        }
+        auditor._save_tickets([ticket])
+
+        staged = auditor.get_staged_code_files()
+        ok, msg = auditor.verify_tickets(staged)
+        assert ok is True
+        assert msg == ""

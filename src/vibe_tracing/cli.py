@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 import importlib.resources as pkg_resources
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from vibe_tracing import __version__
 from vibe_tracing.raw_input_loader import RawInputLoader
@@ -258,7 +258,7 @@ def run_finalize(project_root: Path) -> int:
             print(f"Error: language \"{language}\" not found in language_tool_matrix.", file=sys.stderr)
             return 1
 
-        tool_categories = list(ltm[language].keys())
+        tool_categories = [k for k, v in ltm[language].items() if isinstance(v, dict)]
 
         # Set project prefix for ID parsing (used by PrdParser)
         project_prefix = config_data.get("project_prefix", "VT")
@@ -580,148 +580,247 @@ def _load_context(
     return ctx, raw_loader, validator
 
 
-def _run_integrity_gates(
-    ctx: UnifiedContext,
-    is_pre_commit: bool,
-    project_root: Path,
-    raw_loader: RawInputLoader,
-    records_dict: Dict,
-    config_prefix: str,
-    prd_res: object,
-) -> Optional[int]:
-    """Run integrity gates 1, 1b, 1c, 2, and 2.5.
+def _gate1_constraints_hash(ctx: UnifiedContext, project_root: Path) -> Optional[int]:
+    """Gate 1: Anti-Tampering (Architecture Baseline Check).
 
-    Returns exit code (1) if any gate fails, or None if all pass.
+    Verifies that the architecture constraints file has not been modified
+    since the baseline was finalized.  Compares the SHA-256 hash of the
+    current file against the stored hash in the project config.
+
+    Returns:
+        None if the gate passes (hash matches or no baseline stored).
+        1 (exit code) if the hash has been tampered with.
     """
     import hashlib
 
+    records_dict = {r.file_key: r for r in ctx.manifest.inputs_used}
     constraints_record = records_dict.get("architecture_constraints")
-    prd_record = records_dict.get("prd")
+    if not (constraints_record and constraints_record.status == "ok"):
+        return None
 
-    # Gate 1: Anti-Tampering (Architecture Baseline Check)
-    if constraints_record and constraints_record.status == "ok":
-        computed_hash = hashlib.sha256(Path(constraints_record.file_path).read_bytes()).hexdigest()
-        stored_hash = raw_loader.config_data.get("architecture_constraints_hash")
-        if stored_hash and stored_hash != computed_hash:
-            print(
-                "FATAL: 架构基线已被篡改！\n"
-                f"预期 Hash: {stored_hash[:12]}...\n"
-                f"实际 Hash: {computed_hash[:12]}...\n"
-                "请恢复文件，或通过 `vt finalize` 提交合法的架构变更。",
-                file=sys.stderr
-            )
-            return 1
-
-    # Gate 1b: PRD drift detection
-    prd_path = raw_loader.get_path("prd")
-    if prd_path and Path(prd_path).exists():
-        computed_p_hash = hashlib.sha256(Path(prd_path).read_bytes()).hexdigest()
-        stored_p_hash = raw_loader.config_data.get("prd_hash")
-        if stored_p_hash and stored_p_hash != computed_p_hash:
-            print(
-                "WARNING: PRD 已从基线漂移！\n"
-                f"预期 Hash: {stored_p_hash[:12]}...\n"
-                f"实际 Hash: {computed_p_hash[:12]}...\n"
-                "将重新验证 PRD ↔ Architecture 映射关系。",
-                file=sys.stderr
-            )
-
-    # Gate 1c: PRD ↔ Architecture mapping validation
-    if constraints_record and constraints_record.status == "ok" and prd_record and prd_record.status == "ok":
-        from vibe_tracing.prd_arch_validator import validate_prd_architecture_mapping
-        if prd_res.is_valid:
-            mapping_result = validate_prd_architecture_mapping(
-                prd_res.requirements,
-                constraints_record.content,
-                config_prefix,
-            )
-            if mapping_result.has_dead_links:
-                for link in mapping_result.dead_links:
-                    print(
-                        f"BLOCKED: 架构约束引用的 {link} 不存在于 PRD。\n"
-                        "请更新 architecture_constraints.json 或 PRD 以修复死链。",
-                        file=sys.stderr
-                    )
-                return 1
-            if mapping_result.has_must_uncovered:
-                for req_id in mapping_result.must_uncovered:
-                    print(
-                        f"BLOCKED: MUST 级需求 {req_id} 无架构支撑。\n"
-                        "请在 architecture_constraints.json 中为该需求规划架构模块。",
-                        file=sys.stderr
-                    )
-                return 1
-            for req_id in mapping_result.should_uncovered:
-                print(
-                    f"WARNING: SHOULD/COULD 级需求 {req_id} 缺失架构映射。",
-                    file=sys.stderr
-                )
-
-    # Gate 2: Ghost Code Reconciliation (pre-commit only)
-    if is_pre_commit:
-        from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
-        reconciler = GhostCodeReconciler(project_root)
-        success, error_msg = reconciler.reconcile()
-        if not success:
-            print(error_msg, file=sys.stderr)
-            return 1
-
-    # Gate 2.5: AC Freshness Detection (pre-commit only)
-    if is_pre_commit:
-        from vibe_tracing.ac_freshness_checker import AcFreshnessChecker
-        freshness_checker = AcFreshnessChecker(project_root)
-        success, warning_msg = freshness_checker.check()
-        if warning_msg:
-            print(warning_msg, file=sys.stderr)
-        if not success:
-            return 1
-
-    # Gate 3: Semantic Audit (pre-commit only)
-    if is_pre_commit:
-        from vibe_tracing.semantic_auditor import SemanticAuditor
-        auditor = SemanticAuditor(project_root)
-        staged_code_files = auditor.get_staged_code_files()
-        if staged_code_files:
-            # Convert Task objects and Requirement objects to dicts for the auditor
-            tasks_as_dicts = []
-            if ctx.task_result and ctx.task_result.tasks:
-                for t in ctx.task_result.tasks:
-                    tasks_as_dicts.append({
-                        "task_id": t.task_id,
-                        "related_requirements": t.related_requirements,
-                        "related_acceptance_criteria": t.related_acceptance_criteria,
-                        "category": getattr(t, "category", None),
-                    })
-            reqs_as_dicts = []
-            if ctx.prd and ctx.prd.requirements:
-                for r in ctx.prd.requirements:
-                    reqs_as_dicts.append({
-                        "req_id": r.req_id,
-                        "category": r.category,
-                    })
-            claims_as_dicts = []
-            for c in ctx.claims_list:
-                claims_as_dicts.append({
-                    "claim_id": c.claim_id if hasattr(c, "claim_id") else c.get("claim_id", ""),
-                    "related_task": c.related_task if hasattr(c, "related_task") else c.get("related_task", ""),
-                    "code_refs": c.code_refs if hasattr(c, "code_refs") else c.get("code_refs", []),
-                })
-
-            new_tickets = auditor.generate_tickets(
-                staged_code_files, claims_as_dicts, tasks_as_dicts, reqs_as_dicts,
-            )
-            if new_tickets:
-                print(
-                    f"Semantic Audit: 生成 {len(new_tickets)} 个审计单，等待 Agent 填充理由。",
-                    file=sys.stderr,
-                )
-            success, audit_msg = auditor.verify_tickets(staged_code_files)
-            if audit_msg:
-                print(audit_msg, file=sys.stderr)
-            if not success:
-                return 2
+    computed_hash = hashlib.sha256(
+        Path(constraints_record.file_path).read_bytes()
+    ).hexdigest()
+    stored_hash = ctx.config.get("architecture_constraints_hash")
+    if stored_hash and stored_hash != computed_hash:
+        print(
+            "FATAL: 架构基线已被篡改！\n"
+            f"预期 Hash: {stored_hash[:12]}...\n"
+            f"实际 Hash: {computed_hash[:12]}...\n"
+            "请恢复文件，或通过 `vt finalize` 提交合法的架构变更。",
+            file=sys.stderr,
+        )
+        return 1
 
     return None
+
+
+def _gate1b_prd_drift(ctx: UnifiedContext) -> None:
+    """Gate 1b: PRD drift detection (WARNING only, never blocks).
+
+    Compares the current PRD file hash against the baseline stored in config.
+    If they differ, prints a warning to stderr but does not block the pipeline.
+    """
+    import hashlib
+
+    # Resolve PRD path from manifest
+    prd_record = None
+    for r in ctx.manifest.inputs_used:
+        if r.file_key == "prd":
+            prd_record = r
+            break
+
+    prd_path = Path(prd_record.file_path) if prd_record and prd_record.file_path else None
+    if prd_path is None or not prd_path.exists():
+        return
+
+    computed_p_hash = hashlib.sha256(prd_path.read_bytes()).hexdigest()
+    stored_p_hash = ctx.config.get("prd_hash")
+    if stored_p_hash and stored_p_hash != computed_p_hash:
+        print(
+            "WARNING: PRD 已从基线漂移！\n"
+            f"预期 Hash: {stored_p_hash[:12]}...\n"
+            f"实际 Hash: {computed_p_hash[:12]}...\n"
+            "将重新验证 PRD ↔ Architecture 映射关系。",
+            file=sys.stderr
+        )
+
+
+def _gate1c_mapping(ctx: UnifiedContext, config_prefix: str) -> Optional[int]:
+    """Gate 1c: PRD <-> Architecture mapping validation.
+
+    Returns 1 if dead links or MUST-uncovered requirements are found (blocks).
+    Returns None if validation passes (including SHOULD-level warnings).
+    """
+    constraints_record_content = ctx.constraints
+    prd_res = ctx.prd
+
+    if not constraints_record_content or not prd_res or not prd_res.is_valid:
+        return None
+
+    from vibe_tracing.prd_arch_validator import validate_prd_architecture_mapping
+    mapping_result = validate_prd_architecture_mapping(
+        prd_res.requirements,
+        constraints_record_content,
+        config_prefix,
+    )
+    if mapping_result.has_dead_links:
+        for link in mapping_result.dead_links:
+            print(
+                f"BLOCKED: 架构约束引用的 {link} 不存在于 PRD。\n"
+                "请更新 architecture_constraints.json 或 PRD 以修复死链。",
+                file=sys.stderr
+            )
+        return 1
+    if mapping_result.has_must_uncovered:
+        for req_id in mapping_result.must_uncovered:
+            print(
+                f"BLOCKED: MUST 级需求 {req_id} 无架构支撑。\n"
+                "请在 architecture_constraints.json 中为该需求规划架构模块。",
+                file=sys.stderr
+            )
+        return 1
+    for req_id in mapping_result.should_uncovered:
+        print(
+            f"WARNING: SHOULD/COULD 级需求 {req_id} 缺失架构映射。",
+            file=sys.stderr
+        )
+    return None
+
+
+def _gate2_code_claim_alignment(
+    ctx: UnifiedContext,
+    project_root: Path,
+    is_pre_commit: bool,
+) -> Optional[int]:
+    """Gate 2: Code-Claim Alignment (pre-commit only).
+
+    Runs ghost code detection, task coverage check, and AC freshness check
+    via GhostCodeReconciler.  Only executes when *is_pre_commit* is True.
+
+    Returns:
+        None if the gate passes or is skipped (not pre-commit).
+        1 (exit code) if the gate fails.
+    """
+    if not is_pre_commit:
+        return None
+
+    from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+    reconciler = GhostCodeReconciler(project_root)
+    success, error_msg = reconciler.reconcile()
+    if error_msg:
+        print(error_msg, file=sys.stderr)
+    if not success:
+        return 1
+
+    return None
+
+
+def _run_integrity_gates(
+    ctx: UnifiedContext,
+    project_root: Path,
+    is_pre_commit: bool,
+    config_prefix: str,
+) -> Optional[int]:
+    """Run integrity gates 1, 1b, 1c, 2, and 3.
+
+    Returns exit code if any gate fails, or None if all pass.
+    """
+    # Gate 1: Anti-tampering
+    result = _gate1_constraints_hash(ctx, project_root)
+    if result is not None:
+        return result
+
+    # Gate 1b: PRD drift (warning only)
+    _gate1b_prd_drift(ctx)
+
+    # Gate 1c: PRD-Architecture mapping
+    result = _gate1c_mapping(ctx, config_prefix)
+    if result is not None:
+        return result
+
+    # Gate 2: Code-claim alignment (pre-commit only)
+    result = _gate2_code_claim_alignment(ctx, project_root, is_pre_commit)
+    if result is not None:
+        return result
+
+    # Gate 3: Semantic audit (pre-commit only)
+    result = _gate3_semantic_audit(ctx, project_root, is_pre_commit)
+    if result is not None:
+        return result
+
+    return None
+
+
+def _gate3_semantic_audit(ctx: UnifiedContext, project_root: Path, is_pre_commit: bool) -> Optional[int]:
+    """Run Gate 3: Semantic Audit (pre-commit only).
+
+    Returns None if passed, or 2 if blocked.
+    """
+    if not is_pre_commit:
+        return None
+
+    from vibe_tracing.semantic_auditor import SemanticAuditor
+    auditor = SemanticAuditor(project_root)
+    staged_code_files = auditor.get_staged_code_files()
+    if staged_code_files:
+        # Convert Task objects and Requirement objects to dicts for the auditor
+        tasks_as_dicts = []
+        if ctx.task_result and ctx.task_result.tasks:
+            for t in ctx.task_result.tasks:
+                tasks_as_dicts.append({
+                    "task_id": t.task_id,
+                    "related_requirements": t.related_requirements,
+                    "related_acceptance_criteria": t.related_acceptance_criteria,
+                    "category": getattr(t, "category", None),
+                })
+        reqs_as_dicts = []
+        if ctx.prd and ctx.prd.requirements:
+            for r in ctx.prd.requirements:
+                reqs_as_dicts.append({
+                    "req_id": r.req_id,
+                    "category": r.category,
+                })
+        claims_as_dicts = []
+        for c in ctx.claims_list:
+            claims_as_dicts.append({
+                "claim_id": c.claim_id if hasattr(c, "claim_id") else c.get("claim_id", ""),
+                "related_task": c.related_task if hasattr(c, "related_task") else c.get("related_task", ""),
+                "code_refs": c.code_refs if hasattr(c, "code_refs") else c.get("code_refs", []),
+            })
+
+        new_tickets = auditor.generate_tickets(
+            staged_code_files, claims_as_dicts, tasks_as_dicts, reqs_as_dicts,
+        )
+        if new_tickets:
+            print(
+                f"Semantic Audit: 生成 {len(new_tickets)} 个审计单，等待 Agent 填充理由。",
+                file=sys.stderr,
+            )
+        success, audit_msg = auditor.verify_tickets(staged_code_files)
+        if audit_msg:
+            print(audit_msg, file=sys.stderr)
+        if not success:
+            return 2
+
+    return None
+
+
+def _get_code_extensions(ltm: Dict) -> Set[str]:
+    """Collect all file extensions from every language entry in the language_tool_matrix.
+
+    Iterates over all language entries in *ltm*, merges every ``extensions``
+    array into a single set and returns it.  If no language declares an
+    ``extensions`` field, an empty set is returned (meaning no tools will
+    execute for unknown languages).
+    """
+    extensions: Set[str] = set()
+    for lang_entry in ltm.values():
+        if isinstance(lang_entry, dict):
+            exts = lang_entry.get("extensions")
+            if isinstance(exts, list):
+                extensions.update(exts)
+    return extensions
 
 
 def _execute_tools(
@@ -799,16 +898,19 @@ def _execute_tools(
     )
 
     # Collect paths to execute tools against (code files only)
-    _CODE_EXTENSIONS = {".py", ".js", ".ts", ".jsx", ".tsx"}
+    code_extensions = _get_code_extensions(ltm)
+    if not code_extensions:
+        print("Skipping tool execution: no file extensions defined in language_tool_matrix.", file=sys.stderr)
+        return []
     execution_paths: List[str] = []
     for claim in claims_list:
         for ref in claim.test_refs:
             path_only = ref.split("#")[0]
-            if path_only and Path(path_only).suffix in _CODE_EXTENSIONS and path_only not in execution_paths:
+            if path_only and Path(path_only).suffix in code_extensions and path_only not in execution_paths:
                 execution_paths.append(path_only)
         for ref in claim.code_refs:
             path_only = ref.split("#")[0]
-            if path_only and Path(path_only).suffix in _CODE_EXTENSIONS and path_only not in execution_paths:
+            if path_only and Path(path_only).suffix in code_extensions and path_only not in execution_paths:
                 execution_paths.append(path_only)
 
     if task_res:
@@ -911,7 +1013,54 @@ def _run_analyzers(
                 seen_gaps.add(key)
                 merged_gaps.append(gap)
 
+    # Staged file extension coverage check (WARNING only)
+    _check_staged_extensions(project_root, ctx.constraints)
+
     return merged_gaps, final_risks, compliance_res, claim_res, req_res
+
+
+def _check_staged_extensions(project_root: Path, constraints: Optional[dict]) -> None:
+    """Warn about staged files whose extensions are not in the configured language_tool_matrix.
+
+    This is a WARNING-only check: it does not block the analysis pipeline.
+    """
+    if not constraints:
+        return
+
+    ltm = constraints.get("language_tool_matrix", {})
+    configured_exts = _get_code_extensions(ltm)
+    if not configured_exts:
+        return
+
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            return
+        staged_files = [f for f in result.stdout.splitlines() if f.strip()]
+    except Exception:
+        return
+
+    if not staged_files:
+        return
+
+    unrecognized: Set[str] = set()
+    for staged_file in staged_files:
+        ext = Path(staged_file).suffix
+        if ext and ext not in configured_exts:
+            unrecognized.add(ext)
+
+    for ext in sorted(unrecognized):
+        print(
+            f"WARNING: 发现未配置的代码文件类型 {ext}，"
+            "请更新 architecture_constraints.json 的 language_tool_matrix 并通过 vt finalize 锁定。",
+            file=sys.stderr,
+        )
 
 
 def _evaluate_and_output(
@@ -1124,8 +1273,7 @@ def run_analyze(project_root: Path, output_dir: Path, is_pre_commit: bool = Fals
         records_dict = {r.file_key: r for r in ctx.manifest.inputs_used}
 
         exit_code = _run_integrity_gates(
-            ctx, is_pre_commit, project_root, raw_loader,
-            records_dict, config_prefix, prd_res,
+            ctx, project_root, is_pre_commit, config_prefix,
         )
         if exit_code is not None:
             return exit_code

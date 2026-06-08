@@ -111,6 +111,7 @@ must
             if "language_tool_matrix" not in data:
                 data["language_tool_matrix"] = {
                     "python": {
+                        "extensions": [".py"],
                         "test": {
                             "tool": "pytest",
                             "default_command": "pytest",
@@ -639,3 +640,48 @@ def test_missing_tools_produces_blocked_evidence(tmp_path, capsys, monkeypatch):
         # stderr is stored inside details by EvidenceIndexBuilder
         assert "is not installed" in entry.get("details", {}).get("stderr", "")
         assert entry.get("details", {}).get("error_type") == "tool_not_found"
+
+
+def test_staged_extension_warning(tmp_path, capsys, monkeypatch):
+    """
+    covers: EVO-TASK-012d
+    Test that staging a file with an extension not in the configured
+    language_tool_matrix produces a WARNING but does NOT block.
+    """
+    import subprocess as sp
+
+    # Initialize a git repo in tmp_path so git diff --cached works
+    sp.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+    sp.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=tmp_path, capture_output=True, check=True,
+    )
+    sp.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=tmp_path, capture_output=True, check=True,
+    )
+
+    setup_mock_project(
+        tmp_path,
+        task_status="done",
+        test_outcome="passed",
+        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
+        include_claims=True,
+        claim_has_evidence=True,
+    )
+
+    # Stage all files so git diff --cached sees them
+    sp.run(["git", "add", "-A"], cwd=tmp_path, capture_output=True, check=True)
+
+    # Create and stage a file with an unrecognized extension (.rb)
+    rb_file = tmp_path / "src" / "something.rb"
+    rb_file.write_text("# Ruby file", encoding="utf-8")
+    sp.run(["git", "add", str(rb_file)], cwd=tmp_path, capture_output=True, check=True)
+
+    exit_code = main(["analyze", "--project-root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+    # Must NOT block — warning only
+    assert "Analysis complete. Gate decision:" in captured.out
+    # Must warn about the unrecognized extension
+    assert "WARNING: 发现未配置的代码文件类型 .rb" in captured.err

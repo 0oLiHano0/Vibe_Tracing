@@ -821,6 +821,15 @@
       "additionalProperties": {
         "type": "object",
         "description": "语言名称作为键，值为该语言的工具配置。",
+        "properties": {
+          "extensions": {
+            "type": "array",
+            "description": "该语言的文件扩展名列表，用于确定哪些文件应执行验证工具。",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
         "additionalProperties": {
           "type": "object",
           "required": [

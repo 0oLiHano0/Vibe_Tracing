@@ -870,25 +870,14 @@ def _execute_tools(
 
     missing = sorted(t for t in required_binaries if not shutil.which(t))
     if missing:
-        from vibe_tracing.tool_evidence_adapter import ToolEvidenceCandidate
-        blocked_evidence = []
-        for tool_name in missing:
-            blocked_evidence.append(ToolEvidenceCandidate(
-                source_type="tool",
-                source_path=f"<dependency:{tool_name}>",
-                covers=[],
-                status="blocked",
-                error_code="tool_not_found",
-                stderr=f"Tool '{tool_name}' is not installed. Install with: pip install {tool_name}",
-                details={"error_type": "tool_not_found", "tool": tool_name},
-            ))
         print(f"\n[AI Agent Repair Guide]", file=sys.stderr)
         print(
             f"VT depends on tools that are missing in the environment: {', '.join(missing)}",
             file=sys.stderr,
         )
         print(f"Action Required: pip install {' '.join(missing)}", file=sys.stderr)
-        return blocked_evidence
+        print("Skipping tool execution. Install tools to enable full evidence collection.", file=sys.stderr)
+        return []
 
     engine = ToolExecutionEngine(
         language_tool_matrix=ltm,

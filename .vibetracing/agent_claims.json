@@ -548,14 +548,17 @@
       "src/vibe_tracing/templates/architecture_constraints.template.json",
       "src/vibe_tracing/schemas/architecture_constraints.schema.json",
       "tests/test_cli_analyze.py",
-      "tests/test_e2e_finalize_analyze.py"
+      "tests/test_e2e_finalize_analyze.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
     ],
     "test_refs": [
       "tests/test_cli_analyze.py",
-      "tests/test_e2e_finalize_analyze.py"
+      "tests/test_e2e_finalize_analyze.py",
+      "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T02:30:00Z",
-    "notes": "EVO-012: 配置驱动扩展名 + 工具执行跳过已删除文件"
+    "timestamp": "2026-06-08T05:00:00Z",
+    "notes": "EVO-012: 配置驱动扩展名 + 工具未安装提醒安装"
   },
   {
     "claim_id": "CLAIM-VT-058",

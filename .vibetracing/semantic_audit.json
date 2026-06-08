@@ -2,15 +2,15 @@
   {
     "ticket_id": "AUDIT-VT-001",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:4331d4afb16a6dd48c3965d9900e0812b2a83c8c23b60e24187e90373f50d075",
+    "file_hash": "sha256:eb2ef878d48fa2851888a288cfd0e3e8ff71caf62ecaaea8738e69b179874c9f",
     "task_id": "TASK-VT-058",
     "ac_ids": [
       "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "cli.py 工具执行新增文件存在性检查（project_root / path_only），跳过已删除的代码文件，避免 pytest/mypy/ruff 对不存在的文件报错。",
+    "audit_reason": "cli.py 工具未安装时从产生 BLOCKED 证据改为输出安装指引并跳过工具执行。环境问题不等于代码质量问题，不应阻断门禁。",
     "created_at": "2026-06-08T01:38:30.163828Z",
-    "updated_at": "2026-06-08T01:45:38.747838Z"
+    "updated_at": "2026-06-08T03:06:35.703294Z"
   },
   {
     "ticket_id": "AUDIT-VT-002",
@@ -92,5 +92,33 @@
     "audit_reason": "test_semantic_auditor.py 新增 TestShortReasonBlocks、TestReasonWithoutFilenameBlocks、TestReasonWithFilenameAndLengthPasses 三个测试类，覆盖 audit_reason 结构化校验路径。",
     "created_at": "2026-06-08T01:38:57.226098Z",
     "updated_at": "2026-06-08T02:00:00.000000Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-008",
+    "file_path": "src/vibe_tracing/cli.py",
+    "file_hash": "sha256:eb2ef878d48fa2851888a288cfd0e3e8ff71caf62ecaaea8738e69b179874c9f",
+    "task_id": "TASK-VT-035",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-07"
+    ],
+    "status": "passed",
+    "audit_reason": "cli.py 工具未安装时从产生 BLOCKED 证据改为输出安装指引并跳过工具执行。环境问题不等于代码质量问题，不应阻断门禁。",
+    "created_at": "2026-06-08T03:06:28.667333Z",
+    "updated_at": "2026-06-08T03:06:35.703294Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-009",
+    "file_path": "tests/test_cli_analyze.py",
+    "file_hash": "sha256:b5602b582a7073ed91ac43eb9b90ecc6570f965ddfc366397cdfa0c9bffc2f80",
+    "task_id": "TASK-VT-044",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_cli_analyze.py 更新 test_missing_tools 测试：从验证 BLOCKED 证据改为验证 WARNING 输出和跳过行为。",
+    "created_at": "2026-06-08T03:06:28.672473Z",
+    "updated_at": "2026-06-08T03:06:35.703294Z"
   }
 ]

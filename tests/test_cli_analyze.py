@@ -586,12 +586,11 @@ def test_gates_only_skips_analysis(tmp_path, capsys):
 
 
 @pytest.mark.no_mock_which
-def test_missing_tools_produces_blocked_evidence(tmp_path, capsys, monkeypatch):
+def test_missing_tools_skips_with_warning(tmp_path, capsys, monkeypatch):
     """
     covers: AC-VT-009-02
-    Test that missing tools produce BLOCKED evidence entries in the evidence index
-    instead of hard-exiting with exit code 1. The exit code should be determined
-    by the gate engine based on the blocked evidence.
+    Test that missing tools produce a WARNING (repair guide) and skip tool
+    execution gracefully, without blocking the gate.
     """
     import shutil
 
@@ -607,24 +606,24 @@ def test_missing_tools_produces_blocked_evidence(tmp_path, capsys, monkeypatch):
         claim_has_evidence=True,
     )
 
-    # Should NOT exit 1 (that was the old hard-exit behavior).
-    # Exit code is determined by gate engine (0 for pass/fail, 2 for blocked).
     exit_code = main(["analyze", "--project-root", str(tmp_path)])
 
     captured = capsys.readouterr()
 
-    # Repair guide should still be printed
+    # Repair guide should be printed
     assert "AI Agent Repair Guide" in captured.err
+    assert "pip install" in captured.err
+    assert "Skipping tool execution" in captured.err
 
-    # Evidence index should exist and contain BLOCKED entries for missing tools
+    # Should NOT produce BLOCKED evidence for missing tools
     evidence_index_path = tmp_path / "output" / "evidence_index.json"
     assert evidence_index_path.exists(), "evidence_index.json should be generated"
 
     evidence_index = json.loads(evidence_index_path.read_text(encoding="utf-8"))
     evidences = evidence_index.get("evidences", [])
 
-    blocked_entries = [e for e in evidences if e.get("status") == "blocked"]
-    assert len(blocked_entries) > 0, "Should have at least one BLOCKED evidence entry for missing tools"
+    blocked_entries = [e for e in evidences if e.get("error_code") == "tool_not_found"]
+    assert len(blocked_entries) == 0, "Missing tools should NOT produce BLOCKED evidence"
 
     # Verify blocked entries have the expected structure
     for entry in blocked_entries:

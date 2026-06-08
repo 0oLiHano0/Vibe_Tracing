@@ -17,7 +17,7 @@
       "tests/test_prd_parser.py",
       "tests/test_task_loader.py"
     ],
-    "timestamp": "2026-06-08T12:30:00Z"
+    "timestamp": "2026-06-08T13:26:39.211868+00:00"
   },
   {
     "claim_id": "CLAIM-VT-030",
@@ -87,7 +87,7 @@
     "test_refs": [
       "tests/test_dashboard_renderer.py"
     ],
-    "timestamp": "2026-06-08T12:00:00Z"
+    "timestamp": "2026-06-08T13:26:39.211868+00:00"
   },
   {
     "claim_id": "CLAIM-VT-035",
@@ -658,14 +658,15 @@
       "tests/test_architecture_compliance_checker.py",
       "src/vibe_tracing/schemas/architecture_constraints.schema.json",
       "src/vibe_tracing/templates/architecture_constraints.template.json",
-      "docs/architecture_change_log.md"
+      "docs/architecture_change_log.md",
+      "src/vibe_tracing/architecture_change_proposal.py"
     ],
     "test_refs": [
       "tests/test_merge_gate_engine.py",
       "tests/test_cli_analyze.py",
       "tests/test_architecture_compliance_checker.py"
     ],
-    "timestamp": "2026-06-08T14:00:00Z",
+    "timestamp": "2026-06-08T13:26:39.211868+00:00",
     "notes": "vt doctor + evidence tool_category + hook 债务感知 + vt accept"
   },
   {
@@ -688,13 +689,14 @@
       "src/vibe_tracing/cli.py",
       "src/vibe_tracing/schemas/evidence_index.schema.json",
       "tests/test_tool_execution.py",
-      "tests/test_architecture_compliance_checker.py"
+      "tests/test_architecture_compliance_checker.py",
+      "tests/test_prd_arch_validator.py"
     ],
     "test_refs": [
       "tests/test_architecture_compliance_checker.py",
       "tests/test_tool_execution.py"
     ],
-    "timestamp": "2026-06-08T12:52:53.082451+00:00",
+    "timestamp": "2026-06-08T13:26:39.211868+00:00",
     "notes": "噪音消除措施改进：accepted_rules 可见化 + skipped 证据 + stale WARNING + Agent 行动清单 + 决策日志加载"
   },
   {

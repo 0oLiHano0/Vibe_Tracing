@@ -86,3 +86,13 @@
   * 为了支持在 `cli.py` (MOD-VT-001) 中直接组织、调用自举校验和生成完整的 traceability 报告，扩充其允许调用的模块白名单以覆盖所有的 Core 逻辑与适配器（包括 `MOD-VT-005`, `MOD-VT-006`, `MOD-VT-007`, `MOD-VT-008`, `MOD-VT-009`, `MOD-VT-011`）。
   * 允许 `traceability_analyzer` (MOD-VT-006) 调用 `raw_input_loader` (MOD-VT-002) 加载路径配置文件。
   * 允许 `architecture_compliance_checker` (MOD-VT-009) 引入 `raw_input_loader` (MOD-VT-002) 加载配置，以及在质量门禁中校验 `claude_code_bootstrap_adapter` (MOD-VT-011)。
+
+## [2026-06-08] 单次加载优化 — 模块调用白名单扩展
+
+### MOD-VT-001 和 MOD-VT-005 的 allowed_to_call 更新
+* **变更规则**：MOD-VT-001 (cli.py) 新增 `MOD-VT-004` (tool_evidence_adapter)；MOD-VT-005 (evidence_index_builder) 新增 `MOD-VT-002` (raw_input_loader)。
+* **变更原因**：AC-VT-009-12 要求分析流水线必须单次加载输入文件。为避免重复读取磁盘，cli.py 需要直接访问 tool_evidence_adapter 的数据结构，evidence_index_builder 需要从 raw_input_loader 的已加载记录中获取 SHA-256 哈希。这些调用关系此前被白名单阻断，导致每次分析重复读取文件。
+* **影响范围**：
+  - `docs/architecture_constraints.json`：MOD-VT-001 和 MOD-VT-005 的 allowed_to_call 数组扩展。
+  - `src/vibe_tracing/raw_input_loader.py`：InputFileRecord 新增 sha256_hash 字段，加载时一次性计算。
+  - `src/vibe_tracing/cli.py`：gate 函数复用 manifest 中的哈希，PRD 解析改用已加载内容。

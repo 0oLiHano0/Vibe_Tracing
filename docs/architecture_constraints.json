@@ -198,6 +198,7 @@
       "allowed_to_call": [
         "MOD-VT-002",
         "MOD-VT-003",
+        "MOD-VT-004",
         "MOD-VT-005",
         "MOD-VT-006",
         "MOD-VT-007",
@@ -310,6 +311,7 @@
       "name": "evidence_index_builder",
       "responsibility": "基于原始输入、任务记录、Agent Claim、测试摘要、工具输出和代码路径引用，生成 evidence_index.json。",
       "allowed_to_call": [
+        "MOD-VT-002",
         "MOD-VT-003"
       ],
       "forbidden_to_call": [

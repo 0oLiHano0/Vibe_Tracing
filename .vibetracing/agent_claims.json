@@ -17,7 +17,7 @@
       "tests/test_prd_parser.py",
       "tests/test_task_loader.py"
     ],
-    "timestamp": "2026-06-08T13:26:39.211868+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "content_hash": "5fdf3a3802c54c3b"
   },
   {
@@ -40,7 +40,7 @@
     "test_refs": [
       "tests/test_raw_input_loader.py"
     ],
-    "timestamp": "2026-06-08T12:30:00Z",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "content_hash": "d0cf9db8880b06ca"
   },
   {
@@ -57,7 +57,7 @@
     "test_refs": [
       "tests/test_raw_input_loader.py"
     ],
-    "timestamp": "2026-06-08T12:30:00Z",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "content_hash": "c466f13a6db26533"
   },
   {
@@ -74,7 +74,7 @@
     "test_refs": [
       "tests/test_claim_evidence_analyzer.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "content_hash": "0406baac851296f0"
   },
   {
@@ -91,7 +91,7 @@
     "test_refs": [
       "tests/test_dashboard_renderer.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "content_hash": "d1ea75e95c4faf4b"
   },
   {
@@ -116,7 +116,7 @@
       "tests/test_scaffolding.py",
       "tests/test_dynamic_hints.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "content_hash": "96f6b22338eadbf1"
   },
   {
@@ -141,7 +141,7 @@
       "tests/test_evidence_index_builder.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "UnifiedContext 强类型领域模型，EvidenceIndexBuilder 单次加载",
     "content_hash": "f0a463f64034dc81"
   },
@@ -159,7 +159,7 @@
     "test_refs": [
       "tests/test_merge_gate_engine.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "MergeGateEngine blocked 时不再吞掉 fail 级警告",
     "content_hash": "38225191562c83b0"
   },
@@ -179,7 +179,7 @@
       "tests/test_finalize.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "finalize 存储 prd_hash，analyze 检测 PRD 漂移",
     "content_hash": "614529915344675e"
   },
@@ -201,7 +201,7 @@
       "tests/test_prd_arch_validator.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "PRD↔Arch 映射校验提取为独立模块，analyze 时持续校验",
     "content_hash": "988dea9f96495d71"
   },
@@ -219,7 +219,7 @@
     "test_refs": [
       "tests/test_claim_evidence_analyzer.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "Claim 的 test_refs 必须覆盖关联 AC",
     "content_hash": "e937979fc964bac1"
   },
@@ -243,7 +243,7 @@
       "tests/test_cli_analyze.py",
       "tests/test_ghost_code_reconciler.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "hook set -e + --gates-only + staged claims 读取",
     "content_hash": "61abe0ccda7dea02"
   },
@@ -267,7 +267,7 @@
     "test_refs": [
       "tests/test_task_loader.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "删除 ToolEvidenceAdapter、移除 tests/ 兜底、hashlib 顶部导入、skip_schema",
     "content_hash": "ce6d03755ba4d6d8"
   },
@@ -288,7 +288,7 @@
     "test_refs": [
       "tests/test_reflection_prompts.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "vt analyze 结束时输出 8 维度元认知反思提示",
     "content_hash": "f5104bd02833c90e"
   },
@@ -309,7 +309,7 @@
     "test_refs": [
       "tests/test_evidence_index_builder.py"
     ],
-    "timestamp": "2026-06-07T20:00:00Z",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-001: 删除 ctx=None fallback，纯 UnifiedContext 路径",
     "content_hash": "8e588579cb33c292"
   },
@@ -328,7 +328,7 @@
     "test_refs": [
       "tests/test_architecture_compliance_checker.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-002: 删除 constraints_data=None fallback",
     "content_hash": "37eae96593b93136"
   },
@@ -350,7 +350,7 @@
     "test_refs": [
       "tests/test_task_loader.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-003: 移除 skip_schema 参数",
     "content_hash": "c0d159868af71338"
   },
@@ -369,7 +369,7 @@
     "test_refs": [
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-004: run_analyze 拆分为 5 个子函数",
     "content_hash": "a85fcae56b1d1605"
   },
@@ -388,7 +388,7 @@
     "test_refs": [
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-005: 工具依赖检查失败注入 BLOCKED 证据而非硬退出",
     "content_hash": "1abb5c0fbb0514a2"
   },
@@ -411,7 +411,7 @@
     "test_refs": [
       "tests/test_reflection_prompts.py"
     ],
-    "timestamp": "2026-06-07T20:00:00Z",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-006: reflection prompts 从 JSON 模板加载",
     "content_hash": "d09957fe3dd4f52c"
   },
@@ -469,7 +469,7 @@
       "tests/test_cli_analyze.py",
       "tests/test_e2e_finalize_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "GOV: PRD quality_evolution REQ 类别 + 反思覆盖校验 WARNING",
     "content_hash": "c87b816ae4ab6ba4"
   },
@@ -486,7 +486,7 @@
     "test_refs": [
       "tests/test_quality_gates.py"
     ],
-    "timestamp": "2026-06-08T12:30:00Z",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "GOV: Gate 2.5 反向覆盖校验 — staged 代码文件覆盖 task 修改状态",
     "content_hash": "17a8ece059a131dd"
   },
@@ -509,7 +509,7 @@
     "test_refs": [
       "tests/test_semantic_auditor.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "Gate 3: SemanticAuditor 两阶段协议（generate → verify）",
     "content_hash": "c8e46aca3bdf5aee"
   },
@@ -525,7 +525,7 @@
       "src/vibe_tracing/cli.py"
     ],
     "test_refs": [],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "Gate 2.5 反向覆盖校验升级：无覆盖 task → BLOCKED",
     "content_hash": "c95c2c8c83325f22"
   },
@@ -546,7 +546,7 @@
       "tests/test_scaffolding.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "hook 模板去除 --gates-only + 工具执行过滤非代码文件",
     "content_hash": "32ea86730b86699f"
   },
@@ -570,7 +570,7 @@
       "tests/test_ghost_code_reconciler.py",
       "tests/test_semantic_auditor.py"
     ],
-    "timestamp": "2026-06-08T02:00:00Z",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-010: 白名单扩展 + EVO-014: audit_reason 质量校验",
     "content_hash": "54b3c457593d2106"
   },
@@ -594,7 +594,7 @@
       "tests/test_ghost_code_reconciler.py",
       "tests/test_quality_gates.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-011: Gate 2+2.5 合并 + 反向覆盖检查跳过 done 任务",
     "content_hash": "055306882d772b9b"
   },
@@ -620,7 +620,7 @@
       "tests/test_cli_analyze.py",
       "tests/test_e2e_finalize_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-012: 配置驱动扩展名 + 工具未安装提醒安装",
     "content_hash": "0fdb1a7821466fe5"
   },
@@ -641,7 +641,7 @@
       "tests/test_cli_analyze.py",
       "tests/test_quality_gates.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "EVO-013: 门禁函数拆分 + 编排函数简化",
     "content_hash": "2d1d29102efafc4e"
   },
@@ -664,7 +664,7 @@
       "tests/test_tool_execution.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "ToolResolver 统一工具解析层",
     "content_hash": "678f1efb23cb7be0"
   },
@@ -697,7 +697,7 @@
       "tests/test_architecture_compliance_checker.py",
       "tests/test_ac_vt_009_coverage.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "vt doctor + evidence tool_category + hook 债务感知 + vt accept",
     "content_hash": "ee37af95e6d4d128"
   },
@@ -728,7 +728,7 @@
       "tests/test_architecture_compliance_checker.py",
       "tests/test_tool_execution.py"
     ],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "噪音消除措施改进：accepted_rules 可见化 + skipped 证据 + stale WARNING + Agent 行动清单 + 决策日志加载",
     "content_hash": "fad9d01c6f082848"
   },
@@ -751,7 +751,7 @@
       "pyproject.toml"
     ],
     "test_refs": [],
-    "timestamp": "2026-06-08T15:44:06.087640+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "决策平台：Dashboard 待决策标签页 + 交互按钮 + Decision API + 决策日志",
     "content_hash": "a7902bd78e8429ab"
   },
@@ -836,7 +836,7 @@
       "tests/test_architecture_compliance_checker.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-09T04:15:58.554091+00:00",
+    "timestamp": "2026-06-09T04:27:51.231665+00:00",
     "notes": "进化轮次 d：hints 三级架构 + 决策平台完善 + AC 覆盖率清零 + 变更分离机制 + _is_current claim 修复 + Agent 指令",
     "content_hash": "c829679542ffb8db"
   }

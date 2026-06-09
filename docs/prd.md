@@ -1906,3 +1906,22 @@ Vibe Tracing 的定位是：
 哪些 Agent Claim 有证据，
 哪些地方必须阻塞合并。
 ```
+
+---
+
+## 15. 治理边界
+
+VT 的治理对象是"业务需求是否被正确实现"。以下文件纳入 VT 治理体系（claim/task/AC）：
+
+- 业务逻辑代码：`src/vibe_tracing/**/*.py`
+- 测试代码：`tests/test_*.py`
+- 契约文件：`docs/prd.md`、`docs/architecture_constraints.json`、`docs/task_list.json`
+
+以下文件**不纳入** VT 治理，由标准软件工程实践保障（单元测试、CI、schema 校验）：
+
+- Schema 定义：`schemas/*.json`
+- 输出模板：`templates/*.html`、`templates/*.json`
+- 测试固件：`tests/fixtures/**`
+- 运行时配置：`.vibetracing/config.json`
+- 生成产物：`output/*.html`、`output/*.json`
+- 文档和报告：`*.md`、`*.toml`

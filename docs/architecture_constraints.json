@@ -64,6 +64,27 @@
       ]
     }
   },
+  "governance_boundary": {
+    "description": "VT 治理范围定义。范围内文件纳入 claim/task/AC 体系，范围外文件由标准软件工程实践保障。",
+    "included_patterns": [
+      "src/vibe_tracing/**/*.py",
+      "tests/test_*.py",
+      "docs/prd.md",
+      "docs/architecture_constraints.json",
+      "docs/task_list.json"
+    ],
+    "excluded_patterns": [
+      "schemas/**",
+      "templates/**",
+      "tests/fixtures/**",
+      "output/**",
+      ".vibetracing/**",
+      "*.md",
+      "*.toml",
+      "*.html"
+    ],
+    "excluded_note": "辅助文件（schemas、templates、fixtures、output、config、文档）由单元测试、CI、schema 校验保障，不纳入 VT claim/task/AC 治理体系。"
+  },
   "architecture_principles": [
     {
       "principle_id": "PRINCIPLE-VT-001",

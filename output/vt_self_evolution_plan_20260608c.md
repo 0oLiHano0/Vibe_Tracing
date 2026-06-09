@@ -86,12 +86,6 @@
   - **Root Cause**: hook 的 BLOCKED 判定不区分问题来源。
   - **Affected Scope**: `src/vibe_tracing/ghost_code_reconciler.py`, `src/vibe_tracing/merge_gate_engine.py`
 
-- **Reflect ID**: EVO-REF-037
-  - **Violation Principle**: 1 (项目不足识别)
-  - **Diagnosis**: 项目有 500+ 测试用例，但代码行覆盖率仅 42%（低于 80% 阈值）。覆盖率工具将 41 个证据标记为 "violated"。测试用例数量与覆盖率严重不匹配，说明测试用例的分布和目标需要全面审查——可能大量测试集中在少量模块，而大量模块缺少测试。
-  - **Root Cause**: 测试用例随功能增长自然积累，未有系统的覆盖率规划。需要独立调查和重新规划。
-  - **Affected Scope**: 整体测试套件
-
 ---
 
 ## 三、 问题归类
@@ -175,14 +169,10 @@
   - **AC**: `vt accept PRINCIPLE-VT-001` 成功填充确认字段。已确认的规则不再输出提示。
   - **Subagent**: self
 
-### 独立计划：测试覆盖率调查（暂不实施）
+### 独立研究（已迁移至 `output/vt_pending_issues_20260608.md`）
 
-- [ ] **Task ID**: EVO-TASK-026
-  - **Action**: NEW
-  - **Target File**: 测试套件整体
-  - **Instruction**: 调查 500+ 测试用例但覆盖率仅 42% 的根因。分析各模块的测试分布，输出覆盖率分析报告和测试补充计划。需要独立计划和调度。
-  - **AC**: 输出覆盖率分析报告。
-  - **Subagent**: 待定
+- 测试覆盖率失衡问题（500+ 测试，42% 覆盖率）
+- 噪音消除措施对证据链完整性的影响
 
 ---
 

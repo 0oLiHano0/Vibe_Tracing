@@ -5,12 +5,14 @@ Each test function declares its AC coverage in its docstring.
 """
 
 import sys
+from collections import deque
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from vibe_tracing.core.enums import ErrorCode
-from vibe_tracing.schema_validator import SchemaValidator
+from vibe_tracing.schema_validator import SchemaValidator, _build_hint
 
 SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
 DOCS_DIR = Path(__file__).parent.parent / "docs"
@@ -241,3 +243,127 @@ sys.exit(0)
     assert result.returncode == 0, (
         f"schema_validator imported forbidden module(s): {result.stdout or result.stderr}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Coverage: _build_hint fallback English hints (lines 89-112)
+# These branches are reached when the schema has no "description" field
+# for the failing validator, so the Chinese hint path is skipped.
+# ---------------------------------------------------------------------------
+
+
+def _make_mock_error(validator, validator_value, path_parts, schema=None, instance=None, message="test error"):
+    """Create a mock jsonschema.ValidationError for testing _build_hint directly."""
+    err = MagicMock()
+    err.validator = validator
+    err.validator_value = validator_value
+    err.absolute_path = deque(path_parts)
+    err.schema = schema if schema is not None else {}
+    err.instance = instance if instance is not None else {}
+    err.message = message
+    return err
+
+
+def test_build_hint_required_fallback():
+    """_build_hint returns English fallback for 'required' validator with no description."""
+    err = _make_mock_error("required", ["name", "age"], ["project"])
+    hint = _build_hint(err)
+    assert "Add the required field(s)" in hint
+    assert "name" in hint
+
+
+def test_build_hint_type_fallback():
+    """_build_hint returns English fallback for 'type' validator with no description."""
+    err = _make_mock_error("type", "string", ["schema_version"])
+    hint = _build_hint(err)
+    assert "must be of type" in hint
+    assert "string" in hint
+
+
+def test_build_hint_enum_fallback():
+    """_build_hint returns English fallback for 'enum' validator with no description."""
+    err = _make_mock_error("enum", ["must", "should", "could"], ["tasks", 0, "priority"])
+    hint = _build_hint(err)
+    assert "must be one of" in hint
+
+
+def test_build_hint_pattern_fallback():
+    """_build_hint returns English fallback for 'pattern' validator with no description.
+    Note: the pattern+task_id/related_task Chinese hints are separate branches (lines 62-66).
+    This test uses a path that does NOT end with task_id/related_task to reach the fallback.
+    """
+    err = _make_mock_error("pattern", "^[A-Z]+$", ["project", "project_id"])
+    hint = _build_hint(err)
+    assert "must match pattern" in hint
+
+
+def test_build_hint_min_length_fallback():
+    """_build_hint returns English fallback for 'minLength' validator."""
+    err = _make_mock_error("minLength", 3, ["project", "name"])
+    hint = _build_hint(err)
+    assert "minimum length" in hint
+
+
+def test_build_hint_max_length_fallback():
+    """_build_hint returns English fallback for 'maxLength' validator."""
+    err = _make_mock_error("maxLength", 100, ["project", "name"])
+    hint = _build_hint(err)
+    assert "maximum length" in hint
+
+
+def test_build_hint_minimum_fallback():
+    """_build_hint returns English fallback for 'minimum' validator."""
+    err = _make_mock_error("minimum", 0, ["config", "retry_count"])
+    hint = _build_hint(err)
+    assert "must be >=" in hint or "must be ≥" in hint
+
+
+def test_build_hint_maximum_fallback():
+    """_build_hint returns English fallback for 'maximum' validator."""
+    err = _make_mock_error("maximum", 100, ["config", "retry_count"])
+    hint = _build_hint(err)
+    assert "must be <=" in hint or "must be ≤" in hint
+
+
+def test_build_hint_additional_properties_fallback():
+    """_build_hint returns English fallback for 'additionalProperties' validator."""
+    err = _make_mock_error("additionalProperties", False, ["project"])
+    hint = _build_hint(err)
+    assert "Remove unexpected additional properties" in hint
+
+
+def test_build_hint_unknown_validator_fallback():
+    """_build_hint returns generic English fallback for an unknown validator type."""
+    err = _make_mock_error("customValidator", "something", ["project", "field"])
+    hint = _build_hint(err)
+    assert "Fix the value at" in hint
+    assert "test error" in hint
+
+
+# ---------------------------------------------------------------------------
+# Coverage: validate_file with unknown schema name (lines 169-170)
+# ---------------------------------------------------------------------------
+
+
+def test_validate_file_unknown_schema_name(validator, tmp_path):
+    """validate_file with unknown schema_name returns INVALID_INPUT error."""
+    dummy = tmp_path / "dummy.json"
+    dummy.write_text("{}")
+    result = validator.validate_file(dummy, "nonexistent_schema")
+    assert result.is_valid is False
+    assert result.error_code == ErrorCode.INVALID_INPUT
+    assert "nonexistent_schema" in result.message
+
+
+# ---------------------------------------------------------------------------
+# Coverage: _run_validation when schema file cannot be loaded (lines 253-254)
+# ---------------------------------------------------------------------------
+
+
+def test_run_validation_schema_load_error(tmp_path):
+    """_run_validation returns error when schema file is missing from schemas_dir."""
+    validator = SchemaValidator(tmp_path)  # empty dir, no schema files
+    result = validator.validate_dict({"key": "value"}, "task_list")
+    assert result.is_valid is False
+    assert result.error_code == ErrorCode.INVALID_INPUT
+    assert "Failed to load schema" in result.message

@@ -802,7 +802,9 @@
       "output/claim_auto_invalidation_layer2_20260609.md",
       "output/vt_self_evolution_plan_20260608d.md",
       ".vibetracing/coverage_baseline.json",
-      "output/coverage_redesign_20260609.md"
+      "output/coverage_redesign_20260609.md",
+      "tests/test_git_utils.py",
+      "tests/test_schema_validator.py"
     ],
     "code_refs": [
       "src/vibe_tracing/templates/field_hints.json",
@@ -845,7 +847,9 @@
       "output/claim_auto_invalidation_layer2_20260609.md",
       "output/vt_self_evolution_plan_20260608d.md",
       ".vibetracing/coverage_baseline.json",
-      "output/coverage_redesign_20260609.md"
+      "output/coverage_redesign_20260609.md",
+      "tests/test_git_utils.py",
+      "tests/test_schema_validator.py"
     ],
     "test_refs": [
       "tests/test_ac_vt_009_coverage.py",
@@ -864,8 +868,8 @@
       "tests/test_architecture_compliance_checker.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-09T11:42:22.633763+00:00",
+    "timestamp": "2026-06-09T11:54:29.109511+00:00",
     "notes": "进化轮次 d：hints 三级架构 + 决策平台完善 + AC 覆盖率清零 + 变更分离机制 + _is_current claim 修复 + Agent 指令",
-    "content_hash": "8566a21056c398a0"
+    "content_hash": "29a741f998e2b258"
   }
 ]

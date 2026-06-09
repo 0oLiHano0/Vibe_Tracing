@@ -826,3 +826,809 @@ def test_tool_evidence_candidate_unchanged() -> None:
     assert c.stderr == ""
     assert c.error_code is None
     assert c.details == {}
+
+
+# ---------------------------------------------------------------------------
+# Test: _resolve_hint helper
+# ---------------------------------------------------------------------------
+
+class TestResolveHint:
+    """Verify _resolve_hint handles different hint value types."""
+
+    def test_string_hint_returns_string(self) -> None:
+        """covers: _resolve_hint string branch"""
+        from vibe_tracing.tool_evidence_adapter import _resolve_hint
+        assert _resolve_hint("some hint") == "some hint"
+
+    def test_dict_hint_returns_level1(self) -> None:
+        """covers: _resolve_hint dict branch (line 37-39)"""
+        from vibe_tracing.tool_evidence_adapter import _resolve_hint
+        hint = {"level1": "L1 text", "level2": "L2 text", "level3": "L3 text"}
+        assert _resolve_hint(hint, "level1") == "L1 text"
+
+    def test_dict_hint_falls_back_to_level3(self) -> None:
+        """covers: _resolve_hint dict branch with level3 fallback (line 40)"""
+        from vibe_tracing.tool_evidence_adapter import _resolve_hint
+        hint = {"level3": "L3 only"}
+        assert _resolve_hint(hint, "level1") == "L3 only"
+
+    def test_other_type_returns_empty(self) -> None:
+        """covers: _resolve_hint non-string/non-dict branch"""
+        from vibe_tracing.tool_evidence_adapter import _resolve_hint
+        assert _resolve_hint(123) == ""
+        assert _resolve_hint(None) == ""
+        assert _resolve_hint(["list"]) == ""
+
+
+# ---------------------------------------------------------------------------
+# Test: _load_hints error handling
+# ---------------------------------------------------------------------------
+
+class TestLoadHints:
+    """Verify _load_hints gracefully handles missing/corrupt files."""
+
+    def test_missing_file_returns_empty_dict(self) -> None:
+        """covers: _load_hints FileNotFoundError branch (lines 31-32)"""
+        from vibe_tracing.tool_evidence_adapter import _load_hints
+        with patch("vibe_tracing.tool_evidence_adapter._HINTS_PATH", Path("/nonexistent/path.json")):
+            result = _load_hints("tool")
+            assert result == {}
+
+    def test_corrupt_json_returns_empty_dict(self) -> None:
+        """covers: _load_hints JSONDecodeError branch (lines 31-32)"""
+        from vibe_tracing.tool_evidence_adapter import _load_hints, _HINTS_PATH
+        with patch.object(type(_HINTS_PATH), "read_text", side_effect=json.JSONDecodeError("", "", 0)):
+            result = _load_hints("tool")
+            assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# Test: _validate_path error handling
+# ---------------------------------------------------------------------------
+
+class TestValidatePathErrors:
+    """Verify _validate_path handles exceptions during path resolution."""
+
+    def test_invalid_path_returns_false(self, engine: ToolExecutionEngine) -> None:
+        """covers: _validate_path ValueError/OSError branch (lines 166-167)"""
+        with patch("vibe_tracing.tool_evidence_adapter.Path.resolve", side_effect=ValueError("bad path")):
+            ok, err = engine._validate_path("some/path")
+            assert ok is False
+            assert "Invalid path" in err
+
+    def test_path_equals_root_is_valid(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _validate_path path == project_root branch (line 162)"""
+        # "." resolves to the project root itself
+        ok, err = engine._validate_path(".")
+        assert ok is True
+
+
+# ---------------------------------------------------------------------------
+# Test: _run_subprocess error handling
+# ---------------------------------------------------------------------------
+
+class TestRunSubprocessErrors:
+    """Verify _run_subprocess handles various OS-level exceptions."""
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_permission_error(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: _run_subprocess PermissionError branch (lines 263-266)"""
+        mock_run.side_effect = PermissionError("Permission denied")
+        exit_code, stdout, stderr, error = engine._run_subprocess("some_tool --arg")
+        assert exit_code == -1
+        assert error == "permission"
+        assert "权限" in stderr or "Permission denied" in stderr
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_os_error(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: _run_subprocess OSError branch (lines 267-270)"""
+        mock_run.side_effect = OSError("OS boom")
+        exit_code, stdout, stderr, error = engine._run_subprocess("some_tool")
+        assert exit_code == -1
+        assert error == "os_error"
+        assert "OS error" in stderr or "操作系统" in stderr
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_permission_error_execute_tool(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: execute_tool generic exec_error branch (lines 770-783)"""
+        mock_run.side_effect = PermissionError("no access")
+        candidates = engine.execute_tool(tool_category="lint", path="src/")
+        assert len(candidates) == 1
+        c = candidates[0]
+        assert c.status == CoverageStatus.BLOCKED.value
+        assert c.error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
+        assert c.details.get("error_type") == "permission"
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_os_error_execute_tool(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: execute_tool generic exec_error branch (lines 770-783)"""
+        mock_run.side_effect = OSError("os boom")
+        candidates = engine.execute_tool(tool_category="lint", path="src/")
+        assert len(candidates) == 1
+        c = candidates[0]
+        assert c.status == CoverageStatus.BLOCKED.value
+        assert c.details.get("error_type") == "os_error"
+
+
+# ---------------------------------------------------------------------------
+# Test: Pytest edge cases
+# ---------------------------------------------------------------------------
+
+class TestPytestEdgeCases:
+    """Verify pytest parser handles non-standard exit codes and fallback paths."""
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_pytest_exit3_returns_blocked(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: pytest exit code not in (0,1,2,5) → blocked (line 316)"""
+        mock_run.return_value = MagicMock(returncode=3, stdout="", stderr="internal error")
+        candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.BLOCKED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_pytest_json_report_file_with_relative_path(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: pytest JSON report file reading with relative path (lines 331-342)"""
+        report_data = {"tests": [{"nodeid": "tests/test_foo.py::test_bar", "outcome": "passed"}]}
+        report_path = project_root / "pytest_report.json"
+        report_path.write_text(json.dumps(report_data), encoding="utf-8")
+
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        engine._tool_configs["test"] = {
+            "tool": "pytest",
+            "default_command": f"pytest {{test_path}} --json-report --json-report-file=pytest_report.json",
+            "output_format": "pytest_json",
+            "pass_condition": "exit_code == 0",
+        }
+        candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.COVERED.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_pytest_json_report_file_parse_error_falls_back(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: pytest JSON report file JSONDecodeError fallback (lines 341-342)"""
+        report_path = project_root / "bad_report.json"
+        report_path.write_text("NOT JSON", encoding="utf-8")
+
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        engine._tool_configs["test"] = {
+            "tool": "pytest",
+            "default_command": f"pytest {{test_path}} --json-report --json-report-file={report_path}",
+            "output_format": "pytest_json",
+            "pass_condition": "exit_code == 0",
+        }
+        candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
+        assert len(candidates) == 1
+        # Falls through to last resort (exit_code 0 = covered)
+        assert candidates[0].status == CoverageStatus.COVERED.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_pytest_stdout_json_fallback(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: pytest stdout JSON fallback (lines 345-349)"""
+        report_data = {"tests": [{"nodeid": "tests/test_foo.py::test_baz", "outcome": "passed"}]}
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps(report_data), stderr="")
+        engine._tool_configs["test"] = {
+            "tool": "pytest",
+            "default_command": "pytest {test_path} -q",
+            "output_format": "pytest_json",
+            "pass_condition": "exit_code == 0",
+        }
+        candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.COVERED.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_pytest_last_resort_exit0(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: pytest last resort fallback exit_code=0 (lines 352-366)"""
+        mock_run.return_value = MagicMock(returncode=0, stdout="no json here", stderr="")
+        engine._tool_configs["test"] = {
+            "tool": "pytest",
+            "default_command": "pytest {test_path} -q",
+            "output_format": "pytest_json",
+            "pass_condition": "exit_code == 0",
+        }
+        candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.COVERED.value
+        assert candidates[0].details["outcome"] == "passed"
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_pytest_last_resort_exit1(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: pytest last resort fallback exit_code=1 (lines 352-366)"""
+        mock_run.return_value = MagicMock(returncode=1, stdout="no json here", stderr="")
+        engine._tool_configs["test"] = {
+            "tool": "pytest",
+            "default_command": "pytest {test_path} -q",
+            "output_format": "pytest_json",
+            "pass_condition": "exit_code == 0",
+        }
+        candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.VIOLATED.value
+        assert candidates[0].details["outcome"] == "failed"
+
+
+# ---------------------------------------------------------------------------
+# Test: Pytest JSON parsing edge cases
+# ---------------------------------------------------------------------------
+
+class TestPytestJsonParsingEdgeCases:
+    """Verify _parse_pytest_json handles edge cases in JSON structure."""
+
+    def test_tests_data_not_a_list(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_pytest_json tests_data not list (line 378)"""
+        data = {"tests": "not_a_list"}
+        result = engine._parse_pytest_json(data, "cmd", "path")
+        assert result == []
+
+    def test_test_entry_not_a_dict(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_pytest_json test not dict (line 382)"""
+        data = {"tests": ["string", 123]}
+        result = engine._parse_pytest_json(data, "cmd", "path")
+        assert len(result) == 0
+
+    def test_metadata_docstring_fallback(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_pytest_json metadata docstring (lines 388-392)"""
+        data = {
+            "tests": [{
+                "nodeid": "tests/test_foo.py::test_bar",
+                "outcome": "passed",
+                "metadata": {"docstring": "covers: AC-VT-999-01"},
+            }]
+        }
+        result = engine._parse_pytest_json(data, "cmd", "path")
+        assert len(result) == 1
+        assert result[0].covers == ["AC-VT-999-01"]
+
+    def test_unclear_outcome(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_pytest_json unclear outcome (line 404)"""
+        data = {
+            "tests": [{
+                "nodeid": "tests/test_foo.py::test_skipped",
+                "outcome": "skipped",
+            }]
+        }
+        result = engine._parse_pytest_json(data, "cmd", "path")
+        assert len(result) == 1
+        assert result[0].status == CoverageStatus.UNCLEAR.value
+
+    def test_non_dict_data_returns_empty(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_pytest_json data not dict (line 373)"""
+        result = engine._parse_pytest_json("not_a_dict", "cmd", "path")
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Test: Ruff edge cases
+# ---------------------------------------------------------------------------
+
+class TestRuffEdgeCases:
+    """Verify ruff parser handles edge cases."""
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_ruff_exit3_returns_blocked(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: ruff exit code not in (0,1) → blocked (line 426)"""
+        mock_run.return_value = MagicMock(returncode=3, stdout="", stderr="ruff crashed")
+        candidates = engine.execute_tool(tool_category="lint", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.BLOCKED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_ruff_dict_output_with_violations_key(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: ruff dict output parsing (lines 444-450)"""
+        data = {"violations": [{"code": "F401", "message": "unused import"}]}
+        mock_run.return_value = MagicMock(returncode=1, stdout=json.dumps(data), stderr="")
+        candidates = engine.execute_tool(tool_category="lint", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.VIOLATED.value
+        assert candidates[0].details["violations_count"] == 1
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_ruff_dict_output_with_results_key(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: ruff dict output with 'results' key (line 446)"""
+        data = {"results": []}
+        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps(data), stderr="")
+        candidates = engine.execute_tool(tool_category="lint", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.COMPLIANT.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_ruff_dict_output_with_issues_key(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: ruff dict output with 'issues' key (line 446)"""
+        data = {"issues": [{"code": "E501"}]}
+        mock_run.return_value = MagicMock(returncode=1, stdout=json.dumps(data), stderr="")
+        candidates = engine.execute_tool(tool_category="lint", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.VIOLATED.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_ruff_invalid_json_returns_compliant(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: ruff JSONDecodeError branch (line 449-450)"""
+        mock_run.return_value = MagicMock(returncode=0, stdout="not json", stderr="")
+        candidates = engine.execute_tool(tool_category="lint", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.COMPLIANT.value
+
+
+# ---------------------------------------------------------------------------
+# Test: Mypy edge cases
+# ---------------------------------------------------------------------------
+
+class TestMypyEdgeCases:
+    """Verify mypy parser handles edge cases."""
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_mypy_exit3_returns_blocked(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: mypy exit code not in (0,1,2) → blocked (line 498)"""
+        mock_run.return_value = MagicMock(returncode=3, stdout="", stderr="mypy crashed")
+        candidates = engine.execute_tool(tool_category="type_check", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.BLOCKED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_mypy_json_report_file(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: mypy JSON report file reading (lines 513-525)"""
+        report = {"summary": {"error_count": 3}}
+        report_path = project_root / "mypy_report.json"
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+
+        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="")
+        engine._tool_configs["type_check"] = {
+            "tool": "mypy",
+            "default_command": f"mypy {{source_path}} --json-report {report_path}",
+            "output_format": "mypy_json",
+            "pass_condition": "exit_code == 0",
+        }
+        candidates = engine.execute_tool(tool_category="type_check", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.VIOLATED.value
+        assert candidates[0].details["errors_count"] == 3
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_mypy_json_report_bad_json_falls_back(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: mypy JSON report JSONDecodeError fallback (line 524-525)"""
+        report_path = project_root / "bad_mypy.json"
+        report_path.write_text("NOT JSON", encoding="utf-8")
+
+        mock_run.return_value = MagicMock(
+            returncode=1,
+            stdout="src/foo.py:10: error: Something wrong",
+            stderr="",
+        )
+        engine._tool_configs["type_check"] = {
+            "tool": "mypy",
+            "default_command": f"mypy {{source_path}} --json-report {report_path}",
+            "output_format": "mypy_json",
+            "pass_condition": "exit_code == 0",
+        }
+        candidates = engine.execute_tool(tool_category="type_check", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].details["errors_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Test: Bandit edge cases
+# ---------------------------------------------------------------------------
+
+class TestBanditEdgeCases:
+    """Verify bandit parser handles edge cases."""
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_bandit_exit3_returns_blocked(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: bandit exit code not in (0,1) → blocked (line 556)"""
+        mock_run.return_value = MagicMock(returncode=3, stdout="", stderr="bandit crashed")
+        candidates = engine.execute_tool(tool_category="security", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.BLOCKED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_bandit_output_file(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: bandit output file reading (lines 572-586)"""
+        report = {"results": [{"issue_severity": "LOW", "issue_text": "test"}]}
+        report_path = project_root / "bandit_report.json"
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+
+        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="")
+        engine._tool_configs["security"] = {
+            "tool": "bandit",
+            "default_command": f"bandit -r {{source_path}} -f json -o {report_path}",
+            "output_format": "bandit_json",
+            "pass_condition": "results == 0",
+        }
+        candidates = engine.execute_tool(tool_category="security", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.VIOLATED.value
+        assert candidates[0].details["results_count"] == 1
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_bandit_output_file_bad_json_falls_back(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: bandit output file JSONDecodeError fallback (line 585-586)"""
+        report_path = project_root / "bad_bandit.json"
+        report_path.write_text("NOT JSON", encoding="utf-8")
+
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout='{"results": []}', stderr=""
+        )
+        engine._tool_configs["security"] = {
+            "tool": "bandit",
+            "default_command": f"bandit -r {{source_path}} -f json -o {report_path}",
+            "output_format": "bandit_json",
+            "pass_condition": "results == 0",
+        }
+        candidates = engine.execute_tool(tool_category="security", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.COMPLIANT.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_bandit_output_file_results_not_list(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: bandit results not list fallback (line 595)"""
+        report = {"results": "not_a_list"}
+        report_path = project_root / "bandit_bad_results.json"
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        engine._tool_configs["security"] = {
+            "tool": "bandit",
+            "default_command": f"bandit -r {{source_path}} -f json -o {report_path}",
+            "output_format": "bandit_json",
+            "pass_condition": "results == 0",
+        }
+        candidates = engine.execute_tool(tool_category="security", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.COMPLIANT.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_bandit_stdout_list_fallback(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: bandit stdout list fallback (lines 596-599)"""
+        mock_run.return_value = MagicMock(
+            returncode=1,
+            stdout=json.dumps([{"issue_severity": "HIGH"}]),
+            stderr="",
+        )
+        candidates = engine.execute_tool(tool_category="security", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.VIOLATED.value
+        assert candidates[0].details["results_count"] == 1
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_bandit_stdout_bad_json(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: bandit stdout JSONDecodeError branch (line 598-599)"""
+        mock_run.return_value = MagicMock(returncode=0, stdout="not json", stderr="")
+        candidates = engine.execute_tool(tool_category="security", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.COMPLIANT.value
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_bandit_output_file_no_output_path_match(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: bandit no -o match, falls back to stdout (lines 588-599)"""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout='{"results": []}', stderr=""
+        )
+        engine._tool_configs["security"] = {
+            "tool": "bandit",
+            "default_command": "bandit -r {source_path} -f json",
+            "output_format": "bandit_json",
+            "pass_condition": "results == 0",
+        }
+        candidates = engine.execute_tool(tool_category="security", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.COMPLIANT.value
+
+
+# ---------------------------------------------------------------------------
+# Test: execute_tool build_command ValueError
+# ---------------------------------------------------------------------------
+
+class TestExecuteToolBuildCommandError:
+    """Verify execute_tool handles _build_command ValueError."""
+
+    def test_build_command_value_error_returns_blocked(
+        self, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: execute_tool build_command ValueError (lines 718-729)"""
+        engine._tool_configs["test"] = {
+            "tool": "pytest",
+            "default_command": "pytest {test_path} --config={unknown_var}",
+            "output_format": "pytest_json",
+            "pass_condition": "exit_code == 0",
+        }
+        candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.BLOCKED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
+
+
+# ---------------------------------------------------------------------------
+# Test: Unsupported output format
+# ---------------------------------------------------------------------------
+
+class TestUnsupportedOutputFormat:
+    """Verify execute_tool handles unsupported output_format."""
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_unsupported_format_returns_blocked(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: execute_tool unsupported output format (lines 797-810)"""
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        engine._tool_configs["lint"] = {
+            "tool": "ruff",
+            "default_command": "ruff check {source_path}",
+            "output_format": "xml_format",
+            "pass_condition": "exit_code == 0",
+        }
+        candidates = engine.execute_tool(tool_category="lint", path="src/")
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.BLOCKED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
+        assert "不支持" in candidates[0].stderr or "Unsupported" in candidates[0].stderr
+
+
+# ---------------------------------------------------------------------------
+# Test: _measure_source_coverage edge cases
+# ---------------------------------------------------------------------------
+
+class TestMeasureSourceCoverageEdgeCases:
+    """Verify _measure_source_coverage handles malformed baseline data."""
+
+    def test_corrupt_baseline_json(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _measure_source_coverage JSONDecodeError (line 847-848)"""
+        baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
+        baseline_path.write_text("NOT JSON", encoding="utf-8")
+        candidates = engine._measure_source_coverage()
+        assert candidates == []
+
+    def test_baseline_files_not_dict(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _measure_source_coverage files not dict (line 852)"""
+        baseline = {"files": "not_a_dict"}
+        baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
+        baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+        candidates = engine._measure_source_coverage()
+        assert candidates == []
+
+    def test_file_data_not_dict_skipped(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _measure_source_coverage file_data not dict (line 857)"""
+        baseline = {"files": {"src/a.py": "not_a_dict", "src/b.py": {"percent_covered": 90, "num_statements": 10}}}
+        baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
+        baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+        candidates = engine._measure_source_coverage()
+        assert len(candidates) == 1
+        assert candidates[0].source_path == "src/b.py"
+
+    def test_percent_none_skipped(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _measure_source_coverage percent is None (line 862)"""
+        baseline = {"files": {"src/a.py": {"num_statements": 10}}}
+        baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
+        baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+        candidates = engine._measure_source_coverage()
+        assert candidates == []
+
+
+# ---------------------------------------------------------------------------
+# Test: execute_all with typed paths (dict)
+# ---------------------------------------------------------------------------
+
+class TestExecuteAllTypedPaths:
+    """Verify execute_all with dict-style typed paths."""
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_dict_paths_test_type(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: execute_all dict paths branch (lines 913-924)"""
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        engine._tool_configs = {"test": engine._tool_configs["test"]}
+        candidates = engine.execute_all({"test": ["tests/test_foo.py"]})
+        assert mock_run.call_count == 1
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_dict_paths_source_type(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: execute_all dict paths source type (lines 913-924)"""
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        engine._tool_configs = {"lint": engine._tool_configs["lint"]}
+        candidates = engine.execute_all({"source": ["src/module.py"]})
+        assert mock_run.call_count == 1
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_dict_paths_unknown_type_skipped(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: execute_all dict paths unknown type (line 919-920)"""
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        candidates = engine.execute_all({"unknown_type": ["src/module.py"]})
+        assert mock_run.call_count == 0
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_dict_paths_category_not_in_config_skipped(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: execute_all dict paths category not in config (line 923)"""
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        # "test" is in PATH_TYPE_TOOL_MAP["test"], but not in _tool_configs
+        engine._tool_configs = {"lint": engine._tool_configs["lint"]}
+        candidates = engine.execute_all({"test": ["tests/test_foo.py"]})
+        assert mock_run.call_count == 0
+
+
+# ---------------------------------------------------------------------------
+# Test: _get_test_docstring
+# ---------------------------------------------------------------------------
+
+class TestGetTestDocstring:
+    """Verify _get_test_docstring extracts docstrings via AST."""
+
+    def test_extracts_function_docstring(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _get_test_docstring AST parsing (lines 955-990)"""
+        test_file = project_root / "tests" / "test_sample.py"
+        test_file.write_text(
+            'def test_hello():\n    """covers: AC-VT-001-01"""\n    pass\n',
+            encoding="utf-8",
+        )
+        result = engine._get_test_docstring("tests/test_sample.py::test_hello")
+        assert result == "covers: AC-VT-001-01"
+
+    def test_extracts_class_method_docstring(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _get_test_docstring class method (lines 970-987)"""
+        test_file = project_root / "tests" / "test_sample.py"
+        test_file.write_text(
+            'class TestFoo:\n    def test_bar(self):\n        """Test doc"""\n        pass\n',
+            encoding="utf-8",
+        )
+        result = engine._get_test_docstring("tests/test_sample.py::TestFoo::test_bar")
+        assert result == "Test doc"
+
+    def test_file_not_found_returns_none(self, engine: ToolExecutionEngine) -> None:
+        """covers: _get_test_docstring file not found (line 963)"""
+        result = engine._get_test_docstring("tests/nonexistent.py::test_foo")
+        assert result is None
+
+    def test_function_not_found_returns_none(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _get_test_docstring function not found (line 984)"""
+        test_file = project_root / "tests" / "test_sample.py"
+        test_file.write_text('def test_hello():\n    pass\n', encoding="utf-8")
+        result = engine._get_test_docstring("tests/test_sample.py::test_nonexistent")
+        assert result is None
+
+    def test_no_docstring_returns_none(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _get_test_docstring no docstring (line 987)"""
+        test_file = project_root / "tests" / "test_sample.py"
+        test_file.write_text('def test_no_doc():\n    pass\n', encoding="utf-8")
+        result = engine._get_test_docstring("tests/test_sample.py::test_no_doc")
+        assert result is None
+
+    def test_parametrized_test_name(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _get_test_docstring parametrized name split (line 971)"""
+        test_file = project_root / "tests" / "test_sample.py"
+        test_file.write_text(
+            'def test_param():\n    """Parametrized doc"""\n    pass\n',
+            encoding="utf-8",
+        )
+        result = engine._get_test_docstring("tests/test_sample.py::test_param[case1]")
+        assert result == "Parametrized doc"
+
+    def test_async_function_docstring(self, engine: ToolExecutionEngine, project_root: Path) -> None:
+        """covers: _get_test_docstring async function (line 976)"""
+        test_file = project_root / "tests" / "test_sample.py"
+        test_file.write_text(
+            'async def test_async():\n    """Async doc"""\n    pass\n',
+            encoding="utf-8",
+        )
+        result = engine._get_test_docstring("tests/test_sample.py::test_async")
+        assert result == "Async doc"
+
+
+# ---------------------------------------------------------------------------
+# Test: _extract_covers_from_docstring
+# ---------------------------------------------------------------------------
+
+class TestExtractCoversFromDocstring:
+    """Verify _extract_covers_from_docstring handles various docstring formats."""
+
+    def test_none_docstring(self, engine: ToolExecutionEngine) -> None:
+        """covers: _extract_covers_from_docstring None input"""
+        assert engine._extract_covers_from_docstring(None) == []
+
+    def test_empty_docstring(self, engine: ToolExecutionEngine) -> None:
+        """covers: _extract_covers_from_docstring empty string"""
+        assert engine._extract_covers_from_docstring("") == []
+
+    def test_no_covers_line(self, engine: ToolExecutionEngine) -> None:
+        """covers: _extract_covers_from_docstring no covers keyword"""
+        assert engine._extract_covers_from_docstring("This is a test doc") == []
+
+    def test_covers_ac_id(self, engine: ToolExecutionEngine) -> None:
+        """covers: _extract_covers_from_docstring AC ID extraction"""
+        result = engine._extract_covers_from_docstring("covers: AC-VT-001-01")
+        assert result == ["AC-VT-001-01"]
+
+    def test_covers_req_id(self, engine: ToolExecutionEngine) -> None:
+        """covers: _extract_covers_from_docstring REQ ID extraction"""
+        result = engine._extract_covers_from_docstring("covers: REQ-VT-003")
+        assert result == ["REQ-VT-003"]
+
+    def test_duplicate_ids_deduplicated(self, engine: ToolExecutionEngine) -> None:
+        """covers: _extract_covers_from_docstring dedup"""
+        result = engine._extract_covers_from_docstring("covers: AC-VT-001-01\ncovers: AC-VT-001-01")
+        assert result == ["AC-VT-001-01"]
+
+
+# ---------------------------------------------------------------------------
+# Test: _stamp_category
+# ---------------------------------------------------------------------------
+
+class TestStampCategory:
+    """Verify _stamp_category stamps tool_category on candidates."""
+
+    def test_stamps_category(self) -> None:
+        """covers: _stamp_category (lines 623-630)"""
+        c1 = ToolEvidenceCandidate(
+            source_type="tool", source_path="src/", covers=[], status=CoverageStatus.COVERED.value
+        )
+        c2 = ToolEvidenceCandidate(
+            source_type="tool", source_path="src/b.py", covers=[], status=CoverageStatus.COVERED.value
+        )
+        result = ToolExecutionEngine._stamp_category([c1, c2], "lint")
+        assert all(c.tool_category == "lint" for c in result)
+        assert len(result) == 2
+
+
+# ---------------------------------------------------------------------------
+# Test: get_tool_config
+# ---------------------------------------------------------------------------
+
+class TestGetToolConfig:
+    """Verify get_tool_config returns correct configs."""
+
+    def test_returns_config_for_whitelisted_tool(self, engine: ToolExecutionEngine) -> None:
+        """covers: get_tool_config (line 146)"""
+        config = engine.get_tool_config("lint")
+        assert config is not None
+        assert config["tool"] == "ruff"
+
+    def test_returns_none_for_unknown_tool(self, engine: ToolExecutionEngine) -> None:
+        """covers: get_tool_config (line 146)"""
+        config = engine.get_tool_config("deploy")
+        assert config is None
+
+
+# ---------------------------------------------------------------------------
+# Test: execute_tool auto-generates output_path
+# ---------------------------------------------------------------------------
+
+class TestAutoGenerateOutputPath:
+    """Verify execute_tool auto-generates output_path when template needs it."""
+
+    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    def test_auto_generates_output_path(
+        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: execute_tool auto-generate output_path (lines 702-707)"""
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        engine._tool_configs["lint"] = {
+            "tool": "ruff",
+            "default_command": "ruff check {source_path} --output-file={output_path}",
+            "output_format": "ruff_json",
+            "pass_condition": "violations == 0",
+        }
+        candidates = engine.execute_tool(tool_category="lint", path="src/")
+        # Check that the command was built (subprocess was called)
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        cmd = call_args[0][0]
+        # output_path should have been auto-generated
+        assert ".vibetracing/tmp/vt_lint_" in cmd

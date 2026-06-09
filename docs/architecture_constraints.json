@@ -42,6 +42,38 @@
         "output_format": "bandit_json",
         "pass_condition": "results == 0"
       }
+    },
+    "json": {
+      "extensions": [".json"],
+      "lint": null,
+      "type_check": null,
+      "test": null,
+      "security": null,
+      "coverage": null
+    },
+    "markdown": {
+      "extensions": [".md"],
+      "lint": null,
+      "type_check": null,
+      "test": null,
+      "security": null,
+      "coverage": null
+    },
+    "html": {
+      "extensions": [".html"],
+      "lint": null,
+      "type_check": null,
+      "test": null,
+      "security": null,
+      "coverage": null
+    },
+    "toml": {
+      "extensions": [".toml"],
+      "lint": null,
+      "type_check": null,
+      "test": null,
+      "security": null,
+      "coverage": null
     }
   },
   "architecture_principles": [

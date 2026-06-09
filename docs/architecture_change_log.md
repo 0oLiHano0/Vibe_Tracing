@@ -2,6 +2,14 @@
 
 本项目的所有架构约束变更均在此记录，供项目经理（PM）进行日常审计与追溯。
 
+## [2026-06-09] language_tool_matrix 新增非代码文件类型声明
+
+### language_tool_matrix 新增 json/markdown/html/toml
+* **变更规则**：`language_tool_matrix` 新增 `json`、`markdown`、`html`、`toml` 四个条目，每个条目声明对应的 `extensions`（`.json`、`.md`、`.html`、`.toml`）并将所有工具字段设为 `null`。
+* **变更原因**：当 `.json`、`.md`、`.html`、`.toml` 文件被 staged 时，VT 的 `_check_staged_extensions` 函数发出"发现未配置的代码文件类型"警告。通过在矩阵中显式声明这些非代码文件类型，VT 识别它们为已知类型，不再产生警告。这些文件不需要 lint/type_check/test/security/coverage 工具。
+* **影响范围**：
+  - `docs/architecture_constraints.json`：`language_tool_matrix` 新增 4 个条目。
+
 ## [2026-06-08] 人类接受机制 — manual 规则 accepted_by/accepted_at 字段
 
 ### 所有规则类型新增 accepted_by / accepted_at 字段

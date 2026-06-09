@@ -5,6 +5,9 @@ Tests the Flask app's three endpoints using the test client:
   - GET  /api/decisions
   - POST /api/decisions
   - GET  /api/pending
+
+Also tests the src/vibe_tracing/decision_server.py module which has
+strict field validation and integer decision IDs.
 """
 
 import json
@@ -28,6 +31,29 @@ def client():
     """Provide a Flask test client with TESTING mode on."""
     app.config["TESTING"] = True
     with app.test_client() as c:
+        yield c
+
+
+# ======================================================================
+# Tests for src/vibe_tracing/decision_server.py  (strict validation)
+# ======================================================================
+
+from vibe_tracing.decision_server import app as src_app
+import vibe_tracing.decision_server as src_ds
+
+
+@pytest.fixture(autouse=True)
+def _isolate_src_decisions(tmp_path, monkeypatch):
+    """Redirect the src module's _DECISIONS_FILE to a temp directory."""
+    isolated = tmp_path / ".vibetracing" / "human_decisions.json"
+    monkeypatch.setattr(src_ds, "_DECISIONS_FILE", isolated)
+
+
+@pytest.fixture()
+def src_client():
+    """Provide a Flask test client for the src decision server."""
+    src_app.config["TESTING"] = True
+    with src_app.test_client() as c:
         yield c
 
 
@@ -150,3 +176,134 @@ def test_decisions_persist_across_requests(client):
     resp = client.get("/api/decisions")
     data = json.loads(resp.data)
     assert any(d["target_id"] == "X" for d in data["decisions"])
+
+
+# ======================================================================
+# src/vibe_tracing/decision_server.py -- strict validation & integer IDs
+# ======================================================================
+
+
+class TestSrcDecisionServerGetEmpty:
+    """GET /api/decisions on the src module returns an empty list when no decisions exist."""
+
+    def test_get_empty_returns_empty_list(self, src_client):
+        resp = src_client.get("/api/decisions")
+        assert resp.status_code == 200
+        data = json.loads(resp.data)
+        assert data == []
+
+
+class TestSrcDecisionServerPostAndGet:
+    """POST then GET returns the decision; multiple POSTs accumulate."""
+
+    def test_post_then_get_includes_decision(self, src_client):
+        """After POSTing a decision, GET returns it in the array."""
+        payload = {
+            "category": "accepted_rule",
+            "targetId": "GATE-VT-004",
+            "action": "reconfirm",
+            "reason": "Still valid",
+            "decidedBy": "product_owner",
+        }
+        resp = src_client.post("/api/decisions", json=payload)
+        assert resp.status_code == 201
+        post_data = json.loads(resp.data)
+        assert post_data["success"] is True
+        assert post_data["decision_id"] == 1
+
+        # GET should return it
+        get_resp = src_client.get("/api/decisions")
+        decisions = json.loads(get_resp.data)
+        assert len(decisions) == 1
+        assert decisions[0]["category"] == "accepted_rule"
+        assert decisions[0]["targetId"] == "GATE-VT-004"
+        assert decisions[0]["decision_id"] == 1
+
+    def test_multiple_post_accumulates(self, src_client):
+        """Multiple POSTs accumulate -- GET returns all of them."""
+        for i in range(3):
+            src_client.post(
+                "/api/decisions",
+                json={
+                    "category": f"cat-{i}",
+                    "targetId": f"T-{i}",
+                    "action": "approve",
+                    "reason": "ok",
+                    "decidedBy": "tester",
+                },
+            )
+        decisions = json.loads(src_client.get("/api/decisions").data)
+        assert len(decisions) == 3
+        categories = [d["category"] for d in decisions]
+        assert categories == ["cat-0", "cat-1", "cat-2"]
+
+
+class TestSrcDecisionServerAutoIncrement:
+    """decision_id auto-increments: first is 1, second is 2."""
+
+    def test_first_decision_id_is_one(self, src_client):
+        resp = src_client.post(
+            "/api/decisions",
+            json={
+                "category": "c1",
+                "targetId": "T1",
+                "action": "approve",
+                "reason": "r",
+                "decidedBy": "user",
+            },
+        )
+        assert json.loads(resp.data)["decision_id"] == 1
+
+    def test_second_decision_id_is_two(self, src_client):
+        for i in range(2):
+            src_client.post(
+                "/api/decisions",
+                json={
+                    "category": f"c{i}",
+                    "targetId": f"T{i}",
+                    "action": "approve",
+                    "reason": "r",
+                    "decidedBy": "user",
+                },
+            )
+        decisions = json.loads(src_client.get("/api/decisions").data)
+        assert decisions[0]["decision_id"] == 1
+        assert decisions[1]["decision_id"] == 2
+
+
+class TestSrcDecisionServerValidation:
+    """POST with missing required fields returns 400."""
+
+    def test_missing_all_fields_returns_400(self, src_client):
+        """An empty JSON body should return 400 with missing fields error."""
+        resp = src_client.post("/api/decisions", json={})
+        assert resp.status_code == 400
+        data = json.loads(resp.data)
+        assert data["success"] is False
+        assert "missing fields" in data["error"]
+
+    def test_missing_some_fields_returns_400(self, src_client):
+        """Missing some required fields returns 400."""
+        resp = src_client.post(
+            "/api/decisions",
+            json={"category": "test", "action": "approve"},
+        )
+        assert resp.status_code == 400
+        data = json.loads(resp.data)
+        assert data["success"] is False
+        assert "missing fields" in data["error"]
+
+    def test_all_fields_present_succeeds(self, src_client):
+        """All five required fields present returns 201."""
+        resp = src_client.post(
+            "/api/decisions",
+            json={
+                "category": "test",
+                "targetId": "T-1",
+                "action": "approve",
+                "reason": "looks good",
+                "decidedBy": "tester",
+            },
+        )
+        assert resp.status_code == 201
+        assert json.loads(resp.data)["success"] is True

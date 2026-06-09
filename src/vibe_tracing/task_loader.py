@@ -11,30 +11,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from vibe_tracing.core.ids import validate_id
+from vibe_tracing.hint_loader import load_hints, resolve_hint
 from vibe_tracing.prd_parser import PrdParseResult, get_parent_req_id
 from vibe_tracing.schema_validator import SchemaValidator
 
-_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
 
-
-def _load_field_hints(section: str = "input") -> Dict[str, Any]:
-    with _HINTS_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f).get(section, {})
-
-
-def _resolve_hint(hint_value: Any, level: str = "level3") -> str:
-    """Resolve a hint value to a string at the given verbosity level.
-
-    Backward compatible: if hint_value is a plain string, returns it directly.
-    """
-    if isinstance(hint_value, str):
-        return hint_value
-    if isinstance(hint_value, dict):
-        return hint_value.get(level, hint_value.get("level3", ""))
-    return ""
-
-
-_task_field_hints = _load_field_hints("input")
+_task_field_hints = load_hints("input")
 
 
 @dataclass
@@ -159,7 +141,7 @@ class TaskLoader:
             hint_raw = _task_field_hints.get(field_key)
             if hint_raw:
                 from vibe_tracing.core import ids
-                hint = _resolve_hint(hint_raw, level).replace("{PROJECT_PREFIX}", ids.get_project_prefix())
+                hint = resolve_hint(hint_raw, level).replace("{PROJECT_PREFIX}", ids.get_project_prefix())
                 return f"{base_msg}【修复指南】{hint}"
             return base_msg
 

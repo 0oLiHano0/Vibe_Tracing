@@ -160,3 +160,62 @@ class TestDecisionCardDataFlow:
     def test_decision_api_url_configured(self, rendered_dashboard: str):
         """submitDecision posts to the decision server API endpoint."""
         assert "localhost:5000/api/decisions" in rendered_dashboard
+
+
+# ------------------------------------------------------------------
+# Part B.4: DashboardRenderer loads and renders without errors
+# ------------------------------------------------------------------
+
+class TestDashboardRendererLoads:
+    """Verify the DashboardRenderer can load the template and produce valid HTML."""
+
+    def test_renderer_produces_nonempty_html(self, rendered_dashboard: str):
+        """The rendered dashboard is a non-empty HTML document."""
+        assert len(rendered_dashboard) > 0
+        assert rendered_dashboard.strip().startswith("<")
+
+    def test_renderer_produces_valid_html_structure(self, rendered_dashboard: str):
+        """The rendered output contains basic HTML structure."""
+        assert "<html" in rendered_dashboard
+        assert "</html>" in rendered_dashboard
+
+    def test_renderer_injects_traceability_data(self, rendered_dashboard: str):
+        """The rendered HTML embeds the traceability report JSON."""
+        assert "RUN-DEC-001" in rendered_dashboard
+
+    def test_renderer_injects_evidence_index(self, rendered_dashboard: str):
+        """The rendered HTML embeds the evidence index JSON."""
+        assert "PROJECT-VT" in rendered_dashboard
+
+    def test_renderer_creates_output_file(self, tmp_path: Path):
+        """DashboardRenderer.render() creates the output file at the specified path."""
+        renderer = DashboardRenderer(tmp_path)
+        output_html = tmp_path / "output" / "dashboard.html"
+
+        renderer.render(
+            evidence_index={
+                "run_id": "RUN-001",
+                "project_id": "P-001",
+                "scan_time": "2026-01-01T00:00:00Z",
+                "evidences": [],
+            },
+            traceability_report={
+                "run_id": "RUN-001",
+                "project_id": "P-001",
+                "scan_time": "2026-01-01T00:00:00Z",
+                "gate_decision": "pass",
+                "requirement_coverage": [],
+                "gaps": [],
+                "risks": [],
+                "architecture_compliance_status": [],
+                "architecture_violations": [],
+                "unclear_constraints": [],
+            },
+            output_path=output_html,
+            prd_requirements=[],
+        )
+
+        assert output_html.exists()
+        content = output_html.read_text(encoding="utf-8")
+        assert len(content) > 0
+        assert "<html" in content

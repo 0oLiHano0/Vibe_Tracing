@@ -7,30 +7,12 @@ Evaluates quality gate conditions to produce a machine gate decision:
 - 'pass': if there are no issues.
 """
 
-import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
+from vibe_tracing.hint_loader import load_hints, resolve_hint
 
-
-def _load_hints(category: str) -> Dict[str, Any]:
-    try:
-        data = json.loads(_HINTS_PATH.read_text(encoding="utf-8"))
-        return data.get(category, {})
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def _resolve_hint(hint_value: Any, level: str = "level1") -> str:
-    if isinstance(hint_value, str):
-        return hint_value
-    if isinstance(hint_value, dict):
-        return hint_value.get(level, hint_value.get("level3", ""))
-    return ""
-
-
-_gate_hints = _load_hints("gate_decision")
+_gate_hints = load_hints("gate_decision")
 
 
 class MergeGateEngine:
@@ -91,6 +73,7 @@ class MergeGateEngine:
         staged_items: Optional[Set[str]] = None,
         directly_staged_items: Optional[Set[str]] = None,
         evidence_index: Optional[Dict[str, Any]] = None,
+        human_decisions: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate merge gate criteria based on gaps, risks, and compliance checker results.
@@ -112,13 +95,46 @@ class MergeGateEngine:
                 results.  When provided, coverage violations (source files
                 with < 80% coverage) are extracted from evidences with
                 tool_category ``coverage`` and status ``violated``.
+            human_decisions: Optional list of human decisions.  Each element is a
+                dict with keys ``decision_id``, ``category``, ``targetId``,
+                ``action``, ``reason``, ``decidedBy``, ``timestamp``.
+                Also accepts a wrapper dict ``{"decisions": [...]}``.
+                Supported actions: ``accept_risk`` (downgrades matching risk
+                severity to ``"accepted"``), ``mark_complete`` (marks matching
+                gap as ``"human_resolved"``).
 
         Returns:
             A dict containing:
                 "gate_decision": "pass", "fail", or "blocked"
                 "reasons": list of strings explaining the decision
                 "blocked_items": list of blocking item descriptions
+                "human_decisions_applied": int, number of human decisions applied
         """
+        # ----------------------------------------------------
+        # 0. Normalize human_decisions and build lookup sets
+        # ----------------------------------------------------
+        decisions_list: List[Dict[str, Any]] = []
+        if human_decisions is not None:
+            if isinstance(human_decisions, dict) and "decisions" in human_decisions:
+                decisions_list = human_decisions["decisions"] or []
+            elif isinstance(human_decisions, list):
+                decisions_list = human_decisions
+
+        # targetIds whose risks should be accepted (severity → "accepted")
+        accepted_risk_target_ids: Set[str] = set()
+        # targetIds whose gaps should be marked human_resolved
+        resolved_gap_target_ids: Set[str] = set()
+
+        for d in decisions_list:
+            action = d.get("action", "")
+            target_id = d.get("targetId", "")
+            if action == "accept_risk" and target_id:
+                accepted_risk_target_ids.add(target_id)
+            elif action == "mark_complete" and target_id:
+                resolved_gap_target_ids.add(target_id)
+
+        human_decisions_applied = len(accepted_risk_target_ids) + len(resolved_gap_target_ids)
+
         # For risk evaluation, prefer directly_staged_items to distinguish
         # claims that were directly modified from claims that merely reference
         # modified files (indirectly affected).
@@ -128,11 +144,12 @@ class MergeGateEngine:
         blocked_items: List[str] = []
 
         if prd_status == "draft":
-            draft_hint = _resolve_hint(_gate_hints.get("draft_approved", {}), "level1")
+            draft_hint = resolve_hint(_gate_hints.get("draft_approved", {}), "level1")
             return {
                 "gate_decision": "draft_approved",
                 "reasons": [draft_hint if draft_hint else "项目处于需求草稿阶段（draft），跳过强阻塞门禁规则校验。"],
                 "blocked_items": [],
+                "human_decisions_applied": human_decisions_applied,
             }
 
         # ----------------------------------------------------
@@ -144,14 +161,20 @@ class MergeGateEngine:
             item_type = gap.get("item_type")
             item_id = gap.get("item_id", "")
             reason = gap.get("reason", "")
+            target_id = gap.get("target_id", "")
+            human_resolved = target_id in resolved_gap_target_ids
+
             if item_type == "ac":
-                hint = _resolve_hint(_gate_hints.get("ac_missing_evidence", {}), "level1")
+                hint = resolve_hint(_gate_hints.get("ac_missing_evidence", {}), "level1")
                 msg = hint.format(item_id=item_id, reason=reason) if hint else f"验收标准缺失测试证据 ({item_id}): {reason}"
                 related = {item_id} if item_id else None
-                reasons.append(self._tag_reason(msg, related, staged_items))
-                if self._is_current(related, staged_items):
-                    blocked_items.append(msg)
-                    gate_decision = "blocked"
+                if human_resolved:
+                    reasons.append(self._tag_reason(f"[已人工完成] {msg}", related, staged_items))
+                else:
+                    reasons.append(self._tag_reason(msg, related, staged_items))
+                    if self._is_current(related, staged_items):
+                        blocked_items.append(msg)
+                        gate_decision = "blocked"
 
         # 1.2 Check Must severity risks, completed claims without external evidence,
         # or High risks lacking suggested actions/business impact
@@ -162,41 +185,49 @@ class MergeGateEngine:
             suggested_action = risk.get("suggested_action", "")
             business_impact = risk.get("business_impact", "")
             item_type = risk.get("item_type", "")
+            risk_target_id = risk.get("target_id", "")
+            human_accepted = risk_target_id in accepted_risk_target_ids
+
+            # If human accepted, override severity
+            effective_severity = "accepted" if human_accepted else severity
 
             # Check if it is a completed claim without external evidence (often MUST severity)
             is_self_ref = "only self-referential" in desc or "self-referential" in desc
 
-            # High risk means MUST severity
-            is_high_risk = severity == "must"
+            # High risk means MUST severity (but not if human accepted)
+            is_high_risk = effective_severity == "must"
 
-            if is_high_risk or is_self_ref:
+            if is_high_risk or is_self_ref or human_accepted:
                 risk_related: Set[str] = set()
                 if risk_id:
                     risk_related.add(risk_id)
                 claim_id = risk.get("claim_id")
                 if claim_id:
                     risk_related.add(claim_id)
-                hint = _resolve_hint(_gate_hints.get("high_risk_or_self_ref", {}), "level1")
+                hint = resolve_hint(_gate_hints.get("high_risk_or_self_ref", {}), "level1")
                 msg = hint.format(risk_id=risk_id, desc=desc) if hint else f"高风险或不自证违规 ({risk_id}): {desc}"
-                reasons.append(self._tag_reason(msg, risk_related or None, risk_staged))
-                if self._is_current(risk_related or None, risk_staged):
-                    blocked_items.append(msg)
-                    gate_decision = "blocked"
+                if human_accepted:
+                    reasons.append(self._tag_reason(f"[已接受风险] {msg}", risk_related or None, risk_staged))
+                else:
+                    reasons.append(self._tag_reason(msg, risk_related or None, risk_staged))
+                    if self._is_current(risk_related or None, risk_staged):
+                        blocked_items.append(msg)
+                        gate_decision = "blocked"
 
-                    # Check if high risk is lacking action or business impact
-                    if is_high_risk and (not suggested_action or not business_impact):
-                        hint_missing = _resolve_hint(_gate_hints.get("high_risk_missing_action", {}), "level1")
-                        msg_missing = hint_missing.format(risk_id=risk_id) if hint_missing else f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
-                        blocked_items.append(msg_missing)
-                        reasons.append(self._tag_reason(msg_missing, risk_related or None, risk_staged))
+                        # Check if high risk is lacking action or business impact
+                        if is_high_risk and (not suggested_action or not business_impact):
+                            hint_missing = resolve_hint(_gate_hints.get("high_risk_missing_action", {}), "level1")
+                            msg_missing = hint_missing.format(risk_id=risk_id) if hint_missing else f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
+                            blocked_items.append(msg_missing)
+                            reasons.append(self._tag_reason(msg_missing, risk_related or None, risk_staged))
 
-                    # Add specific reason for low-confidence claims
-                    if item_type == "claim_credibility":
-                        hint_credibility = _resolve_hint(_gate_hints.get("low_confidence_claim", {}), "level1")
-                        msg_credibility = hint_credibility if hint_credibility else "存在低可信度 Claim（无工具验证证据）"
-                        if msg_credibility not in blocked_items:
-                            blocked_items.append(msg_credibility)
-                            reasons.append(self._tag_reason(msg_credibility, risk_related or None, risk_staged))
+                        # Add specific reason for low-confidence claims
+                        if item_type == "claim_credibility":
+                            hint_credibility = resolve_hint(_gate_hints.get("low_confidence_claim", {}), "level1")
+                            msg_credibility = hint_credibility if hint_credibility else "存在低可信度 Claim（无工具验证证据）"
+                            if msg_credibility not in blocked_items:
+                                blocked_items.append(msg_credibility)
+                                reasons.append(self._tag_reason(msg_credibility, risk_related or None, risk_staged))
 
         # 1.3 Check Must architecture violations
         if compliance_result:
@@ -204,7 +235,7 @@ class MergeGateEngine:
             for v in violations:
                 rule_id = v.get("rule_id", "")
                 msg_violation = v.get("message", "")
-                hint = _resolve_hint(_gate_hints.get("must_arch_violation", {}), "level1")
+                hint = resolve_hint(_gate_hints.get("must_arch_violation", {}), "level1")
                 msg = hint.format(rule_id=rule_id, msg_violation=msg_violation) if hint else f"违反 MUST 级别架构约束 ({rule_id}): {msg_violation}"
                 reasons.append(self._tag_reason(msg, None, staged_items))
                 # Architecture violations have no claim/task mapping;
@@ -220,7 +251,7 @@ class MergeGateEngine:
                 status = status_item.get("status")
                 severity = status_item.get("severity", "must")
                 if status == "violated" and severity == "must":
-                    hint = _resolve_hint(_gate_hints.get("arch_rule_violated", {}), "level1")
+                    hint = resolve_hint(_gate_hints.get("arch_rule_violated", {}), "level1")
                     msg = hint.format(rule_id=rule_id) if hint else f"架构规则被违规触发 ({rule_id})"
                     # Avoid duplicate warnings if already caught in violations
                     if not any(rule_id in item for item in blocked_items):
@@ -246,7 +277,7 @@ class MergeGateEngine:
             for uc in unclear_constraints:
                 rule_id = uc.get("rule_id", "")
                 reason = uc.get("reason", "")
-                hint = _resolve_hint(_gate_hints.get("unclear_constraint_rule", {}), "level1")
+                hint = resolve_hint(_gate_hints.get("unclear_constraint_rule", {}), "level1")
                 msg = hint.format(rule_id=rule_id, reason=reason) if hint else f"存在不明确的架构约束规则 ({rule_id}): {reason}"
                 reasons.append(self._tag_reason(msg, None, staged_items))
                 any_fail_detected = True
@@ -261,7 +292,7 @@ class MergeGateEngine:
                 rule_id = status_item.get("rule_id", "")
                 status = status_item.get("status")
                 if status == "unclear":
-                    hint = _resolve_hint(_gate_hints.get("arch_rule_unclear", {}), "level1")
+                    hint = resolve_hint(_gate_hints.get("arch_rule_unclear", {}), "level1")
                     msg = hint.format(rule_id=rule_id) if hint else f"架构规则状态不明确 ({rule_id})"
                     if not any(msg in item for item in reasons):
                         reasons.append(self._tag_reason(msg, None, staged_items))
@@ -274,14 +305,20 @@ class MergeGateEngine:
             item_type = gap.get("item_type")
             item_id = gap.get("item_id", "")
             reason = gap.get("reason", "")
+            target_id = gap.get("target_id", "")
+            human_resolved = target_id in resolved_gap_target_ids
+
             if item_type != "ac":
-                hint = _resolve_hint(_gate_hints.get("non_blocking_gap", {}), "level1")
+                hint = resolve_hint(_gate_hints.get("non_blocking_gap", {}), "level1")
                 msg = hint.format(item_type=item_type, item_id=item_id, reason=reason) if hint else f"非阻塞缺口 ({item_type} {item_id}): {reason}"
                 related = {item_id} if item_id else None
-                reasons.append(self._tag_reason(msg, related, staged_items))
-                any_fail_detected = True
-                if self._is_current(related, staged_items):
-                    current_fail_detected = True
+                if human_resolved:
+                    reasons.append(self._tag_reason(f"[已人工完成] {msg}", related, staged_items))
+                else:
+                    reasons.append(self._tag_reason(msg, related, staged_items))
+                    any_fail_detected = True
+                    if self._is_current(related, staged_items):
+                        current_fail_detected = True
 
         # 2.3 Check Should/Could severity risks or speculative risks
         for risk in risks:
@@ -290,6 +327,8 @@ class MergeGateEngine:
             risk_id = risk.get("risk_id", "")
             confidence = risk.get("confidence")
             risk_type = risk.get("type")
+            risk_target_id = risk.get("target_id", "")
+            human_accepted = risk_target_id in accepted_risk_target_ids
 
             is_speculative = (
                 confidence == "low_confidence" or risk_type == "suggestion"
@@ -303,12 +342,15 @@ class MergeGateEngine:
                 claim_id = risk.get("claim_id")
                 if claim_id:
                     risk_related_fs.add(claim_id)
-                hint = _resolve_hint(_gate_hints.get("low_medium_risk", {}), "level1")
+                hint = resolve_hint(_gate_hints.get("low_medium_risk", {}), "level1")
                 msg = hint.format(risk_id=risk_id, desc=desc) if hint else f"低/中风险或推测性风险 ({risk_id}): {desc}"
-                reasons.append(self._tag_reason(msg, risk_related_fs or None, risk_staged))
-                any_fail_detected = True
-                if self._is_current(risk_related_fs or None, risk_staged):
-                    current_fail_detected = True
+                if human_accepted:
+                    reasons.append(self._tag_reason(f"[已接受风险] {msg}", risk_related_fs or None, risk_staged))
+                else:
+                    reasons.append(self._tag_reason(msg, risk_related_fs or None, risk_staged))
+                    any_fail_detected = True
+                    if self._is_current(risk_related_fs or None, risk_staged):
+                        current_fail_detected = True
 
         # Only upgrade to "fail" if not already "blocked" and at least one
         # fail item is related to current changes.
@@ -343,11 +385,12 @@ class MergeGateEngine:
         # 3. Handle 'pass'
         # ----------------------------------------------------
         if gate_decision == "pass" and not reasons:
-            hint = _resolve_hint(_gate_hints.get("all_gates_passed", {}), "level1")
+            hint = resolve_hint(_gate_hints.get("all_gates_passed", {}), "level1")
             reasons.append(hint if hint else "所有质量门禁规则均已通过，无阻塞项或风险项。")
 
         return {
             "gate_decision": gate_decision,
             "reasons": reasons,
             "blocked_items": blocked_items,
+            "human_decisions_applied": human_decisions_applied,
         }

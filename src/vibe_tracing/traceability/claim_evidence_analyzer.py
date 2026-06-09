@@ -113,12 +113,29 @@ class ClaimEvidenceAnalyzer:
         except Exception:
             return None
 
-    def _check_invalidation(self, claim, stored_fingerprints: dict) -> Optional[dict]:
-        """Check if claim's referenced files have changed since last analysis."""
+    def _check_invalidation(self, claim, stored_fingerprints: dict, evidence_index=None) -> Optional[dict]:
+        """Check if claim's referenced files have changed since last analysis.
+
+        Args:
+            claim: The claim object to check.
+            stored_fingerprints: Legacy fingerprint data from claim_fingerprints.json.
+            evidence_index: Optional evidence_index dict. When provided, validates
+                file hashes against evidence_index instead of stored_fingerprints.
+                When None, falls back to stored_fingerprints logic.
+
+        Returns:
+            A dict with invalidation details if files changed, else None.
+        """
+        cid = claim.claim_id if hasattr(claim, 'claim_id') else claim.get('claim_id')
+
+        # ---- New path: evidence_index based validation ----
+        if evidence_index is not None:
+            return self._check_invalidation_from_evidence_index(claim, cid, evidence_index)
+
+        # ---- Fallback: original stored_fingerprints logic ----
         if stored_fingerprints is None:
             return None
 
-        cid = claim.claim_id if hasattr(claim, 'claim_id') else claim.get('claim_id')
         stored = stored_fingerprints.get(cid)
         if not stored:
             return None
@@ -139,6 +156,69 @@ class ClaimEvidenceAnalyzer:
                 "status": CoverageStatus.NEEDS_REVERIFICATION.value,
                 "files": changed_files,
                 "stored_timestamp": stored.get("timestamp"),
+            }
+        return None
+
+    def _check_invalidation_from_evidence_index(
+        self, claim, cid: str, evidence_index: dict
+    ) -> Optional[dict]:
+        """Validate claim file refs against evidence_index hashes.
+
+        For each code_ref and test_ref in the claim:
+        - File does not exist → needs_reverification
+        - File exists but no hash record in evidence_index → needs_reverification
+        - Hash mismatch → needs_reverification
+        - Hash match → covered
+        """
+        # Build file_path → hash mapping from evidence_index
+        evidence_hash_map: Dict[str, str] = {}
+        scan_time = evidence_index.get("scan_time")
+        for ev in evidence_index.get("evidences", []):
+            file_hash = ev.get("file_hash") or (ev.get("details") or {}).get("file_hash")
+            source_path = ev.get("source_path", "")
+            if source_path and file_hash:
+                # Strip nodeid suffix (e.g. "tests/test.py::test_func" → "tests/test.py")
+                clean_path = source_path.split("#")[0].split("::")[0]
+                evidence_hash_map[clean_path] = file_hash
+
+        code_refs = claim.code_refs if hasattr(claim, 'code_refs') else (claim.get('code_refs') or [])
+        test_refs = claim.test_refs if hasattr(claim, 'test_refs') else (claim.get('test_refs') or [])
+
+        changed_files = []
+        for ref in list(code_refs) + list(test_refs):
+            clean_ref = ref.split("#")[0] if "#" in ref else ref
+            # Strip nodeid for test refs
+            clean_ref = clean_ref.split("::")[0] if "::" in clean_ref else clean_ref
+            full_path = self.project_root / clean_ref
+
+            if not full_path.exists():
+                changed_files.append({
+                    "file": clean_ref,
+                    "reason": f"File {clean_ref} has been deleted",
+                })
+            else:
+                current_hash = _file_sha256(full_path)
+                stored_hash = evidence_hash_map.get(clean_ref)
+                if stored_hash is None:
+                    changed_files.append({
+                        "file": clean_ref,
+                        "new_hash": current_hash,
+                        "reason": f"No hash record in evidence_index for {clean_ref}",
+                    })
+                elif current_hash and current_hash != stored_hash:
+                    changed_files.append({
+                        "file": clean_ref,
+                        "old_hash": stored_hash,
+                        "new_hash": current_hash,
+                        "reason": f"File {clean_ref} hash has changed",
+                    })
+
+        if changed_files:
+            return {
+                "claim_id": cid,
+                "status": CoverageStatus.NEEDS_REVERIFICATION.value,
+                "files": changed_files,
+                "stored_timestamp": scan_time,
             }
         return None
 

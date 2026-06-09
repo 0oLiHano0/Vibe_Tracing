@@ -1058,3 +1058,403 @@ def test_per_file_coverage_ignores_non_coverage_evidence():
 
     # lint violation should not affect coverage gate
     assert res["gate_decision"] == "pass"
+
+
+# ---------------------------------------------------------------
+# Human decisions integration tests
+# ---------------------------------------------------------------
+
+def test_human_decisions_applied_field_always_present():
+    """
+    The human_decisions_applied field should be present in the return dict
+    even when no human_decisions are provided (value 0).
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    res = engine.evaluate([], [], {})
+
+    assert "human_decisions_applied" in res
+    assert res["human_decisions_applied"] == 0
+
+
+def test_accept_risk_unblocks_must_risk():
+    """
+    A MUST-severity risk with a matching accept_risk human decision
+    should be downgraded to 'accepted' and NOT block the gate.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    risks = [
+        {
+            "risk_id": "RISK-VT-050",
+            "target_id": "RISK-VT-050",
+            "description": "Critical vulnerability found.",
+            "severity": "must",
+            "suggested_action": "Patch immediately",
+            "business_impact": "System compromise",
+        }
+    ]
+    human_decisions = [
+        {
+            "decision_id": 1,
+            "category": "risk",
+            "targetId": "RISK-VT-050",
+            "action": "accept_risk",
+            "reason": "Accepted by tech lead",
+            "decidedBy": "tech_lead",
+            "timestamp": "2026-06-09T10:00:00Z",
+        }
+    ]
+
+    res = engine.evaluate([], risks, {}, human_decisions=human_decisions)
+
+    assert res["gate_decision"] == "pass"
+    assert len(res["blocked_items"]) == 0
+    assert any("[已接受风险]" in msg for msg in res["reasons"])
+    assert res["human_decisions_applied"] == 1
+
+
+def test_mark_complete_unblocks_ac_gap():
+    """
+    An AC gap with a matching mark_complete human decision
+    should be marked 'human_resolved' and NOT block the gate.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "AC-VT-001-01",
+            "item_type": "ac",
+            "target_id": "AC-VT-001-01",
+            "reason": "Missing test coverage.",
+        }
+    ]
+    human_decisions = [
+        {
+            "decision_id": 2,
+            "category": "gap",
+            "targetId": "AC-VT-001-01",
+            "action": "mark_complete",
+            "reason": "Verified manually",
+            "decidedBy": "qa_lead",
+            "timestamp": "2026-06-09T10:00:00Z",
+        }
+    ]
+
+    res = engine.evaluate(gaps, [], {}, human_decisions=human_decisions)
+
+    assert res["gate_decision"] == "pass"
+    assert len(res["blocked_items"]) == 0
+    assert any("[已人工完成]" in msg for msg in res["reasons"])
+    assert res["human_decisions_applied"] == 1
+
+
+def test_human_decisions_wrapper_format():
+    """
+    human_decisions can be passed as {"decisions": [...]} wrapper dict.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    risks = [
+        {
+            "risk_id": "RISK-VT-051",
+            "target_id": "RISK-VT-051",
+            "description": "High risk issue.",
+            "severity": "must",
+            "suggested_action": "Fix it",
+            "business_impact": "Major impact",
+        }
+    ]
+    human_decisions = {
+        "decisions": [
+            {
+                "decision_id": 3,
+                "category": "risk",
+                "targetId": "RISK-VT-051",
+                "action": "accept_risk",
+                "reason": "Risk accepted",
+                "decidedBy": "pm",
+                "timestamp": "2026-06-09T11:00:00Z",
+            }
+        ]
+    }
+
+    res = engine.evaluate([], risks, {}, human_decisions=human_decisions)
+
+    assert res["gate_decision"] == "pass"
+    assert res["human_decisions_applied"] == 1
+
+
+def test_human_decisions_empty_list_no_effect():
+    """
+    An empty human_decisions list should have no effect on gate logic.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    risks = [
+        {
+            "risk_id": "RISK-VT-052",
+            "target_id": "RISK-VT-052",
+            "description": "Critical issue.",
+            "severity": "must",
+            "suggested_action": "Fix",
+            "business_impact": "Major",
+        }
+    ]
+
+    res = engine.evaluate([], risks, {}, human_decisions=[])
+
+    assert res["gate_decision"] == "blocked"
+    assert res["human_decisions_applied"] == 0
+
+
+def test_human_decisions_none_backward_compatible():
+    """
+    human_decisions=None (default) should behave identically to before.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    risks = [
+        {
+            "risk_id": "RISK-VT-053",
+            "target_id": "RISK-VT-053",
+            "description": "Critical issue.",
+            "severity": "must",
+            "suggested_action": "Fix",
+            "business_impact": "Major",
+        }
+    ]
+
+    res = engine.evaluate([], risks, {})
+
+    assert res["gate_decision"] == "blocked"
+    assert res["human_decisions_applied"] == 0
+    assert not any("[已接受风险]" in msg for msg in res["reasons"])
+
+
+def test_mismatched_target_id_does_not_accept():
+    """
+    A human decision with a targetId that doesn't match any risk
+    should not affect the gate decision.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    risks = [
+        {
+            "risk_id": "RISK-VT-054",
+            "target_id": "RISK-VT-054",
+            "description": "Critical issue.",
+            "severity": "must",
+            "suggested_action": "Fix",
+            "business_impact": "Major",
+        }
+    ]
+    human_decisions = [
+        {
+            "decision_id": 4,
+            "category": "risk",
+            "targetId": "RISK-VT-999",  # doesn't match
+            "action": "accept_risk",
+            "reason": "Wrong target",
+            "decidedBy": "someone",
+            "timestamp": "2026-06-09T10:00:00Z",
+        }
+    ]
+
+    res = engine.evaluate([], risks, {}, human_decisions=human_decisions)
+
+    assert res["gate_decision"] == "blocked"
+    assert res["human_decisions_applied"] == 1  # decision was parsed but had no matching target
+
+
+def test_mixed_human_decisions_risk_and_gap():
+    """
+    Multiple human decisions can be applied simultaneously to both risks and gaps.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "AC-VT-060-01",
+            "item_type": "ac",
+            "target_id": "AC-VT-060-01",
+            "reason": "Missing test coverage.",
+        }
+    ]
+    risks = [
+        {
+            "risk_id": "RISK-VT-060",
+            "target_id": "RISK-VT-060",
+            "description": "Critical vulnerability.",
+            "severity": "must",
+            "suggested_action": "Patch",
+            "business_impact": "Compromise",
+        }
+    ]
+    human_decisions = [
+        {
+            "decision_id": 5,
+            "category": "risk",
+            "targetId": "RISK-VT-060",
+            "action": "accept_risk",
+            "reason": "Accepted",
+            "decidedBy": "tech_lead",
+            "timestamp": "2026-06-09T10:00:00Z",
+        },
+        {
+            "decision_id": 6,
+            "category": "gap",
+            "targetId": "AC-VT-060-01",
+            "action": "mark_complete",
+            "reason": "Verified",
+            "decidedBy": "qa_lead",
+            "timestamp": "2026-06-09T10:00:00Z",
+        },
+    ]
+
+    res = engine.evaluate(gaps, risks, {}, human_decisions=human_decisions)
+
+    assert res["gate_decision"] == "pass"
+    assert len(res["blocked_items"]) == 0
+    assert res["human_decisions_applied"] == 2
+    assert any("[已接受风险]" in msg for msg in res["reasons"])
+    assert any("[已人工完成]" in msg for msg in res["reasons"])
+
+
+def test_accept_risk_on_should_risk_no_fail():
+    """
+    A SHOULD-severity risk with a matching accept_risk decision
+    should not contribute to the 'fail' gate decision.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    risks = [
+        {
+            "risk_id": "RISK-VT-070",
+            "target_id": "RISK-VT-070",
+            "description": "Minor style issue.",
+            "severity": "should",
+            "confidence": "low_confidence",
+            "type": "suggestion",
+        }
+    ]
+    human_decisions = [
+        {
+            "decision_id": 7,
+            "category": "risk",
+            "targetId": "RISK-VT-070",
+            "action": "accept_risk",
+            "reason": "Not important",
+            "decidedBy": "tech_lead",
+            "timestamp": "2026-06-09T10:00:00Z",
+        }
+    ]
+
+    res = engine.evaluate([], risks, {}, human_decisions=human_decisions)
+
+    assert res["gate_decision"] == "pass"
+    assert res["human_decisions_applied"] == 1
+    assert any("[已接受风险]" in msg for msg in res["reasons"])
+
+
+def test_mark_complete_on_should_gap_no_fail():
+    """
+    A SHOULD-level gap with a matching mark_complete decision
+    should not contribute to the 'fail' gate decision.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "REQ-VT-080",
+            "item_type": "requirement",
+            "target_id": "REQ-VT-080",
+            "reason": "No task coverage",
+        }
+    ]
+    human_decisions = [
+        {
+            "decision_id": 8,
+            "category": "gap",
+            "targetId": "REQ-VT-080",
+            "action": "mark_complete",
+            "reason": "Covered by other work",
+            "decidedBy": "pm",
+            "timestamp": "2026-06-09T10:00:00Z",
+        }
+    ]
+
+    res = engine.evaluate(gaps, [], {}, human_decisions=human_decisions)
+
+    assert res["gate_decision"] == "pass"
+    assert res["human_decisions_applied"] == 1
+    assert any("[已人工完成]" in msg for msg in res["reasons"])
+
+
+def test_risk_without_target_id_not_affected():
+    """
+    A risk without a target_id field should not be affected by any human decision,
+    even if the risk_id matches a decision's targetId.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    risks = [
+        {
+            "risk_id": "RISK-VT-090",
+            # no target_id field
+            "description": "Critical issue.",
+            "severity": "must",
+            "suggested_action": "Fix",
+            "business_impact": "Major",
+        }
+    ]
+    human_decisions = [
+        {
+            "decision_id": 9,
+            "category": "risk",
+            "targetId": "RISK-VT-090",
+            "action": "accept_risk",
+            "reason": "Accepted",
+            "decidedBy": "tech_lead",
+            "timestamp": "2026-06-09T10:00:00Z",
+        }
+    ]
+
+    res = engine.evaluate([], risks, {}, human_decisions=human_decisions)
+
+    # Without target_id on the risk, the decision cannot match
+    assert res["gate_decision"] == "blocked"
+    assert res["human_decisions_applied"] == 1  # decision was parsed but had no effect
+
+
+def test_gap_without_target_id_not_affected():
+    """
+    A gap without a target_id field should not be affected by any human decision.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "AC-VT-090-01",
+            "item_type": "ac",
+            # no target_id field
+            "reason": "Missing test coverage.",
+        }
+    ]
+    human_decisions = [
+        {
+            "decision_id": 10,
+            "category": "gap",
+            "targetId": "AC-VT-090-01",
+            "action": "mark_complete",
+            "reason": "Verified",
+            "decidedBy": "qa_lead",
+            "timestamp": "2026-06-09T10:00:00Z",
+        }
+    ]
+
+    res = engine.evaluate(gaps, [], {}, human_decisions=human_decisions)
+
+    # Without target_id on the gap, the decision cannot match
+    assert res["gate_decision"] == "blocked"
+    assert res["human_decisions_applied"] == 1  # decision was parsed but had no effect

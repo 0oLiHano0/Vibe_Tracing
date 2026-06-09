@@ -1,10 +1,11 @@
-import fnmatch
 import json
 import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set
+
+from vibe_tracing.governance import load_boundary, is_in_scope
 
 class GhostCodeReconciler:
     """
@@ -39,29 +40,6 @@ class GhostCodeReconciler:
             if file_path.startswith(prefix):
                 return True
         return False
-
-    def _load_governance_boundary(self) -> dict:
-        """Load governance_boundary from architecture_constraints.json."""
-        constraints_path = self.project_root / "docs" / "architecture_constraints.json"
-        if not constraints_path.exists():
-            return {"included_patterns": [], "excluded_patterns": []}
-        try:
-            data = json.loads(constraints_path.read_text(encoding="utf-8"))
-            return data.get("governance_boundary", {"included_patterns": [], "excluded_patterns": []})
-        except Exception:
-            return {"included_patterns": [], "excluded_patterns": []}
-
-    def _is_in_governance_boundary(self, file_path: str, boundary: dict) -> bool:
-        """Check if a file is within the governance boundary.
-
-        Files matching any excluded_pattern are considered outside the boundary
-        and should NOT trigger ghost code warnings.
-        """
-        excluded = boundary.get("excluded_patterns", [])
-        for pattern in excluded:
-            if fnmatch.fnmatch(file_path, pattern) or fnmatch.fnmatch(file_path, f"*/{pattern}"):
-                return False
-        return True
 
     def _get_staged_files(self) -> Set[str]:
         try:
@@ -141,8 +119,8 @@ class GhostCodeReconciler:
         business_code_files = {f for f in staged_files if not self._is_whitelisted(f)}
 
         # Filter files outside governance boundary
-        boundary = self._load_governance_boundary()
-        business_code_files = {f for f in business_code_files if self._is_in_governance_boundary(f, boundary)}
+        boundary = load_boundary(self.project_root)
+        business_code_files = {f for f in business_code_files if is_in_scope(f, boundary)}
 
         if not business_code_files:
             # No business code modified, perfect agility for governance assets

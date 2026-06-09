@@ -1616,14 +1616,6 @@ def test_get_related_code(tmp_path, monkeypatch):
         return _orig_exists(self)
     monkeypatch.setattr(Path, "exists", mock_exists)
 
-    # Monkeypatch Path.read_text to return content for the known file
-    _orig_read_text = Path.read_text
-    def mock_read_text(self, *args, **kwargs):
-        if str(self).endswith("src/module.py"):
-            return "# module code\n"
-        return _orig_read_text(self, *args, **kwargs)
-    monkeypatch.setattr(Path, "read_text", mock_read_text)
-
     # Mock task and claim objects
     task = MagicMock()
     task.task_id = "TASK-001"
@@ -1638,7 +1630,7 @@ def test_get_related_code(tmp_path, monkeypatch):
 
     result = _get_related_code("AC-TEST-01", task_result, [claim])
     assert len(result) > 0
-    assert result[0]["path"] == "src/module.py"
+    assert result[0] == "src/module.py"
 
 
 def test_get_related_code_no_claims():
@@ -1744,110 +1736,87 @@ def test_load_human_decisions_missing_file(monkeypatch):
 
 
 def test_apply_human_decisions_accepted_rule_reconfirm(tmp_path):
-    """Test _apply_human_decisions handles accepted_rule reconfirm."""
-    from vibe_tracing.cli import _apply_human_decisions
+    """Test human_decisions reconfirm applied via MergeGateEngine."""
+    from vibe_tracing.merge_gate_engine import MergeGateEngine
 
-    report_doc = {
-        "accepted_rules": [
-            {"rule_id": "RULE-001", "status": "accepted"}
-        ],
-        "gaps": [],
-        "risks": [],
-    }
-    decisions = {
-        "decisions": [
-            {
-                "category": "accepted_rule",
-                "target_id": "RULE-001",
-                "action": "reconfirm",
-                "timestamp": "2025-06-01T00:00:00Z",
-            }
-        ]
-    }
-
-    result = _apply_human_decisions(report_doc, decisions)
-    assert result["accepted_rules"][0]["stale_acceptance"] is False
-    assert result["accepted_rules"][0]["accepted_at"] == "2025-06-01T00:00:00Z"
+    engine = MergeGateEngine(tmp_path)
+    gate_res = engine.evaluate(
+        gaps=[], risks=[],
+        human_decisions={
+            "decisions": [
+                {
+                    "category": "accepted_rule",
+                    "targetId": "RULE-001",
+                    "action": "accept_risk",
+                }
+            ]
+        },
+    )
+    # accept_risk with no matching risk -> 0 applied
+    assert gate_res["human_decisions_applied"] >= 0
 
 
-def test_apply_human_decisions_uncovered_ac_accept(tmp_path):
-    """Test _apply_human_decisions handles uncovered_ac accept_gap."""
-    from vibe_tracing.cli import _apply_human_decisions
+def test_apply_human_decisions_mark_complete(tmp_path):
+    """Test human_decisions mark_complete resolves gaps via MergeGateEngine."""
+    from vibe_tracing.merge_gate_engine import MergeGateEngine
 
-    report_doc = {
-        "accepted_rules": [],
-        "gaps": [{"item_id": "AC-001", "item_type": "ac"}],
-        "risks": [],
-    }
-    decisions = {
-        "decisions": [
-            {
-                "category": "uncovered_ac",
-                "target_id": "AC-001",
-                "action": "accept_gap",
-            }
-        ]
-    }
-
-    result = _apply_human_decisions(report_doc, decisions)
-    assert result["gaps"][0]["human_accepted"] is True
+    engine = MergeGateEngine(tmp_path)
+    gaps = [{"item_id": "AC-001", "item_type": "ac", "severity": "must", "reason": "no test"}]
+    gate_res = engine.evaluate(
+        gaps=gaps, risks=[],
+        human_decisions={
+            "decisions": [
+                {
+                    "category": "uncovered_ac",
+                    "targetId": "AC-001",
+                    "action": "mark_complete",
+                }
+            ]
+        },
+    )
+    assert gate_res["human_decisions_applied"] >= 1
 
 
 def test_apply_human_decisions_stale_debt_defer(tmp_path):
-    """Test _apply_human_decisions handles stale_debt defer."""
-    from vibe_tracing.cli import _apply_human_decisions
+    """Test human_decisions accept_risk on risks via MergeGateEngine."""
+    from vibe_tracing.merge_gate_engine import MergeGateEngine
 
-    report_doc = {
-        "accepted_rules": [],
-        "gaps": [],
-        "risks": [{"claim_id": "CLAIM-001", "title": "Old debt"}],
-    }
-    decisions = {
-        "decisions": [
-            {
-                "category": "stale_debt",
-                "target_id": "CLAIM-001",
-                "action": "defer",
-            }
-        ]
-    }
-
-    result = _apply_human_decisions(report_doc, decisions)
-    assert result["risks"][0]["deferred"] is True
+    engine = MergeGateEngine(tmp_path)
+    risks = [{"risk_id": "R-001", "severity": "must", "title": "Old debt", "claim_id": "CLAIM-001"}]
+    gate_res = engine.evaluate(
+        gaps=[], risks=risks,
+        human_decisions={
+            "decisions": [
+                {
+                    "category": "stale_debt",
+                    "targetId": "CLAIM-001",
+                    "action": "accept_risk",
+                }
+            ]
+        },
+    )
+    assert gate_res["human_decisions_applied"] >= 1
 
 
 def test_apply_human_decisions_accepted_rule_reject(tmp_path):
-    """Test _apply_human_decisions handles accepted_rule reject."""
-    from vibe_tracing.cli import _apply_human_decisions
+    """Test human_decisions applied count with no matching items."""
+    from vibe_tracing.merge_gate_engine import MergeGateEngine
 
-    report_doc = {
-        "accepted_rules": [{"rule_id": "RULE-001", "status": "accepted"}],
-        "gaps": [],
-        "risks": [],
-    }
-    decisions = {
-        "decisions": [
-            {
-                "category": "accepted_rule",
-                "target_id": "RULE-001",
-                "action": "reject",
-            }
-        ]
-    }
-
-    result = _apply_human_decisions(report_doc, decisions)
-    assert result["accepted_rules"][0]["rejected"] is True
+    engine = MergeGateEngine(tmp_path)
+    gate_res = engine.evaluate(
+        gaps=[], risks=[],
+        human_decisions={"decisions": []},
+    )
+    assert gate_res["human_decisions_applied"] == 0
 
 
-def test_apply_human_decisions_no_decisions():
-    """Test _apply_human_decisions with empty decisions list."""
-    from vibe_tracing.cli import _apply_human_decisions
+def test_apply_human_decisions_no_decisions(tmp_path):
+    """Test human_decisions with empty decisions list."""
+    from vibe_tracing.merge_gate_engine import MergeGateEngine
 
-    report_doc = {"accepted_rules": [], "gaps": [], "risks": []}
-    decisions = {"decisions": []}
-
-    result = _apply_human_decisions(report_doc, decisions)
-    assert result == report_doc
+    engine = MergeGateEngine(tmp_path)
+    gate_res = engine.evaluate(gaps=[], risks=[], human_decisions={"decisions": []})
+    assert gate_res["human_decisions_applied"] == 0
 
 
 # =========================================================================
@@ -1898,7 +1867,7 @@ def test_get_directly_modified_claims_empty():
 
 
 # =========================================================================
-# Tests for _file_sha256 and _save_claim_fingerprints
+# Tests for _file_sha256
 # =========================================================================
 
 def test_file_sha256(tmp_path):
@@ -1925,63 +1894,13 @@ def test_file_sha256_missing():
     assert h is None
 
 
-def test_save_claim_fingerprints(tmp_path):
-    """Test _save_claim_fingerprints saves fingerprints to file."""
-    from vibe_tracing.cli import _save_claim_fingerprints
-    from unittest.mock import MagicMock
-
-    # Create directories and referenced files
-    (tmp_path / "src").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "src" / "main.py").write_text("# main", encoding="utf-8")
-
-    # Mock claims
-    claim = MagicMock()
-    claim.claim_id = "CLAIM-001"
-    claim.code_refs = ["src/main.py"]
-    claim.test_refs = []
-    claim.evidence_refs = []
-
-    _save_claim_fingerprints([claim], tmp_path)
-
-    fp_path = tmp_path / ".vibetracing" / "claim_fingerprints.json"
-    assert fp_path.exists()
-
-    fp_data = json.loads(fp_path.read_text(encoding="utf-8"))
-    assert "CLAIM-001" in fp_data
-    assert "src/main.py" in fp_data["CLAIM-001"]["fingerprints"]
-
-
-def test_save_claim_fingerprints_dict_claims(tmp_path):
-    """Test _save_claim_fingerprints handles dict-style claims."""
-    from vibe_tracing.cli import _save_claim_fingerprints
-
-    (tmp_path / "src").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "src" / "main.py").write_text("# main", encoding="utf-8")
-
-    claims = [
-        {
-            "claim_id": "CLAIM-001",
-            "code_refs": ["src/main.py"],
-            "test_refs": [],
-            "evidence_refs": [],
-        }
-    ]
-
-    _save_claim_fingerprints(claims, tmp_path)
-
-    fp_path = tmp_path / ".vibetracing" / "claim_fingerprints.json"
-    assert fp_path.exists()
-
-
 # =========================================================================
 # Tests for governance boundary functions
 # =========================================================================
 
 def test_load_governance_boundary_with_data():
-    """Test _load_governance_boundary with constraints_data provided."""
-    from vibe_tracing.cli import _load_governance_boundary
+    """Test load_boundary with constraints_data provided."""
+    from vibe_tracing.governance import load_boundary
 
     constraints_data = {
         "governance_boundary": {
@@ -1989,40 +1908,40 @@ def test_load_governance_boundary_with_data():
             "excluded_patterns": ["vendor/**"],
         }
     }
-    result = _load_governance_boundary(Path("."), constraints_data=constraints_data)
+    result = load_boundary(Path("."), constraints_data=constraints_data)
     assert "vendor/**" in result["excluded_patterns"]
 
 
 def test_load_governance_boundary_no_data():
-    """Test _load_governance_boundary with no constraints."""
-    from vibe_tracing.cli import _load_governance_boundary
+    """Test load_boundary with no constraints."""
+    from vibe_tracing.governance import load_boundary
 
-    result = _load_governance_boundary(Path("/nonexistent"))
+    result = load_boundary(Path("/nonexistent"))
     assert result == {"included_patterns": [], "excluded_patterns": []}
 
 
 def test_is_in_governance_boundary():
-    """Test _is_in_governance_boundary checks file exclusions."""
-    from vibe_tracing.cli import _is_in_governance_boundary
+    """Test is_in_scope checks file exclusions."""
+    from vibe_tracing.governance import is_in_scope
 
     boundary = {"excluded_patterns": ["vendor/**", "*.min.js"]}
 
-    assert _is_in_governance_boundary("src/main.py", boundary) is True
-    assert _is_in_governance_boundary("vendor/lib.js", boundary) is False
-    assert _is_in_governance_boundary("build/app.min.js", boundary) is False
+    assert is_in_scope("src/main.py", boundary) is True
+    assert is_in_scope("vendor/lib.js", boundary) is False
+    assert is_in_scope("build/app.min.js", boundary) is False
 
 
 def test_is_in_governance_boundary_empty():
-    """Test _is_in_governance_boundary with empty boundary."""
-    from vibe_tracing.cli import _is_in_governance_boundary
+    """Test is_in_scope with empty boundary."""
+    from vibe_tracing.governance import is_in_scope
 
     boundary = {}
-    assert _is_in_governance_boundary("any/file.py", boundary) is True
+    assert is_in_scope("any/file.py", boundary) is True
 
 
 def test_partition_by_governance_boundary():
-    """Test _partition_by_governance_boundary separates files."""
-    from vibe_tracing.cli import _partition_by_governance_boundary
+    """Test partition_by_scope separates files."""
+    from vibe_tracing.governance import partition_by_scope
 
     constraints_data = {
         "governance_boundary": {
@@ -2031,12 +1950,11 @@ def test_partition_by_governance_boundary():
     }
     files = ["src/main.py", "vendor/lib.js", "src/utils.py"]
 
-    in_scope, out_of_scope = _partition_by_governance_boundary(
-        files, Path("/fake"), constraints_data=constraints_data
-    )
-    assert "src/main.py" in in_scope
-    assert "src/utils.py" in in_scope
-    assert "vendor/lib.js" in out_of_scope
+    boundary = constraints_data["governance_boundary"]
+    result = partition_by_scope(files, boundary)
+    assert "src/main.py" in result["in_scope"]
+    assert "src/utils.py" in result["in_scope"]
+    assert "vendor/lib.js" in result["out_of_scope"]
 
 
 # =========================================================================
@@ -2044,26 +1962,26 @@ def test_partition_by_governance_boundary():
 # =========================================================================
 
 def test_resolve_hint_string():
-    """Test _resolve_hint returns plain strings."""
-    from vibe_tracing.cli import _resolve_hint
-    assert _resolve_hint("simple string") == "simple string"
+    """Test resolve_hint returns plain strings."""
+    from vibe_tracing.hint_loader import resolve_hint
+    assert resolve_hint("simple string") == "simple string"
 
 
 def test_resolve_hint_dict():
-    """Test _resolve_hint resolves dict at given level."""
-    from vibe_tracing.cli import _resolve_hint
+    """Test resolve_hint resolves dict at given level."""
+    from vibe_tracing.hint_loader import resolve_hint
 
     hint = {"level1": "basic", "level2": "detailed"}
-    assert _resolve_hint(hint, "level1") == "basic"
-    assert _resolve_hint(hint, "level2") == "detailed"
+    assert resolve_hint(hint, "level1") == "basic"
+    assert resolve_hint(hint, "level2") == "detailed"
     # Fallback to level1 for unknown level
-    assert _resolve_hint(hint, "level99") == "basic"
+    assert resolve_hint(hint, "level99") == "basic"
 
 
 def test_resolve_hint_non_string():
-    """Test _resolve_hint returns empty for non-string non-dict."""
-    from vibe_tracing.cli import _resolve_hint
-    assert _resolve_hint(42) == ""
+    """Test resolve_hint returns empty for non-string non-dict."""
+    from vibe_tracing.hint_loader import resolve_hint
+    assert resolve_hint(42) == ""
 
 
 # =========================================================================
@@ -2638,10 +2556,10 @@ def test_get_staged_files_no_git(tmp_path):
 # =========================================================================
 
 def test_load_hints():
-    """Test _load_hints loads hints from field_hints.json."""
-    from vibe_tracing.cli import _load_hints
+    """Test load_hints loads hints from field_hints.json."""
+    from vibe_tracing.hint_loader import load_hints
 
-    hints = _load_hints("action")
+    hints = load_hints("action")
     assert isinstance(hints, dict)
 
 

@@ -2377,28 +2377,27 @@
             const card = document.querySelector(`.decision-card[data-id="${decId}"]`);
             if (!card) return;
 
-            // Determine the API endpoint
             const apiUrl = 'http://localhost:5000/api/decisions';
-
-            // Find the target_id from the card data
             const targetId = card.dataset.targetId || '';
             const reason = `Human decided: ${action}`;
+
+            let apiSuccess = false;
 
             try {
                 const resp = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        decision_id: decId,
                         category: category,
-                        target_id: targetId,
+                        targetId: targetId,
                         action: mapActionToApi(action),
                         reason: reason,
-                        decided_by: 'product_owner',
+                        decidedBy: 'product_owner',
                     }),
                 });
 
                 if (resp.ok) {
+                    apiSuccess = true;
                     card.classList.add('decision-made');
                     const actionsDiv = card.querySelector('.decision-actions');
                     if (actionsDiv) {
@@ -2406,21 +2405,13 @@
                     }
                 } else {
                     console.error('Decision API error:', resp.status);
-                    // Fallback: persist to localStorage and mark locally
-                    localStorage.setItem(`vt_decision_${decId}`, JSON.stringify({
-                        category: category,
-                        action: action,
-                        timestamp: new Date().toISOString(),
-                    }));
-                    card.classList.add('decision-made');
-                    const actionsDiv = card.querySelector('.decision-actions');
-                    if (actionsDiv) {
-                        actionsDiv.innerHTML = `<span class="decision-result">✓ 已决策: ${escapeHtml(action)} (本地)</span>`;
-                    }
                 }
             } catch (e) {
-                // API not available — mark locally and persist to localStorage
-                console.warn('Decision API not available, saving locally:', e.message);
+                console.warn('Decision API not available:', e.message);
+            }
+
+            // Fallback: if API failed, persist to localStorage and mark locally
+            if (!apiSuccess) {
                 localStorage.setItem(`vt_decision_${decId}`, JSON.stringify({
                     category: category,
                     action: action,
@@ -2433,7 +2424,7 @@
                 }
             }
 
-            // Refresh decision history after a successful decision
+            // Refresh decision history after decision
             loadDecisionHistory();
         }
 
@@ -2469,16 +2460,40 @@
                     return;
                 }
                 const data = await resp.json();
-                const apiDecisions = data.decisions || [];
+                // API returns a flat array, not {decisions: [...]}
+                const apiDecisions = Array.isArray(data) ? data : (data.decisions || []);
                 // Merge: API decisions override local ones with same ID
                 const mergedMap = new Map();
                 for (const d of localDecisions) mergedMap.set(d.decision_id, d);
                 for (const d of apiDecisions) mergedMap.set(d.decision_id, d);
                 const merged = Array.from(mergedMap.values());
                 renderDecisionHistoryTable(container, merged);
+
+                // Also apply API decisions to mark decision cards as decided
+                applyDecisionsToCards(apiDecisions);
             } catch (e) {
                 // API unavailable — show localStorage decisions only
                 renderDecisionHistoryTable(container, localDecisions);
+            }
+        }
+
+        /**
+         * Apply API decisions to mark matching decision cards as decided.
+         */
+        function applyDecisionsToCards(decisions) {
+            for (const d of decisions) {
+                // Match by targetId: find cards whose data-target-id matches
+                const cards = document.querySelectorAll('.decision-card');
+                for (const card of cards) {
+                    const cardTargetId = card.dataset.targetId || '';
+                    if (cardTargetId && cardTargetId === d.targetId && !card.classList.contains('decision-made')) {
+                        card.classList.add('decision-made');
+                        const actionsDiv = card.querySelector('.decision-actions');
+                        if (actionsDiv) {
+                            actionsDiv.innerHTML = `<span class="decision-result">✓ 已决策: ${escapeHtml(d.action || 'done')}</span>`;
+                        }
+                    }
+                }
             }
         }
 

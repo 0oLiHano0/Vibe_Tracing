@@ -7,7 +7,6 @@ and output the evidence index, traceability report, and run metadata.
 """
 
 import argparse
-import fnmatch
 import hashlib
 import json
 import subprocess
@@ -29,6 +28,7 @@ from vibe_tracing.traceability.claim_credibility import assess_claim_credibility
 from vibe_tracing.evidence_index_builder import EvidenceIndexBuilder
 from vibe_tracing.traceability_report_builder import TraceabilityReportBuilder
 from vibe_tracing.merge_gate_engine import MergeGateEngine
+from vibe_tracing.hint_loader import load_hints, resolve_hint
 from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
 from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
 from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
@@ -37,6 +37,7 @@ from vibe_tracing.risk_advisor import RiskAdvisor
 from vibe_tracing.dashboard_renderer import DashboardRenderer
 from vibe_tracing.context import UnifiedContext
 from vibe_tracing.tool_resolver import ToolResolver
+from vibe_tracing.governance import load_boundary, is_in_scope, partition_by_scope
 
 
 def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[str] = None) -> int:
@@ -1200,7 +1201,10 @@ def _get_req_description(req_id: str, prd_result) -> str:
 
 
 def _get_related_code(ac_id: str, task_result, claims_list=None) -> list:
-    """Extract code file paths related to an AC from claims (not tasks)."""
+    """Extract code file paths related to an AC from claims (not tasks).
+
+    Returns a list of path strings (up to 3).
+    """
     code_refs = []
     if not claims_list:
         return code_refs
@@ -1219,11 +1223,7 @@ def _get_related_code(ac_id: str, task_result, claims_list=None) -> list:
             for ref in (getattr(claim, "code_refs", None) or []):
                 path_only = ref.split("#")[0]
                 if path_only and Path(path_only).exists():
-                    try:
-                        content = Path(path_only).read_text()[:500]
-                        code_refs.append({"path": path_only, "content": content})
-                    except Exception:
-                        pass
+                    code_refs.append(path_only)
                     if len(code_refs) >= 3:
                         break
     return code_refs
@@ -1253,38 +1253,14 @@ def _get_existing_tests(ac_id: str, task_result, claims_list=None) -> list:
     return test_refs
 
 
-# ---------------------------------------------------------------------------
-# Hint loading for action messages (mirrors task_loader.py pattern)
-# ---------------------------------------------------------------------------
-_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
-
-
-def _load_hints(category: str = "action") -> Dict[str, Any]:
-    """Load hints from field_hints.json for the given category."""
-    with _HINTS_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f).get(category, {})
-
-
-def _resolve_hint(hint_value: Any, level: str = "level1") -> str:
-    """Resolve a hint value to a string at the given verbosity level.
-
-    Backward compatible: if hint_value is a plain string, returns it directly.
-    """
-    if isinstance(hint_value, str):
-        return hint_value
-    if isinstance(hint_value, dict):
-        return hint_value.get(level, hint_value.get("level1", ""))
-    return ""
-
-
-# Module-level cache for action hints
-_action_hints: Dict[str, Any] = _load_hints("action")
+# Module-level cache for action hints (loaded via centralized hint_loader)
+_action_hints: Dict[str, Any] = load_hints("action")
 
 
 def _hint_title(action_type: str, **kwargs: Any) -> str:
     """Extract the title portion from the first sentence of a level1 hint."""
     hint = _action_hints.get(action_type, {})
-    template = _resolve_hint(hint, "level1")
+    template = resolve_hint(hint, "level1")
     # Extract first sentence (before Chinese period 。)
     idx = template.find("。")
     if idx > 0:
@@ -1329,11 +1305,42 @@ def _derive_test_scenarios(ac_text: str) -> list:
 # Split action collectors (each returns a list of action dicts)
 # ---------------------------------------------------------------------------
 
+def _compute_gap_urgency(
+    gap: dict,
+    staged_items: Optional[Set[str]],
+    evidence_index: Optional[dict],
+) -> int:
+    """Compute urgency score (0-100) for a gap action.
+
+    - 80-100: gap relates to current staged changes
+    - 50-70: gap has evidence in the evidence index (known historical issue)
+    - 20-40: other (pre-existing debt, non-current change)
+    """
+    item_id = gap.get("item_id", "")
+    item_type = gap.get("item_type", "")
+
+    # Check if the gap's item is in the staged change set
+    if staged_items is not None and item_id in staged_items:
+        return 85
+
+    # Check if the gap has evidence in the evidence index
+    if evidence_index:
+        for ev in evidence_index.get("evidences", []):
+            covers = ev.get("covers", [])
+            if item_id in covers:
+                return 60
+
+    # Default: pre-existing debt
+    return 30
+
+
 def _collect_gap_actions(
     merged_gaps: list,
     prd_result: Any,
     task_result: Any,
     claims_list: list,
+    staged_items: Optional[Set[str]] = None,
+    evidence_index: Optional[dict] = None,
 ) -> list:
     """Collect gap-related actions for MUST-level gaps."""
     actions = []
@@ -1359,20 +1366,60 @@ def _collect_gap_actions(
         if gap.get("stale"):
             ctx["note"] = _hint_context("cover_gap", "stale_note")
         if related_code:
-            ctx["implementation_files"] = [r["path"] for r in related_code]
+            ctx["implementation_files"] = related_code
         if existing_tests:
             ctx["existing_tests"] = existing_tests
+
+        urgency = _compute_gap_urgency(gap, staged_items, evidence_index)
 
         actions.append({
             "priority": "HIGH",
             "type": "cover_gap",
             "title": _hint_title("cover_gap", ac_id=ac_id, ac_text=ac_text),
             "context": ctx,
+            "urgency": urgency,
         })
     return actions
 
 
-def _collect_risk_actions(active_risks: list, merged_gaps: list) -> list:
+def _compute_risk_urgency(
+    risk: dict,
+    staged_items: Optional[Set[str]],
+    evidence_index: Optional[dict],
+) -> int:
+    """Compute urgency score (0-100) for a risk action.
+
+    - 80-100: risk relates to current staged changes (claim_id in staged_items)
+    - 50-70: risk has evidence in the evidence index (known historical issue)
+    - 20-40: other (pre-existing debt)
+    """
+    claim_id = risk.get("claim_id", "")
+
+    # Check if the risk's claim is in the staged change set
+    if staged_items is not None and claim_id and claim_id in staged_items:
+        return 85
+
+    # Check if the risk has evidence in the evidence index
+    if evidence_index and claim_id:
+        for ev in evidence_index.get("evidences", []):
+            covers = ev.get("covers", [])
+            if claim_id in covers:
+                return 60
+
+    # Stale debt gets lower urgency
+    if risk.get("stale"):
+        return 25
+
+    # Default
+    return 30
+
+
+def _collect_risk_actions(
+    active_risks: list,
+    merged_gaps: list,
+    staged_items: Optional[Set[str]] = None,
+    evidence_index: Optional[dict] = None,
+) -> list:
     """Collect risk-related actions (MUST risks and stale debts)."""
     actions = []
     for risk in active_risks:
@@ -1380,6 +1427,7 @@ def _collect_risk_actions(active_risks: list, merged_gaps: list) -> list:
         desc = risk.get("description", "")
         is_self_ref = "only self-referential" in desc or "self-referential" in desc
         if severity == "must" or is_self_ref:
+            urgency = _compute_risk_urgency(risk, staged_items, evidence_index)
             actions.append({
                 "priority": "HIGH",
                 "type": "high_risk",
@@ -1396,11 +1444,13 @@ def _collect_risk_actions(active_risks: list, merged_gaps: list) -> list:
                     "suggested_action": risk.get("suggested_action", ""),
                     "fix_via": _hint_context("high_risk", "fix_via"),
                 },
+                "urgency": urgency,
             })
 
     for risk in active_risks:
         if risk.get("stale") and not risk.get("deferred"):
             age_val = risk.get("age_iterations", "多个")
+            urgency = _compute_risk_urgency(risk, staged_items, evidence_index)
             actions.append({
                 "priority": "LOW",
                 "type": "stale_debt",
@@ -1411,6 +1461,7 @@ def _collect_risk_actions(active_risks: list, merged_gaps: list) -> list:
                         "stale_debt", "age_format", age_iterations=age_val,
                     ),
                 },
+                "urgency": urgency,
             })
     return actions
 
@@ -1428,6 +1479,7 @@ def _collect_violation_actions(violations: list, compliance_status: list) -> lis
                 "violation_reason": v.get("reason", ""),
                 "fix_via": _hint_context("fix_violation", "fix_via"),
             },
+            "urgency": 90,
         })
 
     for status_item in compliance_status:
@@ -1447,6 +1499,7 @@ def _collect_violation_actions(violations: list, compliance_status: list) -> lis
                         "severity": item_severity,
                         "fix_via": _hint_context("arch_status_violation", "fix_via"),
                     },
+                    "urgency": 90,
                 })
     return actions
 
@@ -1470,12 +1523,16 @@ def _collect_gate_reason_actions(
                 "reason": reason,
                 "fix_via": _hint_context("gate_blocked", "fix_via"),
             },
+            "urgency": 80,
         })
     return actions
 
 
-def _render_actions(actions: list, coverage_summary: Optional[dict] = None, project_root: Optional[Path] = None, coverage_violations: Optional[list] = None) -> list:
+def _render_actions(actions: list, coverage_summary: Optional[dict] = None, project_root: Optional[Path] = None, coverage_violations: Optional[list] = None, evidence_index: Optional[dict] = None) -> list:
     """Render action dicts to text lines for Agent consumption.
+
+    Actions are sorted by urgency (descending) so that the most pressing
+    items appear first in the output.
 
     Args:
         actions: List of action dicts.
@@ -1489,7 +1546,11 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None, proj
     if not actions:
         lines.append("NO ACTION REQUIRED. Gate passed.")
         return lines
-    for i, action in enumerate(actions, 1):
+
+    # Sort actions by urgency descending (highest urgency first)
+    sorted_actions = sorted(actions, key=lambda a: a.get("urgency", 0), reverse=True)
+
+    for i, action in enumerate(sorted_actions, 1):
         lines.append(f"{'=' * 70}")
         lines.append(f"ACTION {i} [{action['priority']}] {action['title']}")
         lines.append(f"{'=' * 70}")
@@ -1516,6 +1577,12 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None, proj
     low_count = sum(1 for a in actions if a.get("priority") == "LOW")
 
     lines.append(f"HIGH: {high_count} | MEDIUM: {medium_count} | LOW: {low_count}")
+
+    # Category breakdown by urgency
+    current_change_count = sum(1 for a in actions if a.get("urgency", 0) >= 80)
+    pre_existing_count = sum(1 for a in actions if 20 <= a.get("urgency", 0) < 80)
+    pending_human_count = sum(1 for a in actions if a.get("pending_human_decision"))
+    lines.append(f"当前变更: {current_change_count} 项 | 预存债务: {pre_existing_count} 项 | 等待人类: {pending_human_count} 项")
 
     # If there are human decision items, add explicit Agent instructions
     human_decision_items = [a for a in actions if a.get("type") == "human_decision"]
@@ -1554,18 +1621,14 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None, proj
         lines.append("")
         lines.append(f"Coverage: {pct}% ({status}, target: 80%)")
         if pct < 80:
-            # List files below threshold from baseline
-            baseline_file = (project_root / ".vibetracing" / "coverage_baseline.json") if project_root else Path(".vibetracing") / "coverage_baseline.json"
-            if baseline_file.exists():
-                try:
-                    baseline = json.loads(baseline_file.read_text(encoding="utf-8"))
-                    below = [(f, d["percent_covered"]) for f, d in baseline.get("files", {}).items()
-                             if d["percent_covered"] < 80]
-                    below.sort(key=lambda x: x[1])
-                    for f, p in below[:5]:
-                        lines.append(f"  {f}: {p}%")
-                except Exception:
-                    pass
+            # List files below threshold from evidence_index coverage_baseline
+            cb = (evidence_index or {}).get("coverage_baseline", {})
+            if cb:
+                below = [(f, d["percent_covered"]) for f, d in cb.items()
+                         if isinstance(d, dict) and d.get("percent_covered", 100) < 80]
+                below.sort(key=lambda x: x[1])
+                for f, p in below[:5]:
+                    lines.append(f"  {f}: {p}%")
 
     return lines
 
@@ -1574,20 +1637,25 @@ def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
                           accepted_rules, prd_result=None, task_result=None,
                           claims_list=None, gate_reasons=None, merged_gaps=None,
                           compliance_status=None, coverage_summary=None,
-                          project_root=None, coverage_violations=None):
+                          project_root=None, coverage_violations=None,
+                          staged_items=None, evidence_index=None):
     """Format an Agent-executable action list with full inline context."""
     lines = [f"GATE DECISION: {gate_decision.upper()}", ""]
     gaps_for_actions = merged_gaps if merged_gaps is not None else active_gaps
     actions: list = []
     actions.extend(_collect_gap_actions(
         gaps_for_actions, prd_result, task_result, claims_list,
+        staged_items=staged_items, evidence_index=evidence_index,
     ))
-    actions.extend(_collect_risk_actions(active_risks, merged_gaps or []))
+    actions.extend(_collect_risk_actions(
+        active_risks, merged_gaps or [],
+        staged_items=staged_items, evidence_index=evidence_index,
+    ))
     actions.extend(_collect_violation_actions(violations, compliance_status or []))
     actions.extend(_collect_gate_reason_actions(
         gate_decision, gate_reasons or [], actions,
     ))
-    lines.extend(_render_actions(actions, coverage_summary, project_root, coverage_violations=coverage_violations))
+    lines.extend(_render_actions(actions, coverage_summary, project_root, coverage_violations=coverage_violations, evidence_index=evidence_index))
     return "\n".join(lines)
 
 
@@ -1635,57 +1703,6 @@ def _check_staged_extensions(project_root: Path, constraints: Optional[dict]) ->
         )
 
 
-def _load_governance_boundary(
-    project_root: Path, constraints_data: Optional[dict] = None,
-) -> dict:
-    """Load governance_boundary from already-loaded constraints data.
-
-    If *constraints_data* is provided (the parsed dict from UnifiedContext),
-    the file is NOT re-read from disk.
-    """
-    if constraints_data is not None:
-        return constraints_data.get("governance_boundary", {"included_patterns": [], "excluded_patterns": []})
-    constraints_path = project_root / "docs" / "architecture_constraints.json"
-    if not constraints_path.exists():
-        return {"included_patterns": [], "excluded_patterns": []}
-    try:
-        data = json.loads(constraints_path.read_text(encoding="utf-8"))
-        return data.get("governance_boundary", {"included_patterns": [], "excluded_patterns": []})
-    except Exception:
-        return {"included_patterns": [], "excluded_patterns": []}
-
-
-def _is_in_governance_boundary(file_path: str, boundary: dict) -> bool:
-    """Check if a file is within the governance boundary.
-
-    Files matching any excluded_pattern are considered outside the boundary.
-    """
-    excluded = boundary.get("excluded_patterns", [])
-    for pattern in excluded:
-        if fnmatch.fnmatch(file_path, pattern) or fnmatch.fnmatch(file_path, f"*/{pattern}"):
-            return False
-    return True
-
-
-def _partition_by_governance_boundary(
-    affected_files: List[str], project_root: Path,
-    constraints_data: Optional[dict] = None,
-) -> Tuple[Set[str], Set[str]]:
-    """Partition files into in-scope and out-of-scope sets.
-
-    Returns (in_scope, out_of_scope).
-    """
-    boundary = _load_governance_boundary(project_root, constraints_data=constraints_data)
-    in_scope: Set[str] = set()
-    out_of_scope: Set[str] = set()
-    for f in affected_files:
-        if _is_in_governance_boundary(f, boundary):
-            in_scope.add(f)
-        else:
-            out_of_scope.add(f)
-    return in_scope, out_of_scope
-
-
 def _load_human_decisions() -> dict:
     """读取人类决策日志"""
     decisions_path = Path(".vibetracing/human_decisions.json")
@@ -1696,36 +1713,6 @@ def _load_human_decisions() -> dict:
     except (json.JSONDecodeError, OSError):
         return {"version": "1.0", "decisions": []}
 
-
-def _apply_human_decisions(report_doc: dict, decisions: dict) -> dict:
-    """将人类决策应用到报告中"""
-    for decision in decisions.get("decisions", []):
-        category = decision.get("category")
-        target_id = decision.get("target_id")
-        action = decision.get("action")
-
-        if category == "accepted_rule" and action == "reconfirm":
-            for rule in report_doc.get("accepted_rules", []):
-                if rule.get("rule_id") == target_id:
-                    rule["accepted_at"] = decision.get("timestamp", "")
-                    rule["stale_acceptance"] = False
-
-        elif category == "uncovered_ac" and action == "accept_gap":
-            for gap in report_doc.get("gaps", []):
-                if gap.get("item_id") == target_id:
-                    gap["human_accepted"] = True
-
-        elif category == "stale_debt" and action == "defer":
-            for risk in report_doc.get("risks", []):
-                if risk.get("claim_id") == target_id:
-                    risk["deferred"] = True
-
-        elif category == "accepted_rule" and action == "reject":
-            for rule in report_doc.get("accepted_rules", []):
-                if rule.get("rule_id") == target_id:
-                    rule["rejected"] = True
-
-    return report_doc
 
 
 def _compute_claim_hash(claim: dict) -> str:
@@ -1774,36 +1761,6 @@ def _file_sha256(path: Path) -> Optional[str]:
     except (OSError, IOError):
         return None
 
-
-def _save_claim_fingerprints(claims_list, project_root: Path):
-    """Save SHA-256 fingerprints of all files referenced by claims."""
-    fingerprints = {}
-    for claim in claims_list:
-        cid = claim.claim_id if hasattr(claim, 'claim_id') else claim.get('claim_id')
-        refs = set()
-        for ref in (getattr(claim, 'code_refs', None) or []) + \
-                   (getattr(claim, 'test_refs', None) or []) + \
-                   (getattr(claim, 'evidence_refs', None) or []):
-            path = ref.split("#")[0]
-            if path:
-                refs.add(path)
-
-        file_hashes = {}
-        for ref_path in refs:
-            full_path = project_root / ref_path
-            if full_path.exists():
-                h = _file_sha256(full_path)
-                if h:
-                    file_hashes[ref_path] = h
-
-        if file_hashes:
-            fingerprints[cid] = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "fingerprints": file_hashes,
-            }
-
-    fp_path = project_root / ".vibetracing" / "claim_fingerprints.json"
-    fp_path.write_text(json.dumps(fingerprints, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def _evaluate_and_output(
@@ -1890,6 +1847,9 @@ def _evaluate_and_output(
         # modified code files are correctly tagged as [预存].
         directly_staged_items = set(directly_staged_claims)
 
+    # Load human decisions BEFORE gate evaluation (gate engine consumes them directly)
+    human_decisions = _load_human_decisions()
+
     # Merge Gate Engine
     gate_engine = MergeGateEngine(project_root)
     gate_res = gate_engine.evaluate(
@@ -1897,6 +1857,7 @@ def _evaluate_and_output(
         prd_status=prd_res.status, staged_items=staged_items,
         directly_staged_items=directly_staged_items,
         evidence_index=evidence_index,
+        human_decisions=human_decisions,
     )
     gate_decision = gate_res["gate_decision"]
 
@@ -1921,26 +1882,26 @@ def _evaluate_and_output(
         if compliance_res else [],
     }
 
-    # Add coverage summary to report
-    coverage_baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
-    if coverage_baseline_path.exists():
-        try:
-            baseline = json.loads(coverage_baseline_path.read_text(encoding="utf-8"))
-            report_doc["coverage_summary"] = {
-                "aggregate_percent": baseline.get("aggregate_percent", 0),
-                "total_statements": baseline.get("total_statements", 0),
-                "total_covered": baseline.get("total_covered", 0),
-                "file_count": len(baseline.get("files", {})),
-                "timestamp": baseline.get("timestamp", ""),
-            }
-        except Exception:
-            pass
+    # Add coverage summary to report (from evidence_index coverage_baseline)
+    cb_data = evidence_index.get("coverage_baseline", {})
+    if cb_data:
+        total_stmts = sum(f.get("num_statements", 0) for f in cb_data.values() if isinstance(f, dict))
+        total_covered_f = sum(
+            f.get("num_statements", 0) * f.get("percent_covered", 0) / 100
+            for f in cb_data.values() if isinstance(f, dict)
+        )
+        aggregate_pct = round(total_covered_f / total_stmts * 100, 1) if total_stmts > 0 else 0
+        report_doc["coverage_summary"] = {
+            "aggregate_percent": aggregate_pct,
+            "total_statements": total_stmts,
+            "total_covered": int(total_covered_f),
+            "file_count": len(cb_data),
+        }
 
-    # Apply human decisions
-    human_decisions = _load_human_decisions()
-    if human_decisions.get("decisions"):
-        report_doc = _apply_human_decisions(report_doc, human_decisions)
-        print(f"  Applied {len(human_decisions['decisions'])} human decision(s).", file=sys.stderr)
+    # Report human decisions applied by the gate engine
+    hd_applied = gate_res.get("human_decisions_applied", 0)
+    if hd_applied > 0:
+        print(f"  Applied {hd_applied} human decision(s).", file=sys.stderr)
 
     # Build evidence index path (already written by caller)
     index_path = output_dir / "evidence_index.json"
@@ -2102,6 +2063,8 @@ def _evaluate_and_output(
         coverage_summary=report_doc.get("coverage_summary"),
         project_root=project_root,
         coverage_violations=coverage_violations,
+        staged_items=staged_items,
+        evidence_index=evidence_index,
     )
     print(agent_output)
 
@@ -2123,9 +2086,10 @@ def _evaluate_and_output(
                 affected_files.append(path)
 
     # Partition affected files by governance boundary
-    in_scope_files, out_of_scope_files = _partition_by_governance_boundary(
-        affected_files, project_root, constraints_data=ctx.constraints,
-    )
+    boundary = load_boundary(project_root, constraints_data=ctx.constraints)
+    _scope = partition_by_scope(affected_files, boundary)
+    in_scope_files = _scope["in_scope"]
+    out_of_scope_files = _scope["out_of_scope"]
 
     # Extract raw task_list dict from manifest
     records_dict_all = {r.file_key: r for r in manifest.inputs_used}
@@ -2144,9 +2108,6 @@ def _evaluate_and_output(
         governance_in_scope_count=len(in_scope_files),
         governance_out_of_scope_count=len(out_of_scope_files),
     ))
-
-    # Save claim fingerprints for tamper detection
-    _save_claim_fingerprints(claims_list, project_root)
 
     return exit_code
 

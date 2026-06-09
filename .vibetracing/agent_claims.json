@@ -871,5 +871,61 @@
     "timestamp": "2026-06-09T11:54:29.109511+00:00",
     "notes": "进化轮次 d：hints 三级架构 + 决策平台完善 + AC 覆盖率清零 + 变更分离机制 + _is_current claim 修复 + Agent 指令",
     "content_hash": "29a741f998e2b258"
+  },
+  {
+    "claim_id": "CLAIM-VT-067",
+    "related_task": "TASK-VT-065",
+    "claimed_status": "covered",
+    "evidence_refs": [
+      "src/vibe_tracing/decision_server.py",
+      "src/vibe_tracing/hint_loader.py",
+      "src/vibe_tracing/governance.py",
+      "src/vibe_tracing/merge_gate_engine.py",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "src/vibe_tracing/risk_advisor.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "src/vibe_tracing/templates/dashboard.template.html",
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_decision_server.py",
+      "tests/test_dashboard_decisions.py",
+      "docs/prd.md",
+      "docs/architecture_constraints.json"
+    ],
+    "code_refs": [
+      "src/vibe_tracing/decision_server.py",
+      "src/vibe_tracing/hint_loader.py",
+      "src/vibe_tracing/governance.py",
+      "src/vibe_tracing/merge_gate_engine.py",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "src/vibe_tracing/risk_advisor.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "src/vibe_tracing/templates/dashboard.template.html",
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_decision_server.py",
+      "tests/test_dashboard_decisions.py"
+    ],
+    "test_refs": [
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_decision_server.py",
+      "tests/test_dashboard_decisions.py"
+    ],
+    "timestamp": "2026-06-09T13:51:17.462991+00:00",
+    "notes": "决策平台 v1：Decision Server + Gate Engine 人类决策集成 + hints 去重 + 状态整合 + 治理边界提取 + 技术债清零",
+    "content_hash": "59dfc357b631dd04"
   }
 ]

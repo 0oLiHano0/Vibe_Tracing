@@ -815,25 +815,67 @@ class ToolExecutionEngine:
         self,
         baseline_path: Optional[str] = None,
         pass_threshold: float = 80.0,
+        evidence_index: Optional[Dict[str, Any]] = None,
     ) -> List[ToolEvidenceCandidate]:
         """Measure per-source-file coverage from a pre-built baseline.
 
-        Reads ``.vibetracing/coverage_baseline.json`` (produced by the
-        ``vt coverage-baseline`` command) and emits one
-        ``ToolEvidenceCandidate`` per source file listed in the baseline.
+        Reads per-file coverage data and emits one ``ToolEvidenceCandidate``
+        per source file.  The primary data source is the ``coverage_baseline``
+        field in the evidence index (if provided).  Falls back to reading
+        ``.vibetracing/coverage_baseline.json`` from disk when the evidence
+        index is unavailable or lacks the field.
 
         Args:
             baseline_path: Override path to the baseline JSON file.
                 Defaults to ``.vibetracing/coverage_baseline.json`` relative
-                to the project root.
+                to the project root.  Only used as fallback.
             pass_threshold: Minimum percent_covered to be considered
                 ``compliant``.  Files below this threshold are ``violated``.
+            evidence_index: Pre-loaded evidence index dict.  If it contains
+                a ``coverage_baseline`` key, that data is used directly.
 
         Returns:
             List of ToolEvidenceCandidate objects, one per source file.
-            Returns an empty list if the baseline file does not exist or
-            cannot be parsed.
+            Returns an empty list if no baseline data is available.
         """
+        # Try evidence_index first (primary path)
+        if evidence_index and isinstance(evidence_index.get("coverage_baseline"), dict):
+            files = evidence_index["coverage_baseline"]
+            candidates: List[ToolEvidenceCandidate] = []
+            for source_path, file_data in files.items():
+                if not isinstance(file_data, dict):
+                    continue
+
+                percent = file_data.get("percent_covered")
+                num_stmts = file_data.get("num_statements", 0)
+                if percent is None:
+                    continue
+
+                percent_f = float(percent)
+                status = (
+                    CoverageStatus.COMPLIANT.value
+                    if percent_f >= pass_threshold
+                    else CoverageStatus.VIOLATED.value
+                )
+
+                candidates.append(
+                    ToolEvidenceCandidate(
+                        source_type="tool",
+                        source_path=source_path,
+                        covers=[],
+                        status=status,
+                        tool_category="coverage",
+                        details={
+                            "percent_covered": percent_f,
+                            "num_statements": int(num_stmts),
+                            "measurement": "baseline",
+                        },
+                    )
+                )
+
+            return candidates
+
+        # Fallback: read from file
         baseline_file = Path(baseline_path) if baseline_path else (
             self.project_root / ".vibetracing" / "coverage_baseline.json"
         )
@@ -851,7 +893,7 @@ class ToolExecutionEngine:
         if not isinstance(files, dict):
             return []
 
-        candidates: List[ToolEvidenceCandidate] = []
+        candidates = []
         for source_path, file_data in files.items():
             if not isinstance(file_data, dict):
                 continue

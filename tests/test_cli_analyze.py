@@ -2268,30 +2268,47 @@ def test_render_actions_with_coverage_summary():
 
 
 def test_render_actions_coverage_below_threshold(tmp_path):
-    """Test _render_actions shows files below 80% threshold."""
+    """Test _render_actions uses per-file violations for BLOCKED/PASS decision."""
     from vibe_tracing.cli import _render_actions
 
     # Need at least one action for coverage section to render
     actions = [
         {"priority": "HIGH", "type": "test", "title": "Test Action", "context": {}}
     ]
-    coverage = {"aggregate_percent": 60}
-    # Create baseline file
-    vibetracing_dir = tmp_path / ".vibetracing"
-    vibetracing_dir.mkdir(parents=True, exist_ok=True)
-    baseline = {
-        "files": {
-            "src/bad.py": {"percent_covered": 40},
-            "src/ok.py": {"percent_covered": 90},
-        }
-    }
-    (vibetracing_dir / "coverage_baseline.json").write_text(
-        json.dumps(baseline), encoding="utf-8"
-    )
+    coverage = {"aggregate_percent": 85}
+    # Per-file violations from evidence index — this is what determines BLOCKED
+    violations = [
+        {"file": "src/bad.py", "percent": 40},
+    ]
 
-    lines = _render_actions(actions, coverage_summary=coverage, project_root=tmp_path)
+    lines = _render_actions(
+        actions, coverage_summary=coverage, project_root=tmp_path,
+        coverage_violations=violations,
+    )
     assert any("BLOCKED" in l for l in lines)
-    assert any("60%" in l for l in lines)
+    assert any("src/bad.py" in l and "40%" in l for l in lines)
+
+
+def test_render_actions_per_file_violations_pass(tmp_path):
+    """Test _render_actions passes when no per-file violations even if aggregate is low."""
+    from vibe_tracing.cli import _render_actions
+
+    actions = [
+        {"priority": "HIGH", "type": "test", "title": "Test Action", "context": {}}
+    ]
+    # Aggregate is low (includes test files) but no per-file violations
+    coverage = {"aggregate_percent": 52.5}
+    violations = []  # no per-file violations
+
+    lines = _render_actions(
+        actions, coverage_summary=coverage, project_root=tmp_path,
+        coverage_violations=violations,
+    )
+    assert any("PASS" in l for l in lines)
+    assert not any("BLOCKED" in l for l in lines)
+    # Aggregate shown as informational only
+    assert any("52.5%" in l for l in lines)
+    assert any("informational only" in l for l in lines)
 
 
 # =========================================================================

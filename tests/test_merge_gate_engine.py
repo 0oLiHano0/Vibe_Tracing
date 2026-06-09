@@ -971,3 +971,90 @@ def test_missing_hash_treated_as_changed():
     from vibe_tracing.cli import _get_directly_modified_claims
     result = _get_directly_modified_claims(old_claims, new_claims)
     assert "CLAIM-001" in result
+
+
+# ---------------------------------------------------------------
+# Section 2.5: Per-file coverage violations
+# ---------------------------------------------------------------
+
+def test_per_file_coverage_pass_when_all_compliant():
+    """
+    When all source files have >= 80% coverage (all 'compliant'),
+    the gate does NOT block on coverage, even if aggregate is low.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    evidence_index = {
+        "evidences": [
+            {
+                "source_path": "src/foo.py",
+                "status": "compliant",
+                "details": {"tool_category": "coverage", "percent_covered": 95.0},
+            },
+            {
+                "source_path": "src/bar.py",
+                "status": "compliant",
+                "details": {"tool_category": "coverage", "percent_covered": 82.0},
+            },
+        ]
+    }
+
+    res = engine.evaluate([], [], {}, evidence_index=evidence_index)
+
+    assert res["gate_decision"] == "pass"
+    assert not any("Coverage below 80%" in msg for msg in res["reasons"])
+
+
+def test_per_file_coverage_blocks_when_violated():
+    """
+    When a source file has < 80% coverage (status 'violated'),
+    the gate blocks.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    evidence_index = {
+        "evidences": [
+            {
+                "source_path": "src/foo.py",
+                "status": "compliant",
+                "details": {"tool_category": "coverage", "percent_covered": 95.0},
+            },
+            {
+                "source_path": "src/bad.py",
+                "status": "violated",
+                "details": {"tool_category": "coverage", "percent_covered": 45.0},
+            },
+        ]
+    }
+
+    res = engine.evaluate([], [], {}, evidence_index=evidence_index)
+
+    assert res["gate_decision"] == "blocked"
+    assert any("src/bad.py" in msg and "45.0%" in msg for msg in res["reasons"])
+
+
+def test_per_file_coverage_ignores_non_coverage_evidence():
+    """
+    Evidence entries with tool_category != 'coverage' are ignored.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    evidence_index = {
+        "evidences": [
+            {
+                "source_path": "src/foo.py",
+                "status": "violated",
+                "details": {"tool_category": "lint", "percent_covered": 0},
+            },
+            {
+                "source_path": "src/bar.py",
+                "status": "compliant",
+                "details": {"tool_category": "coverage", "percent_covered": 90.0},
+            },
+        ]
+    }
+
+    res = engine.evaluate([], [], {}, evidence_index=evidence_index)
+
+    # lint violation should not affect coverage gate
+    assert res["gate_decision"] == "pass"

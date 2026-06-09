@@ -781,7 +781,8 @@
       "tests/test_dashboard_decisions.py",
       "tests/test_risk_advisor.py",
       "tests/test_dashboard_renderer.py",
-      "tests/test_claim_credibility.py"
+      "tests/test_claim_credibility.py",
+      "tests/test_merge_gate_engine.py"
     ],
     "test_refs": [
       "tests/test_ac_vt_009_coverage.py",
@@ -800,7 +801,7 @@
       "tests/test_architecture_compliance_checker.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-08T15:39:30.698760+00:00",
-    "notes": "进化轮次 d：hints 三级架构 + 决策平台完善 + AC 覆盖率清零 + 变更分离机制"
+    "timestamp": "2026-06-09T00:37:16.078484+00:00",
+    "notes": "进化轮次 d：hints 三级架构 + 决策平台完善 + AC 覆盖率清零 + 变更分离机制 + _is_current claim 修复 + Agent 指令"
   }
 ]

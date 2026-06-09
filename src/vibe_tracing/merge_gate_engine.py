@@ -89,6 +89,7 @@ class MergeGateEngine:
         compliance_result: Optional[Dict[str, Any]] = None,
         prd_status: str = "active",
         staged_items: Optional[Set[str]] = None,
+        directly_staged_items: Optional[Set[str]] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate merge gate criteria based on gaps, risks, and compliance checker results.
@@ -98,9 +99,14 @@ class MergeGateEngine:
             risks: Enriched risks from RiskAdvisor.
             compliance_result: Result from ArchitectureComplianceChecker.
             prd_status: Current PRD status ('draft', 'active', 'frozen', 'deprecated').
-            staged_items: Set of claim/task IDs modified in the current commit.
-                When provided, reasons are tagged with [当前] or [预存] prefixes
-                to distinguish current-change issues from pre-existing debt.
+            staged_items: Set of claim/task/AC/requirement IDs affected by the
+                current commit (superset including indirectly affected items).
+                Used for gap evaluation and architecture violation tagging.
+            directly_staged_items: Set of claim/task/AC/requirement IDs whose
+                definitions were **directly** modified in this commit.  When
+                provided, risk evaluation uses this set instead of
+                *staged_items* so that old claims merely referencing modified
+                files are tagged ``[预存]`` and do not block the gate.
 
         Returns:
             A dict containing:
@@ -108,6 +114,10 @@ class MergeGateEngine:
                 "reasons": list of strings explaining the decision
                 "blocked_items": list of blocking item descriptions
         """
+        # For risk evaluation, prefer directly_staged_items to distinguish
+        # claims that were directly modified from claims that merely reference
+        # modified files (indirectly affected).
+        risk_staged = directly_staged_items if directly_staged_items is not None else staged_items
         gate_decision = "pass"
         reasons: List[str] = []
         blocked_items: List[str] = []
@@ -163,8 +173,8 @@ class MergeGateEngine:
                     risk_related.add(claim_id)
                 hint = _resolve_hint(_gate_hints.get("high_risk_or_self_ref", {}), "level1")
                 msg = hint.format(risk_id=risk_id, desc=desc) if hint else f"高风险或不自证违规 ({risk_id}): {desc}"
-                reasons.append(self._tag_reason(msg, risk_related or None, staged_items))
-                if self._is_current(risk_related or None, staged_items):
+                reasons.append(self._tag_reason(msg, risk_related or None, risk_staged))
+                if self._is_current(risk_related or None, risk_staged):
                     blocked_items.append(msg)
                     gate_decision = "blocked"
 
@@ -173,7 +183,7 @@ class MergeGateEngine:
                         hint_missing = _resolve_hint(_gate_hints.get("high_risk_missing_action", {}), "level1")
                         msg_missing = hint_missing.format(risk_id=risk_id) if hint_missing else f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
                         blocked_items.append(msg_missing)
-                        reasons.append(self._tag_reason(msg_missing, risk_related or None, staged_items))
+                        reasons.append(self._tag_reason(msg_missing, risk_related or None, risk_staged))
 
                     # Add specific reason for low-confidence claims
                     if item_type == "claim_credibility":
@@ -181,7 +191,7 @@ class MergeGateEngine:
                         msg_credibility = hint_credibility if hint_credibility else "存在低可信度 Claim（无工具验证证据）"
                         if msg_credibility not in blocked_items:
                             blocked_items.append(msg_credibility)
-                            reasons.append(self._tag_reason(msg_credibility, risk_related or None, staged_items))
+                            reasons.append(self._tag_reason(msg_credibility, risk_related or None, risk_staged))
 
         # 1.3 Check Must architecture violations
         if compliance_result:
@@ -290,9 +300,9 @@ class MergeGateEngine:
                     risk_related_fs.add(claim_id)
                 hint = _resolve_hint(_gate_hints.get("low_medium_risk", {}), "level1")
                 msg = hint.format(risk_id=risk_id, desc=desc) if hint else f"低/中风险或推测性风险 ({risk_id}): {desc}"
-                reasons.append(self._tag_reason(msg, risk_related_fs or None, staged_items))
+                reasons.append(self._tag_reason(msg, risk_related_fs or None, risk_staged))
                 any_fail_detected = True
-                if self._is_current(risk_related_fs or None, staged_items):
+                if self._is_current(risk_related_fs or None, risk_staged):
                     current_fail_detected = True
 
         # Only upgrade to "fail" if not already "blocked" and at least one

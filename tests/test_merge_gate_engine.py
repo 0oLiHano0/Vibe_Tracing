@@ -737,3 +737,175 @@ def test_staged_ac_in_items_matches_ac_gap():
 
     assert res["gate_decision"] == "blocked"
     assert any("[当前]" in msg and "AC-VT-001-01" in msg for msg in res["reasons"])
+
+
+# ---------------------------------------------------------------
+# directly_staged_items: indirect-claim fix tests
+# ---------------------------------------------------------------
+
+def test_indirectly_affected_claim_does_not_block():
+    """
+    Test that a MUST-severity risk for a claim whose code_refs file was
+    modified (but the claim itself was NOT directly modified) is tagged
+    [预存] and does NOT block the gate.
+
+    Scenario: src/foo.py is staged.  CLAIM-VT-005 (old claim) references
+    src/foo.py via code_refs.  The claim is in staged_items (indirectly
+    affected) but NOT in directly_staged_items (not directly modified).
+    The risk should be treated as pre-existing debt.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = [
+        {
+            "risk_id": "RISK-VT-030",
+            "claim_id": "CLAIM-VT-005",
+            "description": "Claim CLAIM-VT-005 references evidence EVIDENCE-VT-010 which has status 'violated'.",
+            "severity": "must",
+            "risk_category": "violated_evidence",
+            "suggested_action": "Re-verify the claim.",
+            "business_impact": "Evidence chain broken.",
+        }
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    # CLAIM-VT-005 is in staged_items (its code_refs file was modified)
+    staged_items = {"CLAIM-VT-005", "TASK-VT-003", "AC-VT-001-01"}
+    # But CLAIM-VT-005 is NOT in directly_staged_items (claim itself was not modified)
+    directly_staged_items = {"TASK-VT-003", "AC-VT-001-01"}
+
+    res = engine.evaluate(
+        gaps, risks, compliance,
+        staged_items=staged_items,
+        directly_staged_items=directly_staged_items,
+    )
+
+    # Indirectly affected claim should NOT block
+    assert res["gate_decision"] == "pass"
+    assert len(res["blocked_items"]) == 0
+    assert any("[预存]" in msg and "RISK-VT-030" in msg for msg in res["reasons"])
+
+
+def test_directly_modified_claim_still_blocks():
+    """
+    Test that a MUST-severity risk for a claim that IS in directly_staged_items
+    (claim definition was directly modified) still blocks the gate.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = [
+        {
+            "risk_id": "RISK-VT-031",
+            "claim_id": "CLAIM-VT-001",
+            "description": "Claim CLAIM-VT-001 has only self-referential evidence.",
+            "severity": "must",
+            "suggested_action": "Provide external evidence.",
+            "business_impact": "Violates no self-attestation rules.",
+        }
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    # CLAIM-VT-001 is in both staged_items and directly_staged_items
+    staged_items = {"CLAIM-VT-001", "TASK-VT-001"}
+    directly_staged_items = {"CLAIM-VT-001", "TASK-VT-001"}
+
+    res = engine.evaluate(
+        gaps, risks, compliance,
+        staged_items=staged_items,
+        directly_staged_items=directly_staged_items,
+    )
+
+    # Directly modified claim should block
+    assert res["gate_decision"] == "blocked"
+    assert len(res["blocked_items"]) > 0
+    assert any("[当前]" in msg and "RISK-VT-031" in msg for msg in res["reasons"])
+
+
+def test_indirect_claim_ac_gap_still_blocks():
+    """
+    Test that when a claim is indirectly affected (in staged_items but not
+    directly_staged_items), AC gaps for related items still block because
+    AC/requirement IDs remain in directly_staged_items.
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = [
+        {
+            "item_id": "AC-VT-001-01",
+            "item_type": "ac",
+            "reason": "Missing test coverage for AC-VT-001-01.",
+        }
+    ]
+    risks = [
+        {
+            "risk_id": "RISK-VT-032",
+            "claim_id": "CLAIM-VT-005",
+            "description": "Violated evidence.",
+            "severity": "must",
+            "risk_category": "violated_evidence",
+            "suggested_action": "Re-verify.",
+            "business_impact": "Broken chain.",
+        }
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    # CLAIM-VT-005 is indirectly affected (in staged_items but not directly_staged_items)
+    # AC-VT-001-01 is in directly_staged_items (its coverage is directly impacted)
+    staged_items = {"CLAIM-VT-005", "TASK-VT-003", "AC-VT-001-01"}
+    directly_staged_items = {"TASK-VT-003", "AC-VT-001-01"}
+
+    res = engine.evaluate(
+        gaps, risks, compliance,
+        staged_items=staged_items,
+        directly_staged_items=directly_staged_items,
+    )
+
+    # AC gap should still block (AC is in directly_staged_items)
+    assert res["gate_decision"] == "blocked"
+    assert any("AC-VT-001-01" in item for item in res["blocked_items"])
+    assert any("[当前]" in msg and "AC-VT-001-01" in msg for msg in res["reasons"])
+    # But the claim risk should be pre-existing
+    assert any("[预存]" in msg and "RISK-VT-032" in msg for msg in res["reasons"])
+
+
+def test_directly_staged_items_none_falls_back():
+    """
+    Test that when directly_staged_items is None (not provided), the engine
+    falls back to staged_items for risk evaluation (backward compatible).
+    """
+    engine = MergeGateEngine(Path("/dummy/project/root"))
+
+    gaps = []
+    risks = [
+        {
+            "risk_id": "RISK-VT-033",
+            "claim_id": "CLAIM-VT-001",
+            "description": "Critical vulnerability.",
+            "severity": "must",
+            "suggested_action": "Patch immediately",
+            "business_impact": "System compromise",
+        }
+    ]
+    compliance = {
+        "architecture_compliance_status": [],
+        "architecture_violations": [],
+        "unclear_constraints": [],
+    }
+    staged_items = {"CLAIM-VT-001"}
+
+    # directly_staged_items not provided → falls back to staged_items
+    res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
+
+    assert res["gate_decision"] == "blocked"
+    assert any("[当前]" in msg and "RISK-VT-033" in msg for msg in res["reasons"])

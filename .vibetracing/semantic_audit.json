@@ -2,15 +2,15 @@
   {
     "ticket_id": "AUDIT-VT-001",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
+    "file_hash": "sha256:1b59bc6f37179ef5489555c0c310acb41777432a9d911de91eb1fbc8f509152e",
     "task_id": "TASK-VT-058",
     "ac_ids": [
       "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: 进化轮次 d — Agent 行动清单函数拆分 + hints 迁移 + 变更分离机制 + 决策日志加载",
+    "audit_reason": "cli.py: _render_actions 新增 SUMMARY 段含 Agent 人类决策指令，解决 BLOCKED 死循环",
     "created_at": "2026-06-08T01:38:30.163828Z",
-    "updated_at": "2026-06-08T15:39:50.060090Z"
+    "updated_at": "2026-06-09T00:37:32.713635Z"
   },
   {
     "ticket_id": "AUDIT-VT-002",
@@ -96,16 +96,16 @@
   {
     "ticket_id": "AUDIT-VT-008",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
+    "file_hash": "sha256:1b59bc6f37179ef5489555c0c310acb41777432a9d911de91eb1fbc8f509152e",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: 门禁理由分组输出（CURRENT ISSUES vs PRE-EXISTING DEBT）",
+    "audit_reason": "cli.py: 构建 directly_staged_items 集合区分直接修改和间接影响的 claims",
     "created_at": "2026-06-08T03:06:28.667333Z",
-    "updated_at": "2026-06-08T15:39:50.071341Z"
+    "updated_at": "2026-06-09T00:37:32.718950Z"
   },
   {
     "ticket_id": "AUDIT-VT-009",
@@ -152,16 +152,16 @@
   {
     "ticket_id": "AUDIT-VT-012",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
+    "file_hash": "sha256:1b59bc6f37179ef5489555c0c310acb41777432a9d911de91eb1fbc8f509152e",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: staged_items 扩展支持 AC ID 匹配",
+    "audit_reason": "cli.py: _is_current 逻辑修复，旧 claims 引用被修改文件标记为预存而非当前",
     "created_at": "2026-06-08T09:54:49.178453Z",
-    "updated_at": "2026-06-08T15:39:50.086209Z"
+    "updated_at": "2026-06-09T00:37:32.724834Z"
   },
   {
     "ticket_id": "AUDIT-VT-013",
@@ -180,16 +180,16 @@
   {
     "ticket_id": "AUDIT-VT-014",
     "file_path": "src/vibe_tracing/merge_gate_engine.py",
-    "file_hash": "sha256:178fe0730a0beb999f8092b108bf793704973761e64016372b6894ad91ee41ca",
+    "file_hash": "sha256:3aa2801163e84989bf24bbc8f2723789e01092cb7c264a1efa0937497da6657d",
     "task_id": "TASK-VT-045",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-13"
     ],
     "status": "passed",
-    "audit_reason": "merge_gate_engine.py: hints 迁移 + _is_current() 变更分离",
+    "audit_reason": "merge_gate_engine.py: 新增 directly_staged_items 参数到 evaluate() 方法",
     "created_at": "2026-06-08T09:54:49.188628Z",
-    "updated_at": "2026-06-08T15:39:50.090883Z"
+    "updated_at": "2026-06-09T00:37:32.730144Z"
   },
   {
     "ticket_id": "AUDIT-VT-015",
@@ -222,7 +222,7 @@
   {
     "ticket_id": "AUDIT-VT-017",
     "file_path": "tests/test_merge_gate_engine.py",
-    "file_hash": "sha256:ede46db7896ece924b6a5bdd21f818dc1d3ae3de41bb3def7b0cb8cb288785a3",
+    "file_hash": "sha256:8d8612ef168bd77969af3e0c54d46611ffa51d796072c303efa50c69cfbd4334",
     "task_id": "TASK-VT-063",
     "audit_level": "detailed",
     "ac_ids": [
@@ -230,9 +230,9 @@
       "AC-VT-010-02"
     ],
     "status": "passed",
-    "audit_reason": "test_merge_gate_engine.py: 新增 7 个变更分离测试覆盖预存/当前 AC gap 和 MUST risk 场景",
+    "audit_reason": "test_merge_gate_engine.py: 新增 4 个测试覆盖间接影响和直接修改的区分场景",
     "created_at": "2026-06-08T09:54:49.203513Z",
-    "updated_at": "2026-06-08T15:39:50.100494Z"
+    "updated_at": "2026-06-09T00:37:32.735174Z"
   },
   {
     "ticket_id": "AUDIT-VT-018",
@@ -266,16 +266,16 @@
   {
     "ticket_id": "AUDIT-VT-020",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
+    "file_hash": "sha256:1b59bc6f37179ef5489555c0c310acb41777432a9d911de91eb1fbc8f509152e",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: _format_agent_actions 拆分为 5 个独立函数",
+    "audit_reason": "cli.py: SUMMARY 段显示 HIGH/MEDIUM/LOW 计数和人类决策指令",
     "created_at": "2026-06-08T12:48:55.663738Z",
-    "updated_at": "2026-06-08T15:39:50.114978Z"
+    "updated_at": "2026-06-09T00:37:32.740314Z"
   },
   {
     "ticket_id": "AUDIT-VT-021",
@@ -394,16 +394,16 @@
   {
     "ticket_id": "AUDIT-VT-029",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:89860b988c842950f865fd9bfe3467317f199b48082e4717d5def4408b4a6227",
+    "file_hash": "sha256:1b59bc6f37179ef5489555c0c310acb41777432a9d911de91eb1fbc8f509152e",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: _load_hints + _resolve_hint + action hints 集成",
+    "audit_reason": "cli.py: agent_claims.json 在 staged_files 中时才将 claims 加入 directly_staged_items",
     "created_at": "2026-06-08T15:39:49.951721Z",
-    "updated_at": "2026-06-08T15:39:49.951721Z"
+    "updated_at": "2026-06-09T00:37:32.745448Z"
   },
   {
     "ticket_id": "AUDIT-VT-030",
@@ -422,16 +422,16 @@
   {
     "ticket_id": "AUDIT-VT-031",
     "file_path": "src/vibe_tracing/merge_gate_engine.py",
-    "file_hash": "sha256:178fe0730a0beb999f8092b108bf793704973761e64016372b6894ad91ee41ca",
+    "file_hash": "sha256:3aa2801163e84989bf24bbc8f2723789e01092cb7c264a1efa0937497da6657d",
     "task_id": "TASK-VT-045",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-13"
     ],
     "status": "passed",
-    "audit_reason": "merge_gate_engine.py: gate_decision hints 集成",
+    "audit_reason": "merge_gate_engine.py: risk 评估使用 directly_staged_items 避免旧 claims 误判为当前问题",
     "created_at": "2026-06-08T15:39:49.961680Z",
-    "updated_at": "2026-06-08T15:39:49.961680Z"
+    "updated_at": "2026-06-09T00:37:32.750251Z"
   },
   {
     "ticket_id": "AUDIT-VT-032",
@@ -633,7 +633,7 @@
   {
     "ticket_id": "AUDIT-VT-046",
     "file_path": "tests/test_merge_gate_engine.py",
-    "file_hash": "sha256:ede46db7896ece924b6a5bdd21f818dc1d3ae3de41bb3def7b0cb8cb288785a3",
+    "file_hash": "sha256:8d8612ef168bd77969af3e0c54d46611ffa51d796072c303efa50c69cfbd4334",
     "task_id": "TASK-VT-063",
     "audit_level": "detailed",
     "ac_ids": [
@@ -641,9 +641,9 @@
       "AC-VT-010-02"
     ],
     "status": "passed",
-    "audit_reason": "test_merge_gate_engine.py: 更新测试断言适配 pre-existing 不阻断的新行为",
+    "audit_reason": "test_merge_gate_engine.py: 测试间接影响 claim 不阻断、直接修改 claim 仍阻断",
     "created_at": "2026-06-08T15:39:50.034435Z",
-    "updated_at": "2026-06-08T15:39:50.034435Z"
+    "updated_at": "2026-06-09T00:37:32.755140Z"
   },
   {
     "ticket_id": "AUDIT-VT-047",
@@ -702,5 +702,48 @@
     "audit_reason": "test_tool_execution.py: hints 文本断言更新",
     "created_at": "2026-06-08T15:39:50.053922Z",
     "updated_at": "2026-06-08T15:39:50.053922Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-051",
+    "file_path": "src/vibe_tracing/cli.py",
+    "file_hash": "sha256:1b59bc6f37179ef5489555c0c310acb41777432a9d911de91eb1fbc8f509152e",
+    "task_id": "TASK-VT-035",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-07"
+    ],
+    "status": "passed",
+    "audit_reason": "cli.py: Agent 行动清单 SUMMARY 段增加人类决策通知指令和 dashboard 路径",
+    "created_at": "2026-06-09T00:37:32.697371Z",
+    "updated_at": "2026-06-09T00:37:32.697371Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-052",
+    "file_path": "src/vibe_tracing/merge_gate_engine.py",
+    "file_hash": "sha256:3aa2801163e84989bf24bbc8f2723789e01092cb7c264a1efa0937497da6657d",
+    "task_id": "TASK-VT-045",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-13"
+    ],
+    "status": "passed",
+    "audit_reason": "merge_gate_engine.py: _is_current 支持 directly_staged_items 参数区分 claim 修改类型",
+    "created_at": "2026-06-09T00:37:32.702696Z",
+    "updated_at": "2026-06-09T00:37:32.702696Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-053",
+    "file_path": "tests/test_merge_gate_engine.py",
+    "file_hash": "sha256:8d8612ef168bd77969af3e0c54d46611ffa51d796072c303efa50c69cfbd4334",
+    "task_id": "TASK-VT-063",
+    "audit_level": "detailed",
+    "ac_ids": [
+      "AC-VT-009-12",
+      "AC-VT-010-02"
+    ],
+    "status": "passed",
+    "audit_reason": "test_merge_gate_engine.py: 测试 directly_staged_items 为 None 时的向后兼容性",
+    "created_at": "2026-06-09T00:37:32.707637Z",
+    "updated_at": "2026-06-09T00:37:32.707637Z"
   }
 ]

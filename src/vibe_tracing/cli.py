@@ -1492,6 +1492,32 @@ def _render_actions(actions: list) -> list:
             else:
                 lines.append(f"  {key}: {value}")
         lines.append("")
+
+    # Summary section
+    lines.append("=" * 70)
+    lines.append("SUMMARY")
+    lines.append("=" * 70)
+
+    high_count = sum(1 for a in actions if a.get("priority") == "HIGH")
+    medium_count = sum(1 for a in actions if a.get("priority") == "MEDIUM")
+    low_count = sum(1 for a in actions if a.get("priority") == "LOW")
+
+    lines.append(f"HIGH: {high_count} | MEDIUM: {medium_count} | LOW: {low_count}")
+
+    # If there are human decision items, add explicit Agent instructions
+    human_decision_items = [a for a in actions if a.get("type") == "human_decision"]
+    if human_decision_items:
+        dec_ids = [a.get("id", "") for a in human_decision_items]
+        lines.append("")
+        lines.append("⚠ 存在待人类决策的事项。请执行以下操作：")
+        lines.append(f"1. 通知人类打开 dashboard: output/dashboard.html")
+        lines.append(f"2. 在\"待决策\"标签页中查看 {', '.join(dec_ids)}")
+        lines.append("3. 等待人类做出决策后，重新运行 vt analyze")
+        if high_count > 0:
+            lines.append("4. 在等待期间，可继续执行 HIGH 优先级的行动项")
+    elif high_count == 0 and medium_count == 0:
+        lines.append("NO ACTION REQUIRED. Gate passed.")
+
     return lines
 
 
@@ -1633,6 +1659,7 @@ def _evaluate_and_output(
     # requirement IDs.  The gate engine uses this set to decide whether an
     # issue should block (current) or merely be displayed (pre-existing).
     staged_items: Optional[Set[str]] = None
+    directly_staged_items: Optional[Set[str]] = None
     if staged_files:
         affected_claims, affected_reqs, affected_acs = _determine_affected_items(
             staged_files, claims_list, ctx,
@@ -1651,11 +1678,31 @@ def _evaluate_and_output(
         staged_items.update(affected_acs)
         staged_items.update(affected_reqs)
 
+        # Build directly_staged_items: only items whose definitions were
+        # directly modified in this commit.  Claims are included only when
+        # the claims JSON file itself is staged (i.e. the claim was edited),
+        # NOT when merely a referenced code/test file was modified.  Tasks,
+        # ACs, and requirements are always included since their coverage is
+        # directly impacted by code changes.
+        claims_file_rel = ".vibetracing/agent_claims.json"
+        if claims_file_rel in staged_files:
+            # Claims file was modified — affected claims are directly staged
+            directly_staged_claims = set(affected_claims)
+        else:
+            # Only code/test files were modified — claims are indirectly affected
+            directly_staged_claims = set()
+        directly_staged_items = set(directly_staged_claims)
+        if ctx.task_result and ctx.task_result.tasks:
+            directly_staged_items.update(affected_task_ids)
+        directly_staged_items.update(affected_acs)
+        directly_staged_items.update(affected_reqs)
+
     # Merge Gate Engine
     gate_engine = MergeGateEngine(project_root)
     gate_res = gate_engine.evaluate(
         active_gaps, active_risks, compliance_res,
         prd_status=prd_res.status, staged_items=staged_items,
+        directly_staged_items=directly_staged_items,
     )
     gate_decision = gate_res["gate_decision"]
 

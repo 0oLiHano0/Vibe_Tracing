@@ -52,6 +52,18 @@ class EvidenceIndexBuilder:
         Raises:
             ValueError: If required data is missing, invalid, or validation fails.
         """
+        # Step 0: Load existing evidence index for persistence across runs
+        existing_evidence: Dict[tuple, Dict[str, Any]] = {}
+        existing_path = self.project_root / "output" / "evidence_index.json"
+        if existing_path.exists():
+            try:
+                old_index = json.loads(existing_path.read_text(encoding="utf-8"))
+                for ev in old_index.get("evidences", []):
+                    key = (ev.get("source_path"), ev.get("source_type"))
+                    existing_evidence[key] = ev
+            except Exception:
+                pass
+
         # Step 1: Load data from ctx
         prd_res = ctx.prd
         if not prd_res.is_valid:
@@ -199,6 +211,15 @@ class EvidenceIndexBuilder:
                 evidence_dict["details"]["tool_category"] = cand.tool_category
 
             evidences.append(evidence_dict)
+
+        # Preserve test evidence from previous run for non-staged files
+        new_evidence_keys = {(e.get("source_path"), e.get("source_type")) for e in evidences}
+        for key, old_ev in existing_evidence.items():
+            if key[1] == "test" and key not in new_evidence_keys:
+                # Mark as carried over from previous run
+                old_ev["carried_over"] = True
+                old_ev["evidence_id"] = get_next_id()
+                evidences.append(old_ev)
 
         # Assemble the index
         run_id = f"RUN-{uuid.uuid4()}"

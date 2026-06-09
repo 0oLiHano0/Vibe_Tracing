@@ -166,16 +166,16 @@
   {
     "ticket_id": "AUDIT-VT-013",
     "file_path": "src/vibe_tracing/evidence_index_builder.py",
-    "file_hash": "sha256:4c58249f7e42bd19e79c80b95322ff39b00bc6c8a7ff536ca6b0a2b8b98e68eb",
+    "file_hash": "sha256:ab4b2fb6f3c8ddd3096fb502cc716afbd90abddde27aef621a9a5de9d4010bf4",
     "task_id": "TASK-VT-044",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "evidence_index_builder.py 将 tool_category 字段写入 evidence_index 条目的 details 中，使 violated 状态可区分来源工具（ruff/mypy/coverage）。",
+    "audit_reason": "evidence_index_builder.py: build() 方法新增持久化逻辑，加载已有 evidence_index.json 保留未 staged 测试文件的覆盖证据",
     "created_at": "2026-06-08T09:54:49.183231Z",
-    "updated_at": "2026-06-08T09:55:11.291045Z"
+    "updated_at": "2026-06-09T05:55:29.913494Z"
   },
   {
     "ticket_id": "AUDIT-VT-014",
@@ -492,16 +492,16 @@
   {
     "ticket_id": "AUDIT-VT-036",
     "file_path": "tests/test_ac_vt_009_coverage.py",
-    "file_hash": "sha256:fbac8155a83c0eab557fe6b445f9d83e28d59791119cc1697ea5107160cf773f",
+    "file_hash": "sha256:c93cb9169a788ae27fb59cee480deedb7640e0b4ab914bc5856a9ec74569120e",
     "task_id": "TASK-VT-064",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "test_ac_vt_009_coverage.py: 26 个 AC-VT-009 覆盖率测试",
+    "audit_reason": "test_ac_vt_009_coverage.py: 新增 5 个测试覆盖 AC-VT-009-07 零提示词 AI 引导与脚手架机制",
     "created_at": "2026-06-08T15:39:49.985846Z",
-    "updated_at": "2026-06-08T15:39:49.985846Z"
+    "updated_at": "2026-06-09T05:55:29.918520Z"
   },
   {
     "ticket_id": "AUDIT-VT-037",
@@ -816,5 +816,47 @@
     "audit_reason": "cli.py: directly_staged_items 仅包含 content_hash 变化的 claims，移除 task/AC/req 的间接关联",
     "created_at": "2026-06-09T04:19:35.539957Z",
     "updated_at": "2026-06-09T04:19:35.539957Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-059",
+    "file_path": "src/vibe_tracing/evidence_index_builder.py",
+    "file_hash": "sha256:ab4b2fb6f3c8ddd3096fb502cc716afbd90abddde27aef621a9a5de9d4010bf4",
+    "task_id": "TASK-VT-044",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "evidence_index_builder.py: 测试证据持久化解决 AC 覆盖率缺口反复出现的无状态问题",
+    "created_at": "2026-06-09T05:55:29.897192Z",
+    "updated_at": "2026-06-09T05:55:29.897192Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-060",
+    "file_path": "tests/test_ac_vt_009_coverage.py",
+    "file_hash": "sha256:c93cb9169a788ae27fb59cee480deedb7640e0b4ab914bc5856a9ec74569120e",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_ac_vt_009_coverage.py: 测试 init 模板生成、schema 校验提示、模式违规提示等场景",
+    "created_at": "2026-06-09T05:55:29.902570Z",
+    "updated_at": "2026-06-09T05:55:29.902570Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-061",
+    "file_path": "tests/test_evidence_index_builder.py",
+    "file_hash": "sha256:9eba78a38fddc10150a6f169b05fbe40286d92e1eee9f2352e3ba312d566e4d1",
+    "task_id": "TASK-VT-044",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_evidence_index_builder.py: 新增 4 个测试覆盖证据持久化的 carry-over 和 staged 过滤逻辑",
+    "created_at": "2026-06-09T05:55:29.907485Z",
+    "updated_at": "2026-06-09T05:55:29.907485Z"
   }
 ]

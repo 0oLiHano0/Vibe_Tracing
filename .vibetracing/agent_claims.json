@@ -788,7 +788,9 @@
       "tests/test_dashboard_renderer.py",
       "tests/test_architecture_compliance_checker.py",
       "tests/test_cli_analyze.py",
-      "src/vibe_tracing/schemas/agent_claims.schema.json"
+      "src/vibe_tracing/schemas/agent_claims.schema.json",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "tests/test_evidence_index_builder.py"
     ],
     "code_refs": [
       "src/vibe_tracing/templates/field_hints.json",
@@ -817,7 +819,9 @@
       "tests/test_dashboard_renderer.py",
       "tests/test_claim_credibility.py",
       "tests/test_merge_gate_engine.py",
-      "src/vibe_tracing/schemas/agent_claims.schema.json"
+      "src/vibe_tracing/schemas/agent_claims.schema.json",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "tests/test_evidence_index_builder.py"
     ],
     "test_refs": [
       "tests/test_ac_vt_009_coverage.py",
@@ -836,8 +840,8 @@
       "tests/test_architecture_compliance_checker.py",
       "tests/test_cli_analyze.py"
     ],
-    "timestamp": "2026-06-09T04:27:51.231665+00:00",
+    "timestamp": "2026-06-09T05:55:20.475086+00:00",
     "notes": "进化轮次 d：hints 三级架构 + 决策平台完善 + AC 覆盖率清零 + 变更分离机制 + _is_current claim 修复 + Agent 指令",
-    "content_hash": "c829679542ffb8db"
+    "content_hash": "a7d9da7957818e05"
   }
 ]

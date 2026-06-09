@@ -285,3 +285,189 @@ def test_no_untraced_evidence_generated(tmp_path: Path) -> None:
             "compliant",
             "violated",
         ]
+
+
+def test_test_evidence_carried_over_when_not_staged(tmp_path: Path) -> None:
+    """
+    Verify that test evidence from a previous run is preserved when the test file
+    is NOT staged (i.e., no fresh test evidence generated for it).
+    Covers: FIX-TASK-006.
+    """
+    setup_mock_project(tmp_path)
+
+    # Write a previous evidence_index.json with a test evidence entry
+    old_index = {
+        "run_id": "RUN-old",
+        "project_id": "PROJECT-VT",
+        "scan_time": "2026-06-08T00:00:00Z",
+        "evidences": [
+            {
+                "evidence_id": "EVIDENCE-VT-099",
+                "source_type": "test",
+                "source_path": "tests/test_ac_vt_009_coverage.py",
+                "covers": ["AC-VT-009-01", "REQ-VT-009"],
+                "status": "covered",
+                "details": {"test_file": "tests/test_ac_vt_009_coverage.py"},
+            },
+        ],
+    }
+    (tmp_path / "output" / "evidence_index.json").write_text(
+        json.dumps(old_index), encoding="utf-8"
+    )
+
+    builder = EvidenceIndexBuilder(tmp_path)
+    ctx = _build_ctx(tmp_path)
+    output_path = tmp_path / "output" / "evidence_index.json"
+    index = builder.build(output_path, ctx)
+
+    evidences = index["evidences"]
+    test_evs = [e for e in evidences if e["source_type"] == "test"]
+    assert len(test_evs) == 1, "Test evidence from previous run should be carried over"
+    carried = test_evs[0]
+    assert carried["carried_over"] is True
+    assert carried["source_path"] == "tests/test_ac_vt_009_coverage.py"
+    assert carried["status"] == "covered"
+    assert carried["covers"] == ["AC-VT-009-01", "REQ-VT-009"]
+
+
+def test_test_evidence_not_carried_over_when_staged(tmp_path: Path) -> None:
+    """
+    Verify that test evidence is NOT carried over when the test file IS staged
+    (i.e., fresh test evidence was generated for it in this run).
+    Covers: FIX-TASK-006.
+    """
+    setup_mock_project(tmp_path)
+
+    # Write a previous evidence_index.json with a test evidence entry
+    old_index = {
+        "run_id": "RUN-old",
+        "project_id": "PROJECT-VT",
+        "scan_time": "2026-06-08T00:00:00Z",
+        "evidences": [
+            {
+                "evidence_id": "EVIDENCE-VT-099",
+                "source_type": "test",
+                "source_path": "tests/test_ac_vt_009_coverage.py",
+                "covers": ["AC-VT-009-01", "REQ-VT-009"],
+                "status": "covered",
+                "details": {"test_file": "tests/test_ac_vt_009_coverage.py"},
+            },
+        ],
+    }
+    (tmp_path / "output" / "evidence_index.json").write_text(
+        json.dumps(old_index), encoding="utf-8"
+    )
+
+    # Create a mock tool evidence candidate that simulates fresh test evidence
+    from vibe_tracing.tool_evidence_adapter import ToolEvidenceCandidate
+
+    fresh_test_evidence = ToolEvidenceCandidate(
+        source_type="test",
+        source_path="tests/test_ac_vt_009_coverage.py",
+        covers=["AC-VT-009-01", "REQ-VT-009"],
+        status="covered",
+        tool_category="test",
+        command="pytest tests/test_ac_vt_009_coverage.py",
+        exit_code=0,
+    )
+
+    builder = EvidenceIndexBuilder(tmp_path)
+    ctx = _build_ctx(tmp_path)
+    ctx.tool_evidence = [fresh_test_evidence]
+
+    output_path = tmp_path / "output" / "evidence_index.json"
+    index = builder.build(output_path, ctx)
+
+    evidences = index["evidences"]
+    test_evs = [e for e in evidences if e["source_type"] == "test"]
+    assert len(test_evs) == 1, "Only the fresh test evidence should be present"
+    assert test_evs[0].get("carried_over") is not True
+    # The fresh evidence gets a new ID assigned by the tool report processing
+    assert test_evs[0]["source_path"] == "tests/test_ac_vt_009_coverage.py"
+
+
+def test_non_test_evidence_not_carried_over(tmp_path: Path) -> None:
+    """
+    Verify that only test evidence is carried over; other types (claim, code, tool) are not.
+    Covers: FIX-TASK-006.
+    """
+    setup_mock_project(tmp_path)
+
+    # Write a previous evidence_index.json with non-test evidence entries
+    old_index = {
+        "run_id": "RUN-old",
+        "project_id": "PROJECT-VT",
+        "scan_time": "2026-06-08T00:00:00Z",
+        "evidences": [
+            {
+                "evidence_id": "EVIDENCE-VT-098",
+                "source_type": "tool",
+                "source_path": "output/coverage_report.xml",
+                "covers": ["REQ-VT-001"],
+                "status": "covered",
+                "details": {},
+            },
+            {
+                "evidence_id": "EVIDENCE-VT-099",
+                "source_type": "code",
+                "source_path": "src/vibe_tracing/old_module.py",
+                "covers": ["REQ-VT-001"],
+                "status": "compliant",
+                "details": {},
+            },
+        ],
+    }
+    (tmp_path / "output" / "evidence_index.json").write_text(
+        json.dumps(old_index), encoding="utf-8"
+    )
+
+    builder = EvidenceIndexBuilder(tmp_path)
+    ctx = _build_ctx(tmp_path)
+    output_path = tmp_path / "output" / "evidence_index.json"
+    index = builder.build(output_path, ctx)
+
+    evidences = index["evidences"]
+    # No carried_over evidence should exist since none of the old entries were type "test"
+    carried = [e for e in evidences if e.get("carried_over") is True]
+    assert len(carried) == 0, "Non-test evidence should not be carried over"
+
+
+def test_carried_over_evidence_gets_new_id(tmp_path: Path) -> None:
+    """
+    Verify that carried-over test evidence gets a fresh sequential evidence_id.
+    Covers: FIX-TASK-006.
+    """
+    setup_mock_project(tmp_path)
+
+    old_index = {
+        "run_id": "RUN-old",
+        "project_id": "PROJECT-VT",
+        "scan_time": "2026-06-08T00:00:00Z",
+        "evidences": [
+            {
+                "evidence_id": "EVIDENCE-VT-050",
+                "source_type": "test",
+                "source_path": "tests/test_old.py",
+                "covers": ["REQ-VT-001"],
+                "status": "covered",
+                "details": {},
+            },
+        ],
+    }
+    (tmp_path / "output" / "evidence_index.json").write_text(
+        json.dumps(old_index), encoding="utf-8"
+    )
+
+    builder = EvidenceIndexBuilder(tmp_path)
+    ctx = _build_ctx(tmp_path)
+    output_path = tmp_path / "output" / "evidence_index.json"
+    index = builder.build(output_path, ctx)
+
+    evidences = index["evidences"]
+    # The carried-over evidence should have a new sequential ID, not EVIDENCE-VT-050
+    carried = [e for e in evidences if e.get("carried_over") is True]
+    assert len(carried) == 1
+    # It should be assigned the next available ID after all fresh evidences
+    fresh_count = len([e for e in evidences if not e.get("carried_over")])
+    expected_id = f"EVIDENCE-VT-{fresh_count + 1:03d}"
+    assert carried[0]["evidence_id"] == expected_id

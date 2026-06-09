@@ -943,7 +943,10 @@ def test_input_files_loaded_once(tmp_path, capsys):
 
     def _spy_path_open(self_path, *args, **kwargs):
         key = path_to_key.get(str(self_path))
-        if key is not None:
+        # Only count read opens (mode "r" or default); writes from
+        # _repair_content_hashes must not inflate the read count.
+        mode = args[0] if args else kwargs.get("mode", "r")
+        if key is not None and "r" in mode and "w" not in mode:
             open_counts[key] += 1
         return _orig_path_open(self_path, *args, **kwargs)
 

@@ -5,6 +5,7 @@ Loads agent_claims.json, validates it against the JSON Schema contract,
 and performs cross-reference validation against the task list and external evidence rules.
 """
 
+import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -32,6 +33,41 @@ def _resolve_hint(hint_value: Any, level: str = "level3") -> str:
     if isinstance(hint_value, dict):
         return hint_value.get(level, hint_value.get("level3", ""))
     return ""
+
+
+def _compute_claim_hash(claim: dict) -> str:
+    """Compute content hash of a claim (excluding hash and timestamp fields)."""
+    content = {k: v for k, v in claim.items() if k not in ("content_hash", "timestamp")}
+    return hashlib.sha256(
+        json.dumps(content, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()[:16]
+
+
+def _repair_content_hashes(claims: list, claims_path: Path) -> None:
+    """Repair missing or mismatched content_hash fields in claims.
+
+    For each claim:
+    - If content_hash is missing, compute and add it.
+    - If content_hash is present but doesn't match the recomputed value, update it.
+
+    Writes the file back only if any repairs were made.
+    """
+    repaired = False
+    for claim in claims:
+        # Skip template records
+        claim_id = claim.get("claim_id", "")
+        if claim_id.endswith("-9999"):
+            continue
+        expected = _compute_claim_hash(claim)
+        current = claim.get("content_hash")
+        if current != expected:
+            claim["content_hash"] = expected
+            repaired = True
+
+    if repaired:
+        with claims_path.open("w", encoding="utf-8") as f:
+            json.dump(claims, f, indent=2, ensure_ascii=False)
+            f.write("\n")
 
 
 _claim_field_hints = _load_field_hints("input")
@@ -102,6 +138,11 @@ class ClaimLoader:
                     is_valid=False,
                     errors=[f"Failed to read/parse file {claims_path}: {exc}"],
                 )
+
+        # Auto-repair missing or mismatched content_hash fields.
+        # Runs for both file-backed and pre-loaded content so that
+        # content_hash is always kept in sync after any modification.
+        _repair_content_hashes(data, claims_path)
 
         return self.validate_data(data, task_result, source_label=str(claims_path))
 

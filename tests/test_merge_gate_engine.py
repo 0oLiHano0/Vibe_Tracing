@@ -909,3 +909,65 @@ def test_directly_staged_items_none_falls_back():
 
     assert res["gate_decision"] == "blocked"
     assert any("[当前]" in msg and "RISK-VT-033" in msg for msg in res["reasons"])
+
+
+# ---------------------------------------------------------------
+# FIX-TASK-004: Per-claim content hash detection tests
+# ---------------------------------------------------------------
+
+def test_only_modified_claim_detected():
+    """
+    Only claims whose content_hash changed should be detected as modified.
+    """
+    old_claims = [
+        {"claim_id": "CLAIM-001", "content_hash": "aaa", "code_refs": ["a.py"]},
+        {"claim_id": "CLAIM-002", "content_hash": "bbb", "code_refs": ["b.py"]},
+        {"claim_id": "CLAIM-003", "content_hash": "ccc", "code_refs": ["c.py"]},
+    ]
+    new_claims = [
+        {"claim_id": "CLAIM-001", "content_hash": "aaa", "code_refs": ["a.py"]},
+        {"claim_id": "CLAIM-002", "content_hash": "xxx", "code_refs": ["b.py", "d.py"]},  # changed
+        {"claim_id": "CLAIM-003", "content_hash": "ccc", "code_refs": ["c.py"]},
+    ]
+    from vibe_tracing.cli import _get_directly_modified_claims
+    result = _get_directly_modified_claims(old_claims, new_claims)
+    assert result == {"CLAIM-002"}
+
+
+def test_new_claim_detected():
+    """
+    New claims (not in old) should be detected as modified.
+    """
+    old_claims = [{"claim_id": "CLAIM-001", "content_hash": "aaa"}]
+    new_claims = [
+        {"claim_id": "CLAIM-001", "content_hash": "aaa"},
+        {"claim_id": "CLAIM-002", "content_hash": "bbb"},  # new
+    ]
+    from vibe_tracing.cli import _get_directly_modified_claims
+    result = _get_directly_modified_claims(old_claims, new_claims)
+    assert "CLAIM-002" in result
+
+
+def test_deleted_claim_ignored():
+    """
+    Claims deleted from old list should not appear in result.
+    """
+    old_claims = [
+        {"claim_id": "CLAIM-001", "content_hash": "aaa"},
+        {"claim_id": "CLAIM-002", "content_hash": "bbb"},
+    ]
+    new_claims = [{"claim_id": "CLAIM-001", "content_hash": "aaa"}]
+    from vibe_tracing.cli import _get_directly_modified_claims
+    result = _get_directly_modified_claims(old_claims, new_claims)
+    assert "CLAIM-002" not in result
+
+
+def test_missing_hash_treated_as_changed():
+    """
+    Claims without content_hash should be treated as changed.
+    """
+    old_claims = [{"claim_id": "CLAIM-001"}]  # no hash
+    new_claims = [{"claim_id": "CLAIM-001", "content_hash": "aaa"}]
+    from vibe_tracing.cli import _get_directly_modified_claims
+    result = _get_directly_modified_claims(old_claims, new_claims)
+    assert "CLAIM-001" in result

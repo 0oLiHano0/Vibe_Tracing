@@ -11,6 +11,7 @@ import hashlib
 import json
 import subprocess
 import sys
+from dataclasses import asdict
 from pathlib import Path
 import importlib.resources as pkg_resources
 
@@ -1627,6 +1628,41 @@ def _apply_human_decisions(report_doc: dict, decisions: dict) -> dict:
     return report_doc
 
 
+def _compute_claim_hash(claim: dict) -> str:
+    """Compute content hash of a claim (excluding hash and timestamp fields)."""
+    content = {k: v for k, v in claim.items() if k not in ("content_hash", "timestamp")}
+    return hashlib.sha256(
+        json.dumps(content, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()[:16]
+
+
+def _get_directly_modified_claims(
+    old_claims: list,
+    new_claims: list,
+) -> set:
+    """Detect which claims were actually modified by comparing content hashes."""
+    old_hashes = {}
+    for c in old_claims:
+        cid = c.get("claim_id")
+        if cid:
+            old_hashes[cid] = c.get("content_hash")
+
+    new_hashes = {}
+    for c in new_claims:
+        cid = c.get("claim_id")
+        if cid:
+            new_hashes[cid] = c.get("content_hash")
+
+    modified = set()
+    for claim_id, new_hash in new_hashes.items():
+        old_hash = old_hashes.get(claim_id)
+        if old_hash is None:
+            modified.add(claim_id)  # new claim
+        elif old_hash != new_hash:
+            modified.add(claim_id)  # content changed
+    return modified
+
+
 def _evaluate_and_output(
     ctx: UnifiedContext,
     merged_gaps: list,
@@ -1686,16 +1722,30 @@ def _evaluate_and_output(
         # directly impacted by code changes.
         claims_file_rel = ".vibetracing/agent_claims.json"
         if claims_file_rel in staged_files:
-            # Claims file was modified — affected claims are directly staged
-            directly_staged_claims = set(affected_claims)
+            # Compare per-claim content hashes to find actually modified claims
+            from vibe_tracing.git_utils import git_show
+            try:
+                old_json = git_show("HEAD", ".vibetracing/agent_claims.json", project_root)
+                old_claims = json.loads(old_json) if old_json else []
+            except Exception:
+                old_claims = []
+            new_claims_raw = []
+            for c in claims_list:
+                if hasattr(c, '__dict__'):
+                    new_claims_raw.append(c.__dict__)
+                elif isinstance(c, dict):
+                    new_claims_raw.append(c)
+                else:
+                    new_claims_raw.append(asdict(c) if hasattr(c, '__dataclass_fields__') else {})
+            directly_staged_claims = _get_directly_modified_claims(old_claims, new_claims_raw)
         else:
             # Only code/test files were modified — claims are indirectly affected
             directly_staged_claims = set()
+        # directly_staged_items only contains claims whose content_hash
+        # actually changed. Tasks/ACs/reqs stay in staged_items (superset)
+        # but NOT in directly_staged_items, so old claims referencing
+        # modified code files are correctly tagged as [预存].
         directly_staged_items = set(directly_staged_claims)
-        if ctx.task_result and ctx.task_result.tasks:
-            directly_staged_items.update(affected_task_ids)
-        directly_staged_items.update(affected_acs)
-        directly_staged_items.update(affected_reqs)
 
     # Merge Gate Engine
     gate_engine = MergeGateEngine(project_root)

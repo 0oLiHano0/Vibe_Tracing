@@ -67,6 +67,10 @@
       "notes": {
         "type": "string",
         "description": "可选的备注说明信息。"
+      },
+      "content_hash": {
+        "type": "string",
+        "description": "内容哈希，用于检测 claim 内容变更（不含 timestamp 和 content_hash 本身）。"
       }
     }
   }

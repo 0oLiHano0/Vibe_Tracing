@@ -46,42 +46,22 @@
     "json": {
       "extensions": [
         ".json"
-      ],
-      "lint": {},
-      "type_check": {},
-      "test": {},
-      "security": {},
-      "coverage": {}
+      ]
     },
     "markdown": {
       "extensions": [
         ".md"
-      ],
-      "lint": {},
-      "type_check": {},
-      "test": {},
-      "security": {},
-      "coverage": {}
+      ]
     },
     "html": {
       "extensions": [
         ".html"
-      ],
-      "lint": {},
-      "type_check": {},
-      "test": {},
-      "security": {},
-      "coverage": {}
+      ]
     },
     "toml": {
       "extensions": [
         ".toml"
-      ],
-      "lint": {},
-      "type_check": {},
-      "test": {},
-      "security": {},
-      "coverage": {}
+      ]
     }
   },
   "architecture_principles": [

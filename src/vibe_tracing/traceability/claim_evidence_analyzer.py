@@ -69,6 +69,7 @@ with task completeness or test results, and flags nonexistent or outdated file r
 # ============================================================================
 
 import hashlib
+import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -111,6 +112,35 @@ class ClaimEvidenceAnalyzer:
             return dt.astimezone(timezone.utc)
         except Exception:
             return None
+
+    def _check_invalidation(self, claim, stored_fingerprints: dict) -> Optional[dict]:
+        """Check if claim's referenced files have changed since last analysis."""
+        if stored_fingerprints is None:
+            return None
+
+        cid = claim.claim_id if hasattr(claim, 'claim_id') else claim.get('claim_id')
+        stored = stored_fingerprints.get(cid)
+        if not stored:
+            return None
+
+        changed_files = []
+        for ref_path, old_hash in stored.get("fingerprints", {}).items():
+            full_path = self.project_root / ref_path
+            if not full_path.exists():
+                changed_files.append({"file": ref_path, "old_hash": old_hash, "reason": f"File {ref_path} has been deleted"})
+            else:
+                current_hash = _file_sha256(full_path)
+                if current_hash and current_hash != old_hash:
+                    changed_files.append({"file": ref_path, "old_hash": old_hash, "new_hash": current_hash, "reason": f"File {ref_path} hash has changed"})
+
+        if changed_files:
+            return {
+                "claim_id": cid,
+                "status": CoverageStatus.NEEDS_REVERIFICATION.value,
+                "files": changed_files,
+                "stored_timestamp": stored.get("timestamp"),
+            }
+        return None
 
     def analyze(
         self,
@@ -156,6 +186,16 @@ class ClaimEvidenceAnalyzer:
         # Find test evidences
         test_evs = [ev for ev in evidences if ev.get("source_type") == "test"]
 
+        # Load stored file fingerprints for invalidation detection
+        fingerprints_path = self.project_root / ".vibetracing" / "claim_fingerprints.json"
+        stored_fingerprints: Dict[str, Any] = {}
+        if fingerprints_path.exists():
+            try:
+                with open(fingerprints_path, "r", encoding="utf-8") as pf:
+                    stored_fingerprints = json.load(pf)
+            except (OSError, json.JSONDecodeError):
+                stored_fingerprints = {}
+
         for claim in claims:
             claim_id = claim.claim_id
             claimed_status = claim.claimed_status
@@ -176,6 +216,21 @@ class ClaimEvidenceAnalyzer:
             has_failed_test = False
             has_self_ref_gap = False
             has_other_mismatch = False
+
+            # 0. Claim invalidation detection (file fingerprint changes)
+            invalidation = self._check_invalidation(claim, stored_fingerprints)
+            if invalidation:
+                risks.append(
+                    {
+                        "risk_id": f"RISK-INVALIDATED-{claim_id}",
+                        "risk_category": "claim_invalidated_by_file_change",
+                        "severity": "must",
+                        "claim_id": claim_id,
+                        "description": f"Claim {claim_id} 引用的文件已变化，需要重新验证",
+                        "changed_files": [f["file"] for f in invalidation["files"]],
+                        "suggested_action": "重新运行 vt analyze 验证证据是否仍然有效",
+                    }
+                )
 
             # 1. External evidence checks (only relevant if completed)
             external_refs = [ref for ref in evidence_refs if ref != claim_id]

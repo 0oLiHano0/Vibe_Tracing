@@ -261,6 +261,7 @@ class TestCoverageStatus:
             "compliant",
             "violated",
             "skipped",
+            "needs_reverification",
         }
         actual = {member.value for member in CoverageStatus}
         assert actual == expected, (
@@ -274,7 +275,7 @@ class TestCoverageStatus:
 
     def test_coverage_status_count(self):
         """covers: AC-VT-002-01"""
-        assert len(CoverageStatus) == 9
+        assert len(CoverageStatus) == 10
 
     @pytest.mark.parametrize(
         "value",

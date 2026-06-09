@@ -38,7 +38,7 @@
   - **Diagnosis**: 治理覆盖盲区——63 个文件未被任何 Task/AC 覆盖。VT 自身的治理链路存在大面积盲区。
   - **Root Cause**: VT 的 Task/AC 体系只覆盖了核心功能模块，辅助文件（schemas、templates、fixtures、config）未纳入治理。
   - **Affected Scope**: 全项目 63 个文件
-  - **Status**: ❌ 未解决 — 需要在后续迭代中逐步补充覆盖
+  - **Status**: ✅ 已解决 — 治理边界定义明确排除辅助文件，GOV-TASK-001~005 已实施
 
 - **Reflect ID**: EVO-REF-005
   - **Violation Principle**: 3 (彻底根因修复验证)
@@ -52,77 +52,77 @@
   - **Diagnosis**: claims 时间戳批量更新是打补丁式修复。修改 cli.py 后批量更新 19 个旧 claims 时间戳，而非验证 claim 有效性。
   - **Root Cause**: VT 的 claim 时间戳机制与文件修改脱节。文件被修改后，引用它的 claim 应该自动标记为"需要重新验证"，而非依赖手动更新时间戳。
   - **Affected Scope**: .vibetracing/agent_claims.json
-  - **Status**: ❌ 未解决 — 需要设计 claim 自动失效机制
+  - **Status**: ✅ 已解决 — 第一层（per-claim 哈希）+ 第二层（引用文件哈希 + 自动失效检测）均已实现。CLAIM-TASK-001~006 已实施。
 
 - **Reflect ID**: EVO-REF-007
   - **Violation Principle**: 4 (计算与逻辑冗余)
   - **Diagnosis**: D2 单次加载优化修改了 5 个文件，收益不确定（文件 I/O 非瓶颈），成本很高（白名单更新+变更日志）。
   - **Root Cause**: AC-VT-009-12 的"单次加载"要求可能过度工程。在 VT 的使用场景中，文件读取次数不是性能瓶颈。
   - **Affected Scope**: src/vibe_tracing/raw_input_loader.py, src/vibe_tracing/cli.py, src/vibe_tracing/architecture_change_proposal.py, src/vibe_tracing/architecture_compliance_checker.py, src/vibe_tracing/dashboard_renderer.py
-  - **Status**: ❌ 未解决 — 需要评估是否回滚 D2 的代码修改
+  - **Status**: ✅ 已解决 — EVO-TASK-016 评估结论：KEEP（满足 AC-VT-009-12，代码复杂度可接受）
 
 - **Reflect ID**: EVO-REF-008
   - **Violation Principle**: 4 (计算与逻辑冗余)
   - **Diagnosis**: 行动清单的内联上下文可能冗余。Agent 可以自己读取 PRD/代码/测试文件，VT 做内联增加了 vt analyze 的运行时间。
   - **Root Cause**: 未区分"能力弱的 Agent"（需要内联）和"能力强的 Agent"（可以自己读取）。
   - **Affected Scope**: src/vibe_tracing/cli.py (_format_agent_actions, _get_ac_description, _get_related_code)
-  - **Status**: ❌ 未解决 — 需要评估内联上下文的实际价值
+  - **Status**: ✅ 已解决 — EVO-TASK-010 评估结论：SIMPLIFY（移除 _get_related_code 的文件读取，保留其他 4 个函数）
 
 - **Reflect ID**: EVO-REF-009
   - **Violation Principle**: 5 (凭证真实性)
   - **Diagnosis**: 决策平台功能缺乏端到端测试。Dashboard JavaScript 逻辑（extractPendingDecisions、submitDecision）和 Decision API 完全没有测试。
   - **Root Cause**: 测试策略偏向核心逻辑（checker、validator），忽略了用户体验（dashboard、action list）。
   - **Affected Scope**: src/vibe_tracing/templates/dashboard.template.html, decision_server.py
-  - **Status**: ❌ 未解决 — 需要补充决策平台测试
+  - **Status**: ✅ 已解决 — EVO-TASK-013 新增 26 个测试（8 API + 18 Dashboard）
 
 - **Reflect ID**: EVO-REF-010
   - **Violation Principle**: 5 (凭证真实性)
   - **Diagnosis**: 11 个 AC 覆盖率缺口（AC-VT-009-03/04/08/09/10/11/13/14/15/16/17）阻断门禁。
   - **Root Cause**: VT 的 AC 体系定义了大量验收标准，但测试覆盖跟不上。部分 AC 的实现分散在多个文件中，难以用单一测试覆盖。
   - **Affected Scope**: tests/test_*.py
-  - **Status**: ❌ 未解决 — 需要逐个 AC 补充测试
+  - **Status**: ✅ 已解决 — EVO-TASK-008 新增 26 个测试覆盖 11 个 AC-VT-009-* 缺口，AC-VT-009-07 由 FIX-TASK-007 补充。测试证据持久化（FIX-TASK-006）解决了缺口反复出现的问题。
 
 - **Reflect ID**: EVO-REF-011
   - **Violation Principle**: 6 (代码认知复杂度)
   - **Diagnosis**: `_format_agent_actions` 接收 9 个参数，内部有 5 个 action 来源分支。认知复杂度高。
   - **Root Cause**: 函数承担了太多职责——gap 检测、risk 检测、violation 检测、gate_reason fallback、渲染。应该拆分。
   - **Affected Scope**: src/vibe_tracing/cli.py (_format_agent_actions)
-  - **Status**: ❌ 未解决 — 需要拆分为独立函数
+  - **Status**: ✅ 已解决 — EVO-TASK-009 拆分为 5 个独立函数（每个 < 50 行）+ 18 行编排器
 
 - **Reflect ID**: EVO-REF-012
   - **Violation Principle**: 7 (豁免与绕过机制)
   - **Diagnosis**: 架构约束白名单扩展可能是"为了绕过门禁而修改约束"。MOD-VT-001 和 MOD-VT-005 的白名单扩展是否反映了真实架构需求？
   - **Root Cause**: VT 的门禁不区分"架构违规"和"架构演进"。Agent 倾向于"修改约束来绕过门禁"。
   - **Affected Scope**: docs/architecture_constraints.json
-  - **Status**: ❌ 未解决 — 需要设计架构演进的显式机制
+  - **Status**: ✅ 已解决 — EVO-TASK-017 评估结论：GATE-VT-014 已覆盖架构变更治理场景
 
 - **Reflect ID**: EVO-REF-013
   - **Violation Principle**: 7 (豁免与绕过机制)
   - **Diagnosis**: --no-verify 的多次讨论说明 VT 门禁对当前开发节奏造成显著摩擦。
   - **Root Cause**: VT 的完整分析模式在 pre-commit 阶段暴露了所有预存债务，导致每次提交都被阻断。开发阶段需要区分"当前变更的问题"和"代码库积累的问题"。
   - **Affected Scope**: .git/hooks/pre-commit
-  - **Status**: ❌ 未解决 — 需要设计"当前变更 vs 预存债务"的分离机制
+  - **Status**: ✅ 已解决 — EVO-TASK-012 实现 `_is_current()` + `directly_staged_items` 分离机制
 
 - **Reflect ID**: EVO-REF-014
   - **Violation Principle**: 8 (残留与死代码清理)
   - **Diagnosis**: dashboard 的 submitDecision 本地回退是半成品——标记"已决策（本地）"但没有持久化，刷新页面后丢失。
   - **Root Cause**: 交互功能分两步实现（先展示后交互），但第二步的回退逻辑不完整。
   - **Affected Scope**: src/vibe_tracing/templates/dashboard.template.html
-  - **Status**: ❌ 未解决 — 需要完善本地回退的持久化
+  - **Status**: ✅ 已解决 — EVO-TASK-014 实现 localStorage 持久化 + applyLocalDecisions 恢复
 
 - **Reflect ID**: EVO-REF-015
   - **Violation Principle**: 8 (残留与死代码清理)
   - **Diagnosis**: Decision API 的 /api/pending 端点是占位符，返回空数据。
   - **Root Cause**: 实现时只完成了 GET/POST /api/decisions，/api/pending 留为 TODO。
   - **Affected Scope**: decision_server.py
-  - **Status**: ❌ 未解决 — 需要实现或移除
+  - **Status**: ✅ 已解决 — EVO-TASK-015 实现 /api/pending 端点（从 traceability_report.json 提取待决策项）
 
 - **Reflect ID**: EVO-REF-016
   - **Violation Principle**: 6 (代码认知复杂度)
   - **Diagnosis**: VT 输出的信息密度问题需要重新审视。初始设计中 level1（Agent 视图）被定义为"精简摘要"，但这是从"当前 Agent 足够智能且有完整对话上下文"的角度出发的错误假设。
   - **Root Cause**: 一个没有对话上下文的 subagent 需要的是"技术精确的自包含信息"，而非"精简到没有指引的摘要"。精简的信息会迫使 subagent 花大量时间重新读取 PRD、代码、测试来理解上下文——这正是 Agent 行动清单要解决的问题。三个级别的差异应该是**语言风格**（技术语言 vs 业务语言 vs 审计格式），而非**信息量**。
   - **Affected Scope**: src/vibe_tracing/templates/field_hints.json, src/vibe_tracing/cli.py (_format_agent_actions)
-  - **Status**: ❌ 未解决 — 需要在 EVO-TASK-018 中实现三级 verbosity 架构，level1 保持信息完整性但使用技术语言
+  - **Status**: ✅ 已解决 — EVO-TASK-018a+018b 实现 72 条三级 hints，EVO-TASK-009+019+021+022 完成消费者迁移
 
 ---
 

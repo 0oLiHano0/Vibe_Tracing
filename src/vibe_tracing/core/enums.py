@@ -17,6 +17,7 @@ class CoverageStatus(str, Enum):
     COMPLIANT = "compliant"
     VIOLATED = "violated"
     SKIPPED = "skipped"
+    NEEDS_REVERIFICATION = "needs_reverification"
 
 
 class Severity(str, Enum):

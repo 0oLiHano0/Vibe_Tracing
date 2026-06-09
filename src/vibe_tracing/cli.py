@@ -7,6 +7,7 @@ and output the evidence index, traceability report, and run metadata.
 """
 
 import argparse
+import fnmatch
 import hashlib
 import json
 import subprocess
@@ -15,6 +16,7 @@ from dataclasses import asdict
 from pathlib import Path
 import importlib.resources as pkg_resources
 
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from vibe_tracing import __version__
@@ -1586,6 +1588,57 @@ def _check_staged_extensions(project_root: Path, constraints: Optional[dict]) ->
         )
 
 
+def _load_governance_boundary(
+    project_root: Path, constraints_data: Optional[dict] = None,
+) -> dict:
+    """Load governance_boundary from already-loaded constraints data.
+
+    If *constraints_data* is provided (the parsed dict from UnifiedContext),
+    the file is NOT re-read from disk.
+    """
+    if constraints_data is not None:
+        return constraints_data.get("governance_boundary", {"included_patterns": [], "excluded_patterns": []})
+    constraints_path = project_root / "docs" / "architecture_constraints.json"
+    if not constraints_path.exists():
+        return {"included_patterns": [], "excluded_patterns": []}
+    try:
+        data = json.loads(constraints_path.read_text(encoding="utf-8"))
+        return data.get("governance_boundary", {"included_patterns": [], "excluded_patterns": []})
+    except Exception:
+        return {"included_patterns": [], "excluded_patterns": []}
+
+
+def _is_in_governance_boundary(file_path: str, boundary: dict) -> bool:
+    """Check if a file is within the governance boundary.
+
+    Files matching any excluded_pattern are considered outside the boundary.
+    """
+    excluded = boundary.get("excluded_patterns", [])
+    for pattern in excluded:
+        if fnmatch.fnmatch(file_path, pattern) or fnmatch.fnmatch(file_path, f"*/{pattern}"):
+            return False
+    return True
+
+
+def _partition_by_governance_boundary(
+    affected_files: List[str], project_root: Path,
+    constraints_data: Optional[dict] = None,
+) -> Tuple[Set[str], Set[str]]:
+    """Partition files into in-scope and out-of-scope sets.
+
+    Returns (in_scope, out_of_scope).
+    """
+    boundary = _load_governance_boundary(project_root, constraints_data=constraints_data)
+    in_scope: Set[str] = set()
+    out_of_scope: Set[str] = set()
+    for f in affected_files:
+        if _is_in_governance_boundary(f, boundary):
+            in_scope.add(f)
+        else:
+            out_of_scope.add(f)
+    return in_scope, out_of_scope
+
+
 def _load_human_decisions() -> dict:
     """读取人类决策日志"""
     decisions_path = Path(".vibetracing/human_decisions.json")
@@ -1661,6 +1714,49 @@ def _get_directly_modified_claims(
         elif old_hash != new_hash:
             modified.add(claim_id)  # content changed
     return modified
+
+
+def _file_sha256(path: Path) -> Optional[str]:
+    """Compute SHA-256 hex digest of a file."""
+    try:
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except (OSError, IOError):
+        return None
+
+
+def _save_claim_fingerprints(claims_list, project_root: Path):
+    """Save SHA-256 fingerprints of all files referenced by claims."""
+    fingerprints = {}
+    for claim in claims_list:
+        cid = claim.claim_id if hasattr(claim, 'claim_id') else claim.get('claim_id')
+        refs = set()
+        for ref in (getattr(claim, 'code_refs', None) or []) + \
+                   (getattr(claim, 'test_refs', None) or []) + \
+                   (getattr(claim, 'evidence_refs', None) or []):
+            path = ref.split("#")[0]
+            if path:
+                refs.add(path)
+
+        file_hashes = {}
+        for ref_path in refs:
+            full_path = project_root / ref_path
+            if full_path.exists():
+                h = _file_sha256(full_path)
+                if h:
+                    file_hashes[ref_path] = h
+
+        if file_hashes:
+            fingerprints[cid] = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "fingerprints": file_hashes,
+            }
+
+    fp_path = project_root / ".vibetracing" / "claim_fingerprints.json"
+    fp_path.write_text(json.dumps(fingerprints, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def _evaluate_and_output(
@@ -1949,19 +2045,31 @@ def _evaluate_and_output(
             if path and path not in affected_files:
                 affected_files.append(path)
 
+    # Partition affected files by governance boundary
+    in_scope_files, out_of_scope_files = _partition_by_governance_boundary(
+        affected_files, project_root, constraints_data=ctx.constraints,
+    )
+
     # Extract raw task_list dict from manifest
     records_dict_all = {r.file_key: r for r in manifest.inputs_used}
     task_list_record = records_dict_all.get("task_list")
     task_list_raw = task_list_record.content if task_list_record and task_list_record.status == "ok" else {"tasks": []}
 
+    # Only pass in-scope files to reflection prompts so that out-of-scope
+    # files do not trigger coverage warnings.
     print(render_reflection_prompts(
         gate_decision=gate_decision,
         gaps=merged_gaps,
         risks=final_risks,
         task_list=task_list_raw,
-        affected_files=affected_files,
+        affected_files=sorted(in_scope_files),
         compliance_result=compliance_res,
+        governance_in_scope_count=len(in_scope_files),
+        governance_out_of_scope_count=len(out_of_scope_files),
     ))
+
+    # Save claim fingerprints for tamper detection
+    _save_claim_fingerprints(claims_list, project_root)
 
     return exit_code
 

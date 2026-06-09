@@ -2,28 +2,28 @@
   {
     "ticket_id": "AUDIT-VT-001",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:34b61fe40f2139b2a7e31594d4eea046258e977865f1f1c3bb360846b9ee05ef",
+    "file_hash": "sha256:9208b78b7fad80be3ff1cda524ae0ba41cae84be638dd0dae224f43b72cc08cd",
     "task_id": "TASK-VT-058",
     "ac_ids": [
       "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: 移除 directly_staged_items 中的 affected_task_ids/acs/reqs，仅保留 content_hash 变化的 claims",
+    "audit_reason": "cli.py: 新增 _load_governance_boundary、_is_in_governance_boundary、_partition_by_governance_boundary 函数，治理边界过滤",
     "created_at": "2026-06-08T01:38:30.163828Z",
-    "updated_at": "2026-06-09T04:19:35.558990Z"
+    "updated_at": "2026-06-09T10:49:39.970112Z"
   },
   {
     "ticket_id": "AUDIT-VT-002",
     "file_path": "src/vibe_tracing/ghost_code_reconciler.py",
-    "file_hash": "sha256:51a683f87f8559d4175cca657a5c004d6ebc409c326e246033ddd8618735ab2d",
+    "file_hash": "sha256:6a7afd367e650bcb71045c161c55f8c1ec7b450caa9ef1484b8e3edcba4ba57a",
     "task_id": "TASK-VT-056",
     "ac_ids": [
       "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "ghost_code_reconciler.py 反向覆盖检查优化：status=done 的历史任务不再产生噪音 WARNING，仅对活跃任务（todo/in_progress）检查 task 是否同步更新。新增 _get_task_statuses 辅助方法。",
+    "audit_reason": "ghost_code_reconciler.py: 新增治理边界过滤，excluded_patterns 匹配的文件不触发幽灵代码警告",
     "created_at": "2026-06-08T01:38:30.163828Z",
-    "updated_at": "2026-06-08T03:17:35.492358Z"
+    "updated_at": "2026-06-09T10:49:39.974856Z"
   },
   {
     "ticket_id": "AUDIT-VT-003",
@@ -96,16 +96,16 @@
   {
     "ticket_id": "AUDIT-VT-008",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:34b61fe40f2139b2a7e31594d4eea046258e977865f1f1c3bb360846b9ee05ef",
+    "file_hash": "sha256:9208b78b7fad80be3ff1cda524ae0ba41cae84be638dd0dae224f43b72cc08cd",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: directly_staged_items 构建逻辑精简，避免旧 claims 通过 task 间接关联被误判为当前问题",
+    "audit_reason": "cli.py: vt analyze 输出治理范围统计（in-scope vs out-of-scope 文件计数）",
     "created_at": "2026-06-08T03:06:28.667333Z",
-    "updated_at": "2026-06-09T04:19:35.564683Z"
+    "updated_at": "2026-06-09T10:49:39.980145Z"
   },
   {
     "ticket_id": "AUDIT-VT-009",
@@ -124,16 +124,16 @@
   {
     "ticket_id": "AUDIT-VT-010",
     "file_path": "src/vibe_tracing/ghost_code_reconciler.py",
-    "file_hash": "sha256:51a683f87f8559d4175cca657a5c004d6ebc409c326e246033ddd8618735ab2d",
+    "file_hash": "sha256:6a7afd367e650bcb71045c161c55f8c1ec7b450caa9ef1484b8e3edcba4ba57a",
     "task_id": "TASK-VT-049",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "ghost_code_reconciler.py 反向覆盖检查优化：status=done 的历史任务不再产生噪音 WARNING，仅对活跃任务（todo/in_progress）检查 task 是否同步更新。新增 _get_task_statuses 辅助方法。",
+    "audit_reason": "ghost_code_reconciler.py: reconcile() 方法在幽灵代码检查前增加治理边界过滤步骤",
     "created_at": "2026-06-08T03:17:20.682587Z",
-    "updated_at": "2026-06-08T03:17:35.492358Z"
+    "updated_at": "2026-06-09T10:49:39.984878Z"
   },
   {
     "ticket_id": "AUDIT-VT-011",
@@ -152,16 +152,16 @@
   {
     "ticket_id": "AUDIT-VT-012",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:34b61fe40f2139b2a7e31594d4eea046258e977865f1f1c3bb360846b9ee05ef",
+    "file_hash": "sha256:9208b78b7fad80be3ff1cda524ae0ba41cae84be638dd0dae224f43b72cc08cd",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: directly_staged_items 仅包含 per-claim 哈希比较检测到的实际修改 claims",
+    "audit_reason": "cli.py: _save_claim_fingerprints 函数保存所有 claim 引用文件的 SHA-256 指纹",
     "created_at": "2026-06-08T09:54:49.178453Z",
-    "updated_at": "2026-06-09T04:19:35.576813Z"
+    "updated_at": "2026-06-09T10:49:39.989953Z"
   },
   {
     "ticket_id": "AUDIT-VT-013",
@@ -266,30 +266,30 @@
   {
     "ticket_id": "AUDIT-VT-020",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:34b61fe40f2139b2a7e31594d4eea046258e977865f1f1c3bb360846b9ee05ef",
+    "file_hash": "sha256:9208b78b7fad80be3ff1cda524ae0ba41cae84be638dd0dae224f43b72cc08cd",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: directly_staged_claims 使用 _get_directly_modified_claims 精确检测",
+    "audit_reason": "cli.py: _file_sha256 工具函数计算文件 SHA-256 哈希，_save_claim_fingerprints 调用它",
     "created_at": "2026-06-08T12:48:55.663738Z",
-    "updated_at": "2026-06-09T04:19:35.588950Z"
+    "updated_at": "2026-06-09T10:49:39.995102Z"
   },
   {
     "ticket_id": "AUDIT-VT-021",
     "file_path": "src/vibe_tracing/core/enums.py",
-    "file_hash": "sha256:bb5964f49dc806330efd9647016865d03a07251ac34f0eb08176c22c1c51e113",
+    "file_hash": "sha256:14ac7c8405dacf16cf0bb71ae1b6c077c152edc38916ca065dfa0affc7d077c5",
     "task_id": "TASK-VT-064",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "enums.py: 新增 CoverageStatus.SKIPPED 和 ErrorCode.TOOL_NO_TESTS_COLLECTED/TOOL_USAGE_ERROR 枚举值",
+    "audit_reason": "enums.py: CoverageStatus 新增 NEEDS_REVERIFICATION 枚举值",
     "created_at": "2026-06-08T12:48:55.668611Z",
-    "updated_at": "2026-06-08T12:48:55.668611Z"
+    "updated_at": "2026-06-09T10:49:39.999924Z"
   },
   {
     "ticket_id": "AUDIT-VT-022",
@@ -394,16 +394,16 @@
   {
     "ticket_id": "AUDIT-VT-029",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:34b61fe40f2139b2a7e31594d4eea046258e977865f1f1c3bb360846b9ee05ef",
+    "file_hash": "sha256:9208b78b7fad80be3ff1cda524ae0ba41cae84be638dd0dae224f43b72cc08cd",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: directly_staged_items 不再包含 affected_task_ids 防止旧 claims 误判",
+    "audit_reason": "cli.py: _evaluate_and_output 末尾调用 _save_claim_fingerprints 保存指纹",
     "created_at": "2026-06-08T15:39:49.951721Z",
-    "updated_at": "2026-06-09T04:19:35.601645Z"
+    "updated_at": "2026-06-09T10:49:40.004901Z"
   },
   {
     "ticket_id": "AUDIT-VT-030",
@@ -478,16 +478,16 @@
   {
     "ticket_id": "AUDIT-VT-035",
     "file_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
-    "file_hash": "sha256:e360098c67b9c05e11a4392fd7cd4618616deb4036df5afb831c0c7aa32b9349",
+    "file_hash": "sha256:0209f075ff057bcea25d819725567e44e084262db97dc65180d7c93991e69459",
     "task_id": "TASK-VT-033",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-002-04"
     ],
     "status": "passed",
-    "audit_reason": "claim_evidence_analyzer.py: Claim 自动失效设计 + _file_sha256 工具函数",
+    "audit_reason": "claim_evidence_analyzer.py: 新增 _check_invalidation 方法检测引用文件 hash 变化",
     "created_at": "2026-06-08T15:39:49.981018Z",
-    "updated_at": "2026-06-08T15:39:49.981018Z"
+    "updated_at": "2026-06-09T10:49:40.009886Z"
   },
   {
     "ticket_id": "AUDIT-VT-036",
@@ -619,16 +619,16 @@
   {
     "ticket_id": "AUDIT-VT-045",
     "file_path": "tests/test_ids_and_enums.py",
-    "file_hash": "sha256:3e7ee1c9c428e49ea7b2998ff0d2a4166a6c4c30da59d2f6d2dd911fbb823b16",
+    "file_hash": "sha256:f79e9e705aefafd61acc54ddd7aae2f0ec6e60dade7d0d4de52c1ec107129c8a",
     "task_id": "TASK-VT-064",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "test_ids_and_enums.py: skipped 枚举值 + ErrorCode 更新",
+    "audit_reason": "test_ids_and_enums.py: 更新 CoverageStatus 枚举测试包含 needs_reverification",
     "created_at": "2026-06-08T15:39:50.029353Z",
-    "updated_at": "2026-06-08T15:39:50.029353Z"
+    "updated_at": "2026-06-09T10:49:40.015343Z"
   },
   {
     "ticket_id": "AUDIT-VT-046",
@@ -706,16 +706,16 @@
   {
     "ticket_id": "AUDIT-VT-051",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:34b61fe40f2139b2a7e31594d4eea046258e977865f1f1c3bb360846b9ee05ef",
+    "file_hash": "sha256:9208b78b7fad80be3ff1cda524ae0ba41cae84be638dd0dae224f43b72cc08cd",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: per-claim 哈希机制完整实现，精确区分直接修改和间接影响的 claims",
+    "audit_reason": "cli.py: 治理边界统计集成到 Agent 行动清单和反思提示输出",
     "created_at": "2026-06-09T00:37:32.697371Z",
-    "updated_at": "2026-06-09T04:19:35.618881Z"
+    "updated_at": "2026-06-09T10:49:40.020646Z"
   },
   {
     "ticket_id": "AUDIT-VT-052",
@@ -763,16 +763,16 @@
   {
     "ticket_id": "AUDIT-VT-055",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:34b61fe40f2139b2a7e31594d4eea046258e977865f1f1c3bb360846b9ee05ef",
+    "file_hash": "sha256:9208b78b7fad80be3ff1cda524ae0ba41cae84be638dd0dae224f43b72cc08cd",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: _compute_claim_hash 和 _get_directly_modified_claims 函数实现 per-claim 哈希比较",
+    "audit_reason": "cli.py: _load_governance_boundary 支持 constraints_data 参数避免重复读取文件",
     "created_at": "2026-06-09T04:18:12.766632Z",
-    "updated_at": "2026-06-09T04:19:35.635240Z"
+    "updated_at": "2026-06-09T10:49:40.025781Z"
   },
   {
     "ticket_id": "AUDIT-VT-056",
@@ -806,16 +806,16 @@
   {
     "ticket_id": "AUDIT-VT-058",
     "file_path": "src/vibe_tracing/cli.py",
-    "file_hash": "sha256:34b61fe40f2139b2a7e31594d4eea046258e977865f1f1c3bb360846b9ee05ef",
+    "file_hash": "sha256:9208b78b7fad80be3ff1cda524ae0ba41cae84be638dd0dae224f43b72cc08cd",
     "task_id": "TASK-VT-035",
     "audit_level": "standard",
     "ac_ids": [
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: directly_staged_items 仅包含 content_hash 变化的 claims，移除 task/AC/req 的间接关联",
+    "audit_reason": "cli.py: 治理边界统计替代原有的文件覆盖缺口警告",
     "created_at": "2026-06-09T04:19:35.539957Z",
-    "updated_at": "2026-06-09T04:19:35.539957Z"
+    "updated_at": "2026-06-09T10:49:40.031057Z"
   },
   {
     "ticket_id": "AUDIT-VT-059",
@@ -858,5 +858,89 @@
     "audit_reason": "test_evidence_index_builder.py: 新增 4 个测试覆盖证据持久化的 carry-over 和 staged 过滤逻辑",
     "created_at": "2026-06-09T05:55:29.907485Z",
     "updated_at": "2026-06-09T05:55:29.907485Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-062",
+    "file_path": "src/vibe_tracing/cli.py",
+    "file_hash": "sha256:9208b78b7fad80be3ff1cda524ae0ba41cae84be638dd0dae224f43b72cc08cd",
+    "task_id": "TASK-VT-035",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-07"
+    ],
+    "status": "passed",
+    "audit_reason": "cli.py: 治理边界配置加载、文件分区、治理范围统计输出",
+    "created_at": "2026-06-09T10:49:39.938004Z",
+    "updated_at": "2026-06-09T10:49:39.938004Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-063",
+    "file_path": "src/vibe_tracing/core/enums.py",
+    "file_hash": "sha256:14ac7c8405dacf16cf0bb71ae1b6c077c152edc38916ca065dfa0affc7d077c5",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "enums.py: NEEDS_REVERIFICATION 值用于标记引用文件变化的 claim",
+    "created_at": "2026-06-09T10:49:39.943539Z",
+    "updated_at": "2026-06-09T10:49:39.943539Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-064",
+    "file_path": "src/vibe_tracing/ghost_code_reconciler.py",
+    "file_hash": "sha256:6a7afd367e650bcb71045c161c55f8c1ec7b450caa9ef1484b8e3edcba4ba57a",
+    "task_id": "TASK-VT-049",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-17"
+    ],
+    "status": "passed",
+    "audit_reason": "ghost_code_reconciler.py: fnmatch 模式匹配过滤治理边界外文件",
+    "created_at": "2026-06-09T10:49:39.948989Z",
+    "updated_at": "2026-06-09T10:49:39.948989Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-065",
+    "file_path": "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+    "file_hash": "sha256:0209f075ff057bcea25d819725567e44e084262db97dc65180d7c93991e69459",
+    "task_id": "TASK-VT-033",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-002-04"
+    ],
+    "status": "passed",
+    "audit_reason": "claim_evidence_analyzer.py: 加载 claim_fingerprints.json 并比较文件 hash 检测失效",
+    "created_at": "2026-06-09T10:49:39.953948Z",
+    "updated_at": "2026-06-09T10:49:39.953948Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-066",
+    "file_path": "tests/test_claim_evidence_analyzer.py",
+    "file_hash": "sha256:256b591e7ccd86f462e596900a998166620d28decb66b1f7e4f93214900231f6",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_claim_evidence_analyzer.py: 5 个测试覆盖文件 hash 变化/不变/删除/无指纹场景",
+    "created_at": "2026-06-09T10:49:39.958831Z",
+    "updated_at": "2026-06-09T10:49:39.958831Z"
+  },
+  {
+    "ticket_id": "AUDIT-VT-067",
+    "file_path": "tests/test_ids_and_enums.py",
+    "file_hash": "sha256:f79e9e705aefafd61acc54ddd7aae2f0ec6e60dade7d0d4de52c1ec107129c8a",
+    "task_id": "TASK-VT-064",
+    "audit_level": "standard",
+    "ac_ids": [
+      "AC-VT-009-12"
+    ],
+    "status": "passed",
+    "audit_reason": "test_ids_and_enums.py: CoverageStatus 枚举计数从 9 更新为 10",
+    "created_at": "2026-06-09T10:49:39.963697Z",
+    "updated_at": "2026-06-09T10:49:39.963697Z"
   }
 ]

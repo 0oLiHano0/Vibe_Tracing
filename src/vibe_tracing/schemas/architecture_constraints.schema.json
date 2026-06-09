@@ -1151,6 +1151,31 @@
         }
       }
     },
+    "governance_boundary": {
+      "type": "object",
+      "description": "VT governance scope definition. Files within included patterns are governed by the claim/task/AC system; excluded files are governed by standard software engineering practices.",
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "included_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_note": {
+          "type": "string"
+        }
+      }
+    },
     "test_constraints": {
       "type": "array",
       "items": {

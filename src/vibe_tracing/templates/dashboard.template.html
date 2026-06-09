@@ -679,6 +679,12 @@
             border-color: rgba(245, 158, 11, 0.3);
         }
 
+        .badge-invalidated {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
         .badge-status-skipped {
             background-color: rgba(100, 116, 139, 0.15);
             color: #94a3b8;
@@ -1066,6 +1072,11 @@
                     <div class="stat-label">收集证据 / Collected Evidences</div>
                     <div class="stat-value" id="stat-evidence-total">0</div>
                     <div class="stat-meta" id="stat-evidence-breakdown">-</div>
+                </div>
+                <div class="stat-card" style="--accent-color: var(--status-pass);">
+                    <div class="stat-label">治理覆盖 / Governance Coverage</div>
+                    <div class="stat-value" id="stat-governance-coverage">-</div>
+                    <div class="stat-meta" id="stat-governance-breakdown">-</div>
                 </div>
             </div>
 
@@ -1582,8 +1593,27 @@
             else if (e.source_type === 'tool') evTool++;
             else if (e.source_type === 'code') evCode++;
         });
-        document.getElementById('stat-evidence-breakdown').textContent = 
+        document.getElementById('stat-evidence-breakdown').textContent =
             `测试: ${evTest} | 任务: ${evTask} | 声称: ${evClaim} | 工具: ${evTool}`;
+
+        // 5. Governance coverage stat (in-scope vs out-of-scope)
+        (function() {
+            const govMeta = report.governance_boundary || report.file_scope || {};
+            const inScope = govMeta.in_scope_count || govMeta.governed_count || 0;
+            const outScope = govMeta.out_of_scope_count || govMeta.ungoverned_count || 0;
+            const total = inScope + outScope;
+            const pct = total > 0 ? Math.round((inScope / total) * 100) : 0;
+
+            if (total > 0) {
+                document.getElementById('stat-governance-coverage').textContent = `${inScope}/${total} (${pct}%)`;
+                document.getElementById('stat-governance-breakdown').innerHTML =
+                    `治理覆盖：${inScope}/${total} (${pct}%)<br>` +
+                    `<span style="color:var(--text-muted)">范围外：${outScope} 个辅助文件（不纳入治理）</span>`;
+            } else {
+                document.getElementById('stat-governance-coverage').textContent = '-';
+                document.getElementById('stat-governance-breakdown').textContent = '无范围数据 / No scope data';
+            }
+        })();
 
         // TAB SWITCHER
         function switchTab(tabName) {
@@ -2226,6 +2256,30 @@
                 }
             }
 
+            // E. Invalidated claims (from claim_evidence_analyzer)
+            if (reportData.risks) {
+                for (const risk of reportData.risks) {
+                    if (risk.risk_category === "claim_invalidated_by_file_change") {
+                        decisions.push({
+                            id: generateDecisionId("invalidated_claim", risk.claim_id),
+                            category: "invalidated_claim",
+                            categoryLabel: "Claim 证据已变化",
+                            icon: "warning",
+                            title: `Claim ${risk.claim_id} 引用的文件已变化`,
+                            status: "需要重新验证",
+                            question: "Claim 证据可能已变化。重新验证还是接受风险？",
+                            actions: ["重新验证", "接受风险"],
+                            evidenceChain: [
+                                { label: "Claim", value: risk.claim_id },
+                                { label: "变化文件", value: (risk.changed_files || []).join(", ") },
+                                { label: "建议", value: risk.suggested_action || "重新运行 vt analyze 验证" },
+                            ],
+                            targetId: risk.claim_id,
+                        });
+                    }
+                }
+            }
+
             return decisions;
         }
 
@@ -2364,6 +2418,8 @@
                 '本次处理': 'request_action',
                 '继续延后': 'defer',
                 '确认完成': 'accept_gap',
+                '重新验证': 'request_action',
+                '接受风险': 'accept_gap',
             };
             return map[actionLabel] || actionLabel;
         }

@@ -829,3 +829,171 @@ def test_claim_no_test_refs_skips_check(temp_project_dir) -> None:
     assert len(covers_risks) == 0
     assert res["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
 
+
+# ============================================================================
+# Tests for Claim Invalidation Detection (CLAIM-TASK-005)
+# ============================================================================
+
+
+class TestClaimInvalidation:
+    """Tests for claim auto-invalidation by file change detection."""
+
+    def test_file_hash_change_triggers_invalidation(self, temp_project_dir) -> None:
+        """When a referenced file's hash changes, claim is marked needs_reverification."""
+        import hashlib
+
+        # Create a code file
+        code_file = temp_project_dir / "app.py"
+        original_content = "print('original')"
+        code_file.write_text(original_content)
+        original_hash = hashlib.sha256(original_content.encode()).hexdigest()
+
+        claim = Claim(
+            claim_id="CLAIM-VT-001",
+            related_task="TASK-VT-001",
+            claimed_status=CoverageStatus.COVERED.value,
+            evidence_refs=["EVIDENCE-VT-002"],
+            timestamp="2026-05-22T10:00:00Z",
+            code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+        )
+
+        # Stored fingerprints reflect the original content
+        stored_fingerprints = {
+            "CLAIM-VT-001": {
+                "timestamp": "2026-05-22T10:00:00Z",
+                "fingerprints": {
+                    str(code_file.relative_to(temp_project_dir.parent.parent)): original_hash,
+                },
+            }
+        }
+
+        # Change the file content after fingerprints were stored
+        code_file.write_text("print('modified content')")
+
+        analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+        result = analyzer._check_invalidation(claim, stored_fingerprints)
+
+        assert result is not None
+        assert result["claim_id"] == "CLAIM-VT-001"
+        assert result["status"] == CoverageStatus.NEEDS_REVERIFICATION.value
+        assert any(
+            "changed" in f.get("reason", "").lower() or "hash" in f.get("reason", "").lower()
+            for f in result.get("files", [result])
+        )
+
+    def test_file_hash_unchanged_no_invalidation(self, temp_project_dir) -> None:
+        """When referenced files haven't changed, no invalidation."""
+        import hashlib
+
+        code_file = temp_project_dir / "app.py"
+        content = "print('stable')"
+        code_file.write_text(content)
+        file_hash = hashlib.sha256(content.encode()).hexdigest()
+
+        claim = Claim(
+            claim_id="CLAIM-VT-001",
+            related_task="TASK-VT-001",
+            claimed_status=CoverageStatus.COVERED.value,
+            evidence_refs=["EVIDENCE-VT-002"],
+            timestamp="2026-05-22T10:00:00Z",
+            code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+        )
+
+        stored_fingerprints = {
+            "CLAIM-VT-001": {
+                "timestamp": "2026-05-22T10:00:00Z",
+                "fingerprints": {
+                    str(code_file.relative_to(temp_project_dir.parent.parent)): file_hash,
+                },
+            }
+        }
+
+        analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+        result = analyzer._check_invalidation(claim, stored_fingerprints)
+
+        assert result is None
+
+    def test_deleted_file_triggers_invalidation(self, temp_project_dir) -> None:
+        """When a referenced file is deleted, claim is invalidated."""
+        import hashlib
+
+        code_file = temp_project_dir / "app.py"
+        content = "print('will be deleted')"
+        code_file.write_text(content)
+        file_hash = hashlib.sha256(content.encode()).hexdigest()
+
+        claim = Claim(
+            claim_id="CLAIM-VT-001",
+            related_task="TASK-VT-001",
+            claimed_status=CoverageStatus.COVERED.value,
+            evidence_refs=["EVIDENCE-VT-002"],
+            timestamp="2026-05-22T10:00:00Z",
+            code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+        )
+
+        stored_fingerprints = {
+            "CLAIM-VT-001": {
+                "timestamp": "2026-05-22T10:00:00Z",
+                "fingerprints": {
+                    str(code_file.relative_to(temp_project_dir.parent.parent)): file_hash,
+                },
+            }
+        }
+
+        # Delete the file
+        code_file.unlink()
+
+        analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+        result = analyzer._check_invalidation(claim, stored_fingerprints)
+
+        assert result is not None
+        assert result["claim_id"] == "CLAIM-VT-001"
+        assert result["status"] == CoverageStatus.NEEDS_REVERIFICATION.value
+        # Should indicate the file was deleted
+        assert any(
+            "deleted" in f.get("reason", "").lower() or "missing" in f.get("reason", "").lower()
+            for f in result.get("files", [result])
+        )
+
+    def test_no_stored_fingerprints_skips_check(self, temp_project_dir) -> None:
+        """When no fingerprints exist for a claim, skip invalidation check."""
+        code_file = temp_project_dir / "app.py"
+        code_file.write_text("print('hello')")
+
+        claim = Claim(
+            claim_id="CLAIM-VT-001",
+            related_task="TASK-VT-001",
+            claimed_status=CoverageStatus.COVERED.value,
+            evidence_refs=["EVIDENCE-VT-002"],
+            timestamp="2026-05-22T10:00:00Z",
+            code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+        )
+
+        # Empty stored fingerprints -- no entry for this claim
+        stored_fingerprints: dict = {}
+
+        analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+        result = analyzer._check_invalidation(claim, stored_fingerprints)
+
+        assert result is None
+
+    def test_fingerprints_file_not_found_skips_check(self, temp_project_dir) -> None:
+        """When claim_fingerprints.json doesn't exist, skip check without errors."""
+        code_file = temp_project_dir / "app.py"
+        code_file.write_text("print('hello')")
+
+        claim = Claim(
+            claim_id="CLAIM-VT-001",
+            related_task="TASK-VT-001",
+            claimed_status=CoverageStatus.COVERED.value,
+            evidence_refs=["EVIDENCE-VT-002"],
+            timestamp="2026-05-22T10:00:00Z",
+            code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+        )
+
+        analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+        # Passing None as stored_fingerprints simulates the fingerprint file not existing
+        result = analyzer._check_invalidation(claim, None)
+
+        assert result is None
+

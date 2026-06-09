@@ -44,36 +44,44 @@
       }
     },
     "json": {
-      "extensions": [".json"],
-      "lint": null,
-      "type_check": null,
-      "test": null,
-      "security": null,
-      "coverage": null
+      "extensions": [
+        ".json"
+      ],
+      "lint": {},
+      "type_check": {},
+      "test": {},
+      "security": {},
+      "coverage": {}
     },
     "markdown": {
-      "extensions": [".md"],
-      "lint": null,
-      "type_check": null,
-      "test": null,
-      "security": null,
-      "coverage": null
+      "extensions": [
+        ".md"
+      ],
+      "lint": {},
+      "type_check": {},
+      "test": {},
+      "security": {},
+      "coverage": {}
     },
     "html": {
-      "extensions": [".html"],
-      "lint": null,
-      "type_check": null,
-      "test": null,
-      "security": null,
-      "coverage": null
+      "extensions": [
+        ".html"
+      ],
+      "lint": {},
+      "type_check": {},
+      "test": {},
+      "security": {},
+      "coverage": {}
     },
     "toml": {
-      "extensions": [".toml"],
-      "lint": null,
-      "type_check": null,
-      "test": null,
-      "security": null,
-      "coverage": null
+      "extensions": [
+        ".toml"
+      ],
+      "lint": {},
+      "type_check": {},
+      "test": {},
+      "security": {},
+      "coverage": {}
     }
   },
   "architecture_principles": [

@@ -125,13 +125,13 @@ source_paths = [p for p in source_paths if p in staged_files]
 
 ## 五、原子化任务
 
-- [ ] **Task ID**: FIX-TASK-006
+- [x] **Task ID**: FIX-TASK-006
   - **Action**: MODIFY
   - **Target File**: `src/vibe_tracing/evidence_index_builder.py`
   - **Instruction**: `build()` 方法加载已有的 `output/evidence_index.json`，对于未 staged 的测试文件保留其已有证据条目，对于 staged 的测试文件重新生成证据。
   - **AC**: 未 staged 的测试文件的覆盖证据在下一次运行中保留
 
-- [ ] **Task ID**: FIX-TASK-007
+- [x] **Task ID**: FIX-TASK-007
   - **Action**: MODIFY
   - **Target File**: `tests/test_ac_vt_009_coverage.py`
   - **Instruction**: 为 AC-VT-009-07 添加测试覆盖（当前遗漏）。

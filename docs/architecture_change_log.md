@@ -6,7 +6,7 @@
 
 ### language_tool_matrix 新增 json/markdown/html/toml
 * **变更规则**：`language_tool_matrix` 新增 `json`、`markdown`、`html`、`toml` 四个条目，每个条目声明对应的 `extensions`（`.json`、`.md`、`.html`、`.toml`）并将所有工具字段设为 `null`。
-* **变更原因**：当 `.json`、`.md`、`.html`、`.toml` 文件被 staged 时，VT 的 `_check_staged_extensions` 函数发出"发现未配置的代码文件类型"警告。通过在矩阵中显式声明这些非代码文件类型，VT 识别它们为已知类型，不再产生警告。这些文件不需要 lint/type_check/test/security/coverage 工具。
+* **变更原因**：当 `.json`、`.md`、`.html`、`.toml` 文件被 staged 时，VT 的 `_check_staged_extensions` 函数发出"发现未配置的代码文件类型"警告。通过在矩阵中显式声明这些非代码文件类型，VT 识别它们为已知类型，不再产生警告。工具字段使用空对象 `{}` 而非 `null`，以满足 schema 的 `type: "object"` 约束。
 * **影响范围**：
   - `docs/architecture_constraints.json`：`language_tool_matrix` 新增 4 个条目。
 

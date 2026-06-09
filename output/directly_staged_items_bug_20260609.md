@@ -150,28 +150,28 @@ directly_staged_claims = _get_directly_modified_claims(old_claims, new_claims)
 
 ## 六、原子化任务
 
-- [ ] **Task ID**: FIX-TASK-001
+- [x] **Task ID**: FIX-TASK-001
   - **Action**: MODIFY
   - **Target File**: `src/vibe_tracing/cli.py`
   - **Instruction**: 新增 `_compute_claim_hash(claim)` 和 `_get_directly_modified_claims(old_claims, new_claims)` 函数。在 `_evaluate_and_output()` 中，通过 `git show HEAD:.vibetracing/agent_claims.json` 获取旧版本 claims，与当前 claims 比较哈希，仅将哈希变化的 claims 加入 `directly_staged_claims`。替换第 1688-1692 行的构建逻辑。
   - **AC**: 当只有 CLAIM-VT-066 的 content_hash 变化时，`directly_staged_claims` 只包含 CLAIM-VT-066
   - **前置依赖**: 无
 
-- [ ] **Task ID**: FIX-TASK-002
+- [x] **Task ID**: FIX-TASK-002
   - **Action**: MODIFY
   - **Target File**: `.vibetracing/agent_claims.json`
   - **Instruction**: 批量为所有现有 claims 计算并填充 `content_hash` 字段。编写一次性迁移脚本，遍历所有 claims，调用 `_compute_claim_hash()` 写入结果。
   - **AC**: 所有 claims 都有 `content_hash` 字段，值为 16 字符十六进制字符串
   - **前置依赖**: FIX-TASK-001（需要 `_compute_claim_hash` 函数）
 
-- [ ] **Task ID**: FIX-TASK-003
+- [x] **Task ID**: FIX-TASK-003
   - **Action**: MODIFY
   - **Target File**: `src/vibe_tracing/claim_loader.py`
   - **Instruction**: 在 claim 加载时校验 `content_hash`。如果 claim 缺少 `content_hash`，自动计算并补写。如果 `content_hash` 与实际内容不匹配，重新计算并更新。
   - **AC**: 加载 claims 时自动修复缺失或不匹配的 content_hash
   - **前置依赖**: FIX-TASK-001
 
-- [ ] **Task ID**: FIX-TASK-004
+- [x] **Task ID**: FIX-TASK-004
   - **Action**: MODIFY
   - **Target File**: `tests/test_merge_gate_engine.py`
   - **Instruction**: 新增测试验证 per-claim 哈希的精确过滤：
@@ -182,7 +182,7 @@ directly_staged_claims = _get_directly_modified_claims(old_claims, new_claims)
   - **AC**: 4 个新测试全部通过
   - **前置依赖**: FIX-TASK-001
 
-- [ ] **Task ID**: FIX-TASK-005
+- [x] **Task ID**: FIX-TASK-005
   - **Action**: MODIFY
   - **Target File**: `src/vibe_tracing/cli.py`, `src/vibe_tracing/claim_loader.py`
   - **Instruction**: 在所有修改 claim 的代码路径中，调用 `_compute_claim_hash()` 更新 `content_hash`：

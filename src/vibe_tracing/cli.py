@@ -959,7 +959,8 @@ def _execute_tools(
 
     print(f"Executing validation tools for {total_paths} staged path(s)...")
     typed_paths = {"test": test_paths, "source": source_paths}
-    tool_evidence_candidates = engine.execute_all(typed_paths)
+    baseline_path = str(project_root / ".vibetracing" / "coverage_baseline.json")
+    tool_evidence_candidates = engine.execute_all(typed_paths, baseline_path=baseline_path)
 
     # Generate skipped evidence for non-code files
     for ref_path in non_code_refs:
@@ -1473,7 +1474,7 @@ def _collect_gate_reason_actions(
     return actions
 
 
-def _render_actions(actions: list) -> list:
+def _render_actions(actions: list, coverage_summary: Optional[dict] = None, project_root: Optional[Path] = None) -> list:
     """Render action dicts to text lines for Agent consumption."""
     lines: List[str] = []
     if not actions:
@@ -1521,13 +1522,34 @@ def _render_actions(actions: list) -> list:
     elif high_count == 0 and medium_count == 0:
         lines.append("NO ACTION REQUIRED. Gate passed.")
 
+    # Add coverage info to agent output
+    if coverage_summary:
+        pct = coverage_summary["aggregate_percent"]
+        status = "PASS" if pct >= 80 else "BLOCKED"
+        lines.append("")
+        lines.append(f"Coverage: {pct}% ({status}, target: 80%)")
+        if pct < 80:
+            # List files below threshold
+            baseline_file = (project_root / ".vibetracing" / "coverage_baseline.json") if project_root else Path(".vibetracing") / "coverage_baseline.json"
+            if baseline_file.exists():
+                try:
+                    baseline = json.loads(baseline_file.read_text(encoding="utf-8"))
+                    below = [(f, d["percent_covered"]) for f, d in baseline.get("files", {}).items()
+                             if d["percent_covered"] < 80]
+                    below.sort(key=lambda x: x[1])
+                    for f, p in below[:5]:
+                        lines.append(f"  {f}: {p}%")
+                except Exception:
+                    pass
+
     return lines
 
 
 def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
                           accepted_rules, prd_result=None, task_result=None,
                           claims_list=None, gate_reasons=None, merged_gaps=None,
-                          compliance_status=None):
+                          compliance_status=None, coverage_summary=None,
+                          project_root=None):
     """Format an Agent-executable action list with full inline context."""
     lines = [f"GATE DECISION: {gate_decision.upper()}", ""]
     gaps_for_actions = merged_gaps if merged_gaps is not None else active_gaps
@@ -1540,7 +1562,7 @@ def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
     actions.extend(_collect_gate_reason_actions(
         gate_decision, gate_reasons or [], actions,
     ))
-    lines.extend(_render_actions(actions))
+    lines.extend(_render_actions(actions, coverage_summary, project_root))
     return "\n".join(lines)
 
 
@@ -1873,6 +1895,21 @@ def _evaluate_and_output(
         if compliance_res else [],
     }
 
+    # Add coverage summary to report
+    coverage_baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
+    if coverage_baseline_path.exists():
+        try:
+            baseline = json.loads(coverage_baseline_path.read_text(encoding="utf-8"))
+            report_doc["coverage_summary"] = {
+                "aggregate_percent": baseline.get("aggregate_percent", 0),
+                "total_statements": baseline.get("total_statements", 0),
+                "total_covered": baseline.get("total_covered", 0),
+                "file_count": len(baseline.get("files", {})),
+                "timestamp": baseline.get("timestamp", ""),
+            }
+        except Exception:
+            pass
+
     # Apply human decisions
     human_decisions = _load_human_decisions()
     if human_decisions.get("decisions"):
@@ -2025,6 +2062,8 @@ def _evaluate_and_output(
         gate_reasons=gate_res["reasons"],
         merged_gaps=merged_gaps,
         compliance_status=compliance_status,
+        coverage_summary=report_doc.get("coverage_summary"),
+        project_root=project_root,
     )
     print(agent_output)
 

@@ -8,7 +8,7 @@
       "AC-VT-009-17"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: 新增 _load_governance_boundary、_is_in_governance_boundary、_partition_by_governance_boundary 函数，治理边界过滤",
+    "audit_reason": "cli.py: 集成覆盖率基线加载、coverage_summary 报告字段、Agent 输出覆盖率统计",
     "created_at": "2026-06-08T01:38:30.163828Z",
     "updated_at": "2026-06-09T10:49:39.970112Z"
   },
@@ -103,7 +103,7 @@
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: vt analyze 输出治理范围统计（in-scope vs out-of-scope 文件计数）",
+    "audit_reason": "cli.py: _evaluate_and_output 读取 coverage_baseline.json 填充 report_doc",
     "created_at": "2026-06-08T03:06:28.667333Z",
     "updated_at": "2026-06-09T10:49:39.980145Z"
   },
@@ -159,7 +159,7 @@
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: _save_claim_fingerprints 函数保存所有 claim 引用文件的 SHA-256 指纹",
+    "audit_reason": "cli.py: _execute_tools 传递 baseline_path 给工具执行引擎",
     "created_at": "2026-06-08T09:54:49.178453Z",
     "updated_at": "2026-06-09T10:49:39.989953Z"
   },
@@ -201,7 +201,7 @@
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "tool_evidence_adapter.py: hints 迁移 + skipped 证据生成",
+    "audit_reason": "tool_evidence_adapter.py: 移除旧的按测试文件覆盖率解析，新增 _measure_source_coverage",
     "created_at": "2026-06-08T09:54:49.193736Z",
     "updated_at": "2026-06-08T15:39:50.095580Z"
   },
@@ -273,7 +273,7 @@
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: _file_sha256 工具函数计算文件 SHA-256 哈希，_save_claim_fingerprints 调用它",
+    "audit_reason": "cli.py: _render_actions 输出覆盖率统计和未达标文件列表",
     "created_at": "2026-06-08T12:48:55.663738Z",
     "updated_at": "2026-06-09T10:49:39.995102Z"
   },
@@ -287,7 +287,7 @@
       "AC-VT-009-12"
     ],
     "status": "passed",
-    "audit_reason": "enums.py: CoverageStatus 新增 NEEDS_REVERIFICATION 枚举值",
+    "audit_reason": "merge_gate_engine.py: evaluate() 新增 evidence_index 参数和覆盖率门禁检查",
     "created_at": "2026-06-08T12:48:55.668611Z",
     "updated_at": "2026-06-09T10:49:39.999924Z"
   },
@@ -401,7 +401,7 @@
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: _evaluate_and_output 末尾调用 _save_claim_fingerprints 保存指纹",
+    "audit_reason": "cli.py: 传递 evidence_index 给 MergeGateEngine.evaluate()",
     "created_at": "2026-06-08T15:39:49.951721Z",
     "updated_at": "2026-06-09T10:49:40.004901Z"
   },
@@ -485,7 +485,7 @@
       "AC-VT-002-04"
     ],
     "status": "passed",
-    "audit_reason": "claim_evidence_analyzer.py: 新增 _check_invalidation 方法检测引用文件 hash 变化",
+    "audit_reason": "evidence_index_builder.py: carry over 逻辑扩展支持 coverage 证据持久化",
     "created_at": "2026-06-08T15:39:49.981018Z",
     "updated_at": "2026-06-09T10:49:40.009886Z"
   },
@@ -641,7 +641,7 @@
       "AC-VT-010-02"
     ],
     "status": "passed",
-    "audit_reason": "test_merge_gate_engine.py: 测试新增 claim、删除 claim、缺失 hash 的边界场景",
+    "audit_reason": "test_tool_execution.py: 新增 6 个源文件级覆盖率测试替代旧的 2 个解析测试",
     "created_at": "2026-06-08T15:39:50.034435Z",
     "updated_at": "2026-06-09T04:18:12.829984Z"
   },
@@ -713,7 +713,7 @@
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: 治理边界统计集成到 Agent 行动清单和反思提示输出",
+    "audit_reason": "cli.py: 覆盖率 <80% 时在 Agent 行动清单中列出未达标文件",
     "created_at": "2026-06-09T00:37:32.697371Z",
     "updated_at": "2026-06-09T10:49:40.020646Z"
   },
@@ -770,7 +770,7 @@
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: _load_governance_boundary 支持 constraints_data 参数避免重复读取文件",
+    "audit_reason": "cli.py: 覆盖率基线路径通过 baseline_path 参数传递给工具引擎",
     "created_at": "2026-06-09T04:18:12.766632Z",
     "updated_at": "2026-06-09T10:49:40.025781Z"
   },
@@ -813,7 +813,7 @@
       "AC-VT-009-07"
     ],
     "status": "passed",
-    "audit_reason": "cli.py: 治理边界统计替代原有的文件覆盖缺口警告",
+    "audit_reason": "cli.py: coverage_summary 字段包含 aggregate_percent 和 file_count",
     "created_at": "2026-06-09T04:19:35.539957Z",
     "updated_at": "2026-06-09T10:49:40.031057Z"
   },

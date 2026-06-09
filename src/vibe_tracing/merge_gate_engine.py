@@ -90,6 +90,7 @@ class MergeGateEngine:
         prd_status: str = "active",
         staged_items: Optional[Set[str]] = None,
         directly_staged_items: Optional[Set[str]] = None,
+        evidence_index: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate merge gate criteria based on gaps, risks, and compliance checker results.
@@ -107,6 +108,10 @@ class MergeGateEngine:
                 provided, risk evaluation uses this set instead of
                 *staged_items* so that old claims merely referencing modified
                 files are tagged ``[预存]`` and do not block the gate.
+            evidence_index: Evidence index dict containing tool execution
+                results.  When provided, coverage violations (source files
+                with < 80% coverage) are extracted from evidences with
+                tool_category ``coverage`` and status ``violated``.
 
         Returns:
             A dict containing:
@@ -309,6 +314,30 @@ class MergeGateEngine:
         # fail item is related to current changes.
         if current_fail_detected and gate_decision == "pass":
             gate_decision = "fail"
+
+        # ----------------------------------------------------
+        # 2.5 Check coverage violations (always [当前] — fresh measurement)
+        # ----------------------------------------------------
+        coverage_violations = []
+        if evidence_index:
+            for ev in evidence_index.get("evidences", []):
+                if (ev.get("details", {}).get("tool_category") == "coverage" and
+                        ev.get("status") == "violated"):
+                    coverage_violations.append({
+                        "file": ev.get("source_path", ""),
+                        "percent": ev.get("details", {}).get("percent_covered", 0),
+                    })
+        if coverage_violations:
+            for cv in coverage_violations:
+                # Coverage violations are always [当前] — they come from
+                # fresh tool measurements, not from staged changes.
+                tag = "[当前] " if staged_items is not None else ""
+                reasons.append(
+                    f"{tag}Coverage below 80%: {cv['file']} ({cv['percent']}%)"
+                )
+            # Coverage violations are always current (based on fresh measurement)
+            if gate_decision not in ("blocked",):
+                gate_decision = "blocked"
 
         # ----------------------------------------------------
         # 3. Handle 'pass'

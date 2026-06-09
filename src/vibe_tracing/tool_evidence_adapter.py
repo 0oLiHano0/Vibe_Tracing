@@ -91,16 +91,16 @@ class ToolExecutionEngine:
         "lint": {".py"},
         "type_check": {".py"},
         "security": {".py"},
-        "coverage": {".py"},
     }
 
     # Map of path type ("test" or "source") -> set of tool categories that
     # should run on that path type.  Used by execute_all() when typed paths
     # are provided, replacing the extension-based heuristic with a semantic
-    # classification: pytest/coverage run only on test files, while
+    # classification: pytest runs only on test files, while
     # ruff/mypy/bandit run only on source files.
+    # Coverage is measured per-source-file from a baseline, not via subprocess.
     PATH_TYPE_TOOL_MAP: Dict[str, set] = {
-        "test": {"test", "coverage"},
+        "test": {"test"},
         "source": {"lint", "type_check", "security"},
     }
 
@@ -416,91 +416,6 @@ class ToolExecutionEngine:
             )
 
         return candidates
-
-    def _parse_coverage_output(
-        self, stdout: str, stderr: str, exit_code: int, command: str, path: str
-    ) -> List[ToolEvidenceCandidate]:
-        """Parse coverage JSON output."""
-        if exit_code != 0:
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=stderr or f"Coverage failed with exit code {exit_code}",
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                )
-            ]
-
-        # Try reading the JSON output file
-        percent_covered = None
-        json_match = re.search(r"-o\s+(\S+)", command)
-        if json_match:
-            output_path = Path(json_match.group(1))
-            if not output_path.is_absolute():
-                output_path = self.project_root / output_path
-            if output_path.exists():
-                try:
-                    with output_path.open("r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    if isinstance(data, dict):
-                        totals = data.get("totals")
-                        if isinstance(totals, dict):
-                            percent_covered = totals.get("percent_covered")
-                        if percent_covered is None:
-                            percent_covered = data.get("percent_covered")
-                except (json.JSONDecodeError, OSError):
-                    pass
-
-        # Fallback: try parsing stdout
-        if percent_covered is None:
-            try:
-                data = json.loads(stdout)
-                if isinstance(data, dict):
-                    totals = data.get("totals")
-                    if isinstance(totals, dict):
-                        percent_covered = totals.get("percent_covered")
-                    if percent_covered is None:
-                        percent_covered = data.get("percent_covered")
-            except (json.JSONDecodeError, TypeError):
-                pass
-
-        if percent_covered is None:
-            hint = _resolve_hint(_tool_hints.get("coverage_not_found", {}), "level1")
-            msg = hint if hint else "Coverage percentage not found in output"
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=msg,
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                )
-            ]
-
-        status = (
-            CoverageStatus.COMPLIANT.value
-            if float(percent_covered) >= 80.0
-            else CoverageStatus.VIOLATED.value
-        )
-
-        return [
-            ToolEvidenceCandidate(
-                source_type="tool",
-                source_path=path,
-                covers=[],
-                status=status,
-                command=command,
-                exit_code=exit_code,
-                details={"percent_covered": float(percent_covered)},
-            )
-        ]
 
     def _parse_ruff_output(
         self, stdout: str, stderr: str, exit_code: int, command: str, path: str
@@ -872,8 +787,6 @@ class ToolExecutionEngine:
 
         if output_format == "pytest_json":
             candidates = self._parse_pytest_output(stdout, stderr, exit_code, command, path)
-        elif output_format == "coverage_json":
-            candidates = self._parse_coverage_output(stdout, stderr, exit_code, command, path)
         elif output_format == "ruff_json":
             candidates = self._parse_ruff_output(stdout, stderr, exit_code, command, path)
         elif output_format == "mypy_json":
@@ -898,9 +811,84 @@ class ToolExecutionEngine:
 
         return self._stamp_category(candidates, tool_category)
 
+    def _measure_source_coverage(
+        self,
+        baseline_path: Optional[str] = None,
+        pass_threshold: float = 80.0,
+    ) -> List[ToolEvidenceCandidate]:
+        """Measure per-source-file coverage from a pre-built baseline.
+
+        Reads ``.vibetracing/coverage_baseline.json`` (produced by the
+        ``vt coverage-baseline`` command) and emits one
+        ``ToolEvidenceCandidate`` per source file listed in the baseline.
+
+        Args:
+            baseline_path: Override path to the baseline JSON file.
+                Defaults to ``.vibetracing/coverage_baseline.json`` relative
+                to the project root.
+            pass_threshold: Minimum percent_covered to be considered
+                ``compliant``.  Files below this threshold are ``violated``.
+
+        Returns:
+            List of ToolEvidenceCandidate objects, one per source file.
+            Returns an empty list if the baseline file does not exist or
+            cannot be parsed.
+        """
+        baseline_file = Path(baseline_path) if baseline_path else (
+            self.project_root / ".vibetracing" / "coverage_baseline.json"
+        )
+
+        if not baseline_file.is_file():
+            return []
+
+        try:
+            with baseline_file.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return []
+
+        files = data.get("files")
+        if not isinstance(files, dict):
+            return []
+
+        candidates: List[ToolEvidenceCandidate] = []
+        for source_path, file_data in files.items():
+            if not isinstance(file_data, dict):
+                continue
+
+            percent = file_data.get("percent_covered")
+            num_stmts = file_data.get("num_statements", 0)
+            if percent is None:
+                continue
+
+            percent_f = float(percent)
+            status = (
+                CoverageStatus.COMPLIANT.value
+                if percent_f >= pass_threshold
+                else CoverageStatus.VIOLATED.value
+            )
+
+            candidates.append(
+                ToolEvidenceCandidate(
+                    source_type="tool",
+                    source_path=source_path,
+                    covers=[],
+                    status=status,
+                    tool_category="coverage",
+                    details={
+                        "percent_covered": percent_f,
+                        "num_statements": int(num_stmts),
+                        "measurement": "baseline",
+                    },
+                )
+            )
+
+        return candidates
+
     def execute_all(
         self,
         paths,
+        baseline_path: Optional[str] = None,
     ) -> List[ToolEvidenceCandidate]:
         """
         Execute all whitelisted tools for the given paths.
@@ -913,6 +901,8 @@ class ToolExecutionEngine:
                   "source") to path lists.  Tool/category filtering uses
                   ``PATH_TYPE_TOOL_MAP`` so that only semantically
                   appropriate tools run on each path type.
+            baseline_path: Override path to coverage baseline JSON.  If
+                ``None``, defaults to ``.vibetracing/coverage_baseline.json``.
 
         Returns:
             Flat list of all ToolEvidenceCandidate objects.
@@ -952,6 +942,9 @@ class ToolExecutionEngine:
                 tool_config=config,
             )
             all_candidates.extend(candidates)
+
+        # Append per-source-file coverage evidence from the baseline.
+        all_candidates.extend(self._measure_source_coverage(baseline_path))
 
         return all_candidates
 

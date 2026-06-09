@@ -45,12 +45,6 @@ def python_matrix() -> dict:
                 "output_format": "pytest_json",
                 "pass_condition": "exit_code == 0",
             },
-            "coverage": {
-                "tool": "coverage",
-                "default_command": "coverage run -m pytest {test_path} && coverage json -o {output_path}",
-                "output_format": "coverage_json",
-                "pass_condition": "percent_covered >= 80",
-            },
             "lint": {
                 "tool": "ruff",
                 "default_command": "ruff check {source_path} --output-format=json",
@@ -79,7 +73,7 @@ def engine(project_root: Path, python_matrix: dict) -> ToolExecutionEngine:
     return ToolExecutionEngine(
         language_tool_matrix=python_matrix,
         language="python",
-        validation_tools=["test", "coverage", "lint", "type_check", "security"],
+        validation_tools=["test", "lint", "type_check", "security"],
         project_root=project_root,
     )
 
@@ -490,62 +484,119 @@ class TestRuffOutputParsing:
 
 
 # ---------------------------------------------------------------------------
-# Test: Output parsing (coverage_json)
+# Test: Source-file coverage measurement from baseline
 # ---------------------------------------------------------------------------
 
-class TestCoverageOutputParsing:
-    """Verify coverage JSON output is correctly parsed."""
+class TestSourceCoverageMeasurement:
+    """Verify per-source-file coverage from baseline JSON."""
 
-    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
-    def test_coverage_compliant(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine, tmp_path: Path
+    def test_compliant_file(
+        self, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
-        """covers: AC-VT-001-02"""
-        cov_data = {"totals": {"percent_covered": 85.5}}
-        cov_path = tmp_path / "coverage.json"
-        cov_path.write_text(json.dumps(cov_data), encoding="utf-8")
-
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="", stderr=""
-        )
-
-        engine._tool_configs["coverage"] = {
-            "tool": "coverage",
-            "default_command": f"coverage run -m pytest {{test_path}} && coverage json -o {cov_path}",
-            "output_format": "coverage_json",
-            "pass_condition": "percent_covered >= 80",
+        """covers: AC-VT-001-02 — file at or above 80% is compliant."""
+        baseline = {
+            "files": {
+                "src/vibe_tracing/foo.py": {
+                    "percent_covered": 85.5,
+                    "num_statements": 100,
+                    "missing_lines": [10, 20],
+                    "last_measured": "2026-06-09T00:00:00Z",
+                }
+            }
         }
+        baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
+        baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
 
-        candidates = engine.execute_tool(
-            tool_category="coverage", path="tests/", test_path="tests/"
-        )
+        candidates = engine._measure_source_coverage()
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COMPLIANT.value
+        assert candidates[0].source_path == "src/vibe_tracing/foo.py"
         assert candidates[0].details["percent_covered"] == 85.5
+        assert candidates[0].details["num_statements"] == 100
+        assert candidates[0].details["measurement"] == "baseline"
+        assert candidates[0].tool_category == "coverage"
 
-    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
-    def test_coverage_violated(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine, tmp_path: Path
+    def test_violated_file(
+        self, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
-        """covers: AC-VT-001-02"""
-        cov_data = {"totals": {"percent_covered": 55.0}}
-        cov_path = tmp_path / "coverage.json"
-        cov_path.write_text(json.dumps(cov_data), encoding="utf-8")
-
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="", stderr=""
-        )
-
-        engine._tool_configs["coverage"] = {
-            "tool": "coverage",
-            "default_command": f"coverage run -m pytest {{test_path}} && coverage json -o {cov_path}",
-            "output_format": "coverage_json",
-            "pass_condition": "percent_covered >= 80",
+        """covers: AC-VT-001-02 — file below 80% is violated."""
+        baseline = {
+            "files": {
+                "src/vibe_tracing/bar.py": {
+                    "percent_covered": 55.0,
+                    "num_statements": 200,
+                    "missing_lines": [1, 2, 3],
+                    "last_measured": "2026-06-09T00:00:00Z",
+                }
+            }
         }
+        baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
+        baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
 
-        candidates = engine.execute_tool(
-            tool_category="coverage", path="tests/", test_path="tests/"
-        )
+        candidates = engine._measure_source_coverage()
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.VIOLATED.value
+        assert candidates[0].details["percent_covered"] == 55.0
+
+    def test_multiple_files(
+        self, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: AC-VT-001-02 — one candidate per source file."""
+        baseline = {
+            "files": {
+                "src/a.py": {"percent_covered": 100.0, "num_statements": 10},
+                "src/b.py": {"percent_covered": 70.0, "num_statements": 50},
+                "src/c.py": {"percent_covered": 80.0, "num_statements": 30},
+            }
+        }
+        baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
+        baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+        candidates = engine._measure_source_coverage()
+        assert len(candidates) == 3
+        statuses = {c.source_path: c.status for c in candidates}
+        assert statuses["src/a.py"] == CoverageStatus.COMPLIANT.value
+        assert statuses["src/b.py"] == CoverageStatus.VIOLATED.value
+        assert statuses["src/c.py"] == CoverageStatus.COMPLIANT.value
+
+    def test_missing_baseline_returns_empty(
+        self, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: AC-VT-001-02 — no crash when baseline file missing."""
+        candidates = engine._measure_source_coverage()
+        assert candidates == []
+
+    def test_custom_baseline_path(
+        self, engine: ToolExecutionEngine, tmp_path: Path
+    ) -> None:
+        """covers: AC-VT-001-02 — override baseline path works."""
+        baseline = {
+            "files": {
+                "src/x.py": {"percent_covered": 90.0, "num_statements": 20}
+            }
+        }
+        custom_path = tmp_path / "custom_baseline.json"
+        custom_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+        candidates = engine._measure_source_coverage(str(custom_path))
+        assert len(candidates) == 1
+        assert candidates[0].source_path == "src/x.py"
+        assert candidates[0].status == CoverageStatus.COMPLIANT.value
+
+    def test_custom_threshold(
+        self, engine: ToolExecutionEngine, project_root: Path
+    ) -> None:
+        """covers: AC-VT-001-02 — custom pass_threshold is respected."""
+        baseline = {
+            "files": {
+                "src/y.py": {"percent_covered": 85.0, "num_statements": 40}
+            }
+        }
+        baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
+        baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+        # With threshold 90, 85% should be violated
+        candidates = engine._measure_source_coverage(pass_threshold=90.0)
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.VIOLATED.value
 
@@ -720,11 +771,12 @@ class TestExecuteAll:
         )
 
         candidates = engine.execute_all(["src/module.py"])
-        # All 5 tool categories should execute (one subprocess call each)
-        assert mock_run.call_count == 5
-        # Each category produces at least one candidate (coverage, lint,
+        # 4 subprocess-based tool categories execute (test, lint, type_check,
+        # security).  Coverage is measured from baseline, not via subprocess.
+        assert mock_run.call_count == 4
+        # Each category produces at least one candidate (lint,
         # type_check, security return 1 each; test returns 0 from empty parse)
-        assert len(candidates) >= 4
+        assert len(candidates) >= 3
 
     @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
     def test_execute_all_mixed_paths_filters_correctly(
@@ -752,7 +804,6 @@ class TestExecuteAll:
             "lint": {".py"},
             "type_check": {".py"},
             "security": {".py"},
-            "coverage": {".py"},
         }
         assert ToolExecutionEngine.TOOL_FILE_TYPE_MAP == expected
 

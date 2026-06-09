@@ -212,14 +212,17 @@ class EvidenceIndexBuilder:
 
             evidences.append(evidence_dict)
 
-        # Preserve test evidence from previous run for non-staged files
+        # Preserve test and coverage evidence from previous run for non-staged files
         new_evidence_keys = {(e.get("source_path"), e.get("source_type")) for e in evidences}
         for key, old_ev in existing_evidence.items():
-            if key[1] == "test" and key not in new_evidence_keys:
-                # Mark as carried over from previous run
-                old_ev["carried_over"] = True
-                old_ev["evidence_id"] = get_next_id()
-                evidences.append(old_ev)
+            if key not in new_evidence_keys:
+                is_test = key[1] == "test"
+                is_coverage = (key[1] == "tool" and
+                               old_ev.get("details", {}).get("tool_category") == "coverage")
+                if is_test or is_coverage:
+                    old_ev["carried_over"] = True
+                    old_ev["evidence_id"] = get_next_id()
+                    evidences.append(old_ev)
 
         # Assemble the index
         run_id = f"RUN-{uuid.uuid4()}"

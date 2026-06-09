@@ -107,6 +107,8 @@ def render_reflection_prompts(
     compliance_result: Optional[Dict[str, Any]] = None,
     dimensions: Optional[List[Dict[str, Any]]] = None,
     guiding_principles: Optional[str] = None,
+    governance_in_scope_count: Optional[int] = None,
+    governance_out_of_scope_count: Optional[int] = None,
 ) -> str:
     """Render the 8-dimension reflection prompt block."""
     if dimensions is None:
@@ -190,8 +192,16 @@ def render_reflection_prompts(
         lines.append(f"     {prompt}{hint_text}")
         lines.append("")
 
-    # Append uncovered-scope governance warning if applicable
-    if uncovered_files:
+    # Append governance boundary stats (replaces old coverage warning)
+    if governance_in_scope_count is not None and governance_out_of_scope_count is not None:
+        total = governance_in_scope_count + governance_out_of_scope_count
+        if total > 0:
+            lines.append(f"  Governance scope: {governance_in_scope_count} files in scope, "
+                         f"{governance_out_of_scope_count} auxiliary files excluded")
+            lines.append("")
+    elif uncovered_files:
+        # Fallback: when governance boundary info is not provided, show
+        # uncovered file warnings for in-scope files only.
         lines.append("⚠ 治理覆盖警告 (Coverage Warning)")
         lines.append("以下反思诊断涉及的文件未被任何 Task/AC 覆盖：")
         for f in uncovered_files:

@@ -15,7 +15,7 @@ def mock_tool_execution(monkeypatch):
     from vibe_tracing.core.enums import CoverageStatus
     import json
 
-    def mock_execute_all(self, execution_paths):
+    def mock_execute_all(self, execution_paths, baseline_path=None):
         opts_path = self.project_root / "test_opts.json"
         if not opts_path.exists():
             return []

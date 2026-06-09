@@ -23,7 +23,7 @@ def mock_tool_execution(monkeypatch):
         return _real_which(cmd) or f"/usr/bin/{cmd}"
     monkeypatch.setattr(shutil, "which", mock_which)
 
-    def mock_execute_all(self, execution_paths):
+    def mock_execute_all(self, execution_paths, baseline_path=None):
         opts_path = self.project_root / "test_opts.json"
         if not opts_path.exists():
             return []

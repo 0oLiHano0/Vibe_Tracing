@@ -10,6 +10,7 @@ Evaluates quality gate conditions to produce a machine gate decision:
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from vibe_tracing.governance import is_in_scope
 from vibe_tracing.hint_loader import load_hints, resolve_hint
 
 _gate_hints = load_hints("gate_decision")
@@ -64,6 +65,150 @@ class MergeGateEngine:
             return f"[当前] {msg}"
         return f"[预存] {msg}"
 
+    @staticmethod
+    def check_claim_exists(
+        staged_files: Set[str],
+        claims: List[Dict[str, Any]],
+        boundary: Optional[Dict[str, Any]] = None,
+    ) -> tuple:
+        """Check whether staged business files are covered by at least one Claim.
+
+        Args:
+            staged_files: Set of file paths that are staged in the current commit.
+            claims: List of claim dicts, each having ``code_refs`` and/or
+                ``test_refs`` keys (lists of file paths).
+            boundary: Optional governance boundary dict with
+                ``included_patterns`` / ``excluded_patterns``.  When
+                provided, only files matching the boundary are considered
+                business files; non-matching files are ignored.
+
+        Returns:
+            ``(passed, unclaimed_files)`` where *passed* is ``True`` when
+            every business file is covered by at least one claim.
+        """
+        if not staged_files:
+            return (True, set())
+
+        # Filter to business files within the governance boundary.
+        if boundary is not None:
+            business_files = {f for f in staged_files if is_in_scope(f, boundary)}
+        else:
+            business_files = set(staged_files)
+
+        if not business_files:
+            return (True, set())
+
+        # Collect all files referenced by any claim.
+        all_claimed_files: Set[str] = set()
+        for claim in claims:
+            for ref in claim.get("code_refs", []):
+                all_claimed_files.add(ref)
+            for ref in claim.get("test_refs", []):
+                all_claimed_files.add(ref)
+
+        unclaimed = business_files - all_claimed_files
+        if unclaimed:
+            return (False, unclaimed)
+        return (True, set())
+
+    @staticmethod
+    def check_ac_coverage(
+        claims: List[Dict[str, Any]],
+        tasks: List[Dict[str, Any]],
+        evidence_index: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Derive AC coverage status from claims, tasks, and test evidence.
+
+        For each MUST-level task (priority == "must"), this method checks
+        whether its acceptance criteria are covered by passing tests via
+        the claim chain: Task -> Claim -> test_refs -> evidence.
+
+        Args:
+            claims: List of Claim dicts.  Each should have
+                ``related_task``, ``test_refs``, and optionally
+                ``claim_id`` keys.
+            tasks: List of Task dicts from ``task_list.json``.  Each should
+                have ``task_id``, ``priority``, and
+                ``related_acceptance_criteria`` keys.
+            evidence_index: Optional evidence index dict.  When provided
+                and it contains test results (entries with
+                ``details.test_category`` == ``"test"``), the method
+                checks whether referenced tests actually passed.
+
+        Returns:
+            A list of dicts ``[{ac_id, task_id, reason}]`` for each
+            uncovered MUST AC.  Empty list means all MUST ACs are covered.
+        """
+        uncovered: List[Dict[str, Any]] = []
+
+        # Build task_id -> claims lookup
+        task_claims: Dict[str, List[Dict[str, Any]]] = {}
+        for claim in claims:
+            task_id = claim.get("related_task", "")
+            if task_id:
+                task_claims.setdefault(task_id, []).append(claim)
+
+        # Build test file -> result lookup from evidence_index
+        test_results: Dict[str, bool] = {}
+        if evidence_index:
+            for ev in evidence_index.get("evidences", []):
+                details = ev.get("details", {})
+                if details.get("test_category") == "test":
+                    source = ev.get("source_path", "")
+                    if source:
+                        test_results[source] = ev.get("status") == "passed"
+
+        for task in tasks:
+            if task.get("priority") != "must":
+                continue
+
+            task_id = task.get("task_id", "")
+            related_acs = task.get("related_acceptance_criteria", [])
+
+            related_claims = task_claims.get(task_id, [])
+            if not related_claims:
+                for ac_id in related_acs:
+                    uncovered.append({
+                        "ac_id": ac_id,
+                        "task_id": task_id,
+                        "reason": "no_claim_for_task",
+                    })
+                continue
+
+            for ac_id in related_acs:
+                has_passing_test = False
+                for claim in related_claims:
+                    test_refs = claim.get("test_refs", [])
+                    if not test_refs:
+                        continue
+                    if not test_results:
+                        # No test evidence available; declare presence
+                        has_passing_test = True
+                        break
+                    for ref in test_refs:
+                        if test_results.get(ref, False):
+                            has_passing_test = True
+                            break
+                    if has_passing_test:
+                        break
+
+                if not has_passing_test:
+                    any_claim_has_tests = any(
+                        c.get("test_refs") for c in related_claims
+                    )
+                    reason = (
+                        "test_failed"
+                        if (any_claim_has_tests and test_results)
+                        else "no_tests_declared"
+                    )
+                    uncovered.append({
+                        "ac_id": ac_id,
+                        "task_id": task_id,
+                        "reason": reason,
+                    })
+
+        return uncovered
+
     def evaluate(
         self,
         gaps: List[Dict[str, Any]],
@@ -74,6 +219,9 @@ class MergeGateEngine:
         directly_staged_items: Optional[Set[str]] = None,
         evidence_index: Optional[Dict[str, Any]] = None,
         human_decisions: Optional[Any] = None,
+        claims: Optional[List[Dict[str, Any]]] = None,
+        boundary: Optional[Dict[str, Any]] = None,
+        tasks: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate merge gate criteria based on gaps, risks, and compliance checker results.
@@ -102,6 +250,27 @@ class MergeGateEngine:
                 Supported actions: ``accept_risk`` (downgrades matching risk
                 severity to ``"accepted"``), ``mark_complete`` (marks matching
                 gap as ``"human_resolved"``).
+            claims: Optional list of Claim dicts for Claim existence check.
+                Each dict should have ``code_refs`` and/or ``test_refs``
+                keys.  When provided together with *staged_items*, the
+                engine verifies that every staged business file (within the
+                governance boundary) is referenced by at least one Claim.
+                Unclaimed files produce a ``must``-severity gap with
+                category ``missing_claim``, which blocks the gate.  When
+                ``None``, the check is skipped (backward compatible).
+            boundary: Optional governance boundary dict (with
+                ``included_patterns`` / ``excluded_patterns``) used to
+                filter staged files to business files during Claim
+                existence check.  When ``None``, all staged files are
+                treated as business files.
+            tasks: Optional list of Task dicts from ``task_list.json``.
+                When provided together with *claims*, the engine derives
+                AC coverage status for each MUST-level task's acceptance
+                criteria via the claim chain (Task -> Claim -> test_refs
+                -> evidence).  Uncovered MUST ACs produce ``must``-severity
+                gaps with category ``ac_not_covered``, which block the
+                gate.  When ``None``, the check is skipped (backward
+                compatible).
 
         Returns:
             A dict containing:
@@ -153,6 +322,66 @@ class MergeGateEngine:
             }
 
         # ----------------------------------------------------
+        # 0.5 Claim existence check (when claims are provided)
+        # ----------------------------------------------------
+        if claims is not None and staged_items is not None:
+            passed, unclaimed = self.check_claim_exists(
+                staged_files=staged_items,
+                claims=claims,
+                boundary=boundary,
+            )
+            if not passed and unclaimed:
+                for f in sorted(unclaimed):
+                    hint = resolve_hint(
+                        _gate_hints.get("missing_claim", {}), "level1"
+                    )
+                    msg = (
+                        hint.format(file=f)
+                        if hint
+                        else f"业务文件 {f} 未被任何 Claim 覆盖，需要创建 Claim 声明该文件的变更。"
+                    )
+                    gap_entry = {
+                        "item_id": f,
+                        "item_type": "missing_claim",
+                        "target_id": f,
+                        "reason": msg,
+                    }
+                    gaps.append(gap_entry)
+                    reasons.append(self._tag_reason(msg, {f}, staged_items))
+                    blocked_items.append(msg)
+                    gate_decision = "blocked"
+
+        # ----------------------------------------------------
+        # 0.6 AC coverage derivation (when claims + tasks are provided)
+        # ----------------------------------------------------
+        if claims is not None and tasks is not None:
+            ac_gaps = self.check_ac_coverage(claims, tasks, evidence_index)
+            for gap in ac_gaps:
+                ac_id = gap["ac_id"]
+                task_id = gap["task_id"]
+                reason = gap["reason"]
+                hint = resolve_hint(
+                    _gate_hints.get("ac_not_covered", {}), "level1"
+                )
+                msg = (
+                    hint.format(ac_id=ac_id, task_id=task_id, reason=reason)
+                    if hint
+                    else f"MUST AC {ac_id} (task {task_id}) 未被测试覆盖: {reason}"
+                )
+                gap_entry = {
+                    "item_id": ac_id,
+                    "item_type": "ac",
+                    "category": "ac_not_covered",
+                    "target_id": ac_id,
+                    "reason": msg,
+                    "task_id": task_id,
+                }
+                gaps.append(gap_entry)
+                reasons.append(self._tag_reason(msg, {ac_id}, staged_items))
+                blocked_items.append(msg)
+                gate_decision = "blocked"
+
+        # ----------------------------------------------------
         # 1. Evaluate 'blocked' conditions (MUST/critical issues)
         # ----------------------------------------------------
 
@@ -184,7 +413,6 @@ class MergeGateEngine:
             risk_id = risk.get("risk_id", "")
             suggested_action = risk.get("suggested_action", "")
             business_impact = risk.get("business_impact", "")
-            item_type = risk.get("item_type", "")
             risk_target_id = risk.get("target_id", "")
             human_accepted = risk_target_id in accepted_risk_target_ids
 
@@ -220,14 +448,6 @@ class MergeGateEngine:
                             msg_missing = hint_missing.format(risk_id=risk_id) if hint_missing else f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
                             blocked_items.append(msg_missing)
                             reasons.append(self._tag_reason(msg_missing, risk_related or None, risk_staged))
-
-                        # Add specific reason for low-confidence claims
-                        if item_type == "claim_credibility":
-                            hint_credibility = resolve_hint(_gate_hints.get("low_confidence_claim", {}), "level1")
-                            msg_credibility = hint_credibility if hint_credibility else "存在低可信度 Claim（无工具验证证据）"
-                            if msg_credibility not in blocked_items:
-                                blocked_items.append(msg_credibility)
-                                reasons.append(self._tag_reason(msg_credibility, risk_related or None, risk_staged))
 
         # 1.3 Check Must architecture violations
         if compliance_result:

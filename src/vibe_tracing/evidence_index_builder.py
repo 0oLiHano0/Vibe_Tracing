@@ -157,7 +157,7 @@ class EvidenceIndexBuilder:
                     "source_type": "claim",
                     "source_path": claims_file_rel,
                     "covers": covers,
-                    "status": claim.claimed_status,
+                    "status": claim.claimed_status or CoverageStatus.UNCLEAR.value,
                     "details": {
                         "claim_id": claim.claim_id,
                         "related_task": claim.related_task,
@@ -228,27 +228,7 @@ class EvidenceIndexBuilder:
         run_id = f"RUN-{uuid.uuid4()}"
         scan_time = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
-        # Load coverage baseline data (if available) into the index
         coverage_baseline: Dict[str, Dict[str, Any]] = {}
-        cb_path = self.project_root / ".vibetracing" / "coverage_baseline.json"
-        if cb_path.is_file():
-            try:
-                cb_data = json.loads(cb_path.read_text(encoding="utf-8"))
-                cb_files = cb_data.get("files")
-                if isinstance(cb_files, dict):
-                    for source_path, file_data in cb_files.items():
-                        if not isinstance(file_data, dict):
-                            continue
-                        percent = file_data.get("percent_covered")
-                        if percent is None:
-                            continue
-                        coverage_baseline[source_path] = {
-                            "percent_covered": float(percent),
-                            "num_statements": int(file_data.get("num_statements", 0)),
-                            "missing_lines": file_data.get("missing_lines", []),
-                        }
-            except (json.JSONDecodeError, OSError):
-                pass
 
         index_doc = {
             "run_id": run_id,

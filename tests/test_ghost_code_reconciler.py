@@ -14,7 +14,8 @@ from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
 def project(tmp_path: Path):
     """Create a minimal project structure with .vibetracing directory."""
     vibetracing_dir = tmp_path / ".vibetracing"
-    vibetracing_dir.mkdir(parents=True)
+    claims_dir = vibetracing_dir / "claims"
+    claims_dir.mkdir(parents=True)
     return tmp_path
 
 
@@ -32,7 +33,7 @@ class TestMalformedClaimsWarning:
         subprocess.run(["git", "commit", "-m", "init"], cwd=project, capture_output=True, check=True)
 
         # Stage a malformed claims file
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text("{not valid json!!", encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
@@ -43,13 +44,13 @@ class TestMalformedClaimsWarning:
             ok, msg = reconciler.reconcile()
 
         captured = capsys.readouterr()
-        assert "agent_claims.json" in captured.err
+        assert "claims/current.json" in captured.err
         assert "格式解析失败" in captured.err
 
     def test_no_claims_file_does_not_warn(self, project, capsys):
         """When claims file does not exist, no format-warning is printed."""
         # Ensure claims file does NOT exist
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         assert not claims_path.exists()
 
         reconciler = GhostCodeReconciler(project)
@@ -70,7 +71,7 @@ class TestMalformedClaimsWarning:
                 "description": "foo change",
             }
         ]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
 
         reconciler = GhostCodeReconciler(project)
@@ -122,7 +123,7 @@ class TestNoClaimsFile:
 
     def test_no_claims_blocks(self, project):
         """No claims file and staged code files should produce ghost code error."""
-        assert not (project / ".vibetracing" / "agent_claims.json").exists()
+        assert not (project / ".vibetracing" / "claims" / "current.json").exists()
         reconciler = GhostCodeReconciler(project)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}):
             ok, msg = reconciler.reconcile()
@@ -135,7 +136,7 @@ class TestClaimsCoverCodeRefs:
 
     def test_exact_match_passes(self, project):
         claims = [{"claim_id": "C-0001", "code_refs": ["src/foo.py", "src/bar.py"]}]
-        (project / ".vibetracing" / "agent_claims.json").write_text(
+        (project / ".vibetracing" / "claims" / "current.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
         reconciler = GhostCodeReconciler(project)
@@ -150,7 +151,7 @@ class TestClaimsCoverCodeRefs:
     def test_superset_refs_passes(self, project):
         """Claims covering MORE files than staged should still pass."""
         claims = [{"claim_id": "C-0001", "code_refs": ["src/foo.py", "src/bar.py", "src/baz.py"]}]
-        (project / ".vibetracing" / "agent_claims.json").write_text(
+        (project / ".vibetracing" / "claims" / "current.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
         reconciler = GhostCodeReconciler(project)
@@ -165,7 +166,7 @@ class TestClaimsCoverCodeRefs:
     def test_partial_match_blocks(self, project):
         """Only some staged files covered -- uncovered ones are ghost code."""
         claims = [{"claim_id": "C-0001", "code_refs": ["src/foo.py"]}]
-        (project / ".vibetracing" / "agent_claims.json").write_text(
+        (project / ".vibetracing" / "claims" / "current.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
         reconciler = GhostCodeReconciler(project)
@@ -183,7 +184,7 @@ class TestClaimsReferenceNonExistentFile:
     def test_extra_refs_passes(self, project):
         """Claims reference a file not in staged set; gate still passes."""
         claims = [{"claim_id": "C-0001", "code_refs": ["src/foo.py", "src/ghost.py"]}]
-        (project / ".vibetracing" / "agent_claims.json").write_text(
+        (project / ".vibetracing" / "claims" / "current.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
         reconciler = GhostCodeReconciler(project)
@@ -200,7 +201,7 @@ class TestEmptyClaimsArray:
     """Empty claims array means no active refs -- any staged code is ghost."""
 
     def test_empty_claims_blocks(self, project):
-        (project / ".vibetracing" / "agent_claims.json").write_text("[]", encoding="utf-8")
+        (project / ".vibetracing" / "claims" / "current.json").write_text("[]", encoding="utf-8")
         reconciler = GhostCodeReconciler(project)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}), \
              patch.object(reconciler, "_get_active_claims_code_refs", return_value=set()):
@@ -223,6 +224,7 @@ class TestDeltaCalculation:
             ["git", "config", "user.name", "Test"],
             cwd=project, capture_output=True, check=True,
         )
+        (project / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
 
     def test_new_claim_in_staged_not_in_head_is_active(self, project):
         """A claim present in the staged file but absent from HEAD is 'new' and active."""
@@ -234,7 +236,7 @@ class TestDeltaCalculation:
 
         # Now write a new claims file and stage it
         new_claim = {"claim_id": "C-0001", "code_refs": ["src/new.py"]}
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps([new_claim]), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
@@ -246,7 +248,7 @@ class TestDeltaCalculation:
         """A claim identical in staged and HEAD is NOT active (already committed)."""
         self._init_git_repo(project)
         existing_claim = {"claim_id": "C-0001", "code_refs": ["src/old.py"]}
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps([existing_claim]), encoding="utf-8")
         subprocess.run(["git", "add", "-A"], cwd=project, capture_output=True, check=True)
         subprocess.run(["git", "commit", "-m", "add claims"], cwd=project, capture_output=True, check=True)
@@ -260,7 +262,7 @@ class TestDeltaCalculation:
         """A claim modified between HEAD and staged is active."""
         self._init_git_repo(project)
         old_claim = {"claim_id": "C-0001", "code_refs": ["src/old.py"]}
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps([old_claim]), encoding="utf-8")
         subprocess.run(["git", "add", "-A"], cwd=project, capture_output=True, check=True)
         subprocess.run(["git", "commit", "-m", "add claims"], cwd=project, capture_output=True, check=True)
@@ -283,7 +285,7 @@ class TestDeltaCalculation:
         subprocess.run(["git", "commit", "-m", "init"], cwd=project, capture_output=True, check=True)
 
         template = {"claim_id": "C-9999", "code_refs": ["src/template.py"]}
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps([template]), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
@@ -304,7 +306,7 @@ class TestDeltaCalculation:
 
         # Write claims to working directory only -- do NOT git add
         claim = {"claim_id": "C-0001", "code_refs": ["src/ghost.py"]}
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps([claim]), encoding="utf-8")
 
         reconciler = GhostCodeReconciler(project)
@@ -322,7 +324,7 @@ class TestDeltaCalculation:
 
         # Write claims AND stage them
         claim = {"claim_id": "C-0001", "code_refs": ["src/visible.py"]}
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps([claim]), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
@@ -336,7 +338,7 @@ class TestWhitelistLogic:
 
     def test_exact_whitelist_paths(self, project):
         reconciler = GhostCodeReconciler(project)
-        for path in [".vibetracing/agent_claims.json", ".vibetracing/config.json", ".vibetracing/semantic_audit.json", "docs/task_list.json"]:
+        for path in [".vibetracing/claims/current.json", ".vibetracing/agent_claims.json", ".vibetracing/config.json", ".vibetracing/semantic_audit.json", "docs/task_list.json"]:
             assert reconciler._is_whitelisted(path) is True
 
     def test_prefix_whitelist(self, project):
@@ -363,7 +365,7 @@ class TestMalformedHeadClaims:
         subprocess.run(["git", "config", "user.name", "T"], cwd=project, capture_output=True, check=True)
 
         # Commit with valid claims
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps([{"claim_id": "C-0001", "code_refs": ["a.py"]}]), encoding="utf-8")
         subprocess.run(["git", "add", "-A"], cwd=project, capture_output=True, check=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=project, capture_output=True, check=True)
@@ -419,6 +421,7 @@ def _init_git_repo(project: Path):
     )
     (project / "docs").mkdir(exist_ok=True)
     (project / ".vibetracing").mkdir(exist_ok=True)
+    (project / ".vibetracing" / "claims").mkdir(exist_ok=True)
     (project / "src").mkdir(exist_ok=True)
     (project / "placeholder.txt").write_text("init")
     subprocess.run(["git", "add", "placeholder.txt"], cwd=project, capture_output=True, check=True)
@@ -438,7 +441,7 @@ class TestTaskCoverageCheck:
 
         # Write staged claims referencing a task
         claims = [{"claim_id": "C-0001", "related_task": "TASK-MISSING", "code_refs": ["src/foo.py"]}]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.parent.mkdir(parents=True, exist_ok=True)
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
@@ -466,7 +469,7 @@ class TestTaskCoverageCheck:
 
         # Stage claims referencing TASK-001
         claims = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.parent.mkdir(parents=True, exist_ok=True)
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
@@ -493,7 +496,7 @@ class TestTaskCoverageCheck:
 
         # Stage claims referencing TASK-001
         claims = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.parent.mkdir(parents=True, exist_ok=True)
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
@@ -523,7 +526,7 @@ class TestTaskCoverageCheck:
 
         # Stage claims referencing TASK-NEW
         claims = [{"claim_id": "C-0001", "related_task": "TASK-NEW", "code_refs": ["src/foo.py"]}]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.parent.mkdir(parents=True, exist_ok=True)
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
@@ -544,7 +547,7 @@ class TestTaskCoverageCheck:
 
         # Stage claims with line range
         claims = [{"claim_id": "C-001", "related_task": "TASK-001", "code_refs": ["src/foo.py#L1-L10"]}]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.parent.mkdir(parents=True, exist_ok=True)
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
@@ -566,7 +569,7 @@ class TestTaskCoverageCheck:
 
         # Stage claims referencing TASK-001
         claims = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.parent.mkdir(parents=True, exist_ok=True)
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
@@ -590,7 +593,7 @@ class TestTaskCoverageCheck:
 
         # Commit initial claims referencing TASK-EXISTING (so HEAD has claims)
         claims_old = [{"claim_id": "C-0001", "related_task": "TASK-EXISTING", "code_refs": ["src/foo.py"]}]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps(claims_old), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
@@ -634,7 +637,7 @@ class TestTaskCoverageCheck:
 
         # Commit initial claims referencing TASK-001
         claims_old = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.write_text(json.dumps(claims_old), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
@@ -794,7 +797,7 @@ class TestACFreshnessCheck:
 
         # Stage claims that pass ghost code check
         claims = [{"claim_id": "C-0001", "related_task": "TASK-001", "code_refs": ["src/foo.py"]}]
-        claims_path = project / ".vibetracing" / "agent_claims.json"
+        claims_path = project / ".vibetracing" / "claims" / "current.json"
         claims_path.parent.mkdir(parents=True, exist_ok=True)
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)

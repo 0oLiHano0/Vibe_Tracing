@@ -21,19 +21,16 @@ def test_claims_schema_validation_error_with_dynamic_hints(validator):
     """Test that a schema validation error in agent_claims successfully extracts the dynamic hint from schema description."""
     data = [
         {
-            "claim_id": "CLAIM-VT-001",
             "related_task": "TASK-VT-001",
-            "claimed_status": "covered",
-            "evidence_refs": [],
-            # timestamp is missing, which is a required field
+            # claim_id is missing, which is a required field
         },
     ]
 
     res = validator.validate_dict(data, "agent_claims")
     assert res.is_valid is False
-    assert "timestamp" in res.message
+    assert "claim_id" in res.message
     # Check that custom hint is resolved and wrapped with 【修复指南】
-    assert "【修复指南】ISO 8601格式的时间戳" in res.hint
+    assert "【修复指南】申索唯一标识符" in res.hint
 
 
 def test_tasks_schema_validation_error_with_dynamic_hints(validator):

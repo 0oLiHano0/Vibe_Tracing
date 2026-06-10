@@ -1458,3 +1458,577 @@ def test_gap_without_target_id_not_affected():
     # Without target_id on the gap, the decision cannot match
     assert res["gate_decision"] == "blocked"
     assert res["human_decisions_applied"] == 1  # decision was parsed but had no effect
+
+
+# ---------------------------------------------------------------
+# Claim existence check tests (check_claim_exists + evaluate integration)
+# ---------------------------------------------------------------
+
+class TestCheckClaimExists:
+    """Tests for the check_claim_exists static method."""
+
+    def test_empty_staged_files_passes(self):
+        """Empty staged_files always passes."""
+        passed, unclaimed = MergeGateEngine.check_claim_exists(
+            staged_files=set(), claims=[]
+        )
+        assert passed is True
+        assert unclaimed == set()
+
+    def test_all_files_claimed_passes(self):
+        """All staged files are covered by claims."""
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+            {"claim_id": "C2", "code_refs": ["src/bar.py"], "test_refs": ["tests/test_bar.py"]},
+        ]
+        staged = {"src/foo.py", "src/bar.py", "tests/test_bar.py"}
+        passed, unclaimed = MergeGateEngine.check_claim_exists(
+            staged_files=staged, claims=claims
+        )
+        assert passed is True
+        assert unclaimed == set()
+
+    def test_unclaimed_file_fails(self):
+        """A staged file not referenced by any claim is unclaimed."""
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/foo.py", "src/orphan.py"}
+        passed, unclaimed = MergeGateEngine.check_claim_exists(
+            staged_files=staged, claims=claims
+        )
+        assert passed is False
+        assert unclaimed == {"src/orphan.py"}
+
+    def test_test_refs_count_as_claimed(self):
+        """Files in test_refs are considered claimed."""
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": ["tests/test_foo.py"]},
+        ]
+        staged = {"src/foo.py", "tests/test_foo.py"}
+        passed, unclaimed = MergeGateEngine.check_claim_exists(
+            staged_files=staged, claims=claims
+        )
+        assert passed is True
+        assert unclaimed == set()
+
+    def test_boundary_filters_non_business_files(self):
+        """Files outside the governance boundary are ignored."""
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/foo.py", "output/report.html", ".vibetracing/config.json"}
+        boundary = {
+            "included_patterns": ["src/*.py", "tests/test_*.py"],
+            "excluded_patterns": ["output/*", ".vibetracing/*"],
+        }
+        passed, unclaimed = MergeGateEngine.check_claim_exists(
+            staged_files=staged, claims=claims, boundary=boundary
+        )
+        # output/ and .vibetracing/ are excluded by boundary
+        assert passed is True
+        assert unclaimed == set()
+
+    def test_boundary_with_unclaimed_business_file(self):
+        """Business file within boundary but not claimed should fail."""
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/foo.py", "src/bar.py", "output/report.html"}
+        boundary = {
+            "included_patterns": ["src/*.py"],
+            "excluded_patterns": ["output/*"],
+        }
+        passed, unclaimed = MergeGateEngine.check_claim_exists(
+            staged_files=staged, claims=claims, boundary=boundary
+        )
+        assert passed is False
+        assert unclaimed == {"src/bar.py"}
+
+    def test_no_boundary_all_files_are_business(self):
+        """Without boundary, all staged files are treated as business files."""
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/foo.py", "README.md"}
+        passed, unclaimed = MergeGateEngine.check_claim_exists(
+            staged_files=staged, claims=claims
+        )
+        assert passed is False
+        assert unclaimed == {"README.md"}
+
+    def test_boundary_all_excluded_passes(self):
+        """When boundary excludes all staged files, check passes."""
+        claims = []
+        staged = {"output/report.html", "docs/notes.md"}
+        boundary = {
+            "included_patterns": [],
+            "excluded_patterns": ["output/*", "docs/*"],
+        }
+        passed, unclaimed = MergeGateEngine.check_claim_exists(
+            staged_files=staged, claims=claims, boundary=boundary
+        )
+        assert passed is True
+        assert unclaimed == set()
+
+
+class TestEvaluateClaimExistence:
+    """Integration tests for claim existence check within evaluate()."""
+
+    def test_claims_none_skips_check(self):
+        """When claims=None (default), the check is skipped (backward compatible)."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        res = engine.evaluate([], [], {})
+        assert res["gate_decision"] == "pass"
+
+    def test_staged_items_none_skips_check(self):
+        """When staged_items=None, the check is skipped even if claims are provided."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        claims = [{"claim_id": "C1", "code_refs": ["src/foo.py"]}]
+        res = engine.evaluate([], [], {}, claims=claims)
+        assert res["gate_decision"] == "pass"
+
+    def test_all_claimed_passes(self):
+        """When all staged files are claimed, gate passes."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": ["tests/test_foo.py"]},
+        ]
+        staged = {"src/foo.py", "tests/test_foo.py"}
+        res = engine.evaluate([], [], {}, staged_items=staged, claims=claims)
+        assert res["gate_decision"] == "pass"
+
+    def test_unclaimed_file_blocks(self):
+        """An unclaimed staged file blocks the gate with missing_claim gap."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/foo.py", "src/orphan.py"}
+        gaps = []
+        res = engine.evaluate(gaps, [], {}, staged_items=staged, claims=claims)
+        assert res["gate_decision"] == "blocked"
+        assert any("src/orphan.py" in item for item in res["blocked_items"])
+        assert any("src/orphan.py" in msg for msg in res["reasons"])
+        assert any("missing_claim" in gap.get("item_type", "") for gap in gaps)
+
+    def test_unclaimed_gap_appended_to_gaps(self):
+        """Unclaimed files produce gaps with item_type='missing_claim'."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/foo.py", "src/orphan.py"}
+        gaps = []
+        res = engine.evaluate(gaps, [], {}, staged_items=staged, claims=claims)
+        assert res["gate_decision"] == "blocked"
+        # The gap is appended to the input list
+        assert any(g.get("item_type") == "missing_claim" for g in gaps)
+
+    def test_unclaimed_file_gets_current_prefix(self):
+        """Unclaimed file reasons get [当前] prefix when staged_items is provided."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/foo.py", "src/orphan.py"}
+        res = engine.evaluate([], [], {}, staged_items=staged, claims=claims)
+        assert any("[当前]" in msg and "src/orphan.py" in msg for msg in res["reasons"])
+
+    def test_with_boundary_filters_non_business(self):
+        """Files outside boundary are not flagged as unclaimed."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/foo.py", "output/report.html"}
+        boundary = {
+            "included_patterns": ["src/*.py"],
+            "excluded_patterns": ["output/*"],
+        }
+        res = engine.evaluate(
+            [], [], {},
+            staged_items=staged,
+            claims=claims,
+            boundary=boundary,
+        )
+        assert res["gate_decision"] == "pass"
+
+    def test_multiple_unclaimed_files_sorted(self):
+        """Multiple unclaimed files appear in sorted order in reasons."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/foo.py", "src/aaa.py", "src/zzz.py"}
+        res = engine.evaluate([], [], {}, staged_items=staged, claims=claims)
+        assert res["gate_decision"] == "blocked"
+        assert len(res["blocked_items"]) == 2
+        # aaa.py should appear before zzz.py in reasons
+        aaa_idx = next(i for i, m in enumerate(res["reasons"]) if "src/aaa.py" in m)
+        zzz_idx = next(i for i, m in enumerate(res["reasons"]) if "src/zzz.py" in m)
+        assert aaa_idx < zzz_idx
+
+    def test_claim_existence_blocks_even_with_other_pass_conditions(self):
+        """Claim existence block takes effect even when no other gaps/risks exist."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        staged = {"src/orphan.py"}
+        res = engine.evaluate([], [], {}, staged_items=staged, claims=claims)
+        assert res["gate_decision"] == "blocked"
+        assert any("src/orphan.py" in item for item in res["blocked_items"])
+
+    def test_backward_compatible_no_claims_no_staged(self):
+        """Without claims and staged_items, behavior is identical to before."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        gaps = []
+        risks = []
+        compliance = {
+            "architecture_compliance_status": [],
+            "architecture_violations": [],
+            "unclear_constraints": [],
+        }
+        res = engine.evaluate(gaps, risks, compliance)
+        assert res["gate_decision"] == "pass"
+        assert "所有质量门禁规则均已通过" in res["reasons"][0]
+
+
+# ---------------------------------------------------------------
+# AC coverage derivation tests (check_ac_coverage + evaluate)
+# ---------------------------------------------------------------
+
+class TestCheckAcCoverage:
+    """Tests for the check_ac_coverage static method."""
+
+    def test_empty_inputs_returns_empty(self):
+        """Empty claims and tasks returns no uncovered ACs."""
+        result = MergeGateEngine.check_ac_coverage([], [])
+        assert result == []
+
+    def test_should_task_skipped(self):
+        """Tasks with priority != 'must' are skipped."""
+        tasks = [
+            {
+                "task_id": "TASK-VT-010",
+                "priority": "should",
+                "related_acceptance_criteria": ["AC-VT-010-01"],
+            }
+        ]
+        claims = []
+        result = MergeGateEngine.check_ac_coverage(claims, tasks)
+        assert result == []
+
+    def test_must_task_with_claim_and_tests_passes(self):
+        """A MUST task with a claim that has passing test_refs is covered."""
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "test_refs": ["tests/test_foo.py"],
+            }
+        ]
+        result = MergeGateEngine.check_ac_coverage(claims, tasks)
+        assert result == []
+
+    def test_no_claim_for_task(self):
+        """A MUST task with no associated claim produces no_claim_for_task."""
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = []
+        result = MergeGateEngine.check_ac_coverage(claims, tasks)
+        assert len(result) == 1
+        assert result[0]["ac_id"] == "AC-VT-001-01"
+        assert result[0]["task_id"] == "TASK-VT-001"
+        assert result[0]["reason"] == "no_claim_for_task"
+
+    def test_claim_without_test_refs(self):
+        """A claim with empty test_refs produces no_tests_declared."""
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "test_refs": [],
+            }
+        ]
+        result = MergeGateEngine.check_ac_coverage(claims, tasks)
+        assert len(result) == 1
+        assert result[0]["reason"] == "no_tests_declared"
+
+    def test_test_failed_in_evidence(self):
+        """A claim whose test_refs has a failed test produces test_failed."""
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "test_refs": ["tests/test_foo.py"],
+            }
+        ]
+        evidence_index = {
+            "evidences": [
+                {
+                    "source_path": "tests/test_foo.py",
+                    "status": "failed",
+                    "details": {"test_category": "test"},
+                }
+            ]
+        }
+        result = MergeGateEngine.check_ac_coverage(claims, tasks, evidence_index)
+        assert len(result) == 1
+        assert result[0]["reason"] == "test_failed"
+
+    def test_test_passed_in_evidence(self):
+        """A claim whose test_refs has a passing test is covered."""
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "test_refs": ["tests/test_foo.py"],
+            }
+        ]
+        evidence_index = {
+            "evidences": [
+                {
+                    "source_path": "tests/test_foo.py",
+                    "status": "passed",
+                    "details": {"test_category": "test"},
+                }
+            ]
+        }
+        result = MergeGateEngine.check_ac_coverage(claims, tasks, evidence_index)
+        assert result == []
+
+    def test_no_evidence_skips_test_result_check(self):
+        """Without evidence_index, test presence is sufficient (not test_failed)."""
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "test_refs": ["tests/test_foo.py"],
+            }
+        ]
+        result = MergeGateEngine.check_ac_coverage(claims, tasks)
+        assert result == []
+
+    def test_multiple_acs_partial_coverage(self):
+        """Only uncovered ACs appear in the result."""
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": [
+                    "AC-VT-001-01",
+                    "AC-VT-001-02",
+                ],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "test_refs": ["tests/test_foo.py"],
+            }
+        ]
+        # Both ACs are covered because the claim has test_refs
+        # (no evidence_index means test presence is sufficient)
+        result = MergeGateEngine.check_ac_coverage(claims, tasks)
+        assert result == []
+
+    def test_unrelated_claim_does_not_cover(self):
+        """A claim for a different task does not cover the task."""
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-VT-002",
+                "related_task": "TASK-VT-002",  # different task
+                "test_refs": ["tests/test_bar.py"],
+            }
+        ]
+        result = MergeGateEngine.check_ac_coverage(claims, tasks)
+        assert len(result) == 1
+        assert result[0]["reason"] == "no_claim_for_task"
+
+
+class TestEvaluateAcCoverage:
+    """Integration tests for AC coverage derivation within evaluate()."""
+
+    def test_ac_coverage_blocks_when_uncovered(self):
+        """An uncovered MUST AC blocks the gate."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = []
+        res = engine.evaluate([], [], {}, claims=claims, tasks=tasks)
+        assert res["gate_decision"] == "blocked"
+        assert any("AC-VT-001-01" in item for item in res["blocked_items"])
+
+    def test_ac_coverage_passes_when_covered(self):
+        """A covered MUST AC does not block the gate."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "test_refs": ["tests/test_foo.py"],
+            }
+        ]
+        res = engine.evaluate([], [], {}, claims=claims, tasks=tasks)
+        assert res["gate_decision"] == "pass"
+
+    def test_tasks_none_skips_check(self):
+        """When tasks=None, AC coverage check is skipped."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        claims = [
+            {"claim_id": "C1", "code_refs": ["src/foo.py"], "test_refs": []},
+        ]
+        res = engine.evaluate([], [], {}, claims=claims)
+        assert res["gate_decision"] == "pass"
+
+    def test_claims_none_skips_check(self):
+        """When claims=None, AC coverage check is skipped."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        res = engine.evaluate([], [], {}, tasks=tasks)
+        assert res["gate_decision"] == "pass"
+
+    def test_ac_gap_appended_to_gaps_list(self):
+        """Uncovered AC produces a gap entry in the gaps list."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = []
+        gaps = []
+        engine.evaluate(gaps, [], {}, claims=claims, tasks=tasks)
+        assert any(
+            g.get("item_type") == "ac"
+            and g.get("category") == "ac_not_covered"
+            for g in gaps
+        )
+
+    def test_ac_not_covered_uses_hint(self):
+        """The reason message uses the ac_not_covered hint from field_hints.json."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = []
+        res = engine.evaluate([], [], {}, claims=claims, tasks=tasks)
+        # The hint should contain the AC ID
+        assert any("AC-VT-001-01" in msg for msg in res["reasons"])
+        assert any("TASK-VT-001" in msg for msg in res["reasons"])
+
+    def test_ac_coverage_with_test_failed_in_evidence(self):
+        """A MUST AC with a failed test in evidence blocks with test_failed reason."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        tasks = [
+            {
+                "task_id": "TASK-VT-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-VT-001",
+                "related_task": "TASK-VT-001",
+                "test_refs": ["tests/test_foo.py"],
+            }
+        ]
+        evidence_index = {
+            "evidences": [
+                {
+                    "source_path": "tests/test_foo.py",
+                    "status": "failed",
+                    "details": {"test_category": "test"},
+                }
+            ]
+        }
+        res = engine.evaluate(
+            [], [], {},
+            claims=claims,
+            tasks=tasks,
+            evidence_index=evidence_index,
+        )
+        assert res["gate_decision"] == "blocked"
+        assert any("test_failed" in msg for msg in res["reasons"])
+
+    def test_backward_compatible_no_tasks_no_claims(self):
+        """Without tasks and claims, behavior is identical to before."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        res = engine.evaluate([], [], {})
+        assert res["gate_decision"] == "pass"
+        assert "所有质量门禁规则均已通过" in res["reasons"][0]

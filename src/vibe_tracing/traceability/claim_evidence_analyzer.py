@@ -6,70 +6,32 @@ with task completeness or test results, and flags nonexistent or outdated file r
 """
 
 # ============================================================================
-# DESIGN: Claim Auto-Invalidation Mechanism (EVO-TASK-011)
+# DESIGN: Claim as Pointer — Evidence-Based Validation
 # ============================================================================
 #
-# Problem:
-#   Currently, ClaimEvidenceAnalyzer detects stale claims by comparing file
-#   modification timestamps against the claim timestamp (Section 4 in analyze()).
-#   This is a passive, runtime-only check. There is no mechanism to proactively
-#   mark claims as "needs re-verification" when their referenced files change
-#   between analysis runs.
+# Claim is a pointer to evidence, not a self-declared status.
+# The analyzer validates whether the referenced evidence actually supports
+# the claim, without doing hash-based content comparison.
 #
-# Proposed Mechanism:
-#   1. File Fingerprint Storage:
-#      - After each successful vt analyze run, store a snapshot of SHA-256
-#        fingerprints for all files referenced in code_refs, test_refs, and
-#        evidence_refs of every claim.
-#      - Store in .vibetracing/claim_fingerprints.json with structure:
-#        {
-#          "CLAIM-VT-005": {
-#            "timestamp": "2026-06-08T13:26:39Z",
-#            "fingerprints": {
-#              "src/vibe_tracing/raw_input_loader.py": "abc123...",
-#              "tests/test_raw_input_loader.py": "def456..."
-#            }
-#          }
-#        }
+# Key principles:
+#   - Claims reference tasks, evidence, code files, and test files.
+#   - Validation checks structural consistency (existence, status, coverage)
+#     rather than content hash comparison.
+#   - File modification time checks provide a passive staleness signal.
+#   - Invalidation detection via _check_invalidation() is available for
+#     callers who maintain fingerprint snapshots externally (e.g. evidence_index),
+#     but analyze() itself does not load or store fingerprints.
 #
-#   2. Invalidation Detection (in analyze() or a new pre-analyze step):
-#      - Before claim analysis, load claim_fingerprints.json.
-#      - For each claim, compute current SHA-256 of all referenced files.
-#      - If any file's fingerprint differs from the stored snapshot:
-#        * Set claim status to "needs_reverification" (new CoverageStatus enum).
-#        * Generate a risk with risk_category "claim_invalidated_by_file_change".
-#        * Include which specific files changed and their old/new fingerprints.
-#
-#   3. Integration Points:
-#      - ClaimEvidenceAnalyzer.__init__: accept optional fingerprints_path.
-#      - ClaimEvidenceAnalyzer.analyze: add a _check_invalidation() step that
-#        runs before existing Section 1-4 logic.
-#      - CLI (run_analyze): after analysis, write updated fingerprints to disk.
-#      - Gate 2 (pre-commit hook): can check invalidation to warn about stale
-#        claims in staged files without full analysis.
-#
-#   4. Status Lifecycle:
-#      covered -> needs_reverification (file changed)
-#      needs_reverification -> covered (re-analysis confirms evidence still valid)
-#      needs_reverification -> violated (re-analysis finds evidence broken)
-#      needs_reverification -> blocked (evidence file deleted)
-#
-#   5. Dashboard Impact:
-#      - Add "needs_reverification" badge style (amber/yellow).
-#      - In Decisions tab, auto-generate decision cards for invalidated claims
-#        asking: "Claim evidence may have changed. Re-verify or accept risk?"
-#
-#   6. Files to Modify (implementation phase):
-#      - src/vibe_tracing/traceability/claim_evidence_analyzer.py  (core logic)
-#      - src/vibe_tracing/core/enums.py                            (new status)
-#      - src/vibe_tracing/cli.py                                   (fingerprint I/O)
-#      - src/vibe_tracing/templates/dashboard.template.html        (UI badge)
-#      - tests/test_claim_evidence_analyzer.py                     (tests)
+# Sections in analyze():
+#   0. (reserved — invalidation is now caller-driven, not embedded)
+#   1. External evidence checks (status, existence, self-reference)
+#   2. Task completion checks
+#   3. AC test coverage checks + test_refs covers consistency
+#   4. File existence and modification time checks
 #
 # ============================================================================
 
 import hashlib
-import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -116,23 +78,27 @@ class ClaimEvidenceAnalyzer:
     def _check_invalidation(self, claim, stored_fingerprints: dict, evidence_index=None) -> Optional[dict]:
         """Check if claim's referenced files have changed since last analysis.
 
+        When evidence_index is provided, validates file hashes against it.
+        Otherwise, falls back to stored_fingerprints for backward compatibility.
+
+        Note: analyze() no longer calls this method or loads fingerprints.
+        Callers who need invalidation detection should pass evidence_index
+        or manage stored_fingerprints externally.
+
         Args:
             claim: The claim object to check.
-            stored_fingerprints: Legacy fingerprint data from claim_fingerprints.json.
-            evidence_index: Optional evidence_index dict. When provided, validates
-                file hashes against evidence_index instead of stored_fingerprints.
-                When None, falls back to stored_fingerprints logic.
+            stored_fingerprints: Fingerprint data keyed by claim_id (legacy path).
+            evidence_index: Optional evidence_index dict for hash-based validation.
 
         Returns:
             A dict with invalidation details if files changed, else None.
         """
         cid = claim.claim_id if hasattr(claim, 'claim_id') else claim.get('claim_id')
 
-        # ---- New path: evidence_index based validation ----
         if evidence_index is not None:
             return self._check_invalidation_from_evidence_index(claim, cid, evidence_index)
 
-        # ---- Fallback: original stored_fingerprints logic ----
+        # Legacy path: compare against stored_fingerprints
         if stored_fingerprints is None:
             return None
 
@@ -266,16 +232,6 @@ class ClaimEvidenceAnalyzer:
         # Find test evidences
         test_evs = [ev for ev in evidences if ev.get("source_type") == "test"]
 
-        # Load stored file fingerprints for invalidation detection
-        fingerprints_path = self.project_root / ".vibetracing" / "claim_fingerprints.json"
-        stored_fingerprints: Dict[str, Any] = {}
-        if fingerprints_path.exists():
-            try:
-                with open(fingerprints_path, "r", encoding="utf-8") as pf:
-                    stored_fingerprints = json.load(pf)
-            except (OSError, json.JSONDecodeError):
-                stored_fingerprints = {}
-
         for claim in claims:
             claim_id = claim.claim_id
             claimed_status = claim.claimed_status
@@ -296,21 +252,6 @@ class ClaimEvidenceAnalyzer:
             has_failed_test = False
             has_self_ref_gap = False
             has_other_mismatch = False
-
-            # 0. Claim invalidation detection (file fingerprint changes)
-            invalidation = self._check_invalidation(claim, stored_fingerprints)
-            if invalidation:
-                risks.append(
-                    {
-                        "risk_id": f"RISK-INVALIDATED-{claim_id}",
-                        "risk_category": "claim_invalidated_by_file_change",
-                        "severity": "must",
-                        "claim_id": claim_id,
-                        "description": f"Claim {claim_id} 引用的文件已变化，需要重新验证",
-                        "changed_files": [f["file"] for f in invalidation["files"]],
-                        "suggested_action": "重新运行 vt analyze 验证证据是否仍然有效",
-                    }
-                )
 
             # 1. External evidence checks (only relevant if completed)
             external_refs = [ref for ref in evidence_refs if ref != claim_id]

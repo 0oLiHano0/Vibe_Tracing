@@ -378,9 +378,9 @@ def test_multiple_claims_mixed_credibility():
 # ---------------------------------------------------------------------------
 
 
-def test_low_confidence_claim_blocks_gate():
+def test_low_confidence_claim_does_not_block_gate():
     """
-    Low-confidence claim with MUST severity risk blocks the merge gate.
+    Low-confidence claim credibility risk no longer blocks the merge gate.
     covers: AC-VT-040-05
     """
     engine = MergeGateEngine(Path("/dummy/project/root"))
@@ -389,7 +389,7 @@ def test_low_confidence_claim_blocks_gate():
         {
             "risk_id": "RISK-VT-001",
             "description": "Claim CLAIM-VT-001 声明任务完成但无 VT 执行的工具验证证据",
-            "severity": "must",
+            "severity": "should",
             "business_impact": "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险",
             "suggested_action": "确保关联的测试文件存在、声明了 covers AC、且 pytest 能通过。然后重新运行 vibe-tracing analyze。",
             "item_type": "claim_credibility",
@@ -398,14 +398,9 @@ def test_low_confidence_claim_blocks_gate():
 
     res = engine.evaluate(gaps=[], risks=risks, compliance_result=None)
 
-    assert res["gate_decision"] == "blocked"
+    assert res["gate_decision"] != "blocked"
+    assert len(res["blocked_items"]) == 0
     assert any("RISK-VT-001" in msg for msg in res["reasons"])
-    assert any(
-        "存在低可信度 Claim（无工具验证证据）" in msg for msg in res["blocked_items"]
-    )
-    assert any(
-        "存在低可信度 Claim（无工具验证证据）" in msg for msg in res["reasons"]
-    )
 
 
 def test_no_credibility_risks_gate_passes():

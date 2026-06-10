@@ -1,0 +1,598 @@
+[
+  {
+    "claim_id": "CLAIM-VT-005",
+    "related_task": "TASK-VT-005",
+    "code_refs": [
+      "src/vibe_tracing/raw_input_loader.py"
+    ],
+    "test_refs": [
+      "tests/test_raw_input_loader.py",
+      "tests/test_claim_evidence_analyzer.py",
+      "tests/test_evidence_index_builder.py",
+      "tests/test_prd_parser.py",
+      "tests/test_task_loader.py"
+    ],
+    "content_hash": "a6be6c46aaa158d6"
+  },
+  {
+    "claim_id": "CLAIM-VT-030",
+    "related_task": "TASK-VT-030",
+    "code_refs": [
+      "docs/prd.md",
+      "docs/architecture_constraints.json",
+      "docs/task_list.json",
+      "docs/task_execution_rules.md"
+    ],
+    "test_refs": [
+      "tests/test_raw_input_loader.py"
+    ],
+    "content_hash": "9294f74c09a80c4f"
+  },
+  {
+    "claim_id": "CLAIM-VT-031",
+    "related_task": "TASK-VT-031",
+    "code_refs": [
+      "src/vibe_tracing/raw_input_loader.py"
+    ],
+    "test_refs": [
+      "tests/test_raw_input_loader.py"
+    ],
+    "content_hash": "936ace60e168e11f"
+  },
+  {
+    "claim_id": "CLAIM-VT-033",
+    "related_task": "TASK-VT-033",
+    "code_refs": [
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
+    ],
+    "test_refs": [
+      "tests/test_claim_evidence_analyzer.py"
+    ],
+    "content_hash": "776d35f161a3da83"
+  },
+  {
+    "claim_id": "CLAIM-VT-034",
+    "related_task": "TASK-VT-034",
+    "code_refs": [
+      "src/vibe_tracing/dashboard_renderer.py"
+    ],
+    "test_refs": [
+      "tests/test_dashboard_renderer.py"
+    ],
+    "content_hash": "2ffcab7d34b5d86a"
+  },
+  {
+    "claim_id": "CLAIM-VT-035",
+    "related_task": "TASK-VT-035",
+    "code_refs": [
+      "src/vibe_tracing/schema_validator.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_scaffolding.py",
+      "tests/test_dynamic_hints.py"
+    ],
+    "content_hash": "bec9766ee7b2000f"
+  },
+  {
+    "claim_id": "CLAIM-VT-036",
+    "related_task": "TASK-VT-044",
+    "code_refs": [
+      "src/vibe_tracing/context.py",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_unified_context.py",
+      "tests/test_evidence_index_builder.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "notes": "UnifiedContext 强类型领域模型，EvidenceIndexBuilder 单次加载",
+    "content_hash": "daa47a8be97fdc72"
+  },
+  {
+    "claim_id": "CLAIM-VT-037",
+    "related_task": "TASK-VT-045",
+    "code_refs": [
+      "src/vibe_tracing/merge_gate_engine.py"
+    ],
+    "test_refs": [
+      "tests/test_merge_gate_engine.py"
+    ],
+    "notes": "MergeGateEngine blocked 时不再吞掉 fail 级警告",
+    "content_hash": "98a1c1adda006cbd"
+  },
+  {
+    "claim_id": "CLAIM-VT-038",
+    "related_task": "TASK-VT-046",
+    "code_refs": [
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_finalize.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "notes": "finalize 存储 prd_hash，analyze 检测 PRD 漂移",
+    "content_hash": "660509f0e68d5cd0"
+  },
+  {
+    "claim_id": "CLAIM-VT-039",
+    "related_task": "TASK-VT-047",
+    "code_refs": [
+      "src/vibe_tracing/prd_arch_validator.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_prd_arch_validator.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "notes": "PRD↔Arch 映射校验提取为独立模块，analyze 时持续校验",
+    "content_hash": "004cd1368d21480e"
+  },
+  {
+    "claim_id": "CLAIM-VT-040",
+    "related_task": "TASK-VT-048",
+    "code_refs": [
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py"
+    ],
+    "test_refs": [
+      "tests/test_claim_evidence_analyzer.py"
+    ],
+    "notes": "Claim 的 test_refs 必须覆盖关联 AC",
+    "content_hash": "fabf155db55ccc01"
+  },
+  {
+    "claim_id": "CLAIM-VT-041",
+    "related_task": "TASK-VT-049",
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/ghost_code_reconciler.py"
+    ],
+    "test_refs": [
+      "tests/test_scaffolding.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_ghost_code_reconciler.py"
+    ],
+    "notes": "hook set -e + --gates-only + staged claims 读取",
+    "content_hash": "fa74d5d4330a2919"
+  },
+  {
+    "claim_id": "CLAIM-VT-042",
+    "related_task": "TASK-VT-050",
+    "code_refs": [
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_task_loader.py"
+    ],
+    "notes": "删除 ToolEvidenceAdapter、移除 tests/ 兜底、hashlib 顶部导入、skip_schema",
+    "content_hash": "6e9ced2d34402aa1"
+  },
+  {
+    "claim_id": "CLAIM-VT-043",
+    "related_task": "TASK-VT-044",
+    "code_refs": [
+      "src/vibe_tracing/reflection_prompts.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_reflection_prompts.py"
+    ],
+    "test_refs": [
+      "tests/test_reflection_prompts.py"
+    ],
+    "notes": "vt analyze 结束时输出 8 维度元认知反思提示",
+    "content_hash": "dd014e2cb106da77"
+  },
+  {
+    "claim_id": "CLAIM-VT-044",
+    "related_task": "TASK-VT-044",
+    "code_refs": [
+      "src/vibe_tracing/evidence_index_builder.py",
+      "tests/conftest.py",
+      "tests/test_evidence_index_builder.py"
+    ],
+    "test_refs": [
+      "tests/test_evidence_index_builder.py"
+    ],
+    "notes": "EVO-001: 删除 ctx=None fallback，纯 UnifiedContext 路径",
+    "content_hash": "21ccffca07706f49"
+  },
+  {
+    "claim_id": "CLAIM-VT-045",
+    "related_task": "TASK-VT-044",
+    "code_refs": [
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "tests/test_architecture_compliance_checker.py"
+    ],
+    "test_refs": [
+      "tests/test_architecture_compliance_checker.py"
+    ],
+    "notes": "EVO-002: 删除 constraints_data=None fallback",
+    "content_hash": "5ce6b8ddc0852aaf"
+  },
+  {
+    "claim_id": "CLAIM-VT-046",
+    "related_task": "TASK-VT-044",
+    "code_refs": [
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [
+      "tests/test_task_loader.py"
+    ],
+    "notes": "EVO-003: 移除 skip_schema 参数",
+    "content_hash": "c6c1e02d1e79b98f"
+  },
+  {
+    "claim_id": "CLAIM-VT-047",
+    "related_task": "TASK-VT-044",
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_cli_analyze.py"
+    ],
+    "notes": "EVO-004: run_analyze 拆分为 5 个子函数",
+    "content_hash": "aba7a70e93c2d06c"
+  },
+  {
+    "claim_id": "CLAIM-VT-048",
+    "related_task": "TASK-VT-044",
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_cli_analyze.py"
+    ],
+    "notes": "EVO-005: 工具依赖检查失败注入 BLOCKED 证据而非硬退出",
+    "content_hash": "ce07dcacb84f0301"
+  },
+  {
+    "claim_id": "CLAIM-VT-049",
+    "related_task": "TASK-VT-044",
+    "code_refs": [
+      "src/vibe_tracing/reflection_prompts.py",
+      "src/vibe_tracing/templates/reflection_prompts.template.json",
+      "tests/test_reflection_prompts.py",
+      "pyproject.toml"
+    ],
+    "test_refs": [
+      "tests/test_reflection_prompts.py"
+    ],
+    "notes": "EVO-006: reflection prompts 从 JSON 模板加载",
+    "content_hash": "ca7ec1227ddebc50"
+  },
+  {
+    "claim_id": "CLAIM-VT-050",
+    "related_task": "TASK-VT-051",
+    "code_refs": [
+      "src/vibe_tracing/prd_parser.py",
+      "src/vibe_tracing/templates/prd.template.md",
+      "src/vibe_tracing/reflection_prompts.py",
+      "src/vibe_tracing/templates/reflection_prompts.template.json",
+      "src/vibe_tracing/cli.py",
+      "docs/prd.md",
+      "tests/test_prd_parser.py",
+      "tests/test_reflection_prompts.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_e2e_finalize_analyze.py",
+      "tests/test_requirement_task_analyzer.py",
+      "tests/test_task_loader.py",
+      "tests/test_ac_test_analyzer.py",
+      "tests/test_evidence_index_builder.py",
+      "tests/test_prd_draft_guidance.py",
+      "tests/test_quality_gates.py",
+      "tests/fixtures/examples/sample_project_arch_unclear/docs/prd.md",
+      "tests/fixtures/examples/sample_project_bad_claim/docs/prd.md",
+      "tests/fixtures/examples/sample_project_good/docs/prd.md",
+      "tests/fixtures/examples/sample_project_missing_tests/docs/prd.md"
+    ],
+    "test_refs": [
+      "tests/test_prd_parser.py",
+      "tests/test_reflection_prompts.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_e2e_finalize_analyze.py"
+    ],
+    "notes": "GOV: PRD quality_evolution REQ 类别 + 反思覆盖校验 WARNING",
+    "content_hash": "5febe89d9064042b"
+  },
+  {
+    "claim_id": "CLAIM-VT-051",
+    "related_task": "TASK-VT-052",
+    "code_refs": [
+      "tests/test_quality_gates.py"
+    ],
+    "test_refs": [
+      "tests/test_quality_gates.py"
+    ],
+    "notes": "GOV: Gate 2.5 反向覆盖校验 — staged 代码文件覆盖 task 修改状态",
+    "content_hash": "179de230f3cec13a"
+  },
+  {
+    "claim_id": "CLAIM-VT-052",
+    "related_task": "TASK-VT-053",
+    "code_refs": [
+      "src/vibe_tracing/semantic_auditor.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_semantic_auditor.py",
+      ".vibetracing/semantic_audit.json"
+    ],
+    "test_refs": [
+      "tests/test_semantic_auditor.py"
+    ],
+    "notes": "Gate 3: SemanticAuditor 两阶段协议。语义审计单状态批量更新为 passed（决策平台 v1 进化附带清理）。",
+    "content_hash": "26444a80edef461b"
+  },
+  {
+    "claim_id": "CLAIM-VT-053",
+    "related_task": "TASK-VT-054",
+    "code_refs": [
+      "src/vibe_tracing/cli.py"
+    ],
+    "test_refs": [],
+    "notes": "Gate 2.5 反向覆盖校验升级：无覆盖 task → BLOCKED",
+    "content_hash": "4ff03a58ac66847e"
+  },
+  {
+    "claim_id": "CLAIM-VT-054",
+    "related_task": "TASK-VT-049",
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_scaffolding.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "notes": "hook 模板去除 --gates-only + 工具执行过滤非代码文件",
+    "content_hash": "f771bef3fb0b107b"
+  },
+  {
+    "claim_id": "CLAIM-VT-055",
+    "related_task": "TASK-VT-055",
+    "code_refs": [
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/semantic_auditor.py",
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_semantic_auditor.py"
+    ],
+    "test_refs": [
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_semantic_auditor.py"
+    ],
+    "notes": "EVO-010: 白名单扩展 + EVO-014: audit_reason 质量校验",
+    "content_hash": "5cf85d18b44e7590"
+  },
+  {
+    "claim_id": "CLAIM-VT-056",
+    "related_task": "TASK-VT-056",
+    "code_refs": [
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/cli.py",
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_quality_gates.py"
+    ],
+    "test_refs": [
+      "tests/test_ghost_code_reconciler.py",
+      "tests/test_quality_gates.py"
+    ],
+    "notes": "EVO-011: Gate 2+2.5 合并 + 反向覆盖检查跳过 done 任务",
+    "content_hash": "5fdb5e703be3868c"
+  },
+  {
+    "claim_id": "CLAIM-VT-057",
+    "related_task": "TASK-VT-057",
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/templates/architecture_constraints.template.json",
+      "src/vibe_tracing/schemas/architecture_constraints.schema.json",
+      "tests/test_cli_analyze.py",
+      "tests/test_e2e_finalize_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_cli_analyze.py",
+      "tests/test_e2e_finalize_analyze.py"
+    ],
+    "notes": "EVO-012: 配置驱动扩展名 + 工具未安装提醒安装",
+    "content_hash": "4ca80d9aa30ad7d5"
+  },
+  {
+    "claim_id": "CLAIM-VT-058",
+    "related_task": "TASK-VT-058",
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_cli_analyze.py",
+      "tests/test_quality_gates.py"
+    ],
+    "notes": "EVO-013: 门禁函数拆分 + 编排函数简化",
+    "content_hash": "90855945e5dfc27d"
+  },
+  {
+    "claim_id": "CLAIM-VT-062",
+    "related_task": "TASK-VT-062",
+    "code_refs": [
+      "src/vibe_tracing/tool_resolver.py",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "tests/test_tool_execution.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "test_refs": [
+      "tests/test_tool_execution.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "notes": "ToolResolver 统一工具解析层",
+    "content_hash": "b0f41d3c587cb23d"
+  },
+  {
+    "claim_id": "CLAIM-VT-063",
+    "related_task": "TASK-VT-063",
+    "code_refs": [
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/merge_gate_engine.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_architecture_compliance_checker.py",
+      "src/vibe_tracing/schemas/architecture_constraints.schema.json",
+      "src/vibe_tracing/templates/architecture_constraints.template.json",
+      "docs/architecture_change_log.md",
+      "src/vibe_tracing/architecture_change_proposal.py"
+    ],
+    "test_refs": [
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_architecture_compliance_checker.py",
+      "tests/test_ac_vt_009_coverage.py"
+    ],
+    "notes": "vt doctor + evidence tool_category + hook 债务感知 + vt accept",
+    "content_hash": "b8302001a2f356b1"
+  },
+  {
+    "claim_id": "CLAIM-VT-064",
+    "related_task": "TASK-VT-064",
+    "code_refs": [
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "src/vibe_tracing/core/enums.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/schemas/evidence_index.schema.json",
+      "tests/test_tool_execution.py",
+      "tests/test_architecture_compliance_checker.py",
+      "tests/test_prd_arch_validator.py"
+    ],
+    "test_refs": [
+      "tests/test_architecture_compliance_checker.py",
+      "tests/test_tool_execution.py"
+    ],
+    "notes": "噪音消除措施改进：accepted_rules 可见化 + skipped 证据 + stale WARNING + Agent 行动清单 + 决策日志加载",
+    "content_hash": "0f1b06aaaec15475"
+  },
+  {
+    "claim_id": "CLAIM-VT-065",
+    "related_task": "TASK-VT-065",
+    "code_refs": [
+      "src/vibe_tracing/templates/dashboard.template.html",
+      "decision_server.py",
+      ".vibetracing/human_decisions.json",
+      "pyproject.toml"
+    ],
+    "test_refs": [],
+    "notes": "决策平台：Dashboard 待决策标签页 + 交互按钮 + Decision API + 决策日志",
+    "content_hash": "67456cc6b9cfd1d2"
+  },
+  {
+    "claim_id": "CLAIM-VT-066",
+    "related_task": "TASK-VT-064",
+    "code_refs": [
+      "src/vibe_tracing/templates/field_hints.json",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/merge_gate_engine.py",
+      "src/vibe_tracing/risk_advisor.py",
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/dashboard_renderer.py",
+      "src/vibe_tracing/architecture_change_proposal.py",
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "src/vibe_tracing/templates/dashboard.template.html",
+      "decision_server.py",
+      "tests/test_decision_server.py",
+      "tests/test_ids_and_enums.py",
+      "tests/test_ac_vt_009_coverage.py",
+      "tests/test_prd_draft_guidance.py",
+      "tests/test_quality_gates.py",
+      "tests/test_e2e_finalize_analyze.py",
+      "tests/test_tool_execution.py",
+      "tests/test_e2e_samples.py",
+      "tests/test_dashboard_decisions.py",
+      "tests/test_risk_advisor.py",
+      "tests/test_dashboard_renderer.py",
+      "tests/test_claim_credibility.py",
+      "tests/test_merge_gate_engine.py",
+      "src/vibe_tracing/schemas/agent_claims.schema.json",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "tests/test_evidence_index_builder.py",
+      ".coverage",
+      "CLAUDE.md",
+      "src/vibe_tracing/core/enums.py",
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/schemas/architecture_constraints.schema.json",
+      "tests/test_claim_evidence_analyzer.py",
+      ".vibetracing/claim_fingerprints.json",
+      "output/governance_boundary_20260609.md",
+      "output/claim_auto_invalidation_layer2_20260609.md",
+      "output/vt_self_evolution_plan_20260608d.md",
+      ".vibetracing/coverage_baseline.json",
+      "output/coverage_redesign_20260609.md",
+      "tests/test_git_utils.py",
+      "tests/test_schema_validator.py"
+    ],
+    "test_refs": [
+      "tests/test_ac_vt_009_coverage.py",
+      "tests/test_dashboard_decisions.py",
+      "tests/test_decision_server.py",
+      "tests/test_ids_and_enums.py",
+      "tests/test_merge_gate_engine.py",
+      "tests/test_risk_advisor.py",
+      "tests/test_claim_credibility.py",
+      "tests/test_e2e_finalize_analyze.py",
+      "tests/test_e2e_samples.py",
+      "tests/test_prd_draft_guidance.py",
+      "tests/test_quality_gates.py",
+      "tests/test_tool_execution.py",
+      "tests/test_dashboard_renderer.py",
+      "tests/test_architecture_compliance_checker.py",
+      "tests/test_cli_analyze.py"
+    ],
+    "notes": "进化轮次 d：hints 三级架构 + 决策平台完善 + AC 覆盖率清零 + 变更分离机制 + _is_current claim 修复 + Agent 指令",
+    "content_hash": "d5ac7403f4120b8e"
+  },
+  {
+    "claim_id": "CLAIM-VT-067",
+    "related_task": "TASK-VT-065",
+    "code_refs": [
+      "src/vibe_tracing/decision_server.py",
+      "src/vibe_tracing/hint_loader.py",
+      "src/vibe_tracing/governance.py",
+      "src/vibe_tracing/merge_gate_engine.py",
+      "src/vibe_tracing/cli.py",
+      "src/vibe_tracing/architecture_compliance_checker.py",
+      "src/vibe_tracing/risk_advisor.py",
+      "src/vibe_tracing/claim_loader.py",
+      "src/vibe_tracing/task_loader.py",
+      "src/vibe_tracing/evidence_index_builder.py",
+      "src/vibe_tracing/tool_evidence_adapter.py",
+      "src/vibe_tracing/ghost_code_reconciler.py",
+      "src/vibe_tracing/traceability/claim_evidence_analyzer.py",
+      "src/vibe_tracing/templates/dashboard.template.html",
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_decision_server.py",
+      "tests/test_dashboard_decisions.py",
+      "tests/test_evidence_index_builder.py"
+    ],
+    "test_refs": [
+      "tests/test_merge_gate_engine.py",
+      "tests/test_cli_analyze.py",
+      "tests/test_decision_server.py",
+      "tests/test_dashboard_decisions.py",
+      "tests/test_evidence_index_builder.py"
+    ],
+    "notes": "决策平台 v1：Decision Server + Gate Engine 人类决策集成 + hints 去重 + 状态整合 + 治理边界提取 + 技术债清零。872 测试全通过。",
+    "content_hash": "43196c4c4f158005"
+  }
+]

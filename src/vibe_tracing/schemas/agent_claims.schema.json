@@ -8,12 +8,9 @@
     "type": "object",
     "required": [
       "claim_id",
-      "related_task",
-      "claimed_status",
-      "evidence_refs",
-      "timestamp"
+      "related_task"
     ],
-    "additionalProperties": false,
+    "additionalProperties": true,
     "properties": {
       "claim_id": {
         "type": "string",
@@ -24,31 +21,6 @@
         "type": "string",
         "pattern": "^TASK-[a-zA-Z0-9_-]+-\\d+$",
         "description": "关联任务标识符"
-      },
-      "claimed_status": {
-        "type": "string",
-        "enum": [
-          "covered",
-          "partial",
-          "missing",
-          "unclear",
-          "low_confidence",
-          "blocked",
-          "compliant",
-          "violated"
-        ],
-        "description": "申索状态，必须是 'covered', 'partial', 'missing', 'unclear', 'low_confidence', 'blocked', 'compliant', 'violated' 之一。"
-      },
-      "evidence_refs": {
-        "type": "array",
-        "description": "证据参考列表，指向支撑本申索的测试、代码或工具报告等。",
-        "items": {
-          "type": "string"
-        }
-      },
-      "timestamp": {
-        "type": "string",
-        "description": "ISO 8601格式的时间戳，例如 `2026-05-31T10:00:00Z`。"
       },
       "code_refs": {
         "type": "array",
@@ -67,10 +39,6 @@
       "notes": {
         "type": "string",
         "description": "可选的备注说明信息。"
-      },
-      "content_hash": {
-        "type": "string",
-        "description": "内容哈希，用于检测 claim 内容变更（不含 timestamp 和 content_hash 本身）。"
       }
     }
   }

@@ -9,6 +9,7 @@ and output the evidence index, traceability report, and run metadata.
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from dataclasses import asdict
@@ -112,9 +113,17 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
             content = content.replace("{{TODAY}}", today_str)
             return content
 
+        # Create claims directory structure
+        claims_dir = project_root / ".vibetracing" / "claims"
+        claims_archive_dir = claims_dir / "archive"
+        for d in [claims_dir, claims_archive_dir]:
+            if not d.exists():
+                d.mkdir(parents=True, exist_ok=True)
+                print(f"Created directory: {d.relative_to(project_root)}")
+
         # 3. Write ALL template files except config.json first
         other_files = {
-            ".vibetracing/agent_claims.json": render_template(claims_text),
+            ".vibetracing/claims/current.json": render_template(claims_text),
             "docs/task_list.json": render_template(task_list_text),
             "docs/architecture_constraints.json": render_template(arch_text),
             "docs/prd.md": render_template(prd_text),
@@ -960,8 +969,7 @@ def _execute_tools(
 
     print(f"Executing validation tools for {total_paths} staged path(s)...")
     typed_paths = {"test": test_paths, "source": source_paths}
-    baseline_path = str(project_root / ".vibetracing" / "coverage_baseline.json")
-    tool_evidence_candidates = engine.execute_all(typed_paths, baseline_path=baseline_path)
+    tool_evidence_candidates = engine.execute_all(typed_paths)
 
     # Generate skipped evidence for non-code files
     for ref_path in non_code_refs:
@@ -1762,6 +1770,164 @@ def _file_sha256(path: Path) -> Optional[str]:
         return None
 
 
+def _archive_claims(project_root: Path) -> None:
+    """Archive current claims to commit-{hash}.json and clear current.json.
+
+    Called after a successful pre-commit gate evaluation so that claims
+    are preserved alongside the commit they belong to.
+    """
+    current_path = project_root / ".vibetracing" / "claims" / "current.json"
+    archive_dir = project_root / ".vibetracing" / "claims" / "archive"
+
+    # Nothing to archive if file doesn't exist
+    if not current_path.exists():
+        return
+
+    try:
+        with current_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return
+
+    # Nothing to archive if list is empty
+    if not data:
+        return
+
+    # Resolve archive filename: prefer short git commit hash, fallback to timestamp
+    archive_name = None
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            archive_name = f"commit-{result.stdout.strip()}"
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+    if archive_name is None:
+        archive_name = f"commit-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+
+    archive_path = archive_dir / f"{archive_name}.json"
+
+    # Ensure archive directory exists
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write archived claims
+    with archive_path.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+    # Clear current.json
+    with current_path.open("w", encoding="utf-8") as f:
+        json.dump([], f)
+        f.write("\n")
+
+    print(f"Claims archived to {archive_name}.json")
+
+
+
+def _run_claim_tests(project_root: Path, claims_list: list, evidence_index: dict) -> dict:
+    """Run pytest for each Claim's test_refs and write results into evidence_index.
+
+    Args:
+        project_root: The workspace root path.
+        claims_list: List of Claim objects (each with a ``test_refs`` attribute).
+        evidence_index: The current evidence index dict (mutated in place).
+
+    Returns:
+        The updated evidence_index with a new ``test_results`` field.
+    """
+    # Collect unique test_refs across all claims
+    all_test_refs: Set[str] = set()
+    for claim in claims_list:
+        for ref in getattr(claim, "test_refs", []) or []:
+            path_part = ref.split("#")[0]
+            if path_part:
+                all_test_refs.add(path_part)
+
+    if not all_test_refs:
+        evidence_index["test_results"] = {}
+        return evidence_index
+
+    test_results: Dict[str, Any] = {}
+
+    for test_ref in sorted(all_test_refs):
+        test_path = project_root / test_ref
+        if not test_path.exists():
+            test_results[test_ref] = {
+                "status": "file_not_found",
+                "num_tests": 0,
+                "errors": [f"Test file not found: {test_ref}"],
+            }
+            continue
+
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "pytest", str(test_path),
+                 "--tb=short", "-q"],
+                cwd=str(project_root),
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            stdout = result.stdout.strip()
+            stderr = result.stderr.strip()
+
+            # Parse pytest output: "X passed, Y failed, Z errors in ..."
+            num_passed = 0
+            num_failed = 0
+            errors: List[str] = []
+
+            # Check for "X passed" pattern
+            passed_match = re.search(r"(\d+) passed", stdout)
+            if passed_match:
+                num_passed = int(passed_match.group(1))
+
+            failed_match = re.search(r"(\d+) failed", stdout)
+            if failed_match:
+                num_failed = int(failed_match.group(1))
+
+            error_match = re.search(r"(\d+) error", stdout)
+            num_errors = int(error_match.group(1)) if error_match else 0
+
+            total_tests = num_passed + num_failed + num_errors
+
+            if result.returncode == 0:
+                status = "passed"
+            else:
+                status = "failed"
+                # Capture failure details from stdout (short tracebacks)
+                if stdout:
+                    errors.append(stdout)
+                if stderr:
+                    errors.append(stderr)
+
+            test_results[test_ref] = {
+                "status": status,
+                "num_tests": total_tests,
+                "errors": errors,
+            }
+
+        except subprocess.TimeoutExpired:
+            test_results[test_ref] = {
+                "status": "timeout",
+                "num_tests": 0,
+                "errors": ["Test execution timed out after 30 seconds"],
+            }
+        except Exception as exc:
+            test_results[test_ref] = {
+                "status": "error",
+                "num_tests": 0,
+                "errors": [str(exc)],
+            }
+
+    evidence_index["test_results"] = test_results
+    return evidence_index
+
 
 def _evaluate_and_output(
     ctx: UnifiedContext,
@@ -1783,6 +1949,9 @@ def _evaluate_and_output(
         return 1
     claims_list = ctx.claims_list
     task_res = ctx.task_result
+
+    # Run pytest for claim test_refs and record results in evidence_index
+    evidence_index = _run_claim_tests(project_root, claims_list, evidence_index)
 
     # Filter out stale gaps / risks for gate evaluation.  Stale items are
     # still included in the full report for visibility.
@@ -1820,7 +1989,7 @@ def _evaluate_and_output(
         # NOT when merely a referenced code/test file was modified.  Tasks,
         # ACs, and requirements are always included since their coverage is
         # directly impacted by code changes.
-        claims_file_rel = ".vibetracing/agent_claims.json"
+        claims_file_rel = ".vibetracing/claims/current.json"
         if claims_file_rel in staged_files:
             # Compare per-claim content hashes to find actually modified claims
             from vibe_tracing.git_utils import git_show
@@ -2154,6 +2323,8 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
         if gates_only:
             print("Gates-only mode: integrity gates passed. Skipping analysis.")
+            if is_pre_commit:
+                _archive_claims(project_root)
             return 0
 
         tool_evidence = _execute_tools(ctx, project_root, is_draft)
@@ -2195,11 +2366,14 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             staged_files=staged_files,
         )
 
-        return _evaluate_and_output(
+        exit_code = _evaluate_and_output(
             ctx, merged_gaps, final_risks, compliance_res,
             output_dir, evidences_index, claim_res, req_res,
             project_root, is_draft, staged_files=staged_files,
         )
+        if exit_code == 0 and is_pre_commit:
+            _archive_claims(project_root)
+        return exit_code
 
     except _GateBlocked as exc:
         return exc.exit_code
@@ -2313,7 +2487,11 @@ def run_doctor(project_root: Path) -> int:
     checks: List[Dict[str, Any]] = []
 
     # ---- Load governance data ----
-    claims_path = project_root / ".vibetracing" / "agent_claims.json"
+    claims_path = project_root / ".vibetracing" / "claims" / "current.json"
+    if not claims_path.exists():
+        legacy = project_root / ".vibetracing" / "agent_claims.json"
+        if legacy.exists():
+            claims_path = legacy
     task_list_path = project_root / "docs" / "task_list.json"
     prd_path = project_root / "docs" / "prd.md"
     constraints_path = project_root / "docs" / "architecture_constraints.json"

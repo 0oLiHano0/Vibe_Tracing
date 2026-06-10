@@ -5,7 +5,7 @@
     "prd": "docs/prd.md",
     "architecture_constraints": "docs/architecture_constraints.json",
     "task_list": "docs/task_list.json",
-    "agent_claims": ".vibetracing/agent_claims.json",
+    "agent_claims": ".vibetracing/claims/current.json",
     "output_dir": "output"
   },
   "language": "python",

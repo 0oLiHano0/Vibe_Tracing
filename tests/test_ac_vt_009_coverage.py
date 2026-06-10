@@ -1247,7 +1247,7 @@ class TestACVT00907ZeroPromptGuidance:
             tmp_path / "docs" / "prd.md",
             tmp_path / "docs" / "task_list.json",
             tmp_path / "docs" / "architecture_constraints.json",
-            tmp_path / ".vibetracing" / "agent_claims.json",
+            tmp_path / ".vibetracing" / "claims" / "current.json",
             tmp_path / ".vibetracing" / "config.json",
         ]
         for f in expected_files:
@@ -1308,7 +1308,7 @@ class TestACVT00907ZeroPromptGuidance:
 
         # agent_claims template must be valid JSON array
         claims = json.loads(
-            (tmp_path / ".vibetracing" / "agent_claims.json").read_text(
+            (tmp_path / ".vibetracing" / "claims" / "current.json").read_text(
                 encoding="utf-8"
             )
         )

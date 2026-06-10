@@ -74,9 +74,6 @@ def _minimal_agent_claims() -> list:
         {
             "claim_id": "CLAIM-VT-001",
             "related_task": "TASK-VT-001",
-            "claimed_status": "covered",
-            "evidence_refs": ["EVIDENCE-VT-001"],
-            "timestamp": "2026-01-01T00:00:00Z",
         }
     ]
 
@@ -317,7 +314,8 @@ class TestAgentClaimsSchema:
 
     def test_valid_document_with_optional_fields(self):
         """
-        Validates that optional fields (code_refs, test_refs, notes) are accepted.
+        Validates that optional fields (code_refs, test_refs, notes, claimed_status,
+        evidence_refs, timestamp) are accepted.
         Covers: AC-VT-001-01
         """
         schema = load_schema(self.SCHEMA_NAME)
@@ -325,6 +323,9 @@ class TestAgentClaimsSchema:
         doc[0]["code_refs"] = ["src/vibe_tracing/core/enums.py"]
         doc[0]["test_refs"] = ["tests/test_foo.py"]
         doc[0]["notes"] = "All good."
+        doc[0]["claimed_status"] = "covered"
+        doc[0]["evidence_refs"] = ["EVIDENCE-VT-001"]
+        doc[0]["timestamp"] = "2026-01-01T00:00:00Z"
         validate(instance=doc, schema=schema)
 
     def test_missing_claim_id_raises(self):
@@ -349,49 +350,53 @@ class TestAgentClaimsSchema:
         with pytest.raises(ValidationError):
             validate(instance=doc, schema=schema)
 
-    def test_missing_claimed_status_raises(self):
+    def test_claimed_status_is_optional(self):
         """
-        Validates that omitting 'claimed_status' causes a ValidationError.
+        Validates that omitting 'claimed_status' does NOT cause a ValidationError
+        (it is an optional field after schema simplification).
         Covers: AC-VT-001-02
         """
         schema = load_schema(self.SCHEMA_NAME)
         doc = _minimal_agent_claims()
-        del doc[0]["claimed_status"]
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
+        # claimed_status is not in the minimal doc (optional field)
+        assert "claimed_status" not in doc[0]
+        validate(instance=doc, schema=schema)
 
-    def test_missing_evidence_refs_raises(self):
+    def test_evidence_refs_is_optional(self):
         """
-        Validates that omitting 'evidence_refs' causes a ValidationError.
+        Validates that omitting 'evidence_refs' does NOT cause a ValidationError
+        (it is an optional field after schema simplification).
         Covers: AC-VT-001-02
         """
         schema = load_schema(self.SCHEMA_NAME)
         doc = _minimal_agent_claims()
-        del doc[0]["evidence_refs"]
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
+        # evidence_refs is not in the minimal doc (optional field)
+        assert "evidence_refs" not in doc[0]
+        validate(instance=doc, schema=schema)
 
-    def test_missing_timestamp_raises(self):
+    def test_timestamp_is_optional(self):
         """
-        Validates that omitting 'timestamp' causes a ValidationError.
+        Validates that omitting 'timestamp' does NOT cause a ValidationError
+        (it is an optional field after schema simplification).
         Covers: AC-VT-001-02
         """
         schema = load_schema(self.SCHEMA_NAME)
         doc = _minimal_agent_claims()
-        del doc[0]["timestamp"]
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
+        # timestamp is not in the minimal doc (optional field)
+        assert "timestamp" not in doc[0]
+        validate(instance=doc, schema=schema)
 
-    def test_invalid_claimed_status_enum_raises(self):
+    def test_claimed_status_accepts_any_value(self):
         """
-        Validates that an invalid 'claimed_status' enum value causes a ValidationError.
+        Validates that any 'claimed_status' value is accepted since the field
+        is no longer constrained by enum in the simplified schema
+        (additionalProperties: true allows arbitrary fields).
         Covers: AC-VT-001-02
         """
         schema = load_schema(self.SCHEMA_NAME)
         doc = _minimal_agent_claims()
         doc[0]["claimed_status"] = "unknown"
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
+        validate(instance=doc, schema=schema)
 
     def test_invalid_claim_id_pattern_raises(self):
         """

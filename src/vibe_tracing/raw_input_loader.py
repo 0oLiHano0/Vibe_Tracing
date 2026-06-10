@@ -76,13 +76,20 @@ class RawInputLoader:
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/agent_claims.json",
+            "agent_claims": ".vibetracing/claims/current.json",
             "output_dir": "output",
         }
         fallback_rel = defaults.get(key)
         if not fallback_rel:
             raise ValueError(f"Unknown path key: {key}")
-        return self.project_root / fallback_rel
+        resolved = self.project_root / fallback_rel
+        # Backward compatibility: if claims/current.json doesn't exist but
+        # the legacy agent_claims.json does, fall back to the old path.
+        if key == "agent_claims" and not resolved.exists():
+            legacy = self.project_root / ".vibetracing" / "agent_claims.json"
+            if legacy.exists():
+                return legacy
+        return resolved
 
     def load(self) -> RawInputManifest:
         """

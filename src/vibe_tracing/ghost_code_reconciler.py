@@ -17,10 +17,11 @@ class GhostCodeReconciler:
     """
     def __init__(self, project_root: Path):
         self.project_root = project_root
-        self.claims_path = project_root / ".vibetracing" / "agent_claims.json"
-        
+        self.claims_path = project_root / ".vibetracing" / "claims" / "current.json"
+
         # Exact Whitelist (The ledger itself shouldn't require a receipt)
         self.whitelist_paths = {
+            ".vibetracing/claims/current.json",
             ".vibetracing/agent_claims.json",
             ".vibetracing/config.json",
             ".vibetracing/semantic_audit.json",
@@ -75,7 +76,7 @@ class GhostCodeReconciler:
             # File not staged - no claims available
             staged_claims = []
         except Exception as exc:
-            print(f"Warning: agent_claims.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
+            print(f"Warning: claims/current.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
             staged_claims = []
 
         # 2. Get HEAD Claims (unchanged)
@@ -96,7 +97,7 @@ class GhostCodeReconciler:
         except subprocess.CalledProcessError:
             head_claims = []
         except Exception as exc:
-            print(f"Warning: agent_claims.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
+            print(f"Warning: claims/current.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
             head_claims = []
 
         # 3. Calculate Delta (State is Delta)
@@ -136,7 +137,7 @@ class GhostCodeReconciler:
                 "发现未经报备的幽灵代码！\n"
                 f"{files_str}\n"
                 "上述文件在本次提交中没有对应的【活跃发票】（Claim）。\n"
-                "如果它是合法代码，请在 .vibetracing/agent_claims.json 中增加或更新对应的发票，并将其与代码一同提交。"
+                "如果它是合法代码，请在 .vibetracing/claims/current.json 中增加或更新对应的发票，并将其与代码一同提交。"
             )
 
         # Gate 2.5 checks (merged from AcFreshnessChecker)
@@ -177,7 +178,7 @@ class GhostCodeReconciler:
         except (subprocess.CalledProcessError, FileNotFoundError):
             return []
         except (json.JSONDecodeError, Exception) as exc:
-            print(f"Warning: agent_claims.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
+            print(f"Warning: claims/current.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
             return []
 
     def _get_staged_tasks(self) -> Optional[dict]:

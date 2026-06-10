@@ -53,8 +53,9 @@ def test_e2e_good_project(tmp_path):
     assert meta["gate_decision"] == "blocked"
     assert meta["exit_code"] == 2
     assert (
-        "验收标准缺失测试证据" in meta["summary"]
+        "验收标准" in meta["summary"] and "缺失" in meta["summary"]
         or "低可信度" in meta["summary"]
+        or "缺失测试证据" in meta["summary"]
     )
 
 

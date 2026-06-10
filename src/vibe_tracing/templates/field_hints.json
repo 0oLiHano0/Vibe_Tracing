@@ -132,6 +132,16 @@
       "level1": "所有质量门禁规则均已通过，无阻塞项或风险项。gate_decision=pass，可以安全合并。",
       "level2": "所有质量检查均已通过，代码可以合并。",
       "level3": "MergeGateEngine.evaluate() 返回 gate_decision=pass，reasons 列表仅包含该通过消息，无 blocked_items。"
+    },
+    "missing_claim": {
+      "level1": "业务文件 {file} 未被任何 Claim 覆盖。门禁将阻断。修复：在 .vibetracing/claims/current.json 中创建新 Claim，在 code_refs 中引用该文件路径，并关联对应的 task 和证据。",
+      "level2": "暂存的业务文件缺少 Claim 声明。每个业务文件的变更必须被 Claim 覆盖。",
+      "level3": "Claim existence check failed: file={file} 未出现在任何 Claim 的 code_refs 或 test_refs 中。触发 gate_decision=blocked。"
+    },
+    "ac_not_covered": {
+      "level1": "MUST AC {ac_id}（task {task_id}）未被测试覆盖: {reason}。门禁将阻断。修复：为关联的 Claim 补充 test_refs 并确保测试通过，或在 docs/task_list.json 中确认该 task 的 related_acceptance_criteria 是否正确。",
+      "level2": "必须完成的验收标准缺少通过的测试覆盖。需要补充测试并关联到 Claim。",
+      "level3": "AC coverage derivation: ac_id={ac_id}, task_id={task_id}, reason={reason}。该 MUST AC 的覆盖链（Task -> Claim -> test_refs -> evidence）中断，触发 gate_decision=blocked。"
     }
   },
   "risk": {

@@ -23,7 +23,7 @@ def test_run_init_creates_scaffolding(tmp_path):
 
     # Check files existence
     config_path = tmp_path / ".vibetracing" / "config.json"
-    claims_path = tmp_path / ".vibetracing" / "agent_claims.json"
+    claims_path = tmp_path / ".vibetracing" / "claims" / "current.json"
     tasks_path = tmp_path / "docs" / "task_list.json"
     constraints_path = tmp_path / "docs" / "architecture_constraints.json"
     prd_path = tmp_path / "docs" / "prd.md"
@@ -171,7 +171,7 @@ def test_init_partial_failure_retry_uses_new_params(tmp_path):
     assert not config_path.exists(), "config.json should not exist after partial failure"
 
     # Some earlier template files should have been created
-    assert (tmp_path / ".vibetracing" / "agent_claims.json").exists()
+    assert (tmp_path / ".vibetracing" / "claims" / "current.json").exists()
     assert (tmp_path / "docs" / "task_list.json").exists()
 
     # Retry with DIFFERENT params -- config.json does not exist so new params are used

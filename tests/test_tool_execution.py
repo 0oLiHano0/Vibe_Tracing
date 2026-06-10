@@ -1394,7 +1394,7 @@ class TestMeasureSourceCoverageEdgeCases:
         """covers: _measure_source_coverage JSONDecodeError (line 847-848)"""
         baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
         baseline_path.write_text("NOT JSON", encoding="utf-8")
-        candidates = engine._measure_source_coverage()
+        candidates = engine._measure_source_coverage(baseline_path=str(baseline_path))
         assert candidates == []
 
     def test_baseline_files_not_dict(self, engine: ToolExecutionEngine, project_root: Path) -> None:
@@ -1402,7 +1402,7 @@ class TestMeasureSourceCoverageEdgeCases:
         baseline = {"files": "not_a_dict"}
         baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
         baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
-        candidates = engine._measure_source_coverage()
+        candidates = engine._measure_source_coverage(baseline_path=str(baseline_path))
         assert candidates == []
 
     def test_file_data_not_dict_skipped(self, engine: ToolExecutionEngine, project_root: Path) -> None:
@@ -1410,7 +1410,7 @@ class TestMeasureSourceCoverageEdgeCases:
         baseline = {"files": {"src/a.py": "not_a_dict", "src/b.py": {"percent_covered": 90, "num_statements": 10}}}
         baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
         baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
-        candidates = engine._measure_source_coverage()
+        candidates = engine._measure_source_coverage(baseline_path=str(baseline_path))
         assert len(candidates) == 1
         assert candidates[0].source_path == "src/b.py"
 
@@ -1419,7 +1419,7 @@ class TestMeasureSourceCoverageEdgeCases:
         baseline = {"files": {"src/a.py": {"num_statements": 10}}}
         baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
         baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
-        candidates = engine._measure_source_coverage()
+        candidates = engine._measure_source_coverage(baseline_path=str(baseline_path))
         assert candidates == []
 
 

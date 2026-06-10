@@ -820,15 +820,11 @@ class ToolExecutionEngine:
         """Measure per-source-file coverage from a pre-built baseline.
 
         Reads per-file coverage data and emits one ``ToolEvidenceCandidate``
-        per source file.  The primary data source is the ``coverage_baseline``
-        field in the evidence index (if provided).  Falls back to reading
-        ``.vibetracing/coverage_baseline.json`` from disk when the evidence
-        index is unavailable or lacks the field.
+        per source file.  The data source is the ``coverage_baseline``
+        field in the evidence index (if provided).
 
         Args:
-            baseline_path: Override path to the baseline JSON file.
-                Defaults to ``.vibetracing/coverage_baseline.json`` relative
-                to the project root.  Only used as fallback.
+            baseline_path: Deprecated; kept for backward compatibility.
             pass_threshold: Minimum percent_covered to be considered
                 ``compliant``.  Files below this threshold are ``violated``.
             evidence_index: Pre-loaded evidence index dict.  If it contains
@@ -875,7 +871,7 @@ class ToolExecutionEngine:
 
             return candidates
 
-        # Fallback: read from file
+        # Fallback: read from file (backward-compatible path)
         baseline_file = Path(baseline_path) if baseline_path else (
             self.project_root / ".vibetracing" / "coverage_baseline.json"
         )
@@ -943,8 +939,7 @@ class ToolExecutionEngine:
                   "source") to path lists.  Tool/category filtering uses
                   ``PATH_TYPE_TOOL_MAP`` so that only semantically
                   appropriate tools run on each path type.
-            baseline_path: Override path to coverage baseline JSON.  If
-                ``None``, defaults to ``.vibetracing/coverage_baseline.json``.
+            baseline_path: Deprecated; kept for backward compatibility.
 
         Returns:
             Flat list of all ToolEvidenceCandidate objects.

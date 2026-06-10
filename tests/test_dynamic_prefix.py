@@ -20,7 +20,7 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
     config_path = tmp_path / ".vibetracing" / "config.json"
     prd_path = tmp_path / "docs" / "prd.md"
     task_list_path = tmp_path / "docs" / "task_list.json"
-    agent_claims_path = tmp_path / ".vibetracing" / "agent_claims.json"
+    agent_claims_path = tmp_path / ".vibetracing" / "claims" / "current.json"
 
     assert config_path.is_file()
     assert prd_path.is_file()

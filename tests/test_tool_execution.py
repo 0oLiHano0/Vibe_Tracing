@@ -507,7 +507,7 @@ class TestSourceCoverageMeasurement:
         baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
         baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
 
-        candidates = engine._measure_source_coverage()
+        candidates = engine._measure_source_coverage(str(baseline_path))
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COMPLIANT.value
         assert candidates[0].source_path == "src/vibe_tracing/foo.py"
@@ -533,7 +533,7 @@ class TestSourceCoverageMeasurement:
         baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
         baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
 
-        candidates = engine._measure_source_coverage()
+        candidates = engine._measure_source_coverage(str(baseline_path))
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.VIOLATED.value
         assert candidates[0].details["percent_covered"] == 55.0
@@ -552,7 +552,7 @@ class TestSourceCoverageMeasurement:
         baseline_path = project_root / ".vibetracing" / "coverage_baseline.json"
         baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
 
-        candidates = engine._measure_source_coverage()
+        candidates = engine._measure_source_coverage(str(baseline_path))
         assert len(candidates) == 3
         statuses = {c.source_path: c.status for c in candidates}
         assert statuses["src/a.py"] == CoverageStatus.COMPLIANT.value
@@ -596,7 +596,7 @@ class TestSourceCoverageMeasurement:
         baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
 
         # With threshold 90, 85% should be violated
-        candidates = engine._measure_source_coverage(pass_threshold=90.0)
+        candidates = engine._measure_source_coverage(str(baseline_path), pass_threshold=90.0)
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.VIOLATED.value
 

@@ -209,6 +209,305 @@ class MergeGateEngine:
 
         return uncovered
 
+    def _check_claim_existence(
+        self,
+        claims: List[Dict[str, Any]],
+        staged_items: Set[str],
+        boundary: Optional[Dict[str, Any]],
+        gaps: List[Dict[str, Any]],
+        reasons: List[str],
+        blocked_items: List[str],
+    ) -> bool:
+        """Section 0.5: Claim existence check.
+
+        Returns ``True`` if the gate should be set to ``blocked``.
+        Mutates *gaps*, *reasons*, and *blocked_items* in-place.
+        """
+        passed, unclaimed = self.check_claim_exists(
+            staged_files=staged_items,
+            claims=claims,
+            boundary=boundary,
+        )
+        if not passed and unclaimed:
+            for f in sorted(unclaimed):
+                hint = resolve_hint(
+                    _gate_hints.get("missing_claim", {}), "level1"
+                )
+                msg = (
+                    hint.format(file=f)
+                    if hint
+                    else f"业务文件 {f} 未被任何 Claim 覆盖，需要创建 Claim 声明该文件的变更。"
+                )
+                gap_entry = {
+                    "item_id": f,
+                    "item_type": "missing_claim",
+                    "target_id": f,
+                    "reason": msg,
+                }
+                gaps.append(gap_entry)
+                reasons.append(self._tag_reason(msg, {f}, staged_items))
+                blocked_items.append(msg)
+            return True
+        return False
+
+    def _check_ac_coverage(
+        self,
+        claims: List[Dict[str, Any]],
+        tasks: List[Dict[str, Any]],
+        evidence_index: Optional[Dict[str, Any]],
+        staged_items: Optional[Set[str]],
+        gaps: List[Dict[str, Any]],
+        reasons: List[str],
+        blocked_items: List[str],
+    ) -> bool:
+        """Section 0.6: AC coverage derivation.
+
+        Returns ``True`` if the gate should be set to ``blocked``.
+        Mutates *gaps*, *reasons*, and *blocked_items* in-place.
+        """
+        ac_gaps = self.check_ac_coverage(claims, tasks, evidence_index)
+        for gap in ac_gaps:
+            ac_id = gap["ac_id"]
+            task_id = gap["task_id"]
+            reason = gap["reason"]
+            hint = resolve_hint(
+                _gate_hints.get("ac_not_covered", {}), "level1"
+            )
+            msg = (
+                hint.format(ac_id=ac_id, task_id=task_id, reason=reason)
+                if hint
+                else f"MUST AC {ac_id} (task {task_id}) 未被测试覆盖: {reason}"
+            )
+            gap_entry = {
+                "item_id": ac_id,
+                "item_type": "ac",
+                "category": "ac_not_covered",
+                "target_id": ac_id,
+                "reason": msg,
+                "task_id": task_id,
+            }
+            gaps.append(gap_entry)
+            reasons.append(self._tag_reason(msg, {ac_id}, staged_items))
+            blocked_items.append(msg)
+        return bool(ac_gaps)
+
+    def _process_must_gaps(
+        self,
+        gaps: List[Dict[str, Any]],
+        resolved_gap_target_ids: Set[str],
+        staged_items: Optional[Set[str]],
+        reasons: List[str],
+        blocked_items: List[str],
+    ) -> bool:
+        """Section 1.1: Must AC gaps processing.
+
+        Returns ``True`` if the gate should be set to ``blocked``.
+        Mutates *reasons* and *blocked_items* in-place.
+        """
+        has_blocked = False
+        for gap in gaps:
+            item_type = gap.get("item_type")
+            item_id = gap.get("item_id", "")
+            reason = gap.get("reason", "")
+            target_id = gap.get("target_id", "")
+            human_resolved = target_id in resolved_gap_target_ids
+
+            if item_type == "ac":
+                hint = resolve_hint(_gate_hints.get("ac_missing_evidence", {}), "level1")
+                msg = hint.format(item_id=item_id, reason=reason) if hint else f"验收标准缺失测试证据 ({item_id}): {reason}"
+                related = {item_id} if item_id else None
+                if human_resolved:
+                    reasons.append(self._tag_reason(f"[已人工完成] {msg}", related, staged_items))
+                else:
+                    reasons.append(self._tag_reason(msg, related, staged_items))
+                    if self._is_current(related, staged_items):
+                        blocked_items.append(msg)
+                        has_blocked = True
+        return has_blocked
+
+    def _process_must_risks(
+        self,
+        risks: List[Dict[str, Any]],
+        accepted_risk_target_ids: Set[str],
+        risk_staged: Optional[Set[str]],
+        reasons: List[str],
+        blocked_items: List[str],
+    ) -> bool:
+        """Section 1.2: Must risks processing.
+
+        Returns ``True`` if the gate should be set to ``blocked``.
+        Mutates *reasons* and *blocked_items* in-place.
+        """
+        has_blocked = False
+        for risk in risks:
+            severity = risk.get("severity")
+            desc = risk.get("description", "")
+            risk_id = risk.get("risk_id", "")
+            suggested_action = risk.get("suggested_action", "")
+            business_impact = risk.get("business_impact", "")
+            risk_target_id = risk.get("target_id", "")
+            human_accepted = risk_target_id in accepted_risk_target_ids
+
+            effective_severity = "accepted" if human_accepted else severity
+            is_self_ref = "only self-referential" in desc or "self-referential" in desc
+            is_high_risk = effective_severity == "must"
+
+            if is_high_risk or is_self_ref or human_accepted:
+                risk_related: Set[str] = set()
+                if risk_id:
+                    risk_related.add(risk_id)
+                claim_id = risk.get("claim_id")
+                if claim_id:
+                    risk_related.add(claim_id)
+                hint = resolve_hint(_gate_hints.get("high_risk_or_self_ref", {}), "level1")
+                msg = hint.format(risk_id=risk_id, desc=desc) if hint else f"高风险或不自证违规 ({risk_id}): {desc}"
+                if human_accepted:
+                    reasons.append(self._tag_reason(f"[已接受风险] {msg}", risk_related or None, risk_staged))
+                else:
+                    reasons.append(self._tag_reason(msg, risk_related or None, risk_staged))
+                    if self._is_current(risk_related or None, risk_staged):
+                        blocked_items.append(msg)
+                        has_blocked = True
+
+                        if is_high_risk and (not suggested_action or not business_impact):
+                            hint_missing = resolve_hint(_gate_hints.get("high_risk_missing_action", {}), "level1")
+                            msg_missing = hint_missing.format(risk_id=risk_id) if hint_missing else f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
+                            blocked_items.append(msg_missing)
+                            reasons.append(self._tag_reason(msg_missing, risk_related or None, risk_staged))
+        return has_blocked
+
+    def _process_should_gaps(
+        self,
+        gaps: List[Dict[str, Any]],
+        resolved_gap_target_ids: Set[str],
+        staged_items: Optional[Set[str]],
+        reasons: List[str],
+    ) -> tuple:
+        """Section 2.2: Should-level gaps processing.
+
+        Returns ``(any_fail_detected, current_fail_detected)``.
+        Mutates *reasons* in-place.
+        """
+        any_fail = False
+        current_fail = False
+        for gap in gaps:
+            item_type = gap.get("item_type")
+            item_id = gap.get("item_id", "")
+            reason = gap.get("reason", "")
+            target_id = gap.get("target_id", "")
+            human_resolved = target_id in resolved_gap_target_ids
+
+            if item_type != "ac":
+                hint = resolve_hint(_gate_hints.get("non_blocking_gap", {}), "level1")
+                msg = hint.format(item_type=item_type, item_id=item_id, reason=reason) if hint else f"非阻塞缺口 ({item_type} {item_id}): {reason}"
+                related = {item_id} if item_id else None
+                if human_resolved:
+                    reasons.append(self._tag_reason(f"[已人工完成] {msg}", related, staged_items))
+                else:
+                    reasons.append(self._tag_reason(msg, related, staged_items))
+                    any_fail = True
+                    if self._is_current(related, staged_items):
+                        current_fail = True
+        return any_fail, current_fail
+
+    def _process_should_risks(
+        self,
+        risks: List[Dict[str, Any]],
+        accepted_risk_target_ids: Set[str],
+        risk_staged: Optional[Set[str]],
+        reasons: List[str],
+    ) -> tuple:
+        """Section 2.3: Should/Could severity risks processing.
+
+        Returns ``(any_fail_detected, current_fail_detected)``.
+        Mutates *reasons* in-place.
+        """
+        any_fail = False
+        current_fail = False
+        for risk in risks:
+            severity = risk.get("severity")
+            desc = risk.get("description", "")
+            risk_id = risk.get("risk_id", "")
+            confidence = risk.get("confidence")
+            risk_type = risk.get("type")
+            risk_target_id = risk.get("target_id", "")
+            human_accepted = risk_target_id in accepted_risk_target_ids
+
+            is_speculative = (
+                confidence == "low_confidence" or risk_type == "suggestion"
+            )
+            is_should_could = severity in ("should", "could")
+
+            if is_should_could or is_speculative:
+                risk_related_fs: Set[str] = set()
+                if risk_id:
+                    risk_related_fs.add(risk_id)
+                claim_id = risk.get("claim_id")
+                if claim_id:
+                    risk_related_fs.add(claim_id)
+                hint = resolve_hint(_gate_hints.get("low_medium_risk", {}), "level1")
+                msg = hint.format(risk_id=risk_id, desc=desc) if hint else f"低/中风险或推测性风险 ({risk_id}): {desc}"
+                if human_accepted:
+                    reasons.append(self._tag_reason(f"[已接受风险] {msg}", risk_related_fs or None, risk_staged))
+                else:
+                    reasons.append(self._tag_reason(msg, risk_related_fs or None, risk_staged))
+                    any_fail = True
+                    if self._is_current(risk_related_fs or None, risk_staged):
+                        current_fail = True
+        return any_fail, current_fail
+
+    def _compute_gate_decision(
+        self,
+        gate_decision: str,
+        blocked_items: List[str],
+        current_fail_detected: bool,
+        any_fail_detected: bool,
+        human_decisions_applied: int,
+        staged_items: Optional[Set[str]],
+        evidence_index: Optional[Dict[str, Any]],
+        reasons: List[str],
+    ) -> Dict[str, Any]:
+        """Sections 2.5 + 3: Final gate decision computation.
+
+        Handles coverage violations, fail upgrade, and pass message.
+        Returns the final result dict.
+        """
+        # Only upgrade to "fail" if not already "blocked" and at least one
+        # fail item is related to current changes.
+        if current_fail_detected and gate_decision == "pass":
+            gate_decision = "fail"
+
+        # 2.5 Check coverage violations (always [当前] — fresh measurement)
+        coverage_violations = []
+        if evidence_index:
+            for ev in evidence_index.get("evidences", []):
+                if (ev.get("details", {}).get("tool_category") == "coverage" and
+                        ev.get("status") == "violated"):
+                    coverage_violations.append({
+                        "file": ev.get("source_path", ""),
+                        "percent": ev.get("details", {}).get("percent_covered", 0),
+                    })
+        if coverage_violations:
+            for cv in coverage_violations:
+                tag = "[当前] " if staged_items is not None else ""
+                reasons.append(
+                    f"{tag}Coverage below 80%: {cv['file']} ({cv['percent']}%)"
+                )
+            if gate_decision not in ("blocked",):
+                gate_decision = "blocked"
+
+        # 3. Handle 'pass'
+        if gate_decision == "pass" and not reasons:
+            hint = resolve_hint(_gate_hints.get("all_gates_passed", {}), "level1")
+            reasons.append(hint if hint else "所有质量门禁规则均已通过，无阻塞项或风险项。")
+
+        return {
+            "gate_decision": gate_decision,
+            "reasons": reasons,
+            "blocked_items": blocked_items,
+            "human_decisions_applied": human_decisions_applied,
+        }
+
     def evaluate(
         self,
         gaps: List[Dict[str, Any]],
@@ -289,9 +588,7 @@ class MergeGateEngine:
             elif isinstance(human_decisions, list):
                 decisions_list = human_decisions
 
-        # targetIds whose risks should be accepted (severity → "accepted")
         accepted_risk_target_ids: Set[str] = set()
-        # targetIds whose gaps should be marked human_resolved
         resolved_gap_target_ids: Set[str] = set()
 
         for d in decisions_list:
@@ -304,9 +601,6 @@ class MergeGateEngine:
 
         human_decisions_applied = len(accepted_risk_target_ids) + len(resolved_gap_target_ids)
 
-        # For risk evaluation, prefer directly_staged_items to distinguish
-        # claims that were directly modified from claims that merely reference
-        # modified files (indirectly affected).
         risk_staged = directly_staged_items if directly_staged_items is not None else staged_items
         gate_decision = "pass"
         reasons: List[str] = []
@@ -322,134 +616,35 @@ class MergeGateEngine:
             }
 
         # ----------------------------------------------------
-        # 0.5 Claim existence check (when claims are provided)
+        # Section 0.5 + 0.6
         # ----------------------------------------------------
         if claims is not None and staged_items is not None:
-            passed, unclaimed = self.check_claim_exists(
-                staged_files=staged_items,
-                claims=claims,
-                boundary=boundary,
-            )
-            if not passed and unclaimed:
-                for f in sorted(unclaimed):
-                    hint = resolve_hint(
-                        _gate_hints.get("missing_claim", {}), "level1"
-                    )
-                    msg = (
-                        hint.format(file=f)
-                        if hint
-                        else f"业务文件 {f} 未被任何 Claim 覆盖，需要创建 Claim 声明该文件的变更。"
-                    )
-                    gap_entry = {
-                        "item_id": f,
-                        "item_type": "missing_claim",
-                        "target_id": f,
-                        "reason": msg,
-                    }
-                    gaps.append(gap_entry)
-                    reasons.append(self._tag_reason(msg, {f}, staged_items))
-                    blocked_items.append(msg)
-                    gate_decision = "blocked"
+            if self._check_claim_existence(
+                claims, staged_items, boundary, gaps, reasons, blocked_items
+            ):
+                gate_decision = "blocked"
 
-        # ----------------------------------------------------
-        # 0.6 AC coverage derivation (when claims + tasks are provided)
-        # ----------------------------------------------------
         if claims is not None and tasks is not None:
-            ac_gaps = self.check_ac_coverage(claims, tasks, evidence_index)
-            for gap in ac_gaps:
-                ac_id = gap["ac_id"]
-                task_id = gap["task_id"]
-                reason = gap["reason"]
-                hint = resolve_hint(
-                    _gate_hints.get("ac_not_covered", {}), "level1"
-                )
-                msg = (
-                    hint.format(ac_id=ac_id, task_id=task_id, reason=reason)
-                    if hint
-                    else f"MUST AC {ac_id} (task {task_id}) 未被测试覆盖: {reason}"
-                )
-                gap_entry = {
-                    "item_id": ac_id,
-                    "item_type": "ac",
-                    "category": "ac_not_covered",
-                    "target_id": ac_id,
-                    "reason": msg,
-                    "task_id": task_id,
-                }
-                gaps.append(gap_entry)
-                reasons.append(self._tag_reason(msg, {ac_id}, staged_items))
-                blocked_items.append(msg)
+            if self._check_ac_coverage(
+                claims, tasks, evidence_index, staged_items,
+                gaps, reasons, blocked_items,
+            ):
                 gate_decision = "blocked"
 
         # ----------------------------------------------------
-        # 1. Evaluate 'blocked' conditions (MUST/critical issues)
+        # Section 1: Evaluate 'blocked' conditions (MUST/critical)
         # ----------------------------------------------------
+        if self._process_must_gaps(
+            gaps, resolved_gap_target_ids, staged_items, reasons, blocked_items
+        ):
+            gate_decision = "blocked"
 
-        # 1.1 Check Must AC gaps
-        for gap in gaps:
-            item_type = gap.get("item_type")
-            item_id = gap.get("item_id", "")
-            reason = gap.get("reason", "")
-            target_id = gap.get("target_id", "")
-            human_resolved = target_id in resolved_gap_target_ids
+        if self._process_must_risks(
+            risks, accepted_risk_target_ids, risk_staged, reasons, blocked_items
+        ):
+            gate_decision = "blocked"
 
-            if item_type == "ac":
-                hint = resolve_hint(_gate_hints.get("ac_missing_evidence", {}), "level1")
-                msg = hint.format(item_id=item_id, reason=reason) if hint else f"验收标准缺失测试证据 ({item_id}): {reason}"
-                related = {item_id} if item_id else None
-                if human_resolved:
-                    reasons.append(self._tag_reason(f"[已人工完成] {msg}", related, staged_items))
-                else:
-                    reasons.append(self._tag_reason(msg, related, staged_items))
-                    if self._is_current(related, staged_items):
-                        blocked_items.append(msg)
-                        gate_decision = "blocked"
-
-        # 1.2 Check Must severity risks, completed claims without external evidence,
-        # or High risks lacking suggested actions/business impact
-        for risk in risks:
-            severity = risk.get("severity")
-            desc = risk.get("description", "")
-            risk_id = risk.get("risk_id", "")
-            suggested_action = risk.get("suggested_action", "")
-            business_impact = risk.get("business_impact", "")
-            risk_target_id = risk.get("target_id", "")
-            human_accepted = risk_target_id in accepted_risk_target_ids
-
-            # If human accepted, override severity
-            effective_severity = "accepted" if human_accepted else severity
-
-            # Check if it is a completed claim without external evidence (often MUST severity)
-            is_self_ref = "only self-referential" in desc or "self-referential" in desc
-
-            # High risk means MUST severity (but not if human accepted)
-            is_high_risk = effective_severity == "must"
-
-            if is_high_risk or is_self_ref or human_accepted:
-                risk_related: Set[str] = set()
-                if risk_id:
-                    risk_related.add(risk_id)
-                claim_id = risk.get("claim_id")
-                if claim_id:
-                    risk_related.add(claim_id)
-                hint = resolve_hint(_gate_hints.get("high_risk_or_self_ref", {}), "level1")
-                msg = hint.format(risk_id=risk_id, desc=desc) if hint else f"高风险或不自证违规 ({risk_id}): {desc}"
-                if human_accepted:
-                    reasons.append(self._tag_reason(f"[已接受风险] {msg}", risk_related or None, risk_staged))
-                else:
-                    reasons.append(self._tag_reason(msg, risk_related or None, risk_staged))
-                    if self._is_current(risk_related or None, risk_staged):
-                        blocked_items.append(msg)
-                        gate_decision = "blocked"
-
-                        # Check if high risk is lacking action or business impact
-                        if is_high_risk and (not suggested_action or not business_impact):
-                            hint_missing = resolve_hint(_gate_hints.get("high_risk_missing_action", {}), "level1")
-                            msg_missing = hint_missing.format(risk_id=risk_id) if hint_missing else f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
-                            blocked_items.append(msg_missing)
-                            reasons.append(self._tag_reason(msg_missing, risk_related or None, risk_staged))
-
-        # 1.3 Check Must architecture violations
+        # 1.3 Check Must architecture violations (inline)
         if compliance_result:
             violations = compliance_result.get("architecture_violations", [])
             for v in violations:
@@ -458,13 +653,10 @@ class MergeGateEngine:
                 hint = resolve_hint(_gate_hints.get("must_arch_violation", {}), "level1")
                 msg = hint.format(rule_id=rule_id, msg_violation=msg_violation) if hint else f"违反 MUST 级别架构约束 ({rule_id}): {msg_violation}"
                 reasons.append(self._tag_reason(msg, None, staged_items))
-                # Architecture violations have no claim/task mapping;
-                # only block when staged_items is None (full-analysis mode).
                 if staged_items is None:
                     blocked_items.append(msg)
                     gate_decision = "blocked"
 
-            # Check status list for any MUST violated
             status_list = compliance_result.get("architecture_compliance_status", [])
             for status_item in status_list:
                 rule_id = status_item.get("rule_id", "")
@@ -473,7 +665,6 @@ class MergeGateEngine:
                 if status == "violated" and severity == "must":
                     hint = resolve_hint(_gate_hints.get("arch_rule_violated", {}), "level1")
                     msg = hint.format(rule_id=rule_id) if hint else f"架构规则被违规触发 ({rule_id})"
-                    # Avoid duplicate warnings if already caught in violations
                     if not any(rule_id in item for item in blocked_items):
                         reasons.append(self._tag_reason(msg, None, staged_items))
                         if staged_items is None:
@@ -481,17 +672,17 @@ class MergeGateEngine:
                             gate_decision = "blocked"
 
         # ----------------------------------------------------
-        # 2. Evaluate 'fail' conditions (conditional / SHOULD issues)
+        # Section 2: Evaluate 'fail' conditions (SHOULD issues)
         # NOTE: Fail reasons are ALWAYS recorded regardless of gate_decision,
         # so users see all issues in a single run. Only upgrade the decision
         # to "fail" when gate_decision is still "pass" AND at least one
         # fail item is related to current staged changes (or in full-analysis
         # mode).
         # ----------------------------------------------------
-        current_fail_detected = False
         any_fail_detected = False
+        current_fail_detected = False
 
-        # 2.1 Check unclear architecture constraints
+        # 2.1 Check unclear architecture constraints (inline)
         if compliance_result:
             unclear_constraints = compliance_result.get("unclear_constraints", [])
             for uc in unclear_constraints:
@@ -504,7 +695,6 @@ class MergeGateEngine:
                 if staged_items is None:
                     current_fail_detected = True
 
-            # Check status list for any MUST/SHOULD unclear
             status_list = compliance_result.get(
                 "architecture_compliance_status", []
             )
@@ -520,97 +710,25 @@ class MergeGateEngine:
                         if staged_items is None:
                             current_fail_detected = True
 
-        # 2.2 Check Should-level gaps (e.g. requirement or task gaps, which are non-blocking)
-        for gap in gaps:
-            item_type = gap.get("item_type")
-            item_id = gap.get("item_id", "")
-            reason = gap.get("reason", "")
-            target_id = gap.get("target_id", "")
-            human_resolved = target_id in resolved_gap_target_ids
+        # Section 2.2 + 2.3
+        g_any, g_cur = self._process_should_gaps(
+            gaps, resolved_gap_target_ids, staged_items, reasons
+        )
+        any_fail_detected = any_fail_detected or g_any
+        current_fail_detected = current_fail_detected or g_cur
 
-            if item_type != "ac":
-                hint = resolve_hint(_gate_hints.get("non_blocking_gap", {}), "level1")
-                msg = hint.format(item_type=item_type, item_id=item_id, reason=reason) if hint else f"非阻塞缺口 ({item_type} {item_id}): {reason}"
-                related = {item_id} if item_id else None
-                if human_resolved:
-                    reasons.append(self._tag_reason(f"[已人工完成] {msg}", related, staged_items))
-                else:
-                    reasons.append(self._tag_reason(msg, related, staged_items))
-                    any_fail_detected = True
-                    if self._is_current(related, staged_items):
-                        current_fail_detected = True
-
-        # 2.3 Check Should/Could severity risks or speculative risks
-        for risk in risks:
-            severity = risk.get("severity")
-            desc = risk.get("description", "")
-            risk_id = risk.get("risk_id", "")
-            confidence = risk.get("confidence")
-            risk_type = risk.get("type")
-            risk_target_id = risk.get("target_id", "")
-            human_accepted = risk_target_id in accepted_risk_target_ids
-
-            is_speculative = (
-                confidence == "low_confidence" or risk_type == "suggestion"
-            )
-            is_should_could = severity in ("should", "could")
-
-            if is_should_could or is_speculative:
-                risk_related_fs: Set[str] = set()
-                if risk_id:
-                    risk_related_fs.add(risk_id)
-                claim_id = risk.get("claim_id")
-                if claim_id:
-                    risk_related_fs.add(claim_id)
-                hint = resolve_hint(_gate_hints.get("low_medium_risk", {}), "level1")
-                msg = hint.format(risk_id=risk_id, desc=desc) if hint else f"低/中风险或推测性风险 ({risk_id}): {desc}"
-                if human_accepted:
-                    reasons.append(self._tag_reason(f"[已接受风险] {msg}", risk_related_fs or None, risk_staged))
-                else:
-                    reasons.append(self._tag_reason(msg, risk_related_fs or None, risk_staged))
-                    any_fail_detected = True
-                    if self._is_current(risk_related_fs or None, risk_staged):
-                        current_fail_detected = True
-
-        # Only upgrade to "fail" if not already "blocked" and at least one
-        # fail item is related to current changes.
-        if current_fail_detected and gate_decision == "pass":
-            gate_decision = "fail"
+        r_any, r_cur = self._process_should_risks(
+            risks, accepted_risk_target_ids, risk_staged, reasons
+        )
+        any_fail_detected = any_fail_detected or r_any
+        current_fail_detected = current_fail_detected or r_cur
 
         # ----------------------------------------------------
-        # 2.5 Check coverage violations (always [当前] — fresh measurement)
+        # Final decision
         # ----------------------------------------------------
-        coverage_violations = []
-        if evidence_index:
-            for ev in evidence_index.get("evidences", []):
-                if (ev.get("details", {}).get("tool_category") == "coverage" and
-                        ev.get("status") == "violated"):
-                    coverage_violations.append({
-                        "file": ev.get("source_path", ""),
-                        "percent": ev.get("details", {}).get("percent_covered", 0),
-                    })
-        if coverage_violations:
-            for cv in coverage_violations:
-                # Coverage violations are always [当前] — they come from
-                # fresh tool measurements, not from staged changes.
-                tag = "[当前] " if staged_items is not None else ""
-                reasons.append(
-                    f"{tag}Coverage below 80%: {cv['file']} ({cv['percent']}%)"
-                )
-            # Coverage violations are always current (based on fresh measurement)
-            if gate_decision not in ("blocked",):
-                gate_decision = "blocked"
-
-        # ----------------------------------------------------
-        # 3. Handle 'pass'
-        # ----------------------------------------------------
-        if gate_decision == "pass" and not reasons:
-            hint = resolve_hint(_gate_hints.get("all_gates_passed", {}), "level1")
-            reasons.append(hint if hint else "所有质量门禁规则均已通过，无阻塞项或风险项。")
-
-        return {
-            "gate_decision": gate_decision,
-            "reasons": reasons,
-            "blocked_items": blocked_items,
-            "human_decisions_applied": human_decisions_applied,
-        }
+        return self._compute_gate_decision(
+            gate_decision, blocked_items,
+            current_fail_detected, any_fail_detected,
+            human_decisions_applied, staged_items,
+            evidence_index, reasons,
+        )

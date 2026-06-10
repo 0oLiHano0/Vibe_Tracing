@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-5b5cc96b-0258-4642-ad05-db94348c1bf5",
+  "run_id": "RUN-93e0ba7c-b13d-4dac-8d81-30d5fb981c91",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-06-10T03:07:23.497561Z",
+  "scan_time": "2026-06-10T05:57:59.907689Z",
   "gate_decision": "pass",
   "requirement_coverage": [
     {
@@ -865,14 +865,13 @@
     }
   ],
   "metadata": {
-    "run_id": "RUN-5b5cc96b-0258-4642-ad05-db94348c1bf5",
+    "run_id": "RUN-93e0ba7c-b13d-4dac-8d81-30d5fb981c91",
     "project_id": "PROJECT-VT",
-    "scan_time": "2026-06-10T03:07:23.497561Z",
+    "scan_time": "2026-06-10T05:57:59.907689Z",
     "input_files": {
       "prd": "docs/prd.md",
       "architecture_constraints": "docs/architecture_constraints.json",
-      "task_list": "docs/task_list.json",
-      "agent_claims": ".vibetracing/claims/current.json"
+      "task_list": "docs/task_list.json"
     },
     "output_files": {
       "evidence_index": "output/evidence_index.json",

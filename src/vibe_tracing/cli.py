@@ -1914,26 +1914,20 @@ def _run_claim_tests(project_root: Path, claims_list: list, evidence_index: dict
     return evidence_index
 
 
-def _evaluate_and_output(
+def _run_analysis_phase(
     ctx: UnifiedContext,
     merged_gaps: list,
     final_risks: list,
-    compliance_res: Optional[dict],
-    output_dir: Path,
     evidence_index: dict,
-    claim_res: dict,
-    req_res: dict,
     project_root: Path,
-    is_draft: bool,
     staged_files: Optional[Set[str]] = None,
-) -> int:
-    """Run MergeGateEngine, output all reports, and return exit code."""
-    prd_res = ctx.prd
-    manifest = ctx.manifest
-    if not manifest:
-        return 1
+) -> Tuple[list, list, dict, Optional[Set[str]], Optional[Set[str]]]:
+    """Run claim tests, compute active issues, and build staged_items.
+
+    Returns (active_gaps, active_risks, evidence_index,
+             staged_items, directly_staged_items).
+    """
     claims_list = ctx.claims_list
-    task_res = ctx.task_result
 
     # Run pytest for claim test_refs and record results in evidence_index
     evidence_index = _run_claim_tests(project_root, claims_list, evidence_index)
@@ -1944,10 +1938,6 @@ def _evaluate_and_output(
     active_risks = [r for r in final_risks if not r.get("stale")]
 
     # Build staged_items for debt awareness (EVO-TASK-025 / EVO-TASK-012).
-    # staged_items contains all identifiers that are provably affected by
-    # the current staged changes: claim IDs, task IDs, AC IDs, and
-    # requirement IDs.  The gate engine uses this set to decide whether an
-    # issue should block (current) or merely be displayed (pre-existing).
     staged_items: Optional[Set[str]] = None
     directly_staged_items: Optional[Set[str]] = None
     if staged_files:
@@ -1955,7 +1945,6 @@ def _evaluate_and_output(
             staged_files, claims_list, ctx,
         )
         staged_items = set(affected_claims)
-        # Also include related task IDs
         if ctx.task_result and ctx.task_result.tasks:
             affected_task_ids = {
                 claim.related_task
@@ -1963,20 +1952,13 @@ def _evaluate_and_output(
                 if claim.claim_id in affected_claims
             }
             staged_items.update(affected_task_ids)
-        # Include affected AC and requirement IDs so the gate engine can
-        # match AC-level gaps directly to staged changes.
         staged_items.update(affected_acs)
         staged_items.update(affected_reqs)
 
         # Build directly_staged_items: only items whose definitions were
-        # directly modified in this commit.  Claims are included only when
-        # the claims JSON file itself is staged (i.e. the claim was edited),
-        # NOT when merely a referenced code/test file was modified.  Tasks,
-        # ACs, and requirements are always included since their coverage is
-        # directly impacted by code changes.
+        # directly modified in this commit.
         claims_file_rel = ".vibetracing/claims/current.json"
         if claims_file_rel in staged_files:
-            # Compare per-claim content hashes to find actually modified claims
             from vibe_tracing.git_utils import git_show
             try:
                 old_json = git_show("HEAD", ".vibetracing/agent_claims.json", project_root)
@@ -1993,29 +1975,52 @@ def _evaluate_and_output(
                     new_claims_raw.append(asdict(c) if hasattr(c, '__dataclass_fields__') else {})
             directly_staged_claims = _get_directly_modified_claims(old_claims, new_claims_raw)
         else:
-            # Only code/test files were modified — claims are indirectly affected
             directly_staged_claims = set()
-        # directly_staged_items only contains claims whose content_hash
-        # actually changed. Tasks/ACs/reqs stay in staged_items (superset)
-        # but NOT in directly_staged_items, so old claims referencing
-        # modified code files are correctly tagged as [预存].
         directly_staged_items = set(directly_staged_claims)
 
-    # Load human decisions BEFORE gate evaluation (gate engine consumes them directly)
-    human_decisions = _load_human_decisions()
+    return active_gaps, active_risks, evidence_index, staged_items, directly_staged_items
 
-    # Merge Gate Engine
+
+def _run_gate_evaluation(
+    project_root: Path,
+    active_gaps: list,
+    active_risks: list,
+    compliance_res: Optional[dict],
+    ctx: UnifiedContext,
+    evidence_index: dict,
+    staged_items: Optional[Set[str]],
+    directly_staged_items: Optional[Set[str]],
+) -> dict:
+    """Run MergeGateEngine and return gate result dict."""
+    human_decisions = _load_human_decisions()
     gate_engine = MergeGateEngine(project_root)
     gate_res = gate_engine.evaluate(
         active_gaps, active_risks, compliance_res,
-        prd_status=prd_res.status, staged_items=staged_items,
+        prd_status=ctx.prd.status, staged_items=staged_items,
         directly_staged_items=directly_staged_items,
         evidence_index=evidence_index,
         human_decisions=human_decisions,
     )
+    hd_applied = gate_res.get("human_decisions_applied", 0)
+    if hd_applied > 0:
+        print(f"  Applied {hd_applied} human decision(s).", file=sys.stderr)
+    return gate_res
+
+
+def _build_report_document(
+    ctx: UnifiedContext,
+    gate_res: dict,
+    evidence_index: dict,
+    merged_gaps: list,
+    final_risks: list,
+    compliance_res: Optional[dict],
+    req_res: dict,
+    output_dir: Path,
+    project_root: Path,
+) -> dict:
+    """Assemble report document, build traceability report with metadata, and return it."""
     gate_decision = gate_res["gate_decision"]
 
-    # Assemble report document
     report_doc = {
         "run_id": evidence_index.get("run_id"),
         "project_id": evidence_index.get("project_id"),
@@ -2036,7 +2041,7 @@ def _evaluate_and_output(
         if compliance_res else [],
     }
 
-    # Add coverage summary to report (from evidence_index coverage_baseline)
+    # Add coverage summary to report
     cb_data = evidence_index.get("coverage_baseline", {})
     if cb_data:
         total_stmts = sum(f.get("num_statements", 0) for f in cb_data.values() if isinstance(f, dict))
@@ -2052,23 +2057,6 @@ def _evaluate_and_output(
             "file_count": len(cb_data),
         }
 
-    # Report human decisions applied by the gate engine
-    hd_applied = gate_res.get("human_decisions_applied", 0)
-    if hd_applied > 0:
-        print(f"  Applied {hd_applied} human decision(s).", file=sys.stderr)
-
-    # Build evidence index path (already written by caller)
-    index_path = output_dir / "evidence_index.json"
-    exit_code = 2 if gate_decision == "blocked" else 0
-
-    def rel_path_str(p: Path) -> str:
-        try:
-            if p.is_absolute() and (project_root in p.parents or p == project_root):
-                return str(p.relative_to(project_root))
-        except Exception:
-            pass
-        return str(p)
-
     # Build and save traceability report
     report_builder = TraceabilityReportBuilder(project_root)
     report_path = output_dir / "traceability_report.json"
@@ -2078,10 +2066,87 @@ def _evaluate_and_output(
         print(f"Error building traceability report: {exc}", file=sys.stderr)
         raise _GateBlocked(1)
 
-    # Render dashboard
+    # Build and embed metadata
+    metadata_doc = _build_metadata(ctx, gate_res, report_doc, output_dir, project_root)
+    report_doc["metadata"] = metadata_doc
+    try:
+        with report_path.open("w", encoding="utf-8") as f:
+            json.dump(report_doc, f, indent=2, ensure_ascii=False)
+    except Exception as exc:
+        print(f"Error writing traceability report with metadata: {exc}", file=sys.stderr)
+        raise _GateBlocked(1)
+
+    return report_doc
+
+
+def _rel_path_str(p: Path, project_root: Path) -> str:
+    """Return a relative path string if p is under project_root, else the full path."""
+    try:
+        if p.is_absolute() and (project_root in p.parents or p == project_root):
+            return str(p.relative_to(project_root))
+    except Exception:
+        pass
+    return str(p)
+
+
+def _build_metadata(
+    ctx: UnifiedContext,
+    gate_res: dict,
+    report_doc: dict,
+    output_dir: Path,
+    project_root: Path,
+) -> dict:
+    """Build the metadata section for the traceability report."""
+    manifest = ctx.manifest
+    claims_list = ctx.claims_list
+    gate_decision = gate_res["gate_decision"]
+    index_path = output_dir / "evidence_index.json"
+    report_path = output_dir / "traceability_report.json"
+    dashboard_path = output_dir / "dashboard.html"
+    exit_code = 2 if gate_decision == "blocked" else 0
+
+    records_dict = {r.file_key: r for r in manifest.inputs_used}
+    prd_record = records_dict.get("prd")
+    constraints_path = project_root / "docs" / "architecture_constraints.json"
+    task_list_path = project_root / "docs" / "task_list.json"
+    claims_record = records_dict.get("agent_claims")
+
+    input_files_meta = {
+        "prd": _rel_path_str(Path(prd_record.file_path), project_root) if prd_record else "",
+        "architecture_constraints": _rel_path_str(constraints_path, project_root) if constraints_path.exists() else "",
+        "task_list": _rel_path_str(task_list_path, project_root),
+    }
+    if claims_list and claims_record:
+        input_files_meta["agent_claims"] = _rel_path_str(Path(claims_record.file_path), project_root)
+
+    return {
+        "run_id": report_doc.get("run_id"),
+        "project_id": report_doc.get("project_id"),
+        "scan_time": report_doc.get("scan_time"),
+        "input_files": input_files_meta,
+        "output_files": {
+            "evidence_index": _rel_path_str(index_path, project_root),
+            "traceability_report": _rel_path_str(report_path, project_root),
+            "dashboard": _rel_path_str(dashboard_path, project_root),
+        },
+        "gate_decision": gate_decision,
+        "exit_code": exit_code,
+        "summary": "; ".join(gate_res["reasons"]),
+    }
+
+
+def _render_dashboard(
+    ctx: UnifiedContext,
+    report_doc: dict,
+    evidence_index: dict,
+    output_dir: Path,
+    project_root: Path,
+) -> None:
+    """Render the dashboard HTML file."""
+    manifest = ctx.manifest
+    prd_res = ctx.prd
     dashboard_path = output_dir / "dashboard.html"
     try:
-        # Extract pre-computed hash from manifest to avoid re-reading file
         _dash_constraints_hash = None
         if manifest:
             for _r in manifest.inputs_used:
@@ -2121,52 +2186,10 @@ def _evaluate_and_output(
         print(f"Error rendering dashboard: {exc}", file=sys.stderr)
         raise _GateBlocked(1)
 
-    # Build metadata section and embed in traceability_report.json
-    run_id = report_doc.get("run_id")
-    project_id = report_doc.get("project_id")
-    scan_time = report_doc.get("scan_time")
 
-    # Reconstruct input_files metadata from manifest
-    records_dict = {r.file_key: r for r in manifest.inputs_used}
-    prd_record = records_dict.get("prd")
-    constraints_path = project_root / "docs" / "architecture_constraints.json"
-    task_list_path = project_root / "docs" / "task_list.json"
-    claims_record = records_dict.get("agent_claims")
-
-    input_files_meta = {
-        "prd": rel_path_str(Path(prd_record.file_path)) if prd_record else "",
-        "architecture_constraints": rel_path_str(constraints_path) if constraints_path.exists() else "",
-        "task_list": rel_path_str(task_list_path),
-    }
-    if claims_list and claims_record:
-        input_files_meta["agent_claims"] = rel_path_str(Path(claims_record.file_path))
-
-    metadata_doc = {
-        "run_id": run_id,
-        "project_id": project_id,
-        "scan_time": scan_time,
-        "input_files": input_files_meta,
-        "output_files": {
-            "evidence_index": rel_path_str(index_path),
-            "traceability_report": rel_path_str(report_path),
-            "dashboard": rel_path_str(dashboard_path),
-        },
-        "gate_decision": gate_decision,
-        "exit_code": exit_code,
-        "summary": "; ".join(gate_res["reasons"]),
-    }
-
-    # Write metadata section into traceability_report.json
-    report_doc["metadata"] = metadata_doc
-    try:
-        with report_path.open("w", encoding="utf-8") as f:
-            json.dump(report_doc, f, indent=2, ensure_ascii=False)
-    except Exception as exc:
-        print(f"Error writing traceability report with metadata: {exc}", file=sys.stderr)
-        raise _GateBlocked(1)
-
-    # Print summary -- when staged_items is provided (pre-commit mode),
-    # separate current issues from pre-existing debt for clarity.
+def _print_gate_summary(gate_res: dict, staged_items: Optional[Set[str]]) -> None:
+    """Print gate decision summary, separating current issues from pre-existing debt."""
+    gate_decision = gate_res["gate_decision"]
     print(f"Analysis complete. Gate decision: {gate_decision.upper()}")
     if staged_items is not None:
         current_reasons = [r for r in gate_res["reasons"] if r.startswith("[当前]")]
@@ -2187,12 +2210,25 @@ def _evaluate_and_output(
         for reason in gate_res["reasons"]:
             print(f"- {reason}")
 
-    # Format and print Agent action list (additional output for Agent consumption)
+
+def _print_agent_actions(
+    ctx: UnifiedContext,
+    gate_res: dict,
+    report_doc: dict,
+    evidence_index: dict,
+    active_gaps: list,
+    active_risks: list,
+    merged_gaps: list,
+    compliance_res: Optional[dict],
+    staged_items: Optional[Set[str]],
+    project_root: Path,
+) -> None:
+    """Format and print the Agent action list."""
+    gate_decision = gate_res["gate_decision"]
     violations = compliance_res.get("architecture_violations", []) if compliance_res else []
     accepted_rules = compliance_res.get("accepted_rules", []) if compliance_res else []
     compliance_status = compliance_res.get("architecture_compliance_status", []) if compliance_res else []
 
-    # Compute per-file coverage violations from evidence index
     coverage_violations = []
     for ev in evidence_index.get("evidences", []):
         if (ev.get("details", {}).get("tool_category") == "coverage" and
@@ -2208,9 +2244,9 @@ def _evaluate_and_output(
         active_risks=active_risks,
         violations=violations,
         accepted_rules=accepted_rules,
-        prd_result=prd_res,
-        task_result=task_res,
-        claims_list=claims_list,
+        prd_result=ctx.prd,
+        task_result=ctx.task_result,
+        claims_list=ctx.claims_list,
         gate_reasons=gate_res["reasons"],
         merged_gaps=merged_gaps,
         compliance_status=compliance_status,
@@ -2222,12 +2258,28 @@ def _evaluate_and_output(
     )
     print(agent_output)
 
-    if is_draft and (not task_res or not task_res.tasks) and not claims_list:
-        print("\n【零提示词引导】当前项目处于 PRD 草稿阶段（draft），且未发现任何开发任务。请让 AI Agent 读取项目内的 .vibetracing/prompts/prd_analysis.md 并按照其中的 7 步分析法对 PRD 进行分析与补充，逐步生成对应的架构约束和任务列表。")
+    if ctx.prd.status == "draft":
+        task_res = ctx.task_result
+        claims_list = ctx.claims_list
+        if (not task_res or not task_res.tasks) and not claims_list:
+            print("\n【零提示词引导】当前项目处于 PRD 草稿阶段（draft），且未发现任何开发任务。请让 AI Agent 读取项目内的 .vibetracing/prompts/prd_analysis.md 并按照其中的 7 步分析法对 PRD 进行分析与补充，逐步生成对应的架构约束和任务列表。")
 
+
+def _print_reflection_prompts(
+    ctx: UnifiedContext,
+    gate_res: dict,
+    merged_gaps: list,
+    final_risks: list,
+    compliance_res: Optional[dict],
+    project_root: Path,
+) -> None:
+    """Print reflection prompts based on analysis results."""
     from vibe_tracing.reflection_prompts import render_reflection_prompts
 
-    # Extract affected_files from the analysis context
+    claims_list = ctx.claims_list
+    manifest = ctx.manifest
+    gate_decision = gate_res["gate_decision"]
+
     affected_files: List[str] = []
     for claim in claims_list:
         for ref in claim.code_refs:
@@ -2239,19 +2291,15 @@ def _evaluate_and_output(
             if path and path not in affected_files:
                 affected_files.append(path)
 
-    # Partition affected files by governance boundary
     boundary = load_boundary(project_root, constraints_data=ctx.constraints)
     _scope = partition_by_scope(affected_files, boundary)
     in_scope_files = _scope["in_scope"]
     out_of_scope_files = _scope["out_of_scope"]
 
-    # Extract raw task_list dict from manifest
     records_dict_all = {r.file_key: r for r in manifest.inputs_used}
     task_list_record = records_dict_all.get("task_list")
     task_list_raw = task_list_record.content if task_list_record and task_list_record.status == "ok" else {"tasks": []}
 
-    # Only pass in-scope files to reflection prompts so that out-of-scope
-    # files do not trigger coverage warnings.
     print(render_reflection_prompts(
         gate_decision=gate_decision,
         gaps=merged_gaps,
@@ -2262,6 +2310,82 @@ def _evaluate_and_output(
         governance_in_scope_count=len(in_scope_files),
         governance_out_of_scope_count=len(out_of_scope_files),
     ))
+
+
+def _render_output(
+    ctx: UnifiedContext,
+    gate_res: dict,
+    report_doc: dict,
+    evidence_index: dict,
+    active_gaps: list,
+    active_risks: list,
+    merged_gaps: list,
+    final_risks: list,
+    compliance_res: Optional[dict],
+    staged_items: Optional[Set[str]],
+    output_dir: Path,
+    project_root: Path,
+    is_draft: bool,
+) -> None:
+    """Render dashboard, print gate summary, agent actions, and reflection prompts."""
+    _render_dashboard(ctx, report_doc, evidence_index, output_dir, project_root)
+    _print_gate_summary(gate_res, staged_items)
+    _print_agent_actions(
+        ctx, gate_res, report_doc, evidence_index,
+        active_gaps, active_risks, merged_gaps, compliance_res,
+        staged_items, project_root,
+    )
+    _print_reflection_prompts(ctx, gate_res, merged_gaps, final_risks, compliance_res, project_root)
+
+
+def _handle_post_commit(project_root: Path, exit_code: int, is_pre_commit: bool) -> None:
+    """Archive claims after a successful pre-commit run."""
+    if exit_code == 0 and is_pre_commit:
+        _archive_claims(project_root)
+
+
+def _evaluate_and_output(
+    ctx: UnifiedContext,
+    merged_gaps: list,
+    final_risks: list,
+    compliance_res: Optional[dict],
+    output_dir: Path,
+    evidence_index: dict,
+    claim_res: dict,
+    req_res: dict,
+    project_root: Path,
+    is_draft: bool,
+    staged_files: Optional[Set[str]] = None,
+) -> int:
+    """Run MergeGateEngine, output all reports, and return exit code."""
+    if not ctx.manifest:
+        return 1
+
+    # Phase 1: Analysis (claim tests, active issues, staged items)
+    active_gaps, active_risks, evidence_index, staged_items, directly_staged_items = \
+        _run_analysis_phase(ctx, merged_gaps, final_risks, evidence_index, project_root, staged_files)
+
+    # Phase 2: Gate evaluation
+    gate_res = _run_gate_evaluation(
+        project_root, active_gaps, active_risks, compliance_res,
+        ctx, evidence_index, staged_items, directly_staged_items,
+    )
+
+    # Phase 3: Build report document
+    report_doc = _build_report_document(
+        ctx, gate_res, evidence_index, merged_gaps, final_risks,
+        compliance_res, req_res, output_dir, project_root,
+    )
+
+    # Phase 4: Render output (dashboard, summary, agent actions, reflection)
+    _render_output(
+        ctx, gate_res, report_doc, evidence_index,
+        active_gaps, active_risks, merged_gaps, final_risks, compliance_res,
+        staged_items, output_dir, project_root, is_draft,
+    )
+
+    # Compute exit code
+    exit_code = 2 if gate_res["gate_decision"] == "blocked" else 0
 
     return exit_code
 

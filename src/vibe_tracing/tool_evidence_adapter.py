@@ -810,11 +810,13 @@ class ToolExecutionEngine:
         """Measure per-source-file coverage from a pre-built baseline.
 
         Reads per-file coverage data and emits one ``ToolEvidenceCandidate``
-        per source file.  The data source is the ``coverage_baseline``
-        field in the evidence index (if provided).
+        per source file.  The primary data source is the ``coverage_baseline``
+        field in the evidence index (if provided).  An explicit
+        ``baseline_path`` can also point to a JSON file with per-file data.
 
         Args:
-            baseline_path: Deprecated; kept for backward compatibility.
+            baseline_path: Optional path to a coverage baseline JSON file.
+                Only used when ``evidence_index`` has no ``coverage_baseline``.
             pass_threshold: Minimum percent_covered to be considered
                 ``compliant``.  Files below this threshold are ``violated``.
             evidence_index: Pre-loaded evidence index dict.  If it contains
@@ -861,10 +863,12 @@ class ToolExecutionEngine:
 
             return candidates
 
-        # Fallback: read from file (backward-compatible path)
-        baseline_file = Path(baseline_path) if baseline_path else (
-            self.project_root / ".vibetracing" / "coverage_baseline.json"
-        )
+        # Fallback: read from explicit file path only.
+        # No default path — if baseline_path is None, no data is available.
+        if baseline_path is None:
+            return []
+
+        baseline_file = Path(baseline_path)
 
         if not baseline_file.is_file():
             return []

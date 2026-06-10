@@ -146,12 +146,20 @@ must
         json.dumps(config_data, indent=2), encoding="utf-8"
     )
 
+    # Initialize a git repo so that run_finalize (Finalize-as-a-Committer) can
+    # git add / git commit the architecture baseline.
+    import subprocess as _sp
+    _sp.run(["git", "init"], cwd=base, capture_output=True, check=True)
+    _sp.run(["git", "config", "user.email", "test@test.com"], cwd=base, capture_output=True, check=True)
+    _sp.run(["git", "config", "user.name", "Test"], cwd=base, capture_output=True, check=True)
+
     # Finalize to populate language, validation_tools, architecture_constraints_hash, etc.
     from vibe_tracing.cli import run_finalize
     run_finalize(base)
 
-    # Ensure finalize_git_commit is set (tmp dirs are not git repos, so run_finalize
-    # writes null; the anti-corruption layer in run_analyze requires it when hash exists).
+    # Ensure finalize_git_commit is set (run_finalize may fail to commit in
+    # some edge cases; the anti-corruption layer in run_analyze requires it
+    # when hash exists).
     cfg_path = base / ".vibetracing" / "config.json"
     cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
     if not cfg.get("finalize_git_commit"):
@@ -315,9 +323,10 @@ def test_cli_analyze_blocked(tmp_path, capsys):
 def test_cli_analyze_fail_conditional(tmp_path, capsys):
     """
     covers: AC-VT-008-03, AC-VT-009-02
-    Test a conditional project: contains Should-level issues, CLI exits with 0 but decision is FAIL.
+    Test a project with old claim timestamps: when all ACs are covered by tool
+    evidence, the gate decision is PASS regardless of claim age.
+    (Previously expected FAIL via stale-risk detection, which was removed.)
     """
-    # Make tasks SHOULD instead of MUST so gaps are Should-level, causing a conditional fail decision
     setup_mock_project(
         tmp_path,
         task_status="done",
@@ -329,10 +338,10 @@ def test_cli_analyze_fail_conditional(tmp_path, capsys):
     )
 
     exit_code = main(["analyze", "--project-root", str(tmp_path)])
-    assert exit_code == 0  # Conditional fail exits with 0
+    assert exit_code == 0
 
     captured = capsys.readouterr()
-    assert "Analysis complete. Gate decision: FAIL" in captured.out
+    assert "Analysis complete. Gate decision: PASS" in captured.out
 
     # Files should still be generated
     traceability_report_path = (
@@ -342,10 +351,10 @@ def test_cli_analyze_fail_conditional(tmp_path, capsys):
     assert traceability_report_path.exists()
 
     rep = json.loads(traceability_report_path.read_text(encoding="utf-8"))
-    assert rep["gate_decision"] == "fail"
+    assert rep["gate_decision"] == "pass"
 
     meta = rep["metadata"]
-    assert meta["gate_decision"] == "fail"
+    assert meta["gate_decision"] == "pass"
     assert meta["exit_code"] == 0
 
 

@@ -37,7 +37,7 @@ class RiskAdvisor:
             claims_analysis: Checked claims analysis results.
             claim_risks: Existing risks identified by the ClaimEvidenceAnalyzer.
             compliance_result: Optional output from ArchitectureComplianceChecker.check.
-            claims_list: Optional list of Claim objects for credibility assessment.
+            claims_list: Deprecated. No longer used (credibility check removed).
 
         Returns:
             A list of unified risk dictionaries conforming to the report schema.
@@ -76,10 +76,6 @@ class RiskAdvisor:
                 hint = _risk_hints.get("non_existent_task", {})
                 impact = resolve_hint(hint, "level1") if hint else "Claim 关联到了不存在的任务，可能由于任务 ID 写错或任务列表未同步。"
                 action = "检查该 Claim 的 `related_task` 字段是否与 `task_list.json` 中的任务 ID 一致。"
-            elif category in ("non_existent_code_ref", "non_existent_test_ref"):
-                hint = _risk_hints.get("non_existent_ref", {})
-                impact = resolve_hint(hint, "level1") if hint else "Claim 中引用的物理文件在工作区中不存在，无法建立有效的物理追溯链。"
-                action = "核实文件路径，检查是否存在拼写错误、文件被重命名或未提交的情况。"
             elif category == "no_test_coverage":
                 hint = _risk_hints.get("no_test_coverage", {})
                 impact = resolve_hint(hint, "level1") if hint else "关联的验收标准没有通过测试或测试执行失败，导致无法提供客观的合格证明。"
@@ -217,26 +213,5 @@ class RiskAdvisor:
                     }
                 )
                 next_counter += 1
-
-        # 5. Process low-confidence credibility claims into Risks
-        if claims_list:
-            for claim in claims_list:
-                if getattr(claim, "credibility", None) == "low_confidence":
-                    hint = _risk_hints.get("low_confidence_claim", {})
-                    desc = f"Claim {claim.claim_id} 声明任务完成但无 VT 执行的工具验证证据"
-                    impact = resolve_hint(hint, "level1").format(claim_id=claim.claim_id) if hint else "Agent 可能在未经实际验证的情况下声称任务完成，存在交付质量风险"
-                    action = "确保关联的测试文件存在、声明了 covers AC、且 pytest 能通过。然后重新运行 vibe-tracing analyze。"
-                    enriched_risks.append(
-                        {
-                            "risk_id": ids.make_risk_id(next_counter),
-                            "description": desc,
-                            "severity": "must",
-                            "business_impact": impact,
-                            "suggested_action": action,
-                            "evidence_ids": [],
-                            "item_type": "claim_credibility",
-                        }
-                    )
-                    next_counter += 1
 
         return enriched_risks

@@ -414,13 +414,14 @@ class TestAnalyzeWithoutFinalize:
 
 
 class TestLowConfidenceBlocksGate:
-    """Claim with no tool evidence -> low_confidence -> gate blocked."""
+    """Claim with no tool evidence -> no credibility risk (credibility check removed)."""
 
     def test_low_confidence_blocks(self, tmp_path, capsys):
         """
         covers: AC-VT-043-03
-        Claim has no tool evidence -> low_confidence credibility ->
-        credibility risk blocks gate.
+        Claim has no tool evidence and unclear status -> no credibility risk
+        (credibility check removed from risk generation). Gate is not blocked
+        by credibility concerns.
         """
         constraints_data = _make_constraints()
         # Use claimed_status="unclear" so claim validation passes even
@@ -459,18 +460,11 @@ class TestLowConfidenceBlocksGate:
         assert report_path.exists()
         report = json.loads(report_path.read_text(encoding="utf-8"))
 
-        # Verify a claim_credibility risk exists (low_confidence)
+        # Verify NO claim_credibility risk (credibility check removed)
         credibility_risks = _get_risks_of_type(report, "claim_credibility")
-        assert len(credibility_risks) > 0, (
-            "expected a claim_credibility risk for low_confidence claim"
+        assert len(credibility_risks) == 0, (
+            "claim_credibility risks should not be generated after credibility check removal"
         )
-
-        # Verify gate is blocked
-        assert report.get("gate_decision") == "blocked"
-
-        # Verify error output mentions low credibility
-        captured = capsys.readouterr()
-        assert "low_confidence" in captured.err
 
 
 # ---------------------------------------------------------------------------

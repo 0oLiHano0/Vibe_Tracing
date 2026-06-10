@@ -2506,40 +2506,6 @@ def test_run_finalize_language_not_in_matrix(tmp_path, capsys):
 
 
 # =========================================================================
-# Tests for _get_code_extensions
-# =========================================================================
-
-def test_get_code_extensions():
-    """Test _get_code_extensions collects extensions from language_tool_matrix."""
-    from vibe_tracing.cli import _get_code_extensions
-
-    ltm = {
-        "python": {"extensions": [".py", ".pyi"]},
-        "javascript": {"extensions": [".js", ".ts"]},
-        "not_a_lang": "invalid",  # should be skipped
-    }
-    exts = _get_code_extensions(ltm)
-    assert ".py" in exts
-    assert ".pyi" in exts
-    assert ".js" in exts
-    assert ".ts" in exts
-
-
-def test_get_code_extensions_empty():
-    """Test _get_code_extensions with empty matrix."""
-    from vibe_tracing.cli import _get_code_extensions
-    assert _get_code_extensions({}) == set()
-
-
-def test_get_code_extensions_no_extensions():
-    """Test _get_code_extensions when language has no extensions field."""
-    from vibe_tracing.cli import _get_code_extensions
-
-    ltm = {"python": {"tool": "pytest"}}
-    assert _get_code_extensions(ltm) == set()
-
-
-# =========================================================================
 # Tests for _get_staged_files
 # =========================================================================
 

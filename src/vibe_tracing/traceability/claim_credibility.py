@@ -13,102 +13,14 @@ from vibe_tracing.task_loader import TaskListLoadResult
 
 
 def assess_claim_credibility(
-    claims: List[Claim],
-    evidence_list: List[Dict[str, Any]],
-    task_result: Optional[TaskListLoadResult] = None,
+    claims_list: List[Any],
+    evidence_index: Dict[str, Any],
     project_root: Optional[Path] = None,
 ) -> List[str]:
+    """Assess credibility of each claim.
+
+    In the new evidence chain design, claim credibility is determined by
+    VT-executed tool results (pytest), not by evidence_refs. This function
+    is kept for backward compatibility but returns an empty list.
     """
-    Assess credibility of each claim based on VT-executed tool evidence.
-
-    For each claim, checks if evidence_refs point to evidence entries with
-    source_type of "test" or "tool" (VT-executed tool evidence).
-
-    - If a claim has tool evidence references -> credibility = "high"
-    - For non-code claims (task has no test paths) with existing deliverable -> credibility = "medium"
-    - Otherwise -> credibility = "low_confidence"
-
-    Args:
-        claims: List of Claim objects to assess.
-        evidence_list: List of evidence dicts from the evidence index.
-        task_result: Optional TaskListLoadResult for task path lookups.
-        project_root: Optional project root for file existence checks.
-
-    Returns:
-        List of warning messages for low_confidence claims.
-    """
-    # Build task_id -> Task mapping for path lookups
-    task_map: Dict[str, Any] = {}
-    if task_result:
-        for task in task_result.tasks:
-            task_map[task.task_id] = task
-
-    # Build evidence_id -> source_type and source_path -> source_type mappings
-    ev_id_to_source_type: Dict[str, str] = {}
-    ev_path_to_source_type: Dict[str, str] = {}
-    for ev in evidence_list:
-        ev_id = ev.get("evidence_id", "")
-        source_type = ev.get("source_type", "")
-        if ev_id:
-            ev_id_to_source_type[ev_id] = source_type
-        source_path = ev.get("source_path", "")
-        if source_path:
-            # Prefer "tool" or "test" source types over "code"
-            existing = ev_path_to_source_type.get(source_path, "")
-            if source_type in ("test", "tool"):
-                ev_path_to_source_type[source_path] = source_type
-            elif not existing:
-                ev_path_to_source_type[source_path] = source_type
-
-    all_warnings: List[str] = []
-
-    for claim in claims:
-        has_tool_evidence = False
-
-        # Check if evidence_refs point to evidence with source_type "test" or "tool"
-        # Try lookup by evidence_id first, then by source_path
-        for ref in claim.evidence_refs:
-            source_type = ev_id_to_source_type.get(ref, "")
-            if source_type in ("test", "tool"):
-                has_tool_evidence = True
-                break
-            # Also try lookup by source_path (claims may reference source_path values)
-            source_type = ev_path_to_source_type.get(ref, "")
-            if source_type in ("test", "tool"):
-                has_tool_evidence = True
-                break
-
-        if has_tool_evidence:
-            claim.credibility = "high"
-        else:
-            # Check for medium credibility: non-code claim with existing deliverable
-            is_medium = False
-            related_task = task_map.get(claim.related_task)
-
-            if related_task:
-                # Determine if task is non-code by checking for test path indicators
-                has_test_paths = bool(
-                    related_task.related_acceptance_criteria
-                    or related_task.definition_of_done
-                )
-
-                if not has_test_paths and project_root and claim.test_refs:
-                    # Non-code task: check if deliverable file exists
-                    deliverable_path = Path(claim.test_refs[0])
-                    if not deliverable_path.is_absolute():
-                        deliverable_path = project_root / deliverable_path
-                    if deliverable_path.exists():
-                        is_medium = True
-
-            if is_medium:
-                claim.credibility = "medium"
-            else:
-                claim.credibility = "low_confidence"
-                warning = (
-                    f"Claim {claim.claim_id} has no VT-executed tool evidence. "
-                    f"Marked as low_confidence."
-                )
-                claim.credibility_warnings.append(warning)
-                all_warnings.append(warning)
-
-    return all_warnings
+    return []

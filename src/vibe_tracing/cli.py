@@ -25,7 +25,6 @@ from vibe_tracing.schema_validator import SchemaValidator
 from vibe_tracing.prd_parser import PrdParser
 from vibe_tracing.task_loader import TaskLoader
 from vibe_tracing.claim_loader import ClaimLoader
-from vibe_tracing.traceability.claim_credibility import assess_claim_credibility
 from vibe_tracing.evidence_index_builder import EvidenceIndexBuilder
 from vibe_tracing.traceability_report_builder import TraceabilityReportBuilder
 from vibe_tracing.merge_gate_engine import MergeGateEngine
@@ -823,22 +822,6 @@ def _gate3_semantic_audit(ctx: UnifiedContext, project_root: Path, is_pre_commit
     return None
 
 
-def _get_code_extensions(ltm: Dict) -> Set[str]:
-    """Collect all file extensions from every language entry in the language_tool_matrix.
-
-    Iterates over all language entries in *ltm*, merges every ``extensions``
-    array into a single set and returns it.  If no language declares an
-    ``extensions`` field, an empty set is returned (meaning no tools will
-    execute for unknown languages).
-    """
-    extensions: Set[str] = set()
-    for lang_entry in ltm.values():
-        if isinstance(lang_entry, dict):
-            exts = lang_entry.get("extensions")
-            if isinstance(exts, list):
-                extensions.update(exts)
-    return extensions
-
 
 def _execute_tools(
     ctx: UnifiedContext,
@@ -905,7 +888,8 @@ def _execute_tools(
 
     # Collect paths to execute tools against (code files only), separated
     # into test paths and source paths for semantic tool routing.
-    code_extensions = _get_code_extensions(ltm)
+    lang_config = ltm.get(config_language, {})
+    code_extensions = set(lang_config.get("extensions", [".py"]))
     if not code_extensions:
         print("Skipping tool execution: no file extensions defined in language_tool_matrix.", file=sys.stderr)
         return []
@@ -1182,7 +1166,7 @@ def _run_analyzers(
             print(f"  Note: {stale_gap_count} gaps and {stale_risk_count} risks from unchanged files (marked stale).", file=sys.stderr)
 
     # Staged file extension coverage check (WARNING only)
-    _check_staged_extensions(project_root, ctx.constraints)
+    _check_staged_extensions(project_root, ctx.constraints, ctx.config.get("language"))
 
     return merged_gaps, final_risks, compliance_res, claim_res, req_res
 
@@ -1667,7 +1651,7 @@ def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
     return "\n".join(lines)
 
 
-def _check_staged_extensions(project_root: Path, constraints: Optional[dict]) -> None:
+def _check_staged_extensions(project_root: Path, constraints: Optional[dict], config_language: Optional[str] = None) -> None:
     """Warn about staged files whose extensions are not in the configured language_tool_matrix.
 
     This is a WARNING-only check: it does not block the analysis pipeline.
@@ -1676,7 +1660,8 @@ def _check_staged_extensions(project_root: Path, constraints: Optional[dict]) ->
         return
 
     ltm = constraints.get("language_tool_matrix", {})
-    configured_exts = _get_code_extensions(ltm)
+    lang_config = ltm.get(config_language, {})
+    configured_exts = set(lang_config.get("extensions", [".py"]))
     if not configured_exts:
         return
 
@@ -2349,15 +2334,6 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             return 1
 
         evidence_list = evidences_index.get("evidences", [])
-
-        # Assess claim credibility
-        if ctx.claims_list:
-            credibility_warnings = assess_claim_credibility(
-                ctx.claims_list, evidence_list,
-                task_result=ctx.task_result, project_root=project_root,
-            )
-            for warning in credibility_warnings:
-                print(f"Warning: {warning}", file=sys.stderr)
 
         staged_files = _get_staged_files(project_root)
 

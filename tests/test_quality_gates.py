@@ -536,10 +536,9 @@ def test_gate_vt_010_traceability_report_invalid_evidence(tmp_path, capsys):
     """
     covers: GATE-VT-010
     Verify that claims referencing non-existent evidence IDs trigger MUST severity risks,
-    blocking the gate decision. Also validates that outdated claims (file modified after claim timestamp)
-    are flagged as SHOULD severity risks, causing FAIL decision.
+    blocking the gate decision.
     """
-    # 1. Non-existent evidence ID references
+    # Non-existent evidence ID references
     extra_claims = [
         {
             "claim_id": "CLAIM-VT-002",
@@ -563,24 +562,6 @@ def test_gate_vt_010_traceability_report_invalid_evidence(tmp_path, capsys):
     captured = capsys.readouterr()
     assert "Gate decision: BLOCKED" in captured.out
     assert "references non-existent evidence" in captured.out
-
-    # 2. Outdated claim (modified file after claim timestamp)
-    # Write a claim with a past timestamp
-    setup_gate_test_project(
-        tmp_path,
-        claim_timestamp="2010-01-01T00:00:00Z",
-        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
-    )
-    # The referenced file `src/vibe_tracing/core/ids.py` is created during setup and has mtime in 2026,
-    # which is newer than the claim's 2010 timestamp.
-    # The gate is BLOCKED because other MUST-severity conditions (non-existent evidence,
-    # missing tool verification) are now fully evaluated alongside the outdated claim.
-
-    exit_code = main(["analyze", "--project-root", str(tmp_path)])
-    assert exit_code == 2
-    captured = capsys.readouterr()
-    assert "Gate decision: BLOCKED" in captured.out
-    assert "was modified after the claim timestamp" in captured.out
 
 
 def test_gate_vt_011_tool_failures(tmp_path, capsys):

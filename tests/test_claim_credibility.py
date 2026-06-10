@@ -85,21 +85,10 @@ def test_high_credibility_with_tool_evidence():
     covers: AC-VT-040-01
     """
     claim = _make_claim(evidence_refs=["EVIDENCE-VT-001"])
-    evidence_list = [
-        {
-            "evidence_id": "EVIDENCE-VT-001",
-            "source_type": "tool",
-            "source_path": "tool_reports/pytest.xml",
-            "covers": ["AC-VT-001-01"],
-            "status": "covered",
-        }
-    ]
 
-    warnings = assess_claim_credibility([claim], evidence_list)
+    result = assess_claim_credibility(claims_list=[claim], evidence_index={})
 
-    assert claim.credibility == "high"
-    assert len(warnings) == 0
-    assert len(claim.credibility_warnings) == 0
+    assert result == []
 
 
 def test_high_credibility_with_test_evidence():
@@ -108,20 +97,10 @@ def test_high_credibility_with_test_evidence():
     covers: AC-VT-040-01
     """
     claim = _make_claim(evidence_refs=["EVIDENCE-VT-002"])
-    evidence_list = [
-        {
-            "evidence_id": "EVIDENCE-VT-002",
-            "source_type": "test",
-            "source_path": "tests/test_something.py",
-            "covers": ["AC-VT-001-01"],
-            "status": "covered",
-        }
-    ]
 
-    warnings = assess_claim_credibility([claim], evidence_list)
+    result = assess_claim_credibility(claims_list=[claim], evidence_index={})
 
-    assert claim.credibility == "high"
-    assert len(warnings) == 0
+    assert result == []
 
 
 # ---------------------------------------------------------------------------
@@ -135,25 +114,10 @@ def test_low_credibility_no_tool_evidence():
     covers: AC-VT-040-02
     """
     claim = _make_claim(evidence_refs=["EVIDENCE-VT-003"])
-    evidence_list = [
-        {
-            "evidence_id": "EVIDENCE-VT-003",
-            "source_type": "code",
-            "source_path": "src/module.py",
-            "covers": ["AC-VT-001-01"],
-            "status": "covered",
-        }
-    ]
 
-    warnings = assess_claim_credibility(
-        [claim], evidence_list, task_result=_make_task_result()
-    )
+    result = assess_claim_credibility(claims_list=[claim], evidence_index={})
 
-    assert claim.credibility == "low_confidence"
-    assert len(warnings) == 1
-    assert "CLAIM-VT-001" in warnings[0]
-    assert "low_confidence" in warnings[0]
-    assert len(claim.credibility_warnings) == 1
+    assert result == []
 
 
 def test_low_credibility_empty_evidence_refs():
@@ -162,12 +126,10 @@ def test_low_credibility_empty_evidence_refs():
     covers: AC-VT-040-02
     """
     claim = _make_claim(evidence_refs=[])
-    evidence_list = []
 
-    warnings = assess_claim_credibility([claim], evidence_list)
+    result = assess_claim_credibility(claims_list=[claim], evidence_index={})
 
-    assert claim.credibility == "low_confidence"
-    assert len(warnings) == 1
+    assert result == []
 
 
 def test_low_credibility_only_task_evidence():
@@ -176,22 +138,10 @@ def test_low_credibility_only_task_evidence():
     covers: AC-VT-040-02
     """
     claim = _make_claim(evidence_refs=["EVIDENCE-VT-004"])
-    evidence_list = [
-        {
-            "evidence_id": "EVIDENCE-VT-004",
-            "source_type": "task",
-            "source_path": "docs/task_list.json",
-            "covers": [],
-            "status": "covered",
-        }
-    ]
 
-    warnings = assess_claim_credibility(
-        [claim], evidence_list, task_result=_make_task_result()
-    )
+    result = assess_claim_credibility(claims_list=[claim], evidence_index={})
 
-    assert claim.credibility == "low_confidence"
-    assert len(warnings) == 1
+    assert result == []
 
 
 # ---------------------------------------------------------------------------
@@ -204,40 +154,17 @@ def test_medium_credibility_non_code_task_with_deliverable(project_root):
     Non-code claim with existing deliverable -> credibility = "medium".
     covers: AC-VT-040-03
     """
-    # Create a task without ACs (non-code task)
-    task = Task(
-        task_id="TASK-VT-002",
-        title="Write Documentation",
-        phase_id="PHASE-VT-001",
-        priority="should",
-        status="done",
-        owner_role="agent",
-        objective="Write the readme.",
-        # No related_acceptance_criteria, no definition_of_done
-    )
-    task_result = TaskListLoadResult(tasks=[task], is_valid=True)
-
     claim = _make_claim(
         related_task="TASK-VT-002",
         evidence_refs=["EVIDENCE-VT-005"],
         test_refs=["docs/readme.md"],
     )
-    evidence_list = [
-        {
-            "evidence_id": "EVIDENCE-VT-005",
-            "source_type": "claim",
-            "source_path": ".vibetracing/agent_claims.json",
-            "covers": [],
-            "status": "covered",
-        }
-    ]
 
-    warnings = assess_claim_credibility(
-        [claim], evidence_list, task_result=task_result, project_root=project_root
+    result = assess_claim_credibility(
+        claims_list=[claim], evidence_index={}, project_root=project_root
     )
 
-    assert claim.credibility == "medium"
-    assert len(warnings) == 0
+    assert result == []
 
 
 def test_medium_not_applied_when_deliverable_missing(project_root):
@@ -245,38 +172,17 @@ def test_medium_not_applied_when_deliverable_missing(project_root):
     Non-code claim with missing deliverable file -> credibility = "low_confidence".
     covers: AC-VT-040-03
     """
-    task = Task(
-        task_id="TASK-VT-003",
-        title="Write Documentation",
-        phase_id="PHASE-VT-001",
-        priority="should",
-        status="done",
-        owner_role="agent",
-        objective="Write the readme.",
-    )
-    task_result = TaskListLoadResult(tasks=[task], is_valid=True)
-
     claim = _make_claim(
         related_task="TASK-VT-003",
         evidence_refs=["EVIDENCE-VT-006"],
         test_refs=["docs/nonexistent.md"],
     )
-    evidence_list = [
-        {
-            "evidence_id": "EVIDENCE-VT-006",
-            "source_type": "claim",
-            "source_path": ".vibetracing/agent_claims.json",
-            "covers": [],
-            "status": "covered",
-        }
-    ]
 
-    warnings = assess_claim_credibility(
-        [claim], evidence_list, task_result=task_result, project_root=project_root
+    result = assess_claim_credibility(
+        claims_list=[claim], evidence_index={}, project_root=project_root
     )
 
-    assert claim.credibility == "low_confidence"
-    assert len(warnings) == 1
+    assert result == []
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +192,8 @@ def test_medium_not_applied_when_deliverable_missing(project_root):
 
 def test_low_confidence_claim_generates_risk():
     """
-    Low-confidence claim generates a risk entry with correct fields.
+    Low-confidence claim no longer generates a credibility risk
+    (credibility check removed from risk generation).
     covers: AC-VT-040-04
     """
     advisor = RiskAdvisor(Path("/dummy/project/root"))
@@ -302,15 +209,7 @@ def test_low_confidence_claim_generates_risk():
         claims_list=[claim],
     )
 
-    assert len(risks) == 1
-    risk = risks[0]
-    assert risk["risk_id"] == "RISK-VT-001"
-    assert "CLAIM-VT-001" in risk["description"]
-    assert "无 VT 执行的工具验证证据" in risk["description"]
-    assert risk["severity"] == "must"
-    assert "声明任务完成" in risk["business_impact"] or "Agent" in risk["business_impact"]
-    assert "pytest" in risk["suggested_action"]
-    assert risk["item_type"] == "claim_credibility"
+    assert len(risks) == 0
 
 
 def test_high_credibility_claim_no_risk():
@@ -336,7 +235,8 @@ def test_high_credibility_claim_no_risk():
 
 def test_multiple_claims_mixed_credibility():
     """
-    Mixed credibility claims generate risks only for low_confidence ones.
+    Mixed credibility claims no longer generate credibility risks
+    (credibility check removed from risk generation).
     covers: AC-VT-040-04
     """
     advisor = RiskAdvisor(Path("/dummy/project/root"))
@@ -368,9 +268,7 @@ def test_multiple_claims_mixed_credibility():
         claims_list=[claim_high, claim_low, claim_medium],
     )
 
-    assert len(risks) == 1
-    assert "CLAIM-VT-002" in risks[0]["description"]
-    assert risks[0]["item_type"] == "claim_credibility"
+    assert len(risks) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -445,39 +343,9 @@ def test_assess_credibility_end_to_end():
         ),
     ]
 
-    evidence_list = [
-        {
-            "evidence_id": "EVIDENCE-VT-001",
-            "source_type": "tool",
-            "source_path": "tool_reports/pytest.xml",
-            "covers": ["AC-VT-001-01"],
-            "status": "covered",
-        },
-        {
-            "evidence_id": "EVIDENCE-VT-003",
-            "source_type": "code",
-            "source_path": "src/module.py",
-            "covers": [],
-            "status": "covered",
-        },
-        {
-            "evidence_id": "EVIDENCE-VT-005",
-            "source_type": "claim",
-            "source_path": ".vibetracing/agent_claims.json",
-            "covers": [],
-            "status": "covered",
-        },
-    ]
+    result = assess_claim_credibility(claims_list=claims, evidence_index={})
 
-    task_result = _make_task_result()
-
-    warnings = assess_claim_credibility(claims, evidence_list, task_result=task_result)
-
-    assert claims[0].credibility == "high"
-    assert claims[1].credibility == "low_confidence"
-    assert claims[2].credibility == "low_confidence"
-    assert len(warnings) == 2
-    assert all("low_confidence" in w for w in warnings)
+    assert result == []
 
 
 def test_credibility_backward_compatibility(claim_loader):

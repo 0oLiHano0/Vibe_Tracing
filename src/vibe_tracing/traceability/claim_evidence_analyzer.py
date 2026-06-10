@@ -27,12 +27,11 @@ with task completeness or test results, and flags nonexistent or outdated file r
 #   1. External evidence checks (status, existence, self-reference)
 #   2. Task completion checks
 #   3. AC test coverage checks + test_refs covers consistency
-#   4. File existence and modification time checks
+#   (Section 4 removed: file existence checks are now handled by Gate's check_claim_exists and VT's _run_claim_tests)
 #
 # ============================================================================
 
 import hashlib
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -486,57 +485,6 @@ class ClaimEvidenceAnalyzer:
                         }
                     )
                     risk_counter += 1
-
-            # 4. File existence and expiration checks (regardless of completion claim, check refs if present)
-            claim_ts = self._parse_timestamp(claim.timestamp)
-
-            for ref_type, refs in [("code", code_refs), ("test", test_refs)]:
-                for ref in refs:
-                    clean_ref = ref.split("#")[0] if "#" in ref else ref
-                    ref_path = Path(clean_ref)
-                    if not ref_path.is_absolute():
-                        ref_path = self.project_root / ref_path
-
-                    if not ref_path.exists():
-                        # Non-existent file is a must-severity risk if the claim is completed
-                        has_other_mismatch = True
-                        reason = f"Claim {claim_id} references non-existent {ref_type} path: {ref}."
-                        mismatches.append(reason)
-                        risks.append(
-                            {
-                                "risk_id": ids.make_risk_id(risk_counter),
-                                "description": reason,
-                                "severity": "must",
-                                "risk_category": f"non_existent_{ref_type}_ref",
-                                "claim_id": claim_id,
-                            }
-                        )
-                        risk_counter += 1
-                    elif claim_ts:
-                        # Check modification time (skip in CI environment to prevent Git checkout timestamp false positives)
-                        if os.getenv("CI") != "true":
-                            try:
-                                mtime = ref_path.stat().st_mtime
-                                file_dt = datetime.fromtimestamp(mtime, timezone.utc)
-                                if file_dt > claim_ts:
-                                    has_other_mismatch = True
-                                    reason = (
-                                        f"Claim {claim_id} references {ref_type} file {ref} "
-                                        "which was modified after the claim timestamp."
-                                    )
-                                    mismatches.append(reason)
-                                    risks.append(
-                                        {
-                                            "risk_id": ids.make_risk_id(risk_counter),
-                                            "description": reason,
-                                            "severity": "should",
-                                            "risk_category": "stale_file",
-                                            "claim_id": claim_id,
-                                        }
-                                    )
-                                    risk_counter += 1
-                            except Exception:
-                                pass
 
             # Determine final status for claims_analysis
             final_status = claimed_status

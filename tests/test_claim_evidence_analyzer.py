@@ -373,8 +373,8 @@ def test_ac_test_failed(temp_project_dir) -> None:
 
 def test_code_ref_non_existent(temp_project_dir) -> None:
     """
-    Validate completed claim referencing non-existent file path.
-    covers: AC-VT-002-03
+    Verify that analyze() no longer produces non_existent_code_ref risks.
+    File existence checks have been removed from claim_evidence_analyzer.
     """
     claim = Claim(
         claim_id="CLAIM-VT-001",
@@ -404,28 +404,28 @@ def test_code_ref_non_existent(temp_project_dir) -> None:
     analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
     res = analyzer.analyze([claim], evidences)
 
-    assert len(res["risks"]) == 1
-    assert res["risks"][0]["severity"] == "must"
-    assert "references non-existent code path" in res["risks"][0]["description"]
+    # File existence is no longer checked by analyze()
+    non_existent_risks = [
+        r for r in res["risks"] if "non-existent code path" in r.get("description", "")
+    ]
+    assert len(non_existent_risks) == 0
 
-    assert res["claims_analysis"][0]["status"] == CoverageStatus.LOW_CONFIDENCE.value
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
 
 
 def test_code_ref_outdated(temp_project_dir) -> None:
     """
-    Validate completed claim referencing file modified after the claim timestamp.
-    covers: AC-VT-002-03
+    Verify that analyze() no longer produces stale_file risks for modified files.
+    mtime checks have been removed from claim_evidence_analyzer.
     """
+    import os
+
     # Create code ref file
     code_file = temp_project_dir / "app.py"
     code_file.write_text("print('outdated')")
 
-    # Set claim timestamp: 2026-05-22T10:00:00Z
-    # Set file mtime to a later time: e.g. time.time() which is current year (2026) or far in the future
-    # Let's explicitly set mtime to 1800000000 (after 2026-05-22)
+    # Set file mtime to a later time (would have been flagged before removal)
     os_time_mtime = 1800000000
-    import os
-
     os.utime(code_file, (os_time_mtime, os_time_mtime))
 
     claim = Claim(
@@ -456,11 +456,13 @@ def test_code_ref_outdated(temp_project_dir) -> None:
     analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
     res = analyzer.analyze([claim], evidences)
 
-    assert len(res["risks"]) == 1
-    assert res["risks"][0]["severity"] == "should"
-    assert "was modified after the claim timestamp" in res["risks"][0]["description"]
+    # mtime / stale_file checks are no longer performed by analyze()
+    stale_risks = [
+        r for r in res["risks"] if "modified after the claim timestamp" in r.get("description", "")
+    ]
+    assert len(stale_risks) == 0
 
-    assert res["claims_analysis"][0]["status"] == CoverageStatus.LOW_CONFIDENCE.value
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
 
 
 def test_claim_lookup_by_nodeid_and_source_path(temp_project_dir) -> None:
@@ -621,7 +623,8 @@ def test_claim_lookup_multi_matching_and_fail_fast(temp_project_dir) -> None:
 
 def test_code_ref_outdated_skipped_in_ci(temp_project_dir, monkeypatch) -> None:
     """
-    Validate that if the CI environment variable is set to true, the outdated file modification check is bypassed.
+    Verify that analyze() no longer produces mtime-related risks regardless of CI env.
+    mtime checks have been fully removed from claim_evidence_analyzer.
     """
     import os
 
@@ -629,7 +632,7 @@ def test_code_ref_outdated_skipped_in_ci(temp_project_dir, monkeypatch) -> None:
     code_file = temp_project_dir / "app.py"
     code_file.write_text("print('outdated')")
 
-    # Set file mtime to a later time (outdated)
+    # Set file mtime to a later time (would have been flagged before removal)
     os_time_mtime = 1800000000
     os.utime(code_file, (os_time_mtime, os_time_mtime))
 
@@ -660,20 +663,16 @@ def test_code_ref_outdated_skipped_in_ci(temp_project_dir, monkeypatch) -> None:
 
     analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
 
-    # 1. Set CI=true -> Check should be skipped, no risks/mismatches should be produced
+    # mtime check is completely removed, so no risks regardless of CI setting
     monkeypatch.setenv("CI", "true")
     res_ci = analyzer.analyze([claim], evidences)
     assert len(res_ci["risks"]) == 0
-    assert len(res_ci["claims_analysis"][0]["mismatches"]) == 0
     assert res_ci["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
 
-    # 2. Set CI=false -> Check should run, should risk must be produced
     monkeypatch.setenv("CI", "false")
     res_no_ci = analyzer.analyze([claim], evidences)
-    assert len(res_no_ci["risks"]) == 1
-    assert res_no_ci["risks"][0]["severity"] == "should"
-    assert "was modified after the claim timestamp" in res_no_ci["risks"][0]["description"]
-    assert res_no_ci["claims_analysis"][0]["status"] == CoverageStatus.LOW_CONFIDENCE.value
+    assert len(res_no_ci["risks"]) == 0
+    assert res_no_ci["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
 
 
 def test_claim_test_refs_cover_ac(temp_project_dir) -> None:

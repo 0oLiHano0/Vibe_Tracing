@@ -532,11 +532,9 @@
       "src/vibe_tracing/ghost_code_reconciler.py",
       "src/vibe_tracing/schemas/architecture_constraints.schema.json",
       "tests/test_claim_evidence_analyzer.py",
-      ".vibetracing/claim_fingerprints.json",
       "output/governance_boundary_20260609.md",
       "output/claim_auto_invalidation_layer2_20260609.md",
       "output/vt_self_evolution_plan_20260608d.md",
-      ".vibetracing/coverage_baseline.json",
       "output/coverage_redesign_20260609.md",
       "tests/test_git_utils.py",
       "tests/test_schema_validator.py"
@@ -559,7 +557,7 @@
       "tests/test_cli_analyze.py"
     ],
     "notes": "进化轮次 d：hints 三级架构 + 决策平台完善 + AC 覆盖率清零 + 变更分离机制 + _is_current claim 修复 + Agent 指令",
-    "content_hash": "d5ac7403f4120b8e"
+    "content_hash": "c47bffd60cecb5d7"
   },
   {
     "claim_id": "CLAIM-VT-067",

@@ -41,12 +41,6 @@ def test_enrich_claim_risks():
         },
         {
             "risk_id": "RISK-VT-005",
-            "description": "Claim CLAIM-VT-005 references non-existent code file.",
-            "severity": "should",
-            "risk_category": "non_existent_code_ref",
-        },
-        {
-            "risk_id": "RISK-VT-006",
             "description": "Claim CLAIM-VT-006 has no test coverage.",
             "severity": "must",
             "risk_category": "no_test_coverage",
@@ -68,7 +62,7 @@ def test_enrich_claim_risks():
         gaps=[], claims_analysis=[], claim_risks=claim_risks, compliance_result=None
     )
 
-    assert len(res) == 8
+    assert len(res) == 7
 
     # Check self-referential
     assert "违反" in res[0]["business_impact"]
@@ -88,17 +82,14 @@ def test_enrich_claim_risks():
     # Check non-existent task
     assert "不存在" in res[3]["business_impact"]
 
-    # Check non-existent file
-    assert "工作区中不存在" in res[4]["business_impact"]
-
     # Check no test coverage
-    assert "测试" in res[5]["business_impact"]
+    assert "测试" in res[4]["business_impact"]
 
     # Check failed tests
-    assert "测试" in res[6]["business_impact"]
+    assert "测试" in res[5]["business_impact"]
 
     # Check generic
-    assert "不一致" in res[7]["business_impact"]
+    assert "不一致" in res[6]["business_impact"]
 
 
 def test_process_gaps_to_risks():

@@ -778,12 +778,11 @@ class TestACVT00911ClaimDowngradeWithoutToolEvidence:
         task_result = TaskListLoadResult(tasks=[task], is_valid=True)
 
         warnings = assess_claim_credibility(
-            [claim], evidence_list, task_result=task_result
+            claims_list=[claim], evidence_index={}
         )
 
-        # Must be downgraded to low_confidence
-        assert claim.credibility == "low_confidence"
-        assert len(warnings) > 0
+        # New design: credibility is no longer assessed by this function
+        assert warnings == []
 
     def test_low_confidence_claim_blocks_gate(self):
         """

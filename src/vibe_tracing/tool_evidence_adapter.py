@@ -83,25 +83,15 @@ class ToolExecutionEngine:
 
     DEFAULT_TIMEOUT = 120  # seconds
 
-    # Map of tool category -> set of file extensions the tool should run on.
-    # Used by execute_all() to skip paths that a tool cannot handle.
-    # An empty set or missing category means "run on all files" (no filtering).
+    # Backward-compatible class attribute.  execute_all() no longer uses this;
+    # it derives the same information from language_tool_matrix at runtime.
+    # Kept here so that downstream code referencing the attribute continues
+    # to work until it is migrated.
     TOOL_FILE_TYPE_MAP: Dict[str, set] = {
         "test": {".py"},
         "lint": {".py"},
         "type_check": {".py"},
         "security": {".py"},
-    }
-
-    # Map of path type ("test" or "source") -> set of tool categories that
-    # should run on that path type.  Used by execute_all() when typed paths
-    # are provided, replacing the extension-based heuristic with a semantic
-    # classification: pytest runs only on test files, while
-    # ruff/mypy/bandit run only on source files.
-    # Coverage is measured per-source-file from a baseline, not via subprocess.
-    PATH_TYPE_TOOL_MAP: Dict[str, set] = {
-        "test": {"test"},
-        "source": {"lint", "type_check", "security"},
     }
 
     def __init__(
@@ -933,12 +923,12 @@ class ToolExecutionEngine:
 
         Args:
             paths: Either:
-                - A flat ``List[str]`` of paths (legacy, backward-compatible).
-                  Tool/category filtering uses ``TOOL_FILE_TYPE_MAP``.
+                - A flat ``List[str]`` of paths.  All configured tools run on
+                  every file whose extension matches the project language.
                 - A ``Dict[str, List[str]]`` mapping path types ("test" or
-                  "source") to path lists.  Tool/category filtering uses
-                  ``PATH_TYPE_TOOL_MAP`` so that only semantically
-                  appropriate tools run on each path type.
+                  "source") to path lists.  Path type is used to route tools:
+                  "test" paths run only the ``test`` category;
+                  "source" paths run everything else.
             baseline_path: Deprecated; kept for backward compatibility.
 
         Returns:
@@ -946,39 +936,46 @@ class ToolExecutionEngine:
         """
         all_candidates: List[ToolEvidenceCandidate] = []
 
-        # Normalise to a list of (category, path) pairs to execute.
-        if isinstance(paths, dict):
-            # Typed path dict -- use PATH_TYPE_TOOL_MAP for filtering.
-            pairs: List[Tuple[str, str]] = []
-            for path_type, path_list in paths.items():
-                allowed_categories = self.PATH_TYPE_TOOL_MAP.get(path_type)
-                if allowed_categories is None:
-                    # Unknown path type -- skip entirely.
-                    continue
-                for path in path_list:
-                    for category in allowed_categories:
-                        if category in self._tool_configs:
-                            pairs.append((category, path))
-        else:
-            # Flat list -- fall back to TOOL_FILE_TYPE_MAP (legacy mode).
-            pairs = []
-            for category, config in self._tool_configs.items():
-                allowed_extensions = self.TOOL_FILE_TYPE_MAP.get(category)
-                for path in paths:
-                    if allowed_extensions is not None and len(allowed_extensions) > 0:
-                        path_suffix = Path(path).suffix
-                        if path_suffix not in allowed_extensions:
-                            continue
-                    pairs.append((category, path))
+        # Get language extensions from language_tool_matrix.
+        lang_config = self.language_tool_matrix.get(self.language, {})
+        lang_extensions = set(lang_config.get("extensions", [".py"]))
 
-        for category, path in pairs:
-            config = self._tool_configs[category]
-            candidates = self.execute_tool(
-                tool_category=category,
-                path=path,
-                tool_config=config,
-            )
-            all_candidates.extend(candidates)
+        # Normalise to typed path pairs: (path, path_type_or_None).
+        if isinstance(paths, dict):
+            typed_paths: List[Tuple[str, Optional[str]]] = []
+            for path_type, path_list in paths.items():
+                if isinstance(path_list, list):
+                    for path in path_list:
+                        typed_paths.append((path, path_type))
+        else:
+            typed_paths = [(p, None) for p in paths]
+
+        for path, path_type in typed_paths:
+            # Only process files matching the project language extensions.
+            if Path(path).suffix not in lang_extensions:
+                continue
+
+            for category in self.validation_tools:
+                config = self._tool_configs.get(category)
+                if config is None:
+                    continue
+
+                # When a path type is explicitly provided, route by type.
+                if path_type is not None:
+                    if path_type == "test" and category != "test":
+                        continue
+                    if path_type == "source" and category == "test":
+                        continue
+                    if path_type not in ("test", "source"):
+                        # Unknown path type -- skip entirely.
+                        continue
+
+                candidates = self.execute_tool(
+                    tool_category=category,
+                    path=path,
+                    tool_config=config,
+                )
+                all_candidates.extend(candidates)
 
         # Append per-source-file coverage evidence from the baseline.
         all_candidates.extend(self._measure_source_coverage(baseline_path))

@@ -36,7 +36,7 @@ def test_run_init_creates_scaffolding(tmp_path):
     assert prd_path.is_file()
     assert prd_analysis_path.is_file()
 
-    # Verify agent_claims.json content
+    # Verify claims/current.json content
     with claims_path.open("r", encoding="utf-8") as f:
         claims_data = json.load(f)
     assert isinstance(claims_data, list)

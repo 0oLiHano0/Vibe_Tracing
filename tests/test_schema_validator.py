@@ -201,8 +201,8 @@ def test_validate_file_valid_raw_task_list(validator):
 
 
 def test_validate_file_valid_raw_agent_claims(validator):
-    """Validate actual .vibetracing/agent_claims.json (empty array) → is_valid=True. Covers: AC-VT-001-03."""
-    claims_path = VIBETRACING_DIR / "agent_claims.json"
+    """Validate actual .vibetracing/claims/current.json (empty array) → is_valid=True. Covers: AC-VT-001-03."""
+    claims_path = VIBETRACING_DIR / "claims" / "current.json"
     if not claims_path.exists():
         pytest.skip(f"Agent claims file not found: {claims_path}")
     result = validator.validate_file(claims_path, "agent_claims")

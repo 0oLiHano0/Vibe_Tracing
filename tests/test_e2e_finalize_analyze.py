@@ -69,7 +69,7 @@ def _make_config():
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/agent_claims.json",
+            "agent_claims": ".vibetracing/claims/current.json",
             "output_dir": "output",
         },
     }
@@ -151,7 +151,7 @@ def _make_claims(
     code_refs=None,
     claimed_status="covered",
 ):
-    """Return a minimal valid agent_claims.json list.
+    """Return a minimal valid claims/current.json list.
 
     Args:
         evidence_refs: Override evidence references.  Defaults to
@@ -196,6 +196,7 @@ def _setup_project(
     ``run_analyze``.
     """
     (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
     (base / "docs").mkdir(parents=True, exist_ok=True)
 
     # config.json (pre-finalize -- no language)
@@ -214,9 +215,9 @@ def _setup_project(
         json.dumps(_make_task_list(), indent=2), encoding="utf-8"
     )
 
-    # agent_claims.json
+    # claims/current.json
     claims = claims_data if claims_data is not None else _make_claims()
-    (base / ".vibetracing" / "agent_claims.json").write_text(
+    (base / ".vibetracing" / "claims" / "current.json").write_text(
         json.dumps(claims, indent=2), encoding="utf-8"
     )
 

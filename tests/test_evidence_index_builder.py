@@ -23,6 +23,7 @@ def setup_mock_project(base: Path) -> None:
     (base / "output").mkdir(parents=True, exist_ok=True)
     (base / "schemas").mkdir(parents=True, exist_ok=True)
     (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
 
     # Copy real schemas to mock project so schema validator can load them
     real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
@@ -105,7 +106,7 @@ must
             "notes": "Core implemented successfully",
         }
     ]
-    (base / ".vibetracing" / "agent_claims.json").write_text(
+    (base / ".vibetracing" / "claims" / "current.json").write_text(
         json.dumps(agent_claims), encoding="utf-8"
     )
 
@@ -141,7 +142,7 @@ def _build_ctx(base: Path) -> UnifiedContext:
     task_res = task_loader.load_and_validate(base / "docs" / "task_list.json", prd_res)
 
     claim_loader = ClaimLoader(schemas_dir)
-    claim_res = claim_loader.load_and_validate(base / ".vibetracing" / "agent_claims.json", task_res)
+    claim_res = claim_loader.load_and_validate(base / ".vibetracing" / "claims" / "current.json", task_res)
     claims_list = claim_res.claims if claim_res.is_valid else []
 
     config_prefix = raw_loader.config_data.get("project_prefix", "VT")
@@ -211,7 +212,7 @@ def test_build_successful_evidence_index(tmp_path: Path) -> None:
     # Verify Claim mapping
     claim_ev = next(e for e in evidences if e["source_type"] == "claim")
     assert claim_ev["status"] == "covered"
-    assert claim_ev["source_path"] == ".vibetracing/agent_claims.json"
+    assert claim_ev["source_path"] == ".vibetracing/claims/current.json"
     assert sorted(claim_ev["covers"]) == ["AC-VT-001-01", "REQ-VT-001"]
 
     # Verify Code Ref mapping

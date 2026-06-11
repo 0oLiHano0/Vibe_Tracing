@@ -57,17 +57,17 @@
       "level3": "列出关联的架构约束 ID 列表，每个 ID 须在 architecture_constraints 对应节中存在"
     },
     "claim_id": {
-      "level1": "Claim ID 格式错误：应为 CLAIM-{PROJECT_PREFIX}-NNN（NNN 三位数字）。修复：在 .vibetracing/agent_claims.json 中将 claim_id 改为匹配正则 ^(CLAIM)-[A-Z][a-zA-Z0-9]+-\\d{3,4}$ 的值。",
+      "level1": "Claim ID 格式错误：应为 CLAIM-{PROJECT_PREFIX}-NNN（NNN 三位数字）。修复：在 .vibetracing/claims/current.json 中将 claim_id 改为匹配正则 ^(CLAIM)-[A-Z][a-zA-Z0-9]+-\\d{3,4}$ 的值。",
       "level2": "声明编号格式不正确。需要使用 \"CLAIM-项目前缀-三位数字\" 的格式。",
       "level3": "格式为 CLAIM-{PROJECT_PREFIX}-NNN，NNN 为三位数字"
     },
     "related_task": {
-      "level1": "关联任务 ID 格式错误或引用不存在：related_task 需匹配 TASK-{PROJECT_PREFIX}-NNN 格式，且对应 ID 须在 task_list.json 中存在。修复：在 .vibetracing/agent_claims.json 中将 related_task 改为有效的任务 ID。",
+      "level1": "关联任务 ID 格式错误或引用不存在：related_task 需匹配 TASK-{PROJECT_PREFIX}-NNN 格式，且对应 ID 须在 task_list.json 中存在。修复：在 .vibetracing/claims/current.json 中将 related_task 改为有效的任务 ID。",
       "level2": "声明关联的任务编号格式不正确或引用了不存在的任务。请确认任务已在任务列表中定义。",
       "level3": "格式为 TASK-{PROJECT_PREFIX}-NNN，必须已存在于任务列表"
     },
     "evidence_refs": {
-      "level1": "证据引用缺失或仅自引用：已完成的 Claim（claimed_status 为 covered/compliant）须至少引用一条外部证据（如测试用例 ID、commit hash），不能仅引用自身 claim_id。修复：在 .vibetracing/agent_claims.json 中为 evidence_refs 数组添加有效的外部证据引用。",
+      "level1": "证据引用缺失或仅自引用：已完成的 Claim（claimed_status 为 covered/compliant）须至少引用一条外部证据（如测试用例 ID、commit hash），不能仅引用自身 claim_id。修复：在 .vibetracing/claims/current.json 中为 evidence_refs 数组添加有效的外部证据引用。",
       "level2": "已完成的声明缺少外部证据。每个标记为完成的声明必须引用至少一条外部证据（如测试结果、代码提交等），不能只引用自身。",
       "level3": "已完成的 Claim 须至少引用一条外部证据（如测试用例 ID、commit hash 等），不能仅自引用"
     }
@@ -146,17 +146,17 @@
   },
   "risk": {
     "default_inconsistency": {
-      "level1": "Claim 内容与证据事实存在不一致（risk_category 未匹配已知类型）。修复：核对 .vibetracing/agent_claims.json 中该 Claim 的 claimed_status 与 evidence_index.json 中对应证据的实际状态，修正不一致的字段。",
+      "level1": "Claim 内容与证据事实存在不一致（risk_category 未匹配已知类型）。修复：核对 .vibetracing/claims/current.json 中该 Claim 的 claimed_status 与 evidence_index.json 中对应证据的实际状态，修正不一致的字段。",
       "level2": "声明内容与实际证据不一致。需要核对声明和证据记录，找出差异并修正。",
       "level3": "ClaimRisk 未命中已知 risk_category，使用默认 business_impact 和 suggested_action。该不一致可能表明开发状态与证据事实存在冲突，影响门禁评级。"
     },
     "self_referential_claim": {
-      "level1": "Claim 自引用违规：evidence_refs 仅指向自身 claim_id，违反「Agent 不能自证」原则。修复：在 .vibetracing/agent_claims.json 中为该 Claim 的 evidence_refs 添加独立的外部证据（如 pytest 测试报告 ID、commit hash），并在 test_refs 中添加测试文件路径。",
+      "level1": "Claim 自引用违规：evidence_refs 仅指向自身 claim_id，违反「Agent 不能自证」原则。修复：在 .vibetracing/claims/current.json 中为该 Claim 的 evidence_refs 添加独立的外部证据（如 pytest 测试报告 ID、commit hash），并在 test_refs 中添加测试文件路径。",
       "level2": "声明只引用了自己作为证据，没有独立的验证。必须提供外部测试或其他工具的验证结果。",
       "level3": "risk_category=self_referential_claim。Claim 的 evidence_refs 仅包含自身路径，无外部工具或人类审查记录。违反 Agent 不能自证原则，可能掩盖未经外部工具或人类审查的低质量代码。"
     },
     "non_existent_evidence": {
-      "level1": "Claim 引用的证据 ID 在 evidence_index.json 中不存在。证据链中断，无法核查完成状态。修复：运行 `vt analyze` 重新生成 evidence_index.json，或修正 .vibetracing/agent_claims.json 中 evidence_refs 引用的证据 ID。",
+      "level1": "Claim 引用的证据 ID 在 evidence_index.json 中不存在。证据链中断，无法核查完成状态。修复：运行 `vt analyze` 重新生成 evidence_index.json，或修正 .vibetracing/claims/current.json 中 evidence_refs 引用的证据 ID。",
       "level2": "声明引用的证据在系统中找不到。可能证据未生成或引用 ID 写错。",
       "level3": "risk_category=non_existent_evidence。evidence_refs 中的 ID 在 evidence_index.json 的 evidences 列表中无匹配项。证据链中断，导致声称的完成状态无法被客观核查。"
     },
@@ -166,12 +166,12 @@
       "level3": "risk_category=stale_file, confidence=low_confidence, type=suggestion。文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。"
     },
     "non_existent_task": {
-      "level1": "Claim 关联的任务 ID 在 task_list.json 中不存在。修复：检查 .vibetracing/agent_claims.json 中该 Claim 的 related_task 字段，确认 ID 与 docs/task_list.json 中的 task_id 一致，修正拼写或补充缺失的任务。",
+      "level1": "Claim 关联的任务 ID 在 task_list.json 中不存在。修复：检查 .vibetracing/claims/current.json 中该 Claim 的 related_task 字段，确认 ID 与 docs/task_list.json 中的 task_id 一致，修正拼写或补充缺失的任务。",
       "level2": "声明关联的任务编号在任务列表中找不到。可能是编号写错或任务未同步。",
       "level3": "risk_category=non_existent_task。Claim 的 related_task 字段值在 task_list.json 的 tasks 数组中无匹配项。可能由于任务 ID 写错或任务列表未同步。"
     },
     "non_existent_ref": {
-      "level1": "Claim 中引用的代码文件或测试文件在工作区中不存在。修复：核实 .vibetracing/agent_claims.json 中 code_refs / test_refs 的文件路径，检查是否有拼写错误、文件被重命名或未提交的情况。",
+      "level1": "Claim 中引用的代码文件或测试文件在工作区中不存在。修复：核实 .vibetracing/claims/current.json 中 code_refs / test_refs 的文件路径，检查是否有拼写错误、文件被重命名或未提交的情况。",
       "level2": "声明引用的代码或测试文件在磁盘上找不到。请检查文件路径是否正确。",
       "level3": "risk_category in (non_existent_code_ref, non_existent_test_ref)。Claim 中引用的物理文件在工作区中不存在，无法建立有效的物理追溯链。"
     },
@@ -285,7 +285,7 @@
       "level3": "Permission denied: command={command}, error_type=permission。subprocess.run() 抛出 PermissionError。"
     },
     "path_outside_root": {
-      "level1": "路径 {path_str} 解析后位于项目根目录之外：{resolved}。修复：确保 .vibetracing/agent_claims.json 中 code_refs 和 test_refs 的路径均在项目根目录下，使用相对路径。",
+      "level1": "路径 {path_str} 解析后位于项目根目录之外：{resolved}。修复：确保 .vibetracing/claims/current.json 中 code_refs 和 test_refs 的路径均在项目根目录下，使用相对路径。",
       "level2": "文件路径指向了项目目录之外。路径必须在项目范围内。",
       "level3": "Path validation failed: path='{path_str}', resolved='{resolved}'。路径必须在 project_root 内部。"
     },
@@ -372,7 +372,7 @@
       "fix_via": "完成关联的 gap 修复后自动消除"
     },
     "high_risk": {
-      "level1": "高风险项：{risk_id} — {title}。修复方式：补充外部工具验证证据，或降低 claim 覆盖范围。具体操作：{suggested_action}。如果 Claim 已无实际代码对应，将其从 agent_claims.json 中移除。",
+      "level1": "高风险项：{risk_id} — {title}。修复方式：补充外部工具验证证据，或降低 claim 覆盖范围。具体操作：{suggested_action}。如果 Claim 已无实际代码对应，将其从 claims/current.json 中移除。",
       "level2": "存在高风险项需要处理。请查看建议的修复方式。",
       "level3": "Action: priority=HIGH, type=high_risk, risk_id={risk_id}, severity={severity}, claim_id={claim_id}。description={description}。",
       "fix_via": "补充外部工具验证证据，或降低 claim 覆盖范围"

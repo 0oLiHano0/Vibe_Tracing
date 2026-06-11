@@ -1270,7 +1270,7 @@ Must
 ##### AC-VT-009-09：VT 必须能自行执行 Claim 关联的验证工具
 
 * 条件：运行 vibe-tracing analyze 命令且项目已 finalize
-* 输入：config.json 中的 validation_tools、架构约束中的 language_tool_matrix 命令模板、agent_claims.json 中的 Claim 关联测试路径
+* 输入：config.json 中的 validation_tools、架构约束中的 language_tool_matrix 命令模板、claims/current.json 中的 Claim 关联测试路径
 * 期望输出：
   1. VT 根据 validation_tools 列表，从 language_tool_matrix 取命令模板。
   2. 替换路径占位符后执行命令，捕获 stdout/stderr。
@@ -1294,7 +1294,7 @@ Must
 ##### AC-VT-009-11：无工具验证证据的 Claim 必须降级
 
 * 条件：运行 vibe-tracing analyze 且存在 Agent Claim
-* 输入：agent_claims.json 中的 Claim 及其 evidence_refs
+* 输入：claims/current.json 中的 Claim 及其 evidence_refs
 * 期望输出：
   1. Claim 声明完成但无 VT 执行的工具证据（source_type 为 test 或 tool）支撑时，标记为 low_confidence。
   2. 门禁判定时，low_confidence 的 Claim 不得判定为通过。
@@ -1305,7 +1305,7 @@ Must
 ##### AC-VT-009-12：分析流水线必须单次加载输入文件
 
 * 条件：执行 vibe-tracing analyze
-* 输入：config.json、prd.md、architecture_constraints.json、task_list.json、agent_claims.json
+* 输入：config.json、prd.md、architecture_constraints.json、task_list.json、claims/current.json
 * 期望输出：
   1. 所有输入文件在 analyze 流水线中仅从磁盘读取一次。
   2. 解析结果通过 UnifiedContext 强类型领域对象传递给下游组件。
@@ -1698,7 +1698,7 @@ should
 prd.md
 architecture_constraints.json
 task_list.json
-agent_claims.json
+claims/current.json
 代码库
 测试结果摘要
 Review 结果摘要（可选）

@@ -15,7 +15,7 @@
 > **架构约束受阻交互规程 (Constraint Blocker Protocol)**:
 > 当 AI 编码代理在开发中发现受限于某条架构约束而无法继续完成任务时，必须执行以下步骤：
 > 1. 将任务的 `status` 变更为 `blocked`。
-> 2. 在 `.vibetracing/agent_claims.json` 中申报一条状态为 `blocked` 的 Claim。
+> 2. 在 `.vibetracing/claims/current.json` 中申报一条状态为 `blocked` 的 Claim。
 > 3. 在该 Claim 的 `notes` 字段中使用**中文**详细说明碰到的技术壁垒以及约束修改建议。
 > 4. VT 质量门禁会识别此状态并在 Dashboard 的概览中显示警告，供项目经理审核并决策是否允许修改架构约束。
 
@@ -42,7 +42,7 @@
   ```
 
 ### B. 路径与引用的完整性
-当生成 `.vibetracing/agent_claims.json` 时，所有文件和代码引用（`code_refs` 和 `test_refs`）必须指向代码库中真实存在的文件。
+当生成 `.vibetracing/claims/current.json` 时，所有文件和代码引用（`code_refs` 和 `test_refs`）必须指向代码库中真实存在的文件。
 - 指向不存在的路径或行号将触发 MUST 级严重风险并拦截门禁合并。
 - 在声明时间戳**之后**修改文件，会使该 Claim 被标记为“过期（outdated）”（属于 SHOULD 级风险），并要求重新生成该 Claim。
 

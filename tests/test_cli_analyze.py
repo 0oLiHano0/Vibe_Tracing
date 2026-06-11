@@ -58,6 +58,7 @@ def setup_mock_project(
     (base / "output").mkdir(parents=True, exist_ok=True)
     (base / "schemas").mkdir(parents=True, exist_ok=True)
     (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
     (base / "src" / "vibe_tracing" / "core").mkdir(parents=True, exist_ok=True)
 
     # Write a dummy dashboard.html to prevent DEP-VT-002 from being unclear/violated
@@ -223,11 +224,11 @@ must
                 "notes": "Core implemented successfully",
             }
         ]
-        (base / ".vibetracing" / "agent_claims.json").write_text(
+        (base / ".vibetracing" / "claims" / "current.json").write_text(
             json.dumps(agent_claims), encoding="utf-8"
         )
     else:
-        (base / ".vibetracing" / "agent_claims.json").write_text("[]", encoding="utf-8")
+        (base / ".vibetracing" / "claims" / "current.json").write_text("[]", encoding="utf-8")
 
 
 
@@ -916,7 +917,7 @@ def test_input_files_loaded_once(tmp_path, capsys):
     """
     covers: AC-VT-009-12
     Input files (config.json, prd.md, architecture_constraints.json,
-    task_list.json, agent_claims.json) should be read from disk only once
+    task_list.json, claims/current.json) should be read from disk only once
     during the analyze pipeline. Parsed results should be passed through
     UnifiedContext rather than re-read.
     """
@@ -937,7 +938,7 @@ def test_input_files_loaded_once(tmp_path, capsys):
         "prd": str(tmp_path / "docs" / "prd.md"),
         "architecture_constraints": str(tmp_path / "docs" / "architecture_constraints.json"),
         "task_list": str(tmp_path / "docs" / "task_list.json"),
-        "agent_claims": str(tmp_path / ".vibetracing" / "agent_claims.json"),
+        "agent_claims": str(tmp_path / ".vibetracing" / "claims" / "current.json"),
         "config": str(tmp_path / ".vibetracing" / "config.json"),
     }
     # Invert: file_path_string -> file_key for lookup in spies
@@ -1127,6 +1128,7 @@ def _setup_doctor_project(base: Path):
     (base / "docs").mkdir(parents=True, exist_ok=True)
     (base / "output").mkdir(parents=True, exist_ok=True)
     (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
     (base / "src").mkdir(parents=True, exist_ok=True)
 
     # PRD
@@ -1198,7 +1200,7 @@ must
             "notes": "Test claim",
         }
     ]
-    (base / ".vibetracing" / "agent_claims.json").write_text(
+    (base / ".vibetracing" / "claims" / "current.json").write_text(
         json.dumps(claims), encoding="utf-8"
     )
 
@@ -1258,7 +1260,7 @@ def test_run_doctor_broken_file_refs(tmp_path, capsys):
             "notes": "Test claim",
         }
     ]
-    (tmp_path / ".vibetracing" / "agent_claims.json").write_text(
+    (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(
         json.dumps(claims), encoding="utf-8"
     )
 
@@ -1418,7 +1420,7 @@ def test_run_doctor_with_bad_json(tmp_path, capsys):
 
     _setup_doctor_project(tmp_path)
     # Write invalid JSON
-    (tmp_path / ".vibetracing" / "agent_claims.json").write_text("not json!!!", encoding="utf-8")
+    (tmp_path / ".vibetracing" / "claims" / "current.json").write_text("not json!!!", encoding="utf-8")
     (tmp_path / "docs" / "task_list.json").write_text("{broken", encoding="utf-8")
 
     exit_code = run_doctor(tmp_path)
@@ -1523,7 +1525,7 @@ def test_run_doctor_claims_not_list(tmp_path, capsys):
 
     _setup_doctor_project(tmp_path)
     # Write claims as a dict instead of list
-    (tmp_path / ".vibetracing" / "agent_claims.json").write_text(
+    (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(
         json.dumps({"invalid": "format"}), encoding="utf-8"
     )
 
@@ -1549,7 +1551,7 @@ def test_run_doctor_with_fragment_refs(tmp_path, capsys):
             "notes": "Test",
         }
     ]
-    (tmp_path / ".vibetracing" / "agent_claims.json").write_text(
+    (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(
         json.dumps(claims), encoding="utf-8"
     )
 

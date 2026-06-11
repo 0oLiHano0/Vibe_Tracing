@@ -117,7 +117,7 @@ def test_missing_optional_file_does_not_set_has_required_errors(tmp_path):
     absent, has_required_errors must remain False.
     """
     _make_required_files(tmp_path)
-    # Intentionally do NOT create optional agent_claims.json
+    # Intentionally do NOT create optional claims/current.json
 
     loader = RawInputLoader(tmp_path)
     manifest = loader.load()

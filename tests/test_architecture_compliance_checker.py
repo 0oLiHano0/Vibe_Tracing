@@ -88,6 +88,7 @@ def temp_workspace(tmp_path, base_constraints_data):
     docs_dir.mkdir(parents=True)
     vibetracing_dir = tmp_path / ".vibetracing"
     vibetracing_dir.mkdir(parents=True)
+    (vibetracing_dir / "claims").mkdir(parents=True, exist_ok=True)
 
     # Write constraints file
     constraints_file = docs_dir / "architecture_constraints.json"
@@ -98,7 +99,7 @@ def temp_workspace(tmp_path, base_constraints_data):
     # Write other standard files
     (docs_dir / "prd.md").write_text("# PRD", encoding="utf-8")
     (docs_dir / "task_list.json").write_text("[]", encoding="utf-8")
-    (vibetracing_dir / "agent_claims.json").write_text("[]", encoding="utf-8")
+    (vibetracing_dir / "claims/current.json").write_text("[]", encoding="utf-8")
 
     # Create source directory
     src_dir = tmp_path / "src/vibe_tracing"

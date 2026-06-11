@@ -135,7 +135,8 @@ def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
         },
     ]
 
-    file_path = tmp_path / "agent_claims.json"
+    (tmp_path / "claims").mkdir(parents=True, exist_ok=True)
+    file_path = tmp_path / "claims" / "current.json"
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(data, f)
 
@@ -215,7 +216,8 @@ def test_silent_filtering_of_template_records(tmp_path):
             "timestamp": "2026-05-31T10:00:00Z",
         },
     ]
-    claim_path = tmp_path / "agent_claims.json"
+    (tmp_path / "claims").mkdir(parents=True, exist_ok=True)
+    claim_path = tmp_path / "claims" / "current.json"
     with claim_path.open("w", encoding="utf-8") as f:
         json.dump(claim_data, f)
 

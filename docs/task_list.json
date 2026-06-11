@@ -347,7 +347,7 @@
       "status": "done",
       "owner_role": "AI Coding Agent",
       "objective": "读取必需输入和可选输入，并生成 raw_input_manifest。",
-      "atomic_scope": "读取 prd.md、architecture_constraints.json、task_list.json、agent_claims.json、tool_reports、代码路径清单；只加载文件，不做治理判定。",
+      "atomic_scope": "读取 prd.md、architecture_constraints.json、task_list.json、claims/current.json、tool_reports、代码路径清单；只加载文件，不做治理判定。",
       "out_of_scope": [
         "不实现未列出的扩展能力",
         "不让 Agent Claim 自证完成",
@@ -528,7 +528,7 @@
       "priority": "must",
       "status": "todo",
       "owner_role": "AI Coding Agent",
-      "objective": "读取 agent_claims.json 并校验 Claim 的任务、证据和状态字段。",
+      "objective": "读取 claims/current.json 并校验 Claim 的任务、证据和状态字段。",
       "atomic_scope": "校验 claim_id、related_task、claimed_status、evidence_refs、code_refs、test_refs；不接受 Claim 自身作为完成证据。",
       "out_of_scope": [
         "不实现未列出的扩展能力",

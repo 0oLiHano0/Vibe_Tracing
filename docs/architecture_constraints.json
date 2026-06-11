@@ -206,7 +206,7 @@
     {
       "principle_id": "PRINCIPLE-VT-014",
       "title": "机器契约必须通过 Schema 校验",
-      "description": "architecture_constraints.json、task_list.json、agent_claims.json、evidence_index.json、traceability_report.json 等机器可读文件必须通过明确的 Schema 校验。",
+      "description": "architecture_constraints.json、task_list.json、claims/current.json、evidence_index.json、traceability_report.json 等机器可读文件必须通过明确的 Schema 校验。",
       "severity": "must",
       "verification_method": "manual",
       "accepted_by": "human",
@@ -887,7 +887,7 @@
         "docs/prd.md",
         "docs/architecture_constraints.json",
         "docs/task_list.json",
-        ".vibetracing/agent_claims.json",
+        ".vibetracing/claims/current.json",
         ".vibetracing/tool_reports"
       ],
       "rationale": "Raw Layer 是审计事实源，必须在一次运行中保持稳定。",
@@ -906,7 +906,7 @@
         "prd.md",
         "architecture_constraints.json",
         "task_list.json",
-        "agent_claims.json"
+        "claims/current.json"
       ],
       "expected_behavior": "输出明确的 missing_input 错误，将相关状态标记为 missing 或 unclear，并在必需证据不可用时降低门禁结论。",
       "forbidden_behavior": "静默忽略缺失输入，或假设相关工作已经完成。",
@@ -922,7 +922,7 @@
       "applies_to": [
         "architecture_constraints.json",
         "task_list.json",
-        "agent_claims.json",
+        "claims/current.json",
         "evidence_index.json",
         "traceability_report.json"
       ],
@@ -1117,7 +1117,7 @@
       "description": "如果 Agent Claim 声称任务完成，但代码、测试、Review 或工具证据缺失或冲突，系统必须报告 evidence_gap 或 claim_evidence_mismatch。",
       "severity": "must",
       "applies_to": [
-        "agent_claims.json",
+        "claims/current.json",
         "traceability_analyzer",
         "merge_gate_engine"
       ],
@@ -1359,7 +1359,7 @@
       "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。",
       "severity": "must",
       "check_type": "automated",
-      "pass_condition": "prd.md、architecture_constraints.json、task_list.json 和 agent_claims.json 均存在且可读取。",
+      "pass_condition": "prd.md、architecture_constraints.json、task_list.json 和 claims/current.json 均存在且可读取。",
       "fail_condition": "任一必需输入文件缺失或不可读取。",
       "blocks_merge": true,
       "verification_method": "machine"
@@ -1370,7 +1370,7 @@
       "description": "机器可读输入必须是合法 JSON，并在分析前通过预期 Schema 校验。",
       "severity": "must",
       "check_type": "automated",
-      "pass_condition": "architecture_constraints.json、task_list.json 和 agent_claims.json 均通过 Schema 校验。",
+      "pass_condition": "architecture_constraints.json、task_list.json 和 claims/current.json 均通过 Schema 校验。",
       "fail_condition": "任一必需 JSON 输入无效或与 Schema 不兼容。",
       "blocks_merge": true,
       "verification_method": "manual",

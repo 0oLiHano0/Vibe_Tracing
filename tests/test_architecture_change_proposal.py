@@ -51,7 +51,7 @@ def _write_config(proj: Path, constraints_hash: str, git_commit: str = "abc123",
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/agent_claims.json",
+            "agent_claims": ".vibetracing/claims/current.json",
             "output_dir": "output",
         },
     }

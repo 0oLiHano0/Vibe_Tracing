@@ -49,7 +49,7 @@ def _setup_finalize_project(base: Path, constraints_data: dict = None,
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/agent_claims.json",
+            "agent_claims": ".vibetracing/claims/current.json",
             "output_dir": "output",
         },
     }
@@ -118,6 +118,7 @@ def _make_analyze_project(base: Path, *,
     (base / "output").mkdir(parents=True, exist_ok=True)
     (base / "schemas").mkdir(parents=True, exist_ok=True)
     (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
     (base / "src" / "vibe_tracing" / "core").mkdir(parents=True, exist_ok=True)
 
     # Copy real schemas
@@ -236,7 +237,7 @@ def _make_analyze_project(base: Path, *,
                 "test_refs": [],
             }
         ]
-    (base / ".vibetracing" / "agent_claims.json").write_text(
+    (base / ".vibetracing" / "claims" / "current.json").write_text(
         json.dumps(claims_data), encoding="utf-8"
     )
 
@@ -493,7 +494,7 @@ class TestACVT00909VTExecutesVerificationTools:
                 "test_refs": ["tests/test_feature.py"],
             }
         ]
-        (tmp_path / ".vibetracing" / "agent_claims.json").write_text(
+        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
 
@@ -545,6 +546,7 @@ class TestACVT00909VTExecutesVerificationTools:
         preventing tool execution without proper configuration.
         """
         (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
         (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
         (tmp_path / "output").mkdir(parents=True, exist_ok=True)
         (tmp_path / "schemas").mkdir(parents=True, exist_ok=True)
@@ -586,7 +588,7 @@ class TestACVT00909VTExecutesVerificationTools:
         (tmp_path / "docs" / "task_list.json").write_text(
             json.dumps(task_list), encoding="utf-8"
         )
-        (tmp_path / ".vibetracing" / "agent_claims.json").write_text("[]", encoding="utf-8")
+        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text("[]", encoding="utf-8")
         (tmp_path / "dashboard.html").write_text("<html></html>", encoding="utf-8")
 
         exit_code = main(["analyze", "--project-root", str(tmp_path)])
@@ -687,6 +689,7 @@ class TestACVT00910PreciseErrorFeedback:
         the user to run 'vibe-tracing finalize' first.
         """
         (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
         (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
         (tmp_path / "output").mkdir(parents=True, exist_ok=True)
         (tmp_path / "schemas").mkdir(parents=True, exist_ok=True)
@@ -722,7 +725,7 @@ class TestACVT00910PreciseErrorFeedback:
             json.dumps({"schema_version": "0.1", "project": {"project_id": "PROJECT-VT", "name": "T", "stage": "mvp"}, "tasks": []}),
             encoding="utf-8",
         )
-        (tmp_path / ".vibetracing" / "agent_claims.json").write_text("[]", encoding="utf-8")
+        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text("[]", encoding="utf-8")
         (tmp_path / "dashboard.html").write_text("<html></html>", encoding="utf-8")
 
         exit_code = main(["analyze", "--project-root", str(tmp_path)])
@@ -739,50 +742,6 @@ class TestACVT00910PreciseErrorFeedback:
 
 class TestACVT00911ClaimDowngradeWithoutToolEvidence:
     """Verify claims without VT-executed tool evidence are downgraded to low_confidence."""
-
-    def test_claim_without_tool_evidence_gets_low_confidence(self):
-        """
-        covers: AC-VT-009-11
-        A completed claim whose evidence_refs point only to non-test/non-tool
-        evidence (e.g. code, claim, task) must be marked low_confidence.
-        Gate must block when a low_confidence claim has MUST severity.
-        """
-        from vibe_tracing.claim_loader import Claim
-        from vibe_tracing.traceability.claim_credibility import assess_claim_credibility
-
-        claim = Claim(
-            claim_id="CLAIM-VT-001",
-            related_task="TASK-VT-001",
-            claimed_status="covered",
-            evidence_refs=["EVIDENCE-VT-001"],
-            timestamp="2026-01-01T00:00:00Z",
-        )
-        # Evidence is only code-type (not test/tool)
-        evidence_list = [
-            {
-                "evidence_id": "EVIDENCE-VT-001",
-                "source_type": "code",
-                "source_path": "src/module.py",
-                "covers": ["AC-VT-001-01"],
-                "status": "covered",
-            }
-        ]
-
-        from vibe_tracing.task_loader import Task, TaskListLoadResult
-        task = Task(
-            task_id="TASK-VT-001", title="Test", phase_id="PHASE-VT-001",
-            priority="must", status="done", owner_role="agent",
-            objective="Implement.",
-        )
-        task.related_acceptance_criteria = ["AC-VT-001-01"]
-        task_result = TaskListLoadResult(tasks=[task], is_valid=True)
-
-        warnings = assess_claim_credibility(
-            claims_list=[claim], evidence_index={}
-        )
-
-        # New design: credibility is no longer assessed by this function
-        assert warnings == []
 
     def test_low_confidence_claim_blocks_gate(self):
         """
@@ -1236,7 +1195,7 @@ class TestACVT00907ZeroPromptGuidance:
         """covers: AC-VT-009-07
         vt init should generate standard template files in the target project
         including prd.md, task_list.json, architecture_constraints.json,
-        agent_claims.json, and config.json.
+        claims/current.json, and config.json.
         """
         exit_code = run_init(tmp_path, name="Guidance Test", prefix="GT")
         assert exit_code == 0

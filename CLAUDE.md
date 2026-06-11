@@ -33,7 +33,7 @@ Hook 执行 Gate 1（防篡改）、Gate 2（幽灵代码检测）、Gate 2.5（
 
 ### Agent Claims
 
-所有代码变更必须在 `.vibetracing/agent_claims.json` 中声明对应的 Claim。Claim 关联 Task，Task 关联 PRD 的 REQ/AC。未声明 Claim 的业务代码称为"幽灵代码"，会被 Gate 2 阻断。
+所有代码变更必须在 `.vibetracing/claims/current.json` 中声明对应的 Claim。Claim 关联 Task，Task 关联 PRD 的 REQ/AC。未声明 Claim 的业务代码称为"幽灵代码"，会被 Gate 2 阻断。
 
 ### 契约文件
 
@@ -64,7 +64,7 @@ git commit
 3. **执行 `vt finalize`**：锁定设计基线（PRD↔Arch 映射校验 + 双哈希）
 4. **创建 Task**：在 `docs/task_list.json` 中添加 task，关联 REQ 和 AC
 5. **编写代码和测试**
-6. **创建 Claim**：在 `.vibetracing/agent_claims.json` 中声明 claim，关联 task，引用 code_refs 和 test_refs
+6. **创建 Claim**：在 `.vibetracing/claims/current.json` 中声明 claim，关联 task，引用 code_refs 和 test_refs
 7. **`git add` + `git commit`**：hook 自动执行门禁校验
 
 ### 如何跳过自管理（仅限紧急情况）
@@ -83,7 +83,7 @@ git commit --no-verify -m "描述原因"
 **后续必须**：
 - 分析 hook 误报原因
 - 修复 hook 逻辑或更新白名单
-- 补充 agent_claims.json
+- 补充 claims/current.json
 - 运行 `vt analyze` 确认门禁通过
 
 **场景 2：批量重构，逐文件创建 Claim 不现实**
@@ -95,10 +95,10 @@ git commit --no-verify -m "描述原因"
 git commit --no-verify -m "refactor: 批量重命名 [待补 claim]"
 
 # 2. 补充 claims
-# 编辑 .vibetracing/agent_claims.json
+# 编辑 .vibetracing/claims/current.json
 
 # 3. 单独提交 claims
-git add .vibetracing/agent_claims.json
+git add .vibetracing/claims/current.json
 git commit -m "chore: 补充重构 claims"
 
 # 4. 运行完整 analyze 验证

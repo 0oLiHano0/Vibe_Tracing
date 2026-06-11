@@ -1,7 +1,7 @@
 """
 Agent Claim Loader and Validator for Vibe Tracing.
 
-Loads agent_claims.json, validates it against the JSON Schema contract,
+Loads claims/current.json, validates it against the JSON Schema contract,
 and performs cross-reference validation against the task list and external evidence rules.
 """
 

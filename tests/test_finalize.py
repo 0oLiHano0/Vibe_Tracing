@@ -13,6 +13,7 @@ from vibe_tracing.cli import main
 def _setup_project(base: Path, config_data: Optional[dict] = None, constraints_data: Optional[dict] = None) -> None:
     """Helper to set up minimal project structure for finalize tests."""
     (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
     (base / "docs").mkdir(parents=True, exist_ok=True)
 
     config = config_data if config_data is not None else {
@@ -23,7 +24,7 @@ def _setup_project(base: Path, config_data: Optional[dict] = None, constraints_d
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/agent_claims.json",
+            "agent_claims": ".vibetracing/claims/current.json",
             "output_dir": "output",
         },
     }
@@ -533,7 +534,7 @@ def test_finalize_git_add_precise_files(tmp_path, capsys):
     (tmp_path / "docs" / "task_list.json").write_text(
         json.dumps({"tasks": []}), encoding="utf-8"
     )
-    (tmp_path / ".vibetracing" / "agent_claims.json").write_text(
+    (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(
         json.dumps({"claims": []}), encoding="utf-8"
     )
 
@@ -552,7 +553,7 @@ def test_finalize_git_add_precise_files(tmp_path, capsys):
     assert ".vibetracing/config.json" in committed_files
     # Non-target files should NOT appear in the finalize commit
     assert "docs/task_list.json" not in committed_files
-    assert ".vibetracing/agent_claims.json" not in committed_files
+    assert ".vibetracing/claims/current.json" not in committed_files
 
 
 def test_finalize_git_add_includes_change_log_when_exists(tmp_path, capsys):

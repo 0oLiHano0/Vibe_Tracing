@@ -220,10 +220,10 @@ def test_completed_claim_without_external_evidence_fails(claim_loader):
 
 def test_validate_real_files_load(claim_loader):
     """
-    Validate loading the real agent_claims.json file and cross-referencing with the real task_list.json.
+    Validate loading the real claims/current.json file and cross-referencing with the real task_list.json.
     Covers: AC-VT-002-01, AC-VT-002-02, DOD-VT-008-03.
     """
-    claims_path = VIBETRACING_DIR / "agent_claims.json"
+    claims_path = VIBETRACING_DIR / "claims" / "current.json"
     task_list_path = DOCS_DIR / "task_list.json"
 
     if not claims_path.exists() or not task_list_path.exists():
@@ -238,6 +238,6 @@ def test_validate_real_files_load(claim_loader):
 
     res = claim_loader.load_and_validate(claims_path, task_result=task_res)
 
-    # Since the real agent_claims.json might be empty array [], it should load successfully and be valid
+    # Since the real claims/current.json might be empty array [], it should load successfully and be valid
     assert res.is_valid is True, f"Real claims load failed: {res.errors}"
     assert len(res.errors) == 0

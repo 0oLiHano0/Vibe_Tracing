@@ -1,4 +1,4 @@
-"""Tests for GhostCodeReconciler warning on malformed agent_claims.json."""
+"""Tests for GhostCodeReconciler warning on malformed claims/current.json."""
 
 import json
 import subprocess
@@ -20,7 +20,7 @@ def project(tmp_path: Path):
 
 
 class TestMalformedClaimsWarning:
-    """L7: malformed agent_claims.json must print a warning to stderr."""
+    """L7: malformed claims/current.json must print a warning to stderr."""
 
     def test_malformed_claims_json_prints_warning(self, project, capsys):
         """When STAGED claims file contains invalid JSON, a warning appears on stderr."""
@@ -106,7 +106,6 @@ class TestNoStagedCodeFiles:
         """Staging only whitelisted files (e.g. claims, config, output) should pass."""
         reconciler = GhostCodeReconciler(project)
         staged = {
-            ".vibetracing/agent_claims.json",
             ".vibetracing/config.json",
             "docs/task_list.json",
             "output/report.json",
@@ -338,7 +337,7 @@ class TestWhitelistLogic:
 
     def test_exact_whitelist_paths(self, project):
         reconciler = GhostCodeReconciler(project)
-        for path in [".vibetracing/claims/current.json", ".vibetracing/agent_claims.json", ".vibetracing/config.json", ".vibetracing/semantic_audit.json", "docs/task_list.json"]:
+        for path in [".vibetracing/claims/current.json", ".vibetracing/config.json", "docs/task_list.json"]:
             assert reconciler._is_whitelisted(path) is True
 
     def test_prefix_whitelist(self, project):

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://vibe-tracing/schemas/agent_claims.schema.json",
   "title": "AgentClaims",
-  "description": "Schema for agent_claims.json — a top-level array of claim objects.",
+  "description": "Schema for claims/current.json — a top-level array of claim objects.",
   "type": "array",
   "items": {
     "type": "object",

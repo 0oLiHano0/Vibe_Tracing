@@ -56,6 +56,7 @@ def setup_gate_test_project(
     (base / "docs").mkdir(parents=True, exist_ok=True)
     (base / ".vibetracing" / "tool_reports").mkdir(parents=True, exist_ok=True)
     (base / ".vibetracing" / "output").mkdir(parents=True, exist_ok=True)
+    (base / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
     (base / "schemas").mkdir(parents=True, exist_ok=True)
     (base / "src" / "vibe_tracing" / "core").mkdir(parents=True, exist_ok=True)
 
@@ -261,11 +262,11 @@ must
         ]
         if extra_claims:
             agent_claims.extend(extra_claims)
-        (base / ".vibetracing" / "agent_claims.json").write_text(
+        (base / ".vibetracing" / "claims" / "current.json").write_text(
             json.dumps(agent_claims), encoding="utf-8"
         )
     else:
-        (base / ".vibetracing" / "agent_claims.json").write_text("[]", encoding="utf-8")
+        (base / ".vibetracing" / "claims" / "current.json").write_text("[]", encoding="utf-8")
 
     # Write config.json (required by the new "Project not finalized" check in run_analyze)
     config_data = {
@@ -278,7 +279,7 @@ must
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/agent_claims.json",
+            "agent_claims": ".vibetracing/claims/current.json",
             "output_dir": ".vibetracing/output",
         },
     }
@@ -651,7 +652,7 @@ def test_gate_vt_014_architecture_change_log(tmp_path, capsys):
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/agent_claims.json",
+            "agent_claims": ".vibetracing/claims/current.json",
             "output_dir": ".vibetracing/output",
         },
     }

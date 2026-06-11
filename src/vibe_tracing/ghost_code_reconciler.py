@@ -22,9 +22,7 @@ class GhostCodeReconciler:
         # Exact Whitelist (The ledger itself shouldn't require a receipt)
         self.whitelist_paths = {
             ".vibetracing/claims/current.json",
-            ".vibetracing/agent_claims.json",
             ".vibetracing/config.json",
-            ".vibetracing/semantic_audit.json",
             "docs/task_list.json",
         }
 
@@ -161,7 +159,7 @@ class GhostCodeReconciler:
     # ------------------------------------------------------------------
 
     def _get_staged_claims(self) -> List[dict]:
-        """Read staged agent_claims.json from the git index."""
+        """Read staged claims/current.json from the git index."""
         try:
             claims_rel = str(self.claims_path.relative_to(self.project_root))
             result = subprocess.run(

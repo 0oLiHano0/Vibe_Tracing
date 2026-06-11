@@ -347,4 +347,4 @@ ID 规则：
      a. **更新 docs/prd.md**：将确认后的业务场景、功能细节、AC 描述写回并替换 `docs/prd.md` 中的对应占位或草稿内容，将文件头部元属性修改为 `当前状态：active`（或在需求未全部定稿时保持 `draft`）。
      b. **生成任务与契约文件**：
         - 自动在 `docs/task_list.json` 中生成符合规范的任务列表，每个任务要分配唯一的 `TASK-VT-xxx` ID，并与其负责实现的 `REQ`/`AC` 进行显式关联绑定。
-        - 自动初始化空数组 `[]` 或模板项至 `.vibetracing/agent_claims.json`。
+        - 自动初始化空数组 `[]` 或模板项至 `.vibetracing/claims/current.json`。

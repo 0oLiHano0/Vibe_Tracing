@@ -48,7 +48,7 @@ The project layout follows a clean separation of project specification documents
 │   └── test_e2e_samples.py     # E2E Golden File validation tests
 └── .vibetracing/               # Hidden VT Governance Folder
     ├── config.json             # Core configuration mapping docs/ and outputs
-    ├── agent_claims.json       # Log of claims made by developer agent(s)
+    ├── claims/current.json     # Log of claims made by developer agent(s)
     ├── claude_bootstrap/       # Subagent permissions & proposals
     ├── tool_reports/           # Raw output reports from linters/tests
     └── output/                 # Generated traceability matrices and Dashboard HTML

@@ -10,7 +10,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 from vibe_tracing.core.enums import CoverageStatus
 from vibe_tracing.schema_validator import SchemaValidator
@@ -40,10 +40,19 @@ class EvidenceIndexBuilder:
             pass
         return path_str
 
+    @staticmethod
+    def _extract_file_path(source_path: str) -> str:
+        """Strip line-range fragments (e.g. '#L1-L10') from a source_path."""
+        return source_path.split("#")[0]
+
     def build(self, output_path: Path, ctx: Any, **kwargs: Any) -> Dict[str, Any]:
         """
         Gathers all sources of evidence, normalizes them, writes the output,
         and validates it against the JSON Schema contract.
+
+        Supports incremental updates: when an existing evidence_index.json is
+        present, only source files whose mtime is >= the stored scan_time are
+        regenerated.  Unchanged evidence entries are reused as-is.
 
         Args:
             output_path: Path for the output JSON file.
@@ -52,17 +61,30 @@ class EvidenceIndexBuilder:
         Raises:
             ValueError: If required data is missing, invalid, or validation fails.
         """
-        # Step 0: Load existing evidence index for persistence across runs
-        existing_evidence: Dict[tuple, Dict[str, Any]] = {}
+        # Step 0: Load existing evidence index for incremental updates
+        old_evidences: List[Dict[str, Any]] = []
+        old_scan_time: datetime | None = None
         existing_path = self.project_root / "output" / "evidence_index.json"
         if existing_path.exists():
             try:
                 old_index = json.loads(existing_path.read_text(encoding="utf-8"))
-                for ev in old_index.get("evidences", []):
-                    key = (ev.get("source_path"), ev.get("source_type"))
-                    existing_evidence[key] = ev
+                old_evidences = old_index.get("evidences", [])
+                raw_scan = old_index.get("scan_time")
+                if raw_scan:
+                    old_scan_time = datetime.fromisoformat(
+                        raw_scan.replace("Z", "+00:00")
+                    )
             except Exception:
                 pass
+
+        # Build mtime lookup for files referenced in old evidence
+        existing_mtimes: Dict[str, float] = {}
+        for ev in old_evidences:
+            fp = self._extract_file_path(ev.get("source_path", ""))
+            if fp and fp not in existing_mtimes:
+                abs_p = self.project_root / fp
+                if abs_p.exists():
+                    existing_mtimes[fp] = abs_p.stat().st_mtime
 
         # Step 1: Load data from ctx
         prd_res = ctx.prd
@@ -83,18 +105,10 @@ class EvidenceIndexBuilder:
 
         # Setup index tracking
         evidences: List[Dict[str, Any]] = []
-        evidence_counter = 1
-
-        def get_next_id() -> str:
-            nonlocal evidence_counter
-            ev_id = f"EVIDENCE-VT-{evidence_counter:03d}"
-            evidence_counter += 1
-            return ev_id
 
         # Cache task covers for claims/code lookups
         task_covers_map: Dict[str, List[str]] = {}
 
-        # 1. Process Tasks
         # Resolve source paths from manifest records
         _task_record = next(
             (r for r in manifest.inputs_used if r.file_key == "task_list"), None
@@ -110,87 +124,110 @@ class EvidenceIndexBuilder:
         claims_file_rel = (
             self._to_relative_path(_claims_record.file_path)
             if _claims_record
-            else ".vibetracing/agent_claims.json"
+            else ".vibetracing/claims/current.json"
         )
 
-        for task in task_res.tasks:
-            ev_id = get_next_id()
-            covers = sorted(
-                list(set(task.related_requirements + task.related_acceptance_criteria))
-            )
-            task_covers_map[task.task_id] = covers
+        def _should_regenerate(rel_path: str) -> bool:
+            """Return True if the file has changed since the last scan."""
+            if old_scan_time is None:
+                return True
+            fp = self._extract_file_path(rel_path)
+            mtime = existing_mtimes.get(fp)
+            if mtime is None:
+                return True  # file not in old index or doesn't exist
+            return mtime >= old_scan_time.timestamp()
 
-            # Map task status to evidence status
-            # "todo", "in_progress", "blocked", "done"
-            status_map = {
-                "todo": CoverageStatus.MISSING.value,
-                "in_progress": CoverageStatus.PARTIAL.value,
-                "blocked": CoverageStatus.BLOCKED.value,
-                "done": CoverageStatus.COVERED.value,
-            }
-            status = status_map.get(task.status, CoverageStatus.UNCLEAR.value)
+        # Group old evidence by source_path for reuse
+        old_by_path: Dict[str, List[Dict[str, Any]]] = {}
+        for ev in old_evidences:
+            old_by_path.setdefault(ev.get("source_path", ""), []).append(ev)
 
-            evidences.append(
-                {
-                    "evidence_id": ev_id,
-                    "source_type": "task",
-                    "source_path": task_list_rel,
-                    "covers": covers,
-                    "status": status,
-                    "details": {
-                        "task_id": task.task_id,
-                        "title": task.title,
-                        "phase_id": task.phase_id,
-                        "priority": task.priority,
-                    },
+        # 1. Process Tasks
+        if _should_regenerate(task_list_rel):
+            for task in task_res.tasks:
+                covers = sorted(
+                    list(
+                        set(
+                            task.related_requirements
+                            + task.related_acceptance_criteria
+                        )
+                    )
+                )
+                task_covers_map[task.task_id] = covers
+
+                status_map = {
+                    "todo": CoverageStatus.MISSING.value,
+                    "in_progress": CoverageStatus.PARTIAL.value,
+                    "blocked": CoverageStatus.BLOCKED.value,
+                    "done": CoverageStatus.COVERED.value,
                 }
-            )
+                status = status_map.get(task.status, CoverageStatus.UNCLEAR.value)
 
-        # 2. Process Claims & Code References
-        for claim in claims_list:
-            ev_id = get_next_id()
-            covers = task_covers_map.get(claim.related_task, [])
-
-            evidences.append(
-                {
-                    "evidence_id": ev_id,
-                    "source_type": "claim",
-                    "source_path": claims_file_rel,
-                    "covers": covers,
-                    "status": claim.claimed_status or CoverageStatus.UNCLEAR.value,
-                    "details": {
-                        "claim_id": claim.claim_id,
-                        "related_task": claim.related_task,
-                        "timestamp": claim.timestamp,
-                        "notes": claim.notes,
-                    },
-                }
-            )
-
-            # Process code references
-            for code_ref in claim.code_refs:
-                code_ev_id = get_next_id()
                 evidences.append(
                     {
-                        "evidence_id": code_ev_id,
-                        "source_type": "code",
-                        "source_path": code_ref,
+                        "source_type": "task",
+                        "source_path": task_list_rel,
                         "covers": covers,
-                        "status": CoverageStatus.COMPLIANT.value,
+                        "status": status,
+                        "details": {
+                            "task_id": task.task_id,
+                            "title": task.title,
+                            "phase_id": task.phase_id,
+                            "priority": task.priority,
+                        },
+                    }
+                )
+        else:
+            for ev in old_by_path.get(task_list_rel, []):
+                evidences.append(ev)
+                task_id = ev.get("details", {}).get("task_id")
+                if task_id:
+                    task_covers_map[task_id] = ev.get("covers", [])
+
+        # 2. Process Claims & Code References
+        if _should_regenerate(claims_file_rel):
+            for claim in claims_list:
+                covers = task_covers_map.get(claim.related_task, [])
+
+                evidences.append(
+                    {
+                        "source_type": "claim",
+                        "source_path": claims_file_rel,
+                        "covers": covers,
+                        "status": (
+                            claim.claimed_status or CoverageStatus.UNCLEAR.value
+                        ),
                         "details": {
                             "claim_id": claim.claim_id,
                             "related_task": claim.related_task,
+                            "timestamp": claim.timestamp,
+                            "notes": claim.notes,
                         },
                     }
                 )
 
-        # 3. Process Tool Reports
+                for code_ref in claim.code_refs:
+                    evidences.append(
+                        {
+                            "source_type": "code",
+                            "source_path": code_ref,
+                            "covers": covers,
+                            "status": CoverageStatus.COMPLIANT.value,
+                            "details": {
+                                "claim_id": claim.claim_id,
+                                "related_task": claim.related_task,
+                            },
+                        }
+                    )
+        else:
+            for ev in old_by_path.get(claims_file_rel, []):
+                evidences.append(ev)
+
+        # 3. Process Tool Reports (always regenerated from ctx)
         for cand in tool_evidence_candidates:
-            ev_id = get_next_id()
             source_path = self._to_relative_path(cand.source_path)
 
-            evidence_dict = {
-                "evidence_id": ev_id,
+            evidence_dict: Dict[str, Any] = {
                 "source_type": cand.source_type,
                 "source_path": source_path,
                 "covers": cand.covers,
@@ -200,7 +237,6 @@ class EvidenceIndexBuilder:
             if cand.error_code:
                 evidence_dict["error_code"] = cand.error_code
 
-            # Copy other standard details if relevant
             if cand.command:
                 evidence_dict["details"]["command"] = cand.command
             if cand.exit_code != 0 or cand.command:
@@ -213,16 +249,24 @@ class EvidenceIndexBuilder:
             evidences.append(evidence_dict)
 
         # Preserve test and coverage evidence from previous run for non-staged files
-        new_evidence_keys = {(e.get("source_path"), e.get("source_type")) for e in evidences}
-        for key, old_ev in existing_evidence.items():
+        new_evidence_keys: Set[tuple] = {
+            (e.get("source_path"), e.get("source_type")) for e in evidences
+        }
+        for ev in old_evidences:
+            key = (ev.get("source_path"), ev.get("source_type"))
             if key not in new_evidence_keys:
                 is_test = key[1] == "test"
-                is_coverage = (key[1] == "tool" and
-                               old_ev.get("details", {}).get("tool_category") == "coverage")
+                is_coverage = (
+                    key[1] == "tool"
+                    and ev.get("details", {}).get("tool_category") == "coverage"
+                )
                 if is_test or is_coverage:
-                    old_ev["carried_over"] = True
-                    old_ev["evidence_id"] = get_next_id()
-                    evidences.append(old_ev)
+                    ev["carried_over"] = True
+                    evidences.append(ev)
+
+        # Assign sequential evidence IDs to all entries
+        for idx, ev in enumerate(evidences):
+            ev["evidence_id"] = f"EVIDENCE-VT-{idx + 1:03d}"
 
         # Assemble the index
         run_id = f"RUN-{uuid.uuid4()}"

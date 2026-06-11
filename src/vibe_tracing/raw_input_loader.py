@@ -83,12 +83,6 @@ class RawInputLoader:
         if not fallback_rel:
             raise ValueError(f"Unknown path key: {key}")
         resolved = self.project_root / fallback_rel
-        # Backward compatibility: if claims/current.json doesn't exist but
-        # the legacy agent_claims.json does, fall back to the old path.
-        if key == "agent_claims" and not resolved.exists():
-            legacy = self.project_root / ".vibetracing" / "agent_claims.json"
-            if legacy.exists():
-                return legacy
         return resolved
 
     def load(self) -> RawInputManifest:

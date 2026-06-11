@@ -6,7 +6,7 @@ import json
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, Set, Tuple
 
 from vibe_tracing.schema_validator import SchemaValidator
 from vibe_tracing.evidence_index_builder import EvidenceIndexBuilder
@@ -29,6 +29,80 @@ from vibe_tracing.commands.analyze.analysis import (
 )
 from vibe_tracing.commands.analyze.reports import _build_report_document
 from vibe_tracing.commands.analyze.output import _render_output
+
+
+def _classify_staged_files(staged_files: Set[str], project_root: Path) -> Tuple[list, list]:
+    """Classify staged .py files into source code and test file lists.
+
+    Source code: files under ``src/`` with ``.py`` extension.
+    Test files:  files under ``tests/`` with ``.py`` extension.
+
+    Returns ``(code_refs, test_refs)`` — each is a list of relative path strings.
+    """
+    code_refs = []
+    test_refs = []
+    for f in sorted(staged_files):
+        if not f.endswith(".py"):
+            continue
+        if f.startswith("src/") or f.startswith("src\\"):
+            code_refs.append(f)
+        elif f.startswith("tests/") or f.startswith("tests\\"):
+            test_refs.append(f)
+    return code_refs, test_refs
+
+
+def _auto_generate_claim_from_staged(
+    ctx: UnifiedContext,
+    project_root: Path,
+) -> Optional[UnifiedContext]:
+    """Auto-generate a claim from git staged files when current claims are empty.
+
+    Only called in pre-commit mode.  Writes the generated claim to
+    ``claims/current.json`` and updates ``ctx.claims_list`` in memory.
+
+    Returns the updated context, or None if no auto-generation was needed.
+    """
+    claims_path = project_root / ".vibetracing" / "claims" / "current.json"
+
+    staged_files = _get_staged_files(project_root)
+    if not staged_files:
+        return None
+
+    code_refs, test_refs = _classify_staged_files(staged_files, project_root)
+    if not code_refs and not test_refs:
+        return None
+
+    config_prefix = ctx.config_prefix
+    claim = {
+        "claim_id": f"CLAIM-{config_prefix}-001",
+        "related_task": "",
+        "code_refs": code_refs,
+        "test_refs": test_refs,
+        "notes": "Auto-generated from staged files",
+    }
+
+    claims_path.parent.mkdir(parents=True, exist_ok=True)
+    with claims_path.open("w", encoding="utf-8") as f:
+        json.dump([claim], f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+    from vibe_tracing.claim_loader import Claim
+    claim_obj = Claim(
+        claim_id=claim["claim_id"],
+        related_task=claim["related_task"],
+        code_refs=code_refs,
+        test_refs=test_refs,
+        notes=claim["notes"],
+        is_valid=False,
+    )
+    ctx.claims_list.append(claim_obj)
+
+    print(
+        f"Auto-generated claim from staged files: "
+        f"{len(code_refs)} code_refs, {len(test_refs)} test_refs",
+        file=sys.stderr,
+    )
+    return ctx
 
 
 def _run_analysis_phase(
@@ -136,6 +210,7 @@ def _evaluate_and_output(
     project_root: Path,
     is_draft: bool,
     staged_files: Optional[Set[str]] = None,
+    is_pre_commit: bool = False,
 ) -> int:
     """Run MergeGateEngine, output all reports, and return exit code."""
     if not ctx.manifest:
@@ -162,6 +237,7 @@ def _evaluate_and_output(
         ctx, gate_res, report_doc, evidence_index,
         active_gaps, active_risks, merged_gaps, final_risks, compliance_res,
         staged_items, output_dir, project_root, is_draft,
+        is_pre_commit=is_pre_commit, staged_files=staged_files,
     )
 
     # Compute exit code
@@ -210,6 +286,10 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
         if exit_code is not None:
             return exit_code
 
+        # Auto-generate claim from staged files when claims are empty (pre-commit only)
+        if is_pre_commit and not ctx.claims_list:
+            _auto_generate_claim_from_staged(ctx, project_root)
+
         if gates_only:
             print("Gates-only mode: integrity gates passed. Skipping analysis.")
             if is_pre_commit:
@@ -237,6 +317,32 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             print(f"Error building evidence index: {exc}", file=sys.stderr)
             return 1
 
+        # Auto-run claim tests when claims have test_refs but test_results is empty
+        if ctx.claims_list and any(
+            getattr(c, "test_refs", None) for c in ctx.claims_list
+        ):
+            existing_test_results = evidences_index.get("test_results")
+            if not existing_test_results:
+                evidences_index = _run_claim_tests(
+                    project_root, ctx.claims_list, evidences_index
+                )
+                test_results_map = evidences_index.get("test_results", {})
+                total = len(test_results_map)
+                passed = sum(
+                    1 for v in test_results_map.values()
+                    if v.get("status") == "passed"
+                )
+                failed = sum(
+                    1 for v in test_results_map.values()
+                    if v.get("status") == "failed"
+                )
+                cached = 0  # first run, no cache hits possible
+                print(
+                    f"Executed {total} claim tests: "
+                    f"{passed} passed, {failed} failed, {cached} cached",
+                    file=sys.stderr,
+                )
+
         evidence_list = evidences_index.get("evidences", [])
 
         staged_files = _get_staged_files(project_root)
@@ -250,6 +356,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             ctx, merged_gaps, final_risks, compliance_res,
             output_dir, evidences_index, claim_res, req_res,
             project_root, is_draft, staged_files=staged_files,
+            is_pre_commit=is_pre_commit,
         )
         if exit_code == 0 and is_pre_commit:
             _archive_claims(project_root)

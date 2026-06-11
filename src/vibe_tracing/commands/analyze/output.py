@@ -140,6 +140,14 @@ def _print_reflection_prompts(
     ))
 
 
+def _print_empty_claims_hint(ctx: UnifiedContext, staged_files: Optional[Set[str]]) -> None:
+    """Print a warning when claims are empty and no files are staged."""
+    if not ctx.claims_list and not staged_files:
+        print("\n[WARNING] 当前无 claims 且无 staged 文件。")
+        print("请先 git add 变更文件（VT 会自动生成 claim），")
+        print("或手动创建 .vibetracing/claims/current.json。")
+
+
 def _render_output(
     ctx: UnifiedContext,
     gate_res: dict,
@@ -154,10 +162,14 @@ def _render_output(
     output_dir,
     project_root,
     is_draft: bool,
+    is_pre_commit: bool = False,
+    staged_files: Optional[Set[str]] = None,
 ) -> None:
     """Render dashboard, print gate summary, agent actions, and reflection prompts."""
     _render_dashboard(ctx, report_doc, evidence_index, output_dir, project_root)
     _print_gate_summary(gate_res, staged_items)
+    if not is_pre_commit:
+        _print_empty_claims_hint(ctx, staged_files)
     _print_agent_actions(
         ctx, gate_res, report_doc, evidence_index,
         active_gaps, active_risks, merged_gaps, compliance_res,

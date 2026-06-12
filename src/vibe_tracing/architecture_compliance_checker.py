@@ -736,9 +736,19 @@ class ArchitectureComplianceChecker:
                 verification = rule.get("verification_method", "machine")
 
                 if verification == "manual":
+                    # Check embedded accepted_by first (legacy), then human_decisions
                     accepted_by = rule.get("accepted_by")
+                    accepted_at = rule.get("accepted_at", "")
+                    if not accepted_by and human_decisions:
+                        decisions_list = human_decisions.get("decisions", [])
+                        for d in decisions_list:
+                            if (d.get("category") == "accepted_rule"
+                                    and d.get("targetId") == r_id
+                                    and d.get("action") == "accept"):
+                                accepted_by = d.get("decidedBy", "human")
+                                accepted_at = d.get("timestamp", "")
+                                break
                     if accepted_by:
-                        accepted_at = rule.get("accepted_at", "")
                         is_stale = _is_stale_acceptance(accepted_at, threshold_days=30)
                         accepted_rules.append({
                             "rule_id": r_id,

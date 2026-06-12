@@ -21,6 +21,7 @@ def _run_analyzers(
     evidence_list: list,
     project_root: Path,
     staged_files: Optional[Set[str]] = None,
+    human_decisions: Optional[dict] = None,
 ) -> Tuple[list, list, Optional[dict], dict, dict]:
     """Run all analyzers and return (merged_gaps, final_risks, compliance_res, claim_res, req_res)."""
     from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
@@ -72,7 +73,8 @@ def _run_analyzers(
             config_data=ctx.config,
         )
         compliance_res = compliance_checker.check(
-            evidence_list, constraints_data=ctx.constraints
+            evidence_list, constraints_data=ctx.constraints,
+            human_decisions=human_decisions,
         )
 
     # Risk Advisor

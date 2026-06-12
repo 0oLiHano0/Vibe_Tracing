@@ -15,6 +15,6 @@
       "tests/test_merge_gate_engine.py"
     ],
     "notes": "Phase 1 补齐：accept 重写、MergeGate accepted_rule、proposals 填充、schema 清理",
-    "content_hash": "640140ebd535aecf"
+    "content_hash": "919273954fbc8b67"
   }
 ]

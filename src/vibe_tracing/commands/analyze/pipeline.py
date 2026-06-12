@@ -181,9 +181,11 @@ def _run_gate_evaluation(
     evidence_index: dict,
     staged_items: Optional[Set[str]],
     directly_staged_items: Optional[Set[str]],
+    human_decisions: Optional[dict] = None,
 ) -> dict:
     """Run MergeGateEngine and return gate result dict."""
-    human_decisions = _load_human_decisions(project_root)
+    if human_decisions is None:
+        human_decisions = _load_human_decisions(project_root)
     gate_engine = MergeGateEngine(project_root)
     gate_res = gate_engine.evaluate(
         active_gaps, active_risks, compliance_res,
@@ -211,6 +213,7 @@ def _evaluate_and_output(
     is_draft: bool,
     staged_files: Optional[Set[str]] = None,
     is_pre_commit: bool = False,
+    human_decisions: Optional[dict] = None,
 ) -> int:
     """Run MergeGateEngine, output all reports, and return exit code."""
     if not ctx.manifest:
@@ -224,6 +227,7 @@ def _evaluate_and_output(
     gate_res = _run_gate_evaluation(
         project_root, active_gaps, active_risks, compliance_res,
         ctx, evidence_index, staged_items, directly_staged_items,
+        human_decisions=human_decisions,
     )
 
     # Phase 3: Build report document
@@ -347,9 +351,12 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
         staged_files = _get_staged_files(project_root)
 
+        human_decisions = _load_human_decisions(project_root)
+
         merged_gaps, final_risks, compliance_res, claim_res, req_res = _run_analyzers(
             ctx, evidence_list, project_root,
             staged_files=staged_files,
+            human_decisions=human_decisions,
         )
 
         exit_code = _evaluate_and_output(
@@ -357,6 +364,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             output_dir, evidences_index, claim_res, req_res,
             project_root, is_draft, staged_files=staged_files,
             is_pre_commit=is_pre_commit,
+            human_decisions=human_decisions,
         )
         if exit_code == 0 and is_pre_commit:
             _archive_claims(project_root)

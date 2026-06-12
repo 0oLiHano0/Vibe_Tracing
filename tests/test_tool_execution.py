@@ -1450,7 +1450,7 @@ class TestExecuteAllTypedPaths:
     ) -> None:
         """covers: execute_all dict paths category not in config (line 923)"""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
-        # "test" is in PATH_TYPE_TOOL_MAP["test"], but not in _tool_configs
+        # "test" category not in _tool_configs — should be skipped
         engine._tool_configs = {"lint": engine._tool_configs["lint"]}
         candidates = engine.execute_all({"test": ["tests/test_foo.py"]})
         assert mock_run.call_count == 0

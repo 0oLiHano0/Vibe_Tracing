@@ -378,8 +378,9 @@ class TestCheckAcCoverageIntegration:
 
         uncovered = MergeGateEngine.check_ac_coverage(claims, tasks)
 
-        # With no evidence_index, test_refs presence means "covered"
-        assert uncovered == []
+        # With no evidence_index, test_refs alone are insufficient → uncovered
+        assert uncovered != []
+        assert any(u.get("ac_id") == "AC-VT-001-01" for u in uncovered)
 
     def test_must_task_without_claim_is_uncovered(self) -> None:
         """MUST task with no claim -> uncovered AC."""

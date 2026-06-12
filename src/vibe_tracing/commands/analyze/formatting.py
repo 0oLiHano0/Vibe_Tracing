@@ -2,7 +2,6 @@
 Action rendering and formatting for agent consumption.
 """
 
-from pathlib import Path
 from typing import List, Optional
 
 from vibe_tracing.commands.analyze.actions import (
@@ -13,7 +12,7 @@ from vibe_tracing.commands.analyze.actions import (
 )
 
 
-def _render_actions(actions: list, coverage_summary: Optional[dict] = None, project_root: Optional[Path] = None, coverage_violations: Optional[list] = None, evidence_index: Optional[dict] = None) -> list:
+def _render_actions(actions: list, coverage_summary: Optional[dict] = None, evidence_index: Optional[dict] = None) -> list:
     """Render action dicts to text lines for Agent consumption.
 
     Actions are sorted by urgency (descending) so that the most pressing
@@ -21,11 +20,8 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None, proj
 
     Args:
         actions: List of action dicts.
-        coverage_summary: Aggregate coverage info (informational only).
-        project_root: Project root path for reading coverage baseline.
-        coverage_violations: Per-file coverage violations from evidence index.
-            Each item is a dict with 'file' and 'percent' keys.
-            Used for BLOCKED/PASS decision instead of aggregate percent.
+        coverage_summary: Aggregate coverage info.
+        evidence_index: Evidence index for per-file coverage detail.
     """
     lines: List[str] = []
     if not actions:
@@ -84,23 +80,7 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None, proj
         lines.append("NO ACTION REQUIRED. Gate passed.")
 
     # Add coverage info to agent output
-    # Gate decision uses per-file violations from evidence index, NOT aggregate percent.
-    if coverage_violations is not None:
-        # Per-file violations from evidence index determine BLOCKED/PASS
-        if coverage_violations:
-            lines.append("")
-            lines.append(f"Coverage: {len(coverage_violations)} file(s) below 80% (BLOCKED, target: 80%)")
-            for cv in sorted(coverage_violations, key=lambda x: x.get("percent", 0)):
-                lines.append(f"  {cv['file']}: {cv['percent']}%")
-        else:
-            lines.append("")
-            lines.append("Coverage: all files >= 80% (PASS, target: 80%)")
-        # Show aggregate as informational if available
-        if coverage_summary:
-            pct = coverage_summary["aggregate_percent"]
-            lines.append(f"  (aggregate: {pct}% — informational only)")
-    elif coverage_summary:
-        # Fallback: use aggregate percent only when per-file data not available
+    if coverage_summary:
         pct = coverage_summary["aggregate_percent"]
         status = "PASS" if pct >= 80 else "BLOCKED"
         lines.append("")
@@ -122,7 +102,6 @@ def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
                           accepted_rules, prd_result=None, task_result=None,
                           claims_list=None, gate_reasons=None, merged_gaps=None,
                           compliance_status=None, coverage_summary=None,
-                          project_root=None, coverage_violations=None,
                           staged_items=None, evidence_index=None):
     """Format an Agent-executable action list with full inline context."""
     lines = [f"GATE DECISION: {gate_decision.upper()}", ""]
@@ -140,5 +119,5 @@ def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
     actions.extend(_collect_gate_reason_actions(
         gate_decision, gate_reasons or [], actions,
     ))
-    lines.extend(_render_actions(actions, coverage_summary, project_root, coverage_violations=coverage_violations, evidence_index=evidence_index))
+    lines.extend(_render_actions(actions, coverage_summary, evidence_index=evidence_index))
     return "\n".join(lines)

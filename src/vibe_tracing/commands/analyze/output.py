@@ -56,15 +56,6 @@ def _print_agent_actions(
     accepted_rules = compliance_res.get("accepted_rules", []) if compliance_res else []
     compliance_status = compliance_res.get("architecture_compliance_status", []) if compliance_res else []
 
-    coverage_violations = []
-    for ev in evidence_index.get("evidences", []):
-        if (ev.get("details", {}).get("tool_category") == "coverage" and
-                ev.get("status") == "violated"):
-            coverage_violations.append({
-                "file": ev.get("source_path", ""),
-                "percent": ev.get("details", {}).get("percent_covered", 0),
-            })
-
     agent_output = _format_agent_actions(
         gate_decision=gate_decision,
         active_gaps=active_gaps,
@@ -78,8 +69,6 @@ def _print_agent_actions(
         merged_gaps=merged_gaps,
         compliance_status=compliance_status,
         coverage_summary=report_doc.get("coverage_summary"),
-        project_root=project_root,
-        coverage_violations=coverage_violations,
         staged_items=staged_items,
         evidence_index=evidence_index,
     )

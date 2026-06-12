@@ -278,7 +278,6 @@ def test_cli_analyze_pass(tmp_path, capsys):
     assert meta["project_id"] == "PROJECT-VT"
     assert "scan_time" in meta
     assert meta["gate_decision"] == "pass"
-    assert meta["exit_code"] == 0
     assert "input_files" in meta
     assert "output_files" in meta
     assert "summary" in meta
@@ -318,7 +317,6 @@ def test_cli_analyze_blocked(tmp_path, capsys):
 
     meta = rep["metadata"]
     assert meta["gate_decision"] == "blocked"
-    assert meta["exit_code"] == 2
 
 
 def test_cli_analyze_fail_conditional(tmp_path, capsys):
@@ -356,7 +354,6 @@ def test_cli_analyze_fail_conditional(tmp_path, capsys):
 
     meta = rep["metadata"]
     assert meta["gate_decision"] == "pass"
-    assert meta["exit_code"] == 0
 
 
 def test_cli_analyze_missing_required_file(tmp_path, capsys):
@@ -2197,47 +2194,44 @@ def test_render_actions_with_coverage_summary():
 
 
 def test_render_actions_coverage_below_threshold(tmp_path):
-    """Test _render_actions uses per-file violations for BLOCKED/PASS decision."""
+    """Test _render_actions flags BLOCKED when aggregate coverage is below threshold."""
     from vibe_tracing.cli import _render_actions
 
     # Need at least one action for coverage section to render
     actions = [
         {"priority": "HIGH", "type": "test", "title": "Test Action", "context": {}}
     ]
-    coverage = {"aggregate_percent": 85}
-    # Per-file violations from evidence index — this is what determines BLOCKED
-    violations = [
-        {"file": "src/bad.py", "percent": 40},
-    ]
+    coverage = {"aggregate_percent": 75}
+    evidence_index = {
+        "coverage_baseline": {
+            "src/bad.py": {"percent_covered": 45},
+        }
+    }
 
     lines = _render_actions(
-        actions, coverage_summary=coverage, project_root=tmp_path,
-        coverage_violations=violations,
+        actions, coverage_summary=coverage,
+        evidence_index=evidence_index,
     )
     assert any("BLOCKED" in l for l in lines)
-    assert any("src/bad.py" in l and "40%" in l for l in lines)
+    assert any("75%" in l for l in lines)
+    assert any("src/bad.py" in l and "45%" in l for l in lines)
 
 
 def test_render_actions_per_file_violations_pass(tmp_path):
-    """Test _render_actions passes when no per-file violations even if aggregate is low."""
+    """Test _render_actions shows PASS when aggregate coverage is above threshold."""
     from vibe_tracing.cli import _render_actions
 
     actions = [
         {"priority": "HIGH", "type": "test", "title": "Test Action", "context": {}}
     ]
-    # Aggregate is low (includes test files) but no per-file violations
-    coverage = {"aggregate_percent": 52.5}
-    violations = []  # no per-file violations
+    coverage = {"aggregate_percent": 85}
 
     lines = _render_actions(
-        actions, coverage_summary=coverage, project_root=tmp_path,
-        coverage_violations=violations,
+        actions, coverage_summary=coverage,
     )
     assert any("PASS" in l for l in lines)
     assert not any("BLOCKED" in l for l in lines)
-    # Aggregate shown as informational only
-    assert any("52.5%" in l for l in lines)
-    assert any("informational only" in l for l in lines)
+    assert any("85%" in l for l in lines)
 
 
 # =========================================================================

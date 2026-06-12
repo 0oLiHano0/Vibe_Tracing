@@ -26,6 +26,7 @@ class DashboardRenderer:
         self.project_root = project_root
         self.constraints_hash = constraints_hash
         self.config_data = config_data
+        self._proposal_engine = None
 
     def render(
         self,
@@ -46,15 +47,16 @@ class DashboardRenderer:
         # Ensure the directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Load proposal status
-        from vibe_tracing.architecture_change_proposal import (
-            ArchitectureChangeProposalEngine,
-        )
-        try:
-            proposal_engine = ArchitectureChangeProposalEngine(
+        # Load proposal status (lazy-initialized cache)
+        if self._proposal_engine is None:
+            from vibe_tracing.architecture_change_proposal import (
+                ArchitectureChangeProposalEngine,
+            )
+            self._proposal_engine = ArchitectureChangeProposalEngine(
                 self.project_root, config_data=self.config_data,
             )
-            prop_res = proposal_engine.check_governance(
+        try:
+            prop_res = self._proposal_engine.check_governance(
                 constraints_hash=self.constraints_hash,
             )
         except Exception as exc:
@@ -98,7 +100,6 @@ class DashboardRenderer:
             template_content.replace("{prd_reqs_json}", prd_reqs_json)
             .replace("{evidence_idx_json}", evidence_idx_json)
             .replace("{trace_report_json}", trace_report_json)
-            .replace("{boot_data_json}", "null")
             .replace("{prop_data_json}", prop_data_json)
             .replace("{hints_json}", hints_json)
         )

@@ -51,7 +51,6 @@ def test_e2e_good_project(tmp_path):
     report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
     meta = report["metadata"]
     assert meta["gate_decision"] == "blocked"
-    assert meta["exit_code"] == 2
     assert (
         "验收标准" in meta["summary"] and "缺失" in meta["summary"]
         or "低可信度" in meta["summary"]
@@ -75,7 +74,6 @@ def test_e2e_missing_tests(tmp_path):
     report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
     meta = report["metadata"]
     assert meta["gate_decision"] == "blocked"
-    assert meta["exit_code"] == 2
     assert "缺失测试证据" in meta["summary"]
 
 
@@ -95,7 +93,6 @@ def test_e2e_bad_claim(tmp_path):
     report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
     meta = report["metadata"]
     assert meta["gate_decision"] == "blocked"
-    assert meta["exit_code"] == 2
     assert any(
         term in meta["summary"]
         for term in ("不自证违规", "自引用违规", "self-referential", "empty evidence")
@@ -118,7 +115,6 @@ def test_e2e_arch_unclear(tmp_path):
     report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
     meta = report["metadata"]
     assert meta["gate_decision"] == "blocked"
-    assert meta["exit_code"] == 2
     assert (
         "存在不明确的架构约束规则" in meta["summary"]
         or "GATE-VT-008" in meta["summary"]

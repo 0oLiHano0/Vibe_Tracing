@@ -70,7 +70,7 @@ def _build_report_document(
         report_doc = report_builder.build(report_doc, output_path=report_path)
     except Exception as exc:
         print(f"Error building traceability report: {exc}", file=sys.stderr)
-        raise _GateBlocked(1)
+        raise _GateBlocked(1) from exc
 
     # Build and embed metadata
     metadata_doc = _build_metadata(ctx, gate_res, report_doc, output_dir, project_root)
@@ -80,7 +80,7 @@ def _build_report_document(
             json.dump(report_doc, f, indent=2, ensure_ascii=False)
     except Exception as exc:
         print(f"Error writing traceability report with metadata: {exc}", file=sys.stderr)
-        raise _GateBlocked(1)
+        raise _GateBlocked(1) from exc
 
     return report_doc
 
@@ -182,4 +182,4 @@ def _render_dashboard(
         )
     except Exception as exc:
         print(f"Error rendering dashboard: {exc}", file=sys.stderr)
-        raise _GateBlocked(1)
+        raise _GateBlocked(1) from exc

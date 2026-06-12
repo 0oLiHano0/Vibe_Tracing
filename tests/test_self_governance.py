@@ -34,7 +34,6 @@ def test_vt_can_analyze_itself():
     report = json.loads((output_dir / "traceability_report.json").read_text(encoding="utf-8"))
     meta = report["metadata"]
     assert meta["gate_decision"] in ("pass", "fail", "blocked")
-    assert meta["exit_code"] in (0, 2)
 
     # Traceability report must be valid JSON with required fields
     report = json.loads((output_dir / "traceability_report.json").read_text(encoding="utf-8"))

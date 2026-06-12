@@ -123,6 +123,7 @@ class RiskAdvisor:
                         "business_impact": impact,
                         "suggested_action": action,
                         "evidence_ids": [ids.sentinel_evidence_id()],
+                        "original_gap_reason": gap.get("reason", ""),
                     }
                 )
                 next_counter += 1
@@ -139,6 +140,7 @@ class RiskAdvisor:
                         "business_impact": impact,
                         "suggested_action": action,
                         "evidence_ids": [ids.sentinel_evidence_id()],
+                        "original_gap_reason": gap.get("reason", ""),
                     }
                 )
                 next_counter += 1
@@ -155,6 +157,7 @@ class RiskAdvisor:
                         "business_impact": impact,
                         "suggested_action": action,
                         "evidence_ids": [ids.sentinel_evidence_id()],
+                        "original_gap_reason": gap.get("reason", ""),
                     }
                 )
                 next_counter += 1

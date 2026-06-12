@@ -40,7 +40,9 @@ def load_boundary(
     try:
         data = json.loads(constraints_path.read_text(encoding="utf-8"))
         return data.get("governance_boundary", dict(_DEFAULT_BOUNDARY))
-    except Exception:
+    except Exception as exc:
+        import sys
+        print(f"Warning: Failed to load governance boundary: {exc}", file=sys.stderr)
         return dict(_DEFAULT_BOUNDARY)
 
 

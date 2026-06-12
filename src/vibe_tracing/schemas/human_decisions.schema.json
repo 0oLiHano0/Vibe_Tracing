@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Human Decisions",
+  "description": "记录人类对架构规则、风险、缺口等事项的决策记录",
+  "type": "object",
+  "required": ["version", "decisions"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema 版本号，当前为 \"1.0\"",
+      "enum": ["1.0"]
+    },
+    "decisions": {
+      "type": "array",
+      "description": "决策条目列表",
+      "items": {
+        "type": "object",
+        "required": ["decision_id", "category", "targetId", "action", "decidedBy", "timestamp"],
+        "properties": {
+          "decision_id": {
+            "type": "integer",
+            "description": "决策 ID，从 1 开始递增"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["accepted_rule", "accept_risk", "mark_complete", "resolved_gap"],
+            "description": "决策分类"
+          },
+          "targetId": {
+            "type": "string",
+            "description": "决策对象 ID，如 rule_id/gap_id/risk_id"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["accept", "reconfirm", "reject", "accept_risk", "mark_complete", "defer"],
+            "description": "决策动作类型。accept=CLI端初始人工确认(verification_method=manual的规则)；reconfirm=Dashboard端复核确认规则仍然有效；reject=Dashboard端复核认为规则不再适用；accept_risk=接受某项风险；mark_complete=标记缺口已完成；defer=延后处理"
+          },
+          "reason": {
+            "type": "string",
+            "description": "人类决策理由"
+          },
+          "decidedBy": {
+            "type": "string",
+            "description": "决策者标识，如 human"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "决策时间，ISO 8601 格式"
+          }
+        }
+      }
+    }
+  }
+}

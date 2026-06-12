@@ -186,6 +186,7 @@ def render_reflection_prompts(
                     violation_count=violation_count,
                     uncovered_count=uncovered_scope_count,
                 )
+                hint_text = hint_text.replace("\\n", "\n")
                 break
 
         lines.append(f"  {idx}. {title}")

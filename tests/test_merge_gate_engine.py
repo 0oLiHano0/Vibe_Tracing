@@ -476,8 +476,8 @@ def test_no_staged_items_backward_compatible():
 def test_architecture_violation_gets_pre_existing_prefix():
     """
     Test that architecture violations (not tied to a specific claim/task)
-    get [预存] prefix when staged_items is provided, and do NOT block the
-    gate (cannot prove relation to staged changes).
+    get [预存] prefix when staged_items is provided, but STILL block the
+    gate (must-severity architecture violations always block).
     covers: EVO-TASK-025, EVO-TASK-012
     """
     engine = MergeGateEngine(Path("/dummy/project/root"))
@@ -499,8 +499,8 @@ def test_architecture_violation_gets_pre_existing_prefix():
 
     res = engine.evaluate(gaps, risks, compliance, staged_items=staged_items)
 
-    # Architecture violations cannot be mapped to staged items → pre-existing
-    assert res["gate_decision"] == "pass"
+    # Must architecture violations always block, even in incremental mode
+    assert res["gate_decision"] == "blocked"
     assert any("[预存]" in msg and "DEP-VT-001" in msg for msg in res["reasons"])
 
 
@@ -1721,7 +1721,7 @@ class TestCheckAcCoverage:
         assert result == []
 
     def test_must_task_with_claim_and_tests_passes(self):
-        """A MUST task with a claim that has passing test_refs is covered."""
+        """Without evidence_index, test_refs alone are insufficient — AC is uncovered."""
         tasks = [
             {
                 "task_id": "TASK-VT-001",
@@ -1737,7 +1737,10 @@ class TestCheckAcCoverage:
             }
         ]
         result = MergeGateEngine.check_ac_coverage(claims, tasks)
-        assert result == []
+        # Without evidence_index, test_results is empty → AC uncovered
+        assert len(result) == 1
+        assert result[0]["ac_id"] == "AC-VT-001-01"
+        assert result[0]["reason"] == "no_tests_declared"
 
     def test_no_claim_for_task(self):
         """A MUST task with no associated claim produces no_claim_for_task."""
@@ -1833,7 +1836,7 @@ class TestCheckAcCoverage:
         assert result == []
 
     def test_no_evidence_skips_test_result_check(self):
-        """Without evidence_index, test presence is sufficient (not test_failed)."""
+        """Without evidence_index, test_refs alone cannot prove passing — AC is uncovered."""
         tasks = [
             {
                 "task_id": "TASK-VT-001",
@@ -1849,10 +1852,14 @@ class TestCheckAcCoverage:
             }
         ]
         result = MergeGateEngine.check_ac_coverage(claims, tasks)
-        assert result == []
+        # Without evidence_index, test_results is empty → has_passing_test = False
+        # The AC is uncovered with reason "no_tests_declared"
+        assert len(result) == 1
+        assert result[0]["ac_id"] == "AC-VT-001-01"
+        assert result[0]["reason"] == "no_tests_declared"
 
     def test_multiple_acs_partial_coverage(self):
-        """Only uncovered ACs appear in the result."""
+        """Without evidence_index, all ACs are uncovered even with test_refs."""
         tasks = [
             {
                 "task_id": "TASK-VT-001",
@@ -1870,10 +1877,11 @@ class TestCheckAcCoverage:
                 "test_refs": ["tests/test_foo.py"],
             }
         ]
-        # Both ACs are covered because the claim has test_refs
-        # (no evidence_index means test presence is sufficient)
+        # Without evidence_index, test_results is empty → both ACs uncovered
         result = MergeGateEngine.check_ac_coverage(claims, tasks)
-        assert result == []
+        assert len(result) == 2
+        assert all(r["reason"] == "no_tests_declared" for r in result)
+        assert {r["ac_id"] for r in result} == {"AC-VT-001-01", "AC-VT-001-02"}
 
     def test_unrelated_claim_does_not_cover(self):
         """A claim for a different task does not cover the task."""
@@ -1915,7 +1923,7 @@ class TestEvaluateAcCoverage:
         assert any("AC-VT-001-01" in item for item in res["blocked_items"])
 
     def test_ac_coverage_passes_when_covered(self):
-        """A covered MUST AC does not block the gate."""
+        """Without evidence_index, AC coverage blocks even with test_refs (cannot verify passing)."""
         engine = MergeGateEngine(Path("/dummy/project/root"))
         tasks = [
             {
@@ -1932,7 +1940,7 @@ class TestEvaluateAcCoverage:
             }
         ]
         res = engine.evaluate([], [], {}, claims=claims, tasks=tasks)
-        assert res["gate_decision"] == "pass"
+        assert res["gate_decision"] == "blocked"
 
     def test_tasks_none_skips_check(self):
         """When tasks=None, AC coverage check is skipped."""

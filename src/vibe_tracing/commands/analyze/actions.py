@@ -4,6 +4,12 @@ Agent action collectors and urgency scoring.
 
 from typing import Any, Dict, List, Optional, Set
 
+URGENCY_STAGED = 85
+URGENCY_IN_EVIDENCE = 60
+URGENCY_DEFAULT = 30
+URGENCY_STALE = 25
+
+
 from vibe_tracing.commands.analyze.helpers import (
     _hint_title,
     _hint_context,
@@ -31,17 +37,17 @@ def _compute_gap_urgency(
 
     # Check if the gap's item is in the staged change set
     if staged_items is not None and item_id in staged_items:
-        return 85
+        return URGENCY_STAGED
 
     # Check if the gap has evidence in the evidence index
     if evidence_index:
         for ev in evidence_index.get("evidences", []):
             covers = ev.get("covers", [])
             if item_id in covers:
-                return 60
+                return URGENCY_IN_EVIDENCE
 
     # Default: pre-existing debt
-    return 30
+    return URGENCY_DEFAULT
 
 
 def _collect_gap_actions(
@@ -107,21 +113,21 @@ def _compute_risk_urgency(
 
     # Check if the risk's claim is in the staged change set
     if staged_items is not None and claim_id and claim_id in staged_items:
-        return 85
+        return URGENCY_STAGED
 
     # Check if the risk has evidence in the evidence index
     if evidence_index and claim_id:
         for ev in evidence_index.get("evidences", []):
             covers = ev.get("covers", [])
             if claim_id in covers:
-                return 60
+                return URGENCY_IN_EVIDENCE
 
     # Stale debt gets lower urgency
     if risk.get("stale"):
-        return 25
+        return URGENCY_STALE
 
     # Default
-    return 30
+    return URGENCY_DEFAULT
 
 
 def _collect_risk_actions(

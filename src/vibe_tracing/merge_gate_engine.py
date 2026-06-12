@@ -22,6 +22,7 @@ class MergeGateEngine:
     def __init__(self, project_root: Path) -> None:
         """Initialize the engine with project root."""
         self.project_root = project_root
+        self.coverage_threshold = 80
 
     @staticmethod
     def _is_current(
@@ -182,8 +183,8 @@ class MergeGateEngine:
                     if not test_refs:
                         continue
                     if not test_results:
-                        # No test evidence available; declare presence
-                        has_passing_test = True
+                        # No test evidence available; cannot verify pass
+                        has_passing_test = False
                         break
                     for ref in test_refs:
                         if test_results.get(ref, False):
@@ -349,7 +350,11 @@ class MergeGateEngine:
             human_accepted = risk_target_id in accepted_risk_target_ids
 
             effective_severity = "accepted" if human_accepted else severity
-            is_self_ref = "only self-referential" in desc or "self-referential" in desc
+            risk_category = risk.get("risk_category", "")
+            is_self_ref = risk_category == "self_referential_claim"
+            if not is_self_ref:
+                desc = risk.get("description", "")
+                is_self_ref = "self-referential" in desc
             is_high_risk = effective_severity == "must"
 
             if is_high_risk or is_self_ref or human_accepted:
@@ -488,10 +493,11 @@ class MergeGateEngine:
                         "percent": ev.get("details", {}).get("percent_covered", 0),
                     })
         if coverage_violations:
+            threshold = getattr(self, 'coverage_threshold', 80)
             for cv in coverage_violations:
                 tag = "[当前] " if staged_items is not None else ""
                 reasons.append(
-                    f"{tag}Coverage below 80%: {cv['file']} ({cv['percent']}%)"
+                    f"{tag}Coverage below {threshold}%: {cv['file']} ({cv['percent']}%)"
                 )
             if gate_decision not in ("blocked",):
                 gate_decision = "blocked"
@@ -653,9 +659,8 @@ class MergeGateEngine:
                 hint = resolve_hint(_gate_hints.get("must_arch_violation", {}), "level1")
                 msg = hint.format(rule_id=rule_id, msg_violation=msg_violation) if hint else f"违反 MUST 级别架构约束 ({rule_id}): {msg_violation}"
                 reasons.append(self._tag_reason(msg, None, staged_items))
-                if staged_items is None:
-                    blocked_items.append(msg)
-                    gate_decision = "blocked"
+                blocked_items.append(msg)
+                gate_decision = "blocked"
 
             status_list = compliance_result.get("architecture_compliance_status", [])
             for status_item in status_list:
@@ -667,9 +672,28 @@ class MergeGateEngine:
                     msg = hint.format(rule_id=rule_id) if hint else f"架构规则被违规触发 ({rule_id})"
                     if not any(rule_id in item for item in blocked_items):
                         reasons.append(self._tag_reason(msg, None, staged_items))
-                        if staged_items is None:
-                            blocked_items.append(msg)
-                            gate_decision = "blocked"
+                        blocked_items.append(msg)
+                        gate_decision = "blocked"
+
+        # 1.4 Process proposal risks/gaps from architecture change governance
+        if compliance_result:
+            for risk in compliance_result.get("proposal_risks", []):
+                risk_id = risk.get("risk_id", "")
+                desc = risk.get("description", "")
+                msg = f"[架构变更提案风险] {risk_id}: {desc}"
+                reasons.append(self._tag_reason(msg, None, staged_items))
+                if staged_items is None:
+                    blocked_items.append(msg)
+                    gate_decision = "blocked"
+
+            for gap in compliance_result.get("proposal_gaps", []):
+                gap_id = gap.get("item_id", "")
+                reason_text = gap.get("reason", "")
+                msg = f"[架构变更治理缺口] {gap_id}: {reason_text}"
+                reasons.append(self._tag_reason(msg, None, staged_items))
+                if staged_items is None:
+                    blocked_items.append(msg)
+                    gate_decision = "blocked"
 
         # ----------------------------------------------------
         # Section 2: Evaluate 'fail' conditions (SHOULD issues)

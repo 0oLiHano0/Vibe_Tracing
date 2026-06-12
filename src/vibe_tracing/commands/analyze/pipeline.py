@@ -183,7 +183,7 @@ def _run_gate_evaluation(
     directly_staged_items: Optional[Set[str]],
 ) -> dict:
     """Run MergeGateEngine and return gate result dict."""
-    human_decisions = _load_human_decisions()
+    human_decisions = _load_human_decisions(project_root)
     gate_engine = MergeGateEngine(project_root)
     gate_res = gate_engine.evaluate(
         active_gaps, active_risks, compliance_res,

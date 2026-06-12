@@ -130,9 +130,11 @@ def _run_analyzers(
     return merged_gaps, final_risks, compliance_res, claim_res, req_res
 
 
-def _load_human_decisions() -> dict:
+def _load_human_decisions(project_root: Optional[Path] = None) -> dict:
     """Read human decision log."""
-    decisions_path = Path(".vibetracing/human_decisions.json")
+    if project_root is None:
+        project_root = Path(".")
+    decisions_path = project_root / ".vibetracing" / "human_decisions.json"
     if not decisions_path.exists():
         return {"version": "1.0", "decisions": []}
     try:

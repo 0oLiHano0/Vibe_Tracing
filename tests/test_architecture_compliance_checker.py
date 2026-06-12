@@ -476,9 +476,9 @@ def test_unaccepted_manual_rules_not_in_unclear(temp_workspace):
     assert entry["status"] == "unclear"
     assert entry["verification_method"] == "manual"
 
-    # Should NOT appear in unclear_constraints (so it does not block GATE-VT-007)
+    # Should appear in unclear_constraints (to block GATE-VT-007)
     unclear_ids = [u["rule_id"] for u in results["unclear_constraints"]]
-    assert "PRINCIPLE-VT-UNACC-01" not in unclear_ids
+    assert "PRINCIPLE-VT-UNACC-01" in unclear_ids
 
     # Should NOT appear in accepted_rules
     accepted_ids = [r["rule_id"] for r in results["accepted_rules"]]

@@ -1,7 +1,14 @@
 """Unified context domain model for vt analyze pipeline."""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from vibe_tracing.claim_loader import Claim
+    from vibe_tracing.prd_parser import PrdParseResult
+    from vibe_tracing.raw_input_loader import RawInputManifest
+    from vibe_tracing.task_loader import TaskListLoadResult
+    from vibe_tracing.tool_evidence_adapter import ToolEvidenceCandidate
 
 
 @dataclass
@@ -13,10 +20,19 @@ class UnifiedContext:
     """
 
     config: Dict[str, Any]
-    prd: Any  # PrdParseResult
+    prd: "PrdParseResult"
     constraints: Optional[Dict[str, Any]] = None
-    task_result: Optional[Any] = None  # TaskListLoadResult
-    claims_list: List[Any] = field(default_factory=list)
-    tool_evidence: List[Any] = field(default_factory=list)
-    manifest: Optional[Any] = None  # InputManifest
+    task_result: Optional["TaskListLoadResult"] = None
+    claims_list: List["Claim"] = field(default_factory=list)
+    tool_evidence: List["ToolEvidenceCandidate"] = field(default_factory=list)
+    manifest: Optional["RawInputManifest"] = None
     config_prefix: str = "VT"
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.config, dict):
+            raise TypeError(f"config must be a dict, got {type(self.config).__name__}")
+        if not hasattr(self.prd, "requirements"):
+            raise TypeError(
+                f"prd must have a 'requirements' attribute (PrdParseResult), "
+                f"got {type(self.prd).__name__}"
+            )

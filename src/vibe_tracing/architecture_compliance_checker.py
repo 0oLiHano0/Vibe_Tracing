@@ -80,7 +80,7 @@ class ArchitectureComplianceChecker:
             parts = rel_path.parts
             if len(parts) < 1:
                 return None, None
-            if "core" in parts:
+            if len(parts) >= 2 and parts[0] == "vibe_tracing" and parts[1] == "core":
                 return None, None
 
             filename = parts[-1]
@@ -110,7 +110,7 @@ class ArchitectureComplianceChecker:
         parts = imported_module.split(".")
         if len(parts) < 2:
             return None, None
-        if "core" in parts:
+        if parts[1] == "core":
             return None, None
 
         sub = parts[1]
@@ -127,14 +127,17 @@ class ArchitectureComplianceChecker:
 
     def _find_evidence_id(self, file_path: str, evidences: List[Dict[str, Any]]) -> str:
         """Find the matching evidence_id for a given file path from the evidence index list."""
-        norm_path = file_path.replace("\\", "/").strip("/")
+        norm_path_stripped = file_path.replace("\\", "/").strip("/").lower()
         for ev in evidences:
-            ev_path = ev.get("source_path", "").replace("\\", "/").strip("/")
-            if ev_path and (
-                norm_path == ev_path
-                or norm_path.endswith(ev_path)
-                or ev_path.endswith(norm_path)
-            ):
+            ev_path = ev.get("source_path", "").replace("\\", "/").strip("/").lower()
+            if not ev_path:
+                continue
+            if norm_path_stripped == ev_path:
+                return ev["evidence_id"]
+            # Segment-level suffix match: compare last 3 path segments
+            norm_suffix = "/".join(norm_path_stripped.split("/")[-3:])
+            ev_suffix = "/".join(ev_path.split("/")[-3:])
+            if norm_suffix == ev_suffix:
                 return ev["evidence_id"]
         return ids.sentinel_evidence_id()
 
@@ -142,6 +145,7 @@ class ArchitectureComplianceChecker:
         self,
         evidences: List[Dict[str, Any]],
         constraints_data: Dict[str, Any],
+        human_decisions: Optional[dict] = None,
     ) -> Dict[str, Any]:
         """
         Check all must architectural constraints and module boundaries.
@@ -149,6 +153,7 @@ class ArchitectureComplianceChecker:
         Args:
             evidences: List of evidence entries from evidence_index.json.
             constraints_data: Pre-loaded constraints dict (required).
+            human_decisions: Optional human decision log for accepted rules.
 
         Returns:
             A dictionary containing:
@@ -218,7 +223,7 @@ class ArchitectureComplianceChecker:
                         )
 
                     # Check allowed list (if defined, enforce whitelist except for core/self/standard library)
-                    if allowed_ids is not None and imp_mod_id not in allowed_ids:
+                    if allowed_ids is not None and imp_mod_id is not None and imp_mod_id not in allowed_ids:
                         hint = resolve_hint(_compliance_hints.get("not_in_allowed_whitelist", {}), "level1")
                         msg = hint.format(
                             module_id=m_id, module_name=m_name,
@@ -746,10 +751,7 @@ class ArchitectureComplianceChecker:
                         })
                         continue
                     # Manual rules that have NOT been accepted are
-                    # acknowledged as unclear but do NOT block the gate.
-                    # They are recorded for audit purposes but excluded
-                    # from the unclear_constraints list that feeds
-                    # GATE-VT-007.
+                    # unclear and do block GATE-VT-007.
                     status_list.append(
                         {
                             "rule_id": r_id,
@@ -758,6 +760,12 @@ class ArchitectureComplianceChecker:
                             "title": rule.get("title", ""),
                             "description": rule.get("description", ""),
                             "verification_method": "manual",
+                        }
+                    )
+                    unclear_list.append(
+                        {
+                            "rule_id": r_id,
+                            "reason": f"Manual verification rule {r_id} requires human acceptance.",
                         }
                     )
                 else:

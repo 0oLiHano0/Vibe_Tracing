@@ -4,6 +4,8 @@ Main analyze pipeline orchestration.
 
 import json
 import sys
+import time
+import uuid
 from dataclasses import asdict
 from pathlib import Path
 from typing import Optional, Set, Tuple
@@ -274,19 +276,47 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             schemas_dir = Path(__file__).parents[2] / "schemas"
         validator = SchemaValidator(schemas_dir)
 
+        # Initialize operational logger
+        from vibe_tracing.operational_logger import OperationalLogger
+        _run_start_t = time.perf_counter()
+
+        _t_ctx = time.perf_counter()
         ctx, raw_loader, validator = _load_context(project_root, schemas_dir, validator)
         prd_res = ctx.prd
         is_draft = (prd_res.status == "draft")
         config_prefix = ctx.config_prefix
+
+        log_level = ctx.config.get("logging", {}).get("level", "DEBUG")
+        vt_logger = OperationalLogger.init(
+            run_id=f"RUN-{uuid.uuid4()}",
+            project_root=project_root,
+            level=log_level,
+        )
+        vt_logger.info("run_start", "Analysis pipeline started",
+                       is_pre_commit=is_pre_commit, gates_only=gates_only)
+        vt_logger.info("phase_end", "Load context completed",
+                       phase="load_context",
+                       duration_ms=int((time.perf_counter() - _t_ctx) * 1000),
+                       config_prefix=config_prefix,
+                       has_prd=prd_res is not None,
+                       claims_count=len(ctx.claims_list),
+                       )
 
         # Resolve output_dir from config if not explicitly provided
         if output_dir is None:
             _out_rel = ctx.config.get("paths", {}).get("output_dir", "output")
             output_dir = (project_root / _out_rel).resolve()
 
+        _t_gates = time.perf_counter()
         exit_code = _run_integrity_gates(
             ctx, project_root, is_pre_commit, config_prefix,
         )
+        vt_logger.info("phase_end", "Integrity gates completed",
+                       phase="integrity_gates",
+                       duration_ms=int((time.perf_counter() - _t_gates) * 1000),
+                       gate_result="pass" if exit_code is None else "blocked",
+                       exit_code=exit_code if exit_code is not None else 0,
+                       )
         if exit_code is not None:
             return exit_code
 
@@ -300,12 +330,19 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                 _archive_claims(project_root)
             return 0
 
+        _t_tools = time.perf_counter()
         tool_evidence = _execute_tools(ctx, project_root, is_draft)
         ctx.tool_evidence = tool_evidence
+        vt_logger.info("phase_end", "Tool execution completed",
+                       phase="execute_tools",
+                       duration_ms=int((time.perf_counter() - _t_tools) * 1000),
+                       tools_executed=len(tool_evidence),
+                       )
 
         # Build evidence index
         index_builder = EvidenceIndexBuilder(project_root)
         index_path = output_dir / "evidence_index.json"
+        _t_build = time.perf_counter()
         try:
             evidences_index = index_builder.build(
                 output_path=index_path,
@@ -320,8 +357,14 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
         except Exception as exc:
             print(f"Error building evidence index: {exc}", file=sys.stderr)
             return 1
+        vt_logger.info("phase_end", "Evidence index built",
+                       phase="build_evidence_index",
+                       duration_ms=int((time.perf_counter() - _t_build) * 1000),
+                       evidences_count=len(evidences_index.get("evidences", [])),
+                       )
 
         # Auto-run claim tests when claims have test_refs but test_results is empty
+        _t_claim_tests = time.perf_counter()
         if ctx.claims_list and any(
             getattr(c, "test_refs", None) for c in ctx.claims_list
         ):
@@ -346,6 +389,11 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                     f"{passed} passed, {failed} failed, {cached} cached",
                     file=sys.stderr,
                 )
+        vt_logger.info("phase_end", "Claim tests completed",
+                       phase="run_claim_tests",
+                       duration_ms=int((time.perf_counter() - _t_claim_tests) * 1000),
+                       test_results_count=len(evidences_index.get("test_results", {})),
+                       )
 
         evidence_list = evidences_index.get("evidences", [])
 
@@ -353,12 +401,21 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
         human_decisions = _load_human_decisions(project_root)
 
+        _t_analyzers = time.perf_counter()
         merged_gaps, final_risks, compliance_res, claim_res, req_res = _run_analyzers(
             ctx, evidence_list, project_root,
             staged_files=staged_files,
             human_decisions=human_decisions,
         )
+        vt_logger.info("phase_end", "Analyzers completed",
+                       phase="run_analyzers",
+                       duration_ms=int((time.perf_counter() - _t_analyzers) * 1000),
+                       gaps_count=len(merged_gaps),
+                       risks_count=len(final_risks),
+                       has_compliance=compliance_res is not None,
+                       )
 
+        _t_eval = time.perf_counter()
         exit_code = _evaluate_and_output(
             ctx, merged_gaps, final_risks, compliance_res,
             output_dir, evidences_index, claim_res, req_res,
@@ -366,8 +423,21 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             is_pre_commit=is_pre_commit,
             human_decisions=human_decisions,
         )
+        gate_decision = "blocked" if exit_code == 2 else "pass"
+        vt_logger.info("phase_end", "Evaluate and output completed",
+                       phase="evaluate_and_output",
+                       duration_ms=int((time.perf_counter() - _t_eval) * 1000),
+                       gate_decision=gate_decision,
+                       )
         if exit_code == 0 and is_pre_commit:
             _archive_claims(project_root)
+
+        total_duration_ms = int((time.perf_counter() - _run_start_t) * 1000)
+        vt_logger.info("run_end", "Analysis pipeline completed",
+                       total_duration_ms=total_duration_ms,
+                       gate_decision=gate_decision,
+                       exit_code=exit_code,
+                       )
         return exit_code
 
     except _GateBlocked as exc:

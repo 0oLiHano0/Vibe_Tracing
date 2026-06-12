@@ -8,6 +8,7 @@ requirements without task coverage.
 
 from typing import Any, Dict, List
 from vibe_tracing.core.enums import CoverageStatus
+from vibe_tracing.operational_logger import OperationalLogger
 
 
 class RequirementTaskAnalyzer:
@@ -86,6 +87,12 @@ class RequirementTaskAnalyzer:
                     "evidence_ids": evidence_ids,
                 }
             )
+
+        OperationalLogger.get().debug("analyzer_result", "RequirementTaskAnalyzer complete",
+            requirements_count=len(prd_requirements),
+            evidences_count=len(evidences),
+            gaps_count=len(gaps),
+            coverage_count=len(requirement_coverage))
 
         return {
             "requirement_coverage": requirement_coverage,

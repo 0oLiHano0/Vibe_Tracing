@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -14,6 +15,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from vibe_tracing.context import UnifiedContext
 from vibe_tracing.commands.common import _determine_affected_items
 from vibe_tracing.commands.analyze.tools import _check_staged_extensions
+from vibe_tracing.operational_logger import OperationalLogger
 
 
 def _run_analyzers(
@@ -142,6 +144,7 @@ def _load_human_decisions(project_root: Optional[Path] = None) -> dict:
     try:
         return json.loads(decisions_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
+        OperationalLogger.get().warning("human_decisions_load_failed", "Could not load human decisions file", path=str(decisions_path))
         return {"version": "1.0", "decisions": []}
 
 
@@ -179,6 +182,8 @@ def _run_claim_tests(project_root: Path, claims_list: list, evidence_index: dict
 
     if not all_test_refs:
         evidence_index["test_results"] = {}
+        OperationalLogger.get().info("cache_stat", "Claim test cache results",
+            cache_hits=0, cache_misses=0, total=0)
         return evidence_index
 
     # Load previous test_results cache from evidence_index (if any)
@@ -215,6 +220,7 @@ def _run_claim_tests(project_root: Path, claims_list: list, evidence_index: dict
         # --- Cache miss: run pytest ---
         cache_misses += 1
         try:
+            _t = time.perf_counter()
             result = subprocess.run(
                 [sys.executable, "-m", "pytest", str(test_path),
                  "--tb=short", "-q"],
@@ -223,6 +229,18 @@ def _run_claim_tests(project_root: Path, claims_list: list, evidence_index: dict
                 text=True,
                 timeout=30,
             )
+            duration_ms = int((time.perf_counter() - _t) * 1000)
+            try:
+                vt_logger = OperationalLogger.get()
+                vt_logger.info("subprocess_exec", "Claim test pytest completed",
+                               command="pytest",
+                               duration_ms=duration_ms,
+                               exit_code=result.returncode,
+                               stdout_size=len(result.stdout or ""),
+                               stderr_size=len(result.stderr or ""),
+                               test_ref=test_ref)
+            except Exception:
+                pass  # Never block on logging
             stdout = result.stdout.strip()
             stderr = result.stderr.strip()
 
@@ -291,4 +309,6 @@ def _run_claim_tests(project_root: Path, claims_list: list, evidence_index: dict
             f"(of {len(all_test_refs)} total).",
             file=sys.stderr,
         )
+    OperationalLogger.get().info("cache_stat", "Claim test cache results",
+        cache_hits=cache_hits, cache_misses=cache_misses, total=len(all_test_refs))
     return evidence_index

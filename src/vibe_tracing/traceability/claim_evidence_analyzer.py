@@ -38,6 +38,7 @@ from typing import Any, Dict, List, Optional
 
 from vibe_tracing.core import ids
 from vibe_tracing.core.enums import CoverageStatus
+from vibe_tracing.operational_logger import OperationalLogger
 
 
 def _file_sha256(path: Path) -> Optional[str]:
@@ -504,6 +505,13 @@ class ClaimEvidenceAnalyzer:
                     "mismatches": mismatches,
                 }
             )
+
+        OperationalLogger.get().debug("analyzer_result", "ClaimEvidenceAnalyzer complete",
+            claims_count=len(claims),
+            evidences_count=len(evidences),
+            gaps_count=len(gaps),
+            risks_count=len(risks),
+            claims_analysis_count=len(claims_analysis))
 
         return {
             "claims_analysis": claims_analysis,

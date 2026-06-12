@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from vibe_tracing.core import ids
 from vibe_tracing.hint_loader import load_hints, resolve_hint
+from vibe_tracing.operational_logger import OperationalLogger
 
 _compliance_hints = load_hints("compliance")
 
@@ -234,6 +235,15 @@ class ArchitectureComplianceChecker:
                             (f, imp_mod_name, msg)
                         )
 
+            # Log module boundary check details at DEBUG level
+            _files_in_module = [f for f in file_imports if self._get_module_for_path(f, src_dir)[0] == m_id]
+            _imports_checked = sum(len(file_imports[f]) for f in _files_in_module)
+            OperationalLogger.get().debug("compliance_module_boundary", "Module boundary check",
+                module_id=m_id, module_name=m_name,
+                files_in_module=len(_files_in_module),
+                imports_checked=_imports_checked,
+                violations=len(m_violations))
+
             # Determine compliance status for the module boundary
             if m_violations:
                 status_list.append(
@@ -299,6 +309,11 @@ class ArchitectureComplianceChecker:
                         file_name=f.name, line_number=lineno, import_name=imp_name,
                     ) if hint else f"Prohibited import of adapter module '{imp_name}' (module {imp_mod_id}) at line {lineno} in {f.name}"
                     dep_vt_001_violations.append((f, msg))
+
+        OperationalLogger.get().debug("compliance_check", "DEP-VT-001 check complete",
+            rule_id="DEP-VT-001",
+            status="violated" if dep_vt_001_violations else "compliant",
+            violations=len(dep_vt_001_violations))
 
         if dep_vt_001_violations:
             status_list.append(
@@ -415,6 +430,11 @@ class ArchitectureComplianceChecker:
                     }
                 )
 
+        _dep_vt_002_status = "unclear" if not dashboard_files else ("violated" if dashboard_files and any(s.get("rule_id") == "DEP-VT-002" and s.get("status") == "violated" for s in status_list) else "compliant")
+        OperationalLogger.get().debug("compliance_check", "DEP-VT-002 check complete",
+            rule_id="DEP-VT-002", status=_dep_vt_002_status,
+            dashboard_found=bool(dashboard_files))
+
         # ----------------------------------------------------
         # 4. Check STORE-VT-001 / PRINCIPLE-VT-009 (MVP no database)
         # ----------------------------------------------------
@@ -475,6 +495,11 @@ class ArchitectureComplianceChecker:
                 }
             )
 
+        OperationalLogger.get().debug("compliance_check", "STORE-VT-001 check complete",
+            rule_id="STORE-VT-001",
+            status="violated" if db_violations else "compliant",
+            violations=len(db_violations))
+
         # ----------------------------------------------------
         # 5. Check GATE-VT-001 (Required input files must exist)
         # ----------------------------------------------------
@@ -523,6 +548,11 @@ class ArchitectureComplianceChecker:
                     "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。",
                 }
             )
+
+        OperationalLogger.get().debug("compliance_check", "GATE-VT-001 check complete",
+            rule_id="GATE-VT-001",
+            status="violated" if missing_files else "compliant",
+            missing_files=missing_files)
 
         # ----------------------------------------------------
         # 6. Evaluate GATE-VT-006 & GATE-VT-007 Gate compliance

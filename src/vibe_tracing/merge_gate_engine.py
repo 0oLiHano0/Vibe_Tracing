@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from vibe_tracing.governance import is_in_scope
 from vibe_tracing.hint_loader import load_hints, resolve_hint
+from vibe_tracing.operational_logger import OperationalLogger
 
 _gate_hints = load_hints("gate_decision")
 
@@ -229,6 +230,20 @@ class MergeGateEngine:
             claims=claims,
             boundary=boundary,
         )
+        # Compute counts for DEBUG logging
+        if boundary is not None:
+            _biz_files = {f for f in staged_items if is_in_scope(f, boundary)}
+        else:
+            _biz_files = set(staged_items)
+        _all_claimed = set()
+        for _c in claims:
+            for _r in _c.get("code_refs", []):
+                _all_claimed.add(_r)
+            for _r in _c.get("test_refs", []):
+                _all_claimed.add(_r)
+        OperationalLogger.get().debug("gate_claim_existence", "Claim existence check",
+            business_files=len(_biz_files), claimed_files=len(_all_claimed),
+            unclaimed=len(unclaimed), passed=passed)
         if not passed and unclaimed:
             for f in sorted(unclaimed):
                 hint = resolve_hint(
@@ -267,6 +282,15 @@ class MergeGateEngine:
         Mutates *gaps*, *reasons*, and *blocked_items* in-place.
         """
         ac_gaps = self.check_ac_coverage(claims, tasks, evidence_index)
+        # Compute total MUST ACs for DEBUG logging
+        _total_must_acs = sum(
+            len(t.get("related_acceptance_criteria", []))
+            for t in tasks if t.get("priority") == "must"
+        )
+        _covered_acs = _total_must_acs - len(ac_gaps)
+        OperationalLogger.get().debug("gate_ac_coverage", "AC coverage check",
+            total_must_acs=_total_must_acs, covered=_covered_acs,
+            uncovered=len(ac_gaps))
         for gap in ac_gaps:
             ac_id = gap["ac_id"]
             task_id = gap["task_id"]
@@ -622,6 +646,13 @@ class MergeGateEngine:
 
         human_decisions_applied = len(accepted_risk_target_ids) + len(resolved_gap_target_ids) + len(accepted_rule_target_ids) + len(rejected_rule_target_ids)
 
+        OperationalLogger.get().debug("gate_human_decisions", "Human decisions lookup built",
+            total_decisions=len(decisions_list),
+            accepted_risks=len(accepted_risk_target_ids),
+            resolved_gaps=len(resolved_gap_target_ids),
+            accepted_rules=len(accepted_rule_target_ids),
+            rejected_rules=len(rejected_rule_target_ids))
+
         risk_staged = directly_staged_items if directly_staged_items is not None else staged_items
         gate_decision = "pass"
         reasons: List[str] = []
@@ -765,6 +796,12 @@ class MergeGateEngine:
         # ----------------------------------------------------
         # Final decision
         # ----------------------------------------------------
+        OperationalLogger.get().debug("gate_intermediate", "Gate intermediate state",
+            gate_decision=gate_decision,
+            any_fail_detected=any_fail_detected,
+            current_fail_detected=current_fail_detected,
+            blocked_count=len(blocked_items),
+            reasons_count=len(reasons))
         return self._compute_gate_decision(
             gate_decision, blocked_items,
             current_fail_detected, any_fail_detected,

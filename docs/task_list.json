@@ -3564,6 +3564,84 @@
         }
       ],
       "ai_coding_guidance": []
+    },
+    {
+      "task_id": "TASK-VT-066",
+      "phase_id": "PHASE-VT-008",
+      "title": "运行时日志系统：operational logger + pipeline 计时 + 异常记录 + DEBUG 插桩",
+      "priority": "must",
+      "status": "done",
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-002-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "owner_role": "AI Developer",
+      "objective": "为 VT 自身运行添加可观测性基础设施，用于排错和性能优化",
+      "atomic_scope": "operational_logger.py, pipeline.py 计时, tool_evidence_adapter.py 子进程计时, 异常结构化记录, 缓存统计, hint 回退监控, DEBUG 级别插桩",
+      "out_of_scope": [
+        "不替换用户面向的 print() 输出",
+        "不修改 JSON 报告 schema",
+        "不引入第三方日志库"
+      ],
+      "related_architecture_constraints": [
+        "LOG-VT-001",
+        "LOG-VT-002",
+        "LOG-VT-010",
+        "LOG-VT-011",
+        "LOG-VT-012",
+        "LOG-VT-013",
+        "LOG-VT-014",
+        "LOG-VT-015"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "operational_logger.py",
+        "pipeline 阶段计时",
+        "子进程执行计时",
+        "异常结构化记录",
+        "缓存/hint/DEBUG 插桩"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-066-01",
+          "description": "operational_logger.py 可独立初始化并输出 JSON Lines 格式日志"
+        },
+        {
+          "dod_id": "DOD-VT-066-02",
+          "description": "config.json 的 logging.level 可控制日志粒度"
+        },
+        {
+          "dod_id": "DOD-VT-066-03",
+          "description": "pipeline 各阶段有耗时记录"
+        },
+        {
+          "dod_id": "DOD-VT-066-04",
+          "description": "子进程执行有计时记录"
+        },
+        {
+          "dod_id": "DOD-VT-066-05",
+          "description": "关键路径异常不再静默吞没"
+        },
+        {
+          "dod_id": "DOD-VT-066-06",
+          "description": "DEBUG 级别可追踪 gate/compliance/analyzer 决策路径"
+        },
+        {
+          "dod_id": "DOD-VT-066-07",
+          "description": "日志不改变现有 CLI 输出和报告格式"
+        },
+        {
+          "dod_id": "DOD-VT-066-08",
+          "description": "全量测试通过"
+        }
+      ]
     }
   ]
 }

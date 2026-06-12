@@ -13,31 +13,16 @@ import json
 import re
 import shlex
 import subprocess
+import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from vibe_tracing.core.enums import CoverageStatus, ErrorCode
+from vibe_tracing.hint_loader import load_hints, resolve_hint
+from vibe_tracing.operational_logger import OperationalLogger
 from vibe_tracing.tool_resolver import ToolResolver
-
-_HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
-
-
-def _load_hints(category: str) -> Dict[str, Any]:
-    try:
-        data = json.loads(_HINTS_PATH.read_text(encoding="utf-8"))
-        return data.get(category, {})
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def _resolve_hint(hint_value: Any, level: str = "level1") -> str:
-    if isinstance(hint_value, str):
-        return hint_value
-    if isinstance(hint_value, dict):
-        return hint_value.get(level, hint_value.get("level3", ""))
-    return ""
 
 
 def _safe_format(template: str, **kwargs: Any) -> str:
@@ -48,7 +33,7 @@ def _safe_format(template: str, **kwargs: Any) -> str:
     return result
 
 
-_tool_hints = _load_hints("tool")
+_tool_hints = load_hints("tool")
 
 
 @dataclass
@@ -139,7 +124,7 @@ class ToolExecutionEngine:
             resolved = (self.project_root / path_str).resolve()
             project_resolved = self.project_root.resolve()
             if not (resolved == project_resolved or project_resolved in resolved.parents):
-                hint = _resolve_hint(_tool_hints.get("path_outside_root", {}), "level1")
+                hint = resolve_hint(_tool_hints.get("path_outside_root", {}), "level1")
                 msg = _safe_format(hint, path_str=path_str, resolved=resolved) if hint else f"Path '{path_str}' resolves outside project root: {resolved}"
                 return False, msg
         except (ValueError, OSError) as exc:
@@ -165,7 +150,7 @@ class ToolExecutionEngine:
         if not path_str:
             return ""
         if not self._SAFE_PATH_PATTERN.match(path_str):
-            hint = _resolve_hint(_tool_hints.get("unsafe_path_chars", {}), "level1")
+            hint = resolve_hint(_tool_hints.get("unsafe_path_chars", {}), "level1")
             msg = _safe_format(hint, path_str=path_str) if hint else f"Path '{path_str}' contains unsafe characters. Only alphanumeric, underscore, dot, slash, and hyphen are allowed."
             raise ValueError(msg)
         return shlex.quote(path_str)
@@ -196,7 +181,7 @@ class ToolExecutionEngine:
         # Reject if any placeholder-like tokens remain
         remaining = re.findall(r"\{[a-z_]+\}", cmd)
         if remaining:
-            hint = _resolve_hint(_tool_hints.get("unresolved_placeholders", {}), "level1")
+            hint = resolve_hint(_tool_hints.get("unresolved_placeholders", {}), "level1")
             msg = _safe_format(hint,
                 remaining=remaining, allowed_placeholders=', '.join(sorted(_ALLOWED_PLACEHOLDERS)),
             ) if hint else f"Unresolved placeholders in command: {remaining}. Only {', '.join(sorted(_ALLOWED_PLACEHOLDERS))} are permitted."
@@ -220,6 +205,8 @@ class ToolExecutionEngine:
             (exit_code, stdout, stderr, error_message_or_none)
         """
         try:
+            cmd_name = command.split()[0] if command else ""
+            _t = time.perf_counter()
             result = subprocess.run(
                 command,
                 shell=True,
@@ -228,23 +215,35 @@ class ToolExecutionEngine:
                 text=True,
                 timeout=self.timeout,
             )
+            duration_ms = int((time.perf_counter() - _t) * 1000)
+            try:
+                from vibe_tracing.operational_logger import OperationalLogger
+                vt_logger = OperationalLogger.get()
+                vt_logger.info("subprocess_exec", "Tool subprocess completed",
+                               command=cmd_name,
+                               duration_ms=duration_ms,
+                               exit_code=result.returncode,
+                               stdout_size=len(result.stdout or ""),
+                               stderr_size=len(result.stderr or ""))
+            except Exception:
+                pass  # Never block on logging
             return result.returncode, result.stdout, result.stderr, None
         except subprocess.TimeoutExpired:
-            hint = _resolve_hint(_tool_hints.get("execution_timeout", {}), "level1")
+            hint = resolve_hint(_tool_hints.get("execution_timeout", {}), "level1")
             source_path = command.split()[0] if command else ""
             msg = _safe_format(hint, source_path=source_path, timeout_seconds=self.timeout) if hint else f"Tool execution timed out after {self.timeout}s"
             return -1, "", msg, "timeout"
         except FileNotFoundError:
-            hint = _resolve_hint(_tool_hints.get("binary_not_found", {}), "level1")
+            hint = resolve_hint(_tool_hints.get("binary_not_found", {}), "level1")
             cmd_token = command.split()[0] if command else ""
             msg = _safe_format(hint, command=cmd_token, tool_name=cmd_token) if hint else f"Tool binary not found: {cmd_token}"
             return -1, "", msg, "not_found"
         except PermissionError:
-            hint = _resolve_hint(_tool_hints.get("permission_denied", {}), "level1")
+            hint = resolve_hint(_tool_hints.get("permission_denied", {}), "level1")
             msg = _safe_format(hint, command=command) if hint else f"Permission denied executing: {command}"
             return -1, "", msg, "permission"
         except OSError as exc:
-            hint = _resolve_hint(_tool_hints.get("subprocess_os_error", {}), "level1")
+            hint = resolve_hint(_tool_hints.get("subprocess_os_error", {}), "level1")
             msg = _safe_format(hint, exc=exc) if hint else f"OS error executing tool: {exc}"
             return -1, "", msg, "os_error"
 
@@ -318,14 +317,14 @@ class ToolExecutionEngine:
                         data = json.load(f)
                     return self._parse_pytest_json(data, command, path)
                 except (json.JSONDecodeError, OSError):
-                    pass
+                    OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse pytest JSON report file", tool=command, path=str(report_path))
 
         # Fallback: try parsing stdout as JSON
         try:
             data = json.loads(stdout)
             return self._parse_pytest_json(data, command, path)
         except (json.JSONDecodeError, TypeError):
-            pass
+            OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse pytest stdout as JSON", tool=command, path=path)
 
         # Last resort: return a single candidate based on exit code
         # (exit_code is guaranteed to be 0 or 1 at this point due to early returns)
@@ -426,7 +425,7 @@ class ToolExecutionEngine:
                         violations = data[key]
                         break
         except (json.JSONDecodeError, TypeError):
-            pass
+            OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse ruff output as JSON", tool=command, path=path)
 
         status = (
             CoverageStatus.COMPLIANT.value
@@ -501,7 +500,7 @@ class ToolExecutionEngine:
                     if isinstance(data, dict):
                         errors_count = data.get("summary", {}).get("error_count", 0)
                 except (json.JSONDecodeError, OSError):
-                    pass
+                    OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse mypy JSON report", tool=command, path=str(report_path))
 
         # Fallback: count error lines in stdout
         if errors_count == 0 and exit_code == 1:
@@ -562,7 +561,7 @@ class ToolExecutionEngine:
                         if not isinstance(results, list):
                             results = []
                 except (json.JSONDecodeError, OSError):
-                    pass
+                    OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse bandit output file", tool=command, path=str(output_path))
 
         # Fallback: try parsing stdout
         if not results:
@@ -575,7 +574,7 @@ class ToolExecutionEngine:
                 elif isinstance(data, list):
                     results = data
             except (json.JSONDecodeError, TypeError):
-                pass
+                OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse bandit stdout as JSON", tool=command, path=path)
 
         status = (
             CoverageStatus.COMPLIANT.value
@@ -637,7 +636,7 @@ class ToolExecutionEngine:
         if tool_config is None:
             tool_config = self.get_tool_config(tool_category)
         if tool_config is None:
-            hint = _resolve_hint(_tool_hints.get("category_not_whitelisted", {}), "level1")
+            hint = resolve_hint(_tool_hints.get("category_not_whitelisted", {}), "level1")
             allowed = sorted(self._tool_configs.keys())
             msg = _safe_format(hint,
                 tool_category=tool_category, allowed_categories=', '.join(allowed),
@@ -773,7 +772,7 @@ class ToolExecutionEngine:
         elif output_format == "bandit_json":
             candidates = self._parse_bandit_output(stdout, stderr, exit_code, command, path)
         else:
-            hint = _resolve_hint(_tool_hints.get("unsupported_output_format", {}), "level1")
+            hint = resolve_hint(_tool_hints.get("unsupported_output_format", {}), "level1")
             msg = _safe_format(hint, output_format=output_format) if hint else f"Unsupported output format: {output_format}"
             candidates = [
                 ToolEvidenceCandidate(
@@ -866,6 +865,7 @@ class ToolExecutionEngine:
             with baseline_file.open("r", encoding="utf-8") as f:
                 data = json.load(f)
         except (json.JSONDecodeError, OSError):
+            OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse coverage baseline file", path=str(baseline_path))
             return []
 
         files = data.get("files")

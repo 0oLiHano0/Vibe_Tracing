@@ -824,31 +824,31 @@ def test_tool_evidence_candidate_unchanged() -> None:
 # ---------------------------------------------------------------------------
 
 class TestResolveHint:
-    """Verify _resolve_hint handles different hint value types."""
+    """Verify resolve_hint handles different hint value types."""
 
     def test_string_hint_returns_string(self) -> None:
-        """covers: _resolve_hint string branch"""
-        from vibe_tracing.tool_evidence_adapter import _resolve_hint
-        assert _resolve_hint("some hint") == "some hint"
+        """covers: resolve_hint string branch"""
+        from vibe_tracing.hint_loader import resolve_hint
+        assert resolve_hint("some hint") == "some hint"
 
     def test_dict_hint_returns_level1(self) -> None:
-        """covers: _resolve_hint dict branch (line 37-39)"""
-        from vibe_tracing.tool_evidence_adapter import _resolve_hint
+        """covers: resolve_hint dict branch"""
+        from vibe_tracing.hint_loader import resolve_hint
         hint = {"level1": "L1 text", "level2": "L2 text", "level3": "L3 text"}
-        assert _resolve_hint(hint, "level1") == "L1 text"
+        assert resolve_hint(hint, "level1") == "L1 text"
 
-    def test_dict_hint_falls_back_to_level3(self) -> None:
-        """covers: _resolve_hint dict branch with level3 fallback (line 40)"""
-        from vibe_tracing.tool_evidence_adapter import _resolve_hint
+    def test_dict_hint_falls_back_to_level1(self) -> None:
+        """covers: resolve_hint dict branch with level1 fallback"""
+        from vibe_tracing.hint_loader import resolve_hint
         hint = {"level3": "L3 only"}
-        assert _resolve_hint(hint, "level1") == "L3 only"
+        assert resolve_hint(hint, "level1") == ""
 
     def test_other_type_returns_empty(self) -> None:
-        """covers: _resolve_hint non-string/non-dict branch"""
-        from vibe_tracing.tool_evidence_adapter import _resolve_hint
-        assert _resolve_hint(123) == ""
-        assert _resolve_hint(None) == ""
-        assert _resolve_hint(["list"]) == ""
+        """covers: resolve_hint non-string/non-dict branch"""
+        from vibe_tracing.hint_loader import resolve_hint
+        assert resolve_hint(123) == ""
+        assert resolve_hint(None) == ""
+        assert resolve_hint(["list"]) == ""
 
 
 # ---------------------------------------------------------------------------
@@ -856,21 +856,29 @@ class TestResolveHint:
 # ---------------------------------------------------------------------------
 
 class TestLoadHints:
-    """Verify _load_hints gracefully handles missing/corrupt files."""
+    """Verify load_hints gracefully handles missing/corrupt files."""
 
     def test_missing_file_returns_empty_dict(self) -> None:
-        """covers: _load_hints FileNotFoundError branch (lines 31-32)"""
-        from vibe_tracing.tool_evidence_adapter import _load_hints
-        with patch("vibe_tracing.tool_evidence_adapter._HINTS_PATH", Path("/nonexistent/path.json")):
-            result = _load_hints("tool")
+        """covers: load_hints FileNotFoundError branch"""
+        import vibe_tracing.hint_loader as hl
+        from vibe_tracing.hint_loader import load_hints
+        # Clear cache to ensure the test hits the file read path
+        hl._cache.clear()
+        with patch("vibe_tracing.hint_loader._HINTS_PATH", Path("/nonexistent/path.json")):
+            result = load_hints("tool")
             assert result == {}
+        hl._cache.clear()
 
     def test_corrupt_json_returns_empty_dict(self) -> None:
-        """covers: _load_hints JSONDecodeError branch (lines 31-32)"""
-        from vibe_tracing.tool_evidence_adapter import _load_hints, _HINTS_PATH
+        """covers: load_hints JSONDecodeError branch"""
+        import vibe_tracing.hint_loader as hl
+        from vibe_tracing.hint_loader import load_hints, _HINTS_PATH
+        # Clear cache to ensure the test hits the file read path
+        hl._cache.clear()
         with patch.object(type(_HINTS_PATH), "read_text", side_effect=json.JSONDecodeError("", "", 0)):
-            result = _load_hints("tool")
+            result = load_hints("tool")
             assert result == {}
+        hl._cache.clear()
 
 
 # ---------------------------------------------------------------------------

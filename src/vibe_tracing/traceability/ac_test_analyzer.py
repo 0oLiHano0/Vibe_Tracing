@@ -7,6 +7,7 @@ test evidence record, and flags gaps for Must-priority ACs that lack test covera
 
 from typing import Any, Dict, List
 from vibe_tracing.core.enums import CoverageStatus
+from vibe_tracing.operational_logger import OperationalLogger
 
 
 class AcTestAnalyzer:
@@ -81,6 +82,12 @@ class AcTestAnalyzer:
                         "evidence_ids": evidence_ids,
                     }
                 )
+
+        OperationalLogger.get().debug("analyzer_result", "AcTestAnalyzer complete",
+            requirements_count=len(prd_requirements),
+            evidences_count=len(evidences),
+            gaps_count=len(gaps),
+            ac_coverage_count=len(ac_coverage))
 
         return {
             "ac_coverage": ac_coverage,

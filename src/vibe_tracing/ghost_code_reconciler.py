@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set
 
 from vibe_tracing.governance import load_boundary, is_in_scope
+from vibe_tracing.operational_logger import OperationalLogger
 
 class GhostCodeReconciler:
     """
@@ -50,7 +51,8 @@ class GhostCodeReconciler:
                 check=True
             )
             return {line.strip() for line in result.stdout.splitlines() if line.strip()}
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            OperationalLogger.get().warning("git_subprocess_failed", "Git operation failed: _get_staged_files", exc=e)
             print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             return set()
 
@@ -67,13 +69,15 @@ class GhostCodeReconciler:
                 check=True
             )
             staged_claims = json.loads(result.stdout)
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
+            OperationalLogger.get().warning("git_subprocess_failed", "Git not available for staged claims", exc=exc)
             print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             staged_claims = []
-        except subprocess.CalledProcessError:
-            # File not staged - no claims available
+        except subprocess.CalledProcessError as exc:
+            OperationalLogger.get().debug("claims_not_staged", "Claims file not in git index", exc=exc)
             staged_claims = []
         except Exception as exc:
+            OperationalLogger.get().exception("claims_parse_failed", "Could not parse staged claims", exc=exc)
             print(f"Warning: claims/current.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
             staged_claims = []
 
@@ -89,12 +93,15 @@ class GhostCodeReconciler:
                 check=True
             )
             head_claims = json.loads(result.stdout)
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
+            OperationalLogger.get().warning("git_subprocess_failed", "Git not available for head claims", exc=exc)
             print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             head_claims = []
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as exc:
+            OperationalLogger.get().debug("head_claims_not_found", "No HEAD claims available", exc=exc)
             head_claims = []
         except Exception as exc:
+            OperationalLogger.get().exception("head_claims_parse_failed", "Could not parse HEAD claims", exc=exc)
             print(f"Warning: claims/current.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
             head_claims = []
 
@@ -108,6 +115,7 @@ class GhostCodeReconciler:
             if staged_claim not in head_claims:
                 # It is a NEW or MODIFIED claim in this commit!
                 active_code_refs.update(staged_claim.get("code_refs", []))
+                active_code_refs.update(staged_claim.get("test_refs", []))
 
         return active_code_refs
 
@@ -173,9 +181,11 @@ class GhostCodeReconciler:
             if isinstance(data, list):
                 return data
             return []
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            OperationalLogger.get().warning("git_subprocess_failed", "Git operation failed: _get_staged_claims", exc=exc)
             return []
         except (json.JSONDecodeError, Exception) as exc:
+            OperationalLogger.get().exception("claims_parse_failed", "Could not parse staged claims", exc=exc)
             print(f"Warning: claims/current.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
             return []
 
@@ -190,7 +200,8 @@ class GhostCodeReconciler:
                 check=True,
             )
             return json.loads(result.stdout)
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as exc:
+            OperationalLogger.get().warning("task_list_load_failed", "Could not load staged task_list.json", exc=exc)
             return None
 
     def _get_head_tasks(self) -> Optional[dict]:
@@ -204,7 +215,8 @@ class GhostCodeReconciler:
                 check=True,
             )
             return json.loads(result.stdout)
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as exc:
+            OperationalLogger.get().warning("task_list_load_failed", "Could not load HEAD task_list.json", exc=exc)
             return None
 
     def _get_modified_task_ids(self) -> Set[str]:
@@ -374,8 +386,8 @@ class GhostCodeReconciler:
                 check=True,
             )
             prd_is_staged = True
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            pass
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            OperationalLogger.get().debug("prd_not_staged", "PRD file not in git index", exc=exc)
 
         # Get AC IDs from staged PRD
         staged_ac_ids: Set[str] = set()
@@ -425,5 +437,6 @@ class GhostCodeReconciler:
             content = result.stdout
             ac_pattern = re.compile(r"AC-[A-Z]+-\d+-\d+")
             return set(ac_pattern.findall(content))
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            OperationalLogger.get().warning("prd_ac_parse_failed", "Could not read staged PRD for AC extraction", exc=exc)
             return set()

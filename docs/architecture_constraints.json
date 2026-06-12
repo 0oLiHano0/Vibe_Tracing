@@ -969,6 +969,76 @@
         "full_sensitive_prompt"
       ],
       "verification_method": "manual"
+    },
+    {
+      "rule_id": "LOG-VT-010",
+      "title": "日志是运行时遥测，不是审计交付物",
+      "description": "日志系统记录 VT 自身的运行时内部状态（耗时、缓存、异常、子进程执行），用于 VT 开发者排错和性能优化。日志不得替代 Hints 体系的消费者指导功能，不得替代 JSON 报告的审计交付物功能。三者职责不重叠：Hints 指导消费者，报告交付审查结果，日志记录运行过程。",
+      "severity": "must",
+      "forbidden_fields": [
+        "hint_content_in_log",
+        "audit_as_evidence_source",
+        "report_conclusion_duplication"
+      ],
+      "verification_method": "manual"
+    },
+    {
+      "rule_id": "LOG-VT-011",
+      "title": "日志不得改变用户面向输出",
+      "description": "日志系统的引入不得修改现有的 CLI 输出（stdout print）、错误输出（stderr print）或 Dashboard 渲染。日志是旁路记录，不影响任何面向 Agent 或人类的输出内容。",
+      "severity": "must",
+      "forbidden_fields": [
+        "print_as_logger",
+        "log_format_in_cli_output",
+        "logging_failure_blocks_analysis"
+      ],
+      "verification_method": "manual"
+    },
+    {
+      "rule_id": "LOG-VT-012",
+      "title": "日志文件不纳入 VT 治理边界",
+      "description": ".vibetracing/logs/ 目录下的日志文件是 VT 运行的副产物，不属于业务代码或设计文件，不纳入 claim/task/AC 治理体系，不触发幽灵代码检测。",
+      "severity": "must",
+      "verification_method": "machine"
+    },
+    {
+      "rule_id": "LOG-VT-013",
+      "title": "日志不得引入外部依赖",
+      "description": "日志系统必须基于 Python 标准库 logging、json、time 模块实现，不得引入 structlog、loguru 或任何第三方日志库。",
+      "severity": "must",
+      "forbidden_fields": [
+        "structlog",
+        "loguru",
+        "python-json-logger"
+      ],
+      "verification_method": "machine"
+    },
+    {
+      "rule_id": "LOG-VT-014",
+      "title": "日志不得修改现有报告 schema 或输出格式",
+      "description": "日志系统的引入不得改变 evidence_index.json、traceability_report.json、dashboard.html 的 schema、字段或生成逻辑。日志是独立的输出产物，与报告无数据依赖。",
+      "severity": "must",
+      "forbidden_fields": [
+        "log_fields_in_report_json",
+        "schema_change_for_logging",
+        "circular_dependency_with_report"
+      ],
+      "verification_method": "manual"
+    },
+    {
+      "rule_id": "LOG-VT-015",
+      "title": "日志级别必须可通过 config.json 配置",
+      "description": "日志系统必须支持通过 config.json 的 logging.level 字段控制输出粒度，支持 DEBUG/INFO/WARNING/ERROR 四个级别，未配置时默认 DEBUG。不同级别只影响日志内容的详细程度，不影响 VT 的分析逻辑或门禁判定结果。",
+      "severity": "must",
+      "required_fields": [
+        "logging.level"
+      ],
+      "forbidden_fields": [
+        "log_level_affects_gate_decision",
+        "debug_logs_hint_consumer_content",
+        "missing_log_level_blocks_analysis"
+      ],
+      "verification_method": "machine"
     }
   ],
   "security_rules": [

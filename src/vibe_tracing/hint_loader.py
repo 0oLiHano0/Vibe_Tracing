@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
+from vibe_tracing.operational_logger import OperationalLogger
+
 _HINTS_PATH = Path(__file__).parent / "templates" / "field_hints.json"
 
 _cache: Dict[str, Dict[str, Any]] = {}
@@ -35,6 +37,7 @@ def load_hints(category: str) -> Dict[str, Any]:
         data = json.loads(_HINTS_PATH.read_text(encoding="utf-8"))
         result = data.get(category, {})
     except (FileNotFoundError, json.JSONDecodeError):
+        OperationalLogger.get().warning("hints_load_failed", f"Could not load hints category: {category}", path=str(_HINTS_PATH))
         result = {}
     _cache[category] = result
     return result
@@ -57,5 +60,12 @@ def resolve_hint(hint_value: Any, level: str = "level1") -> str:
     if isinstance(hint_value, str):
         return hint_value
     if isinstance(hint_value, dict):
-        return hint_value.get(level, hint_value.get("level1", ""))
+        result = hint_value.get(level, hint_value.get("level1", ""))
+        if not result:
+            OperationalLogger.get().debug("hint_fallback", "Hint resolved to empty",
+                requested_level=level, available_keys=list(hint_value.keys()))
+        return result
+    if hint_value:  # non-empty, non-dict, non-string
+        OperationalLogger.get().debug("hint_fallback", "Hint value is not string or dict",
+            hint_type=type(hint_value).__name__)
     return ""

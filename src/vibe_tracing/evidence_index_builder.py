@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Set
 
 from vibe_tracing.core.enums import CoverageStatus
+from vibe_tracing.operational_logger import OperationalLogger
 from vibe_tracing.schema_validator import SchemaValidator
 from vibe_tracing.task_loader import TaskListLoadResult
 
@@ -75,7 +76,7 @@ class EvidenceIndexBuilder:
                         raw_scan.replace("Z", "+00:00")
                     )
             except Exception:
-                pass
+                OperationalLogger.get().warning("evidence_index_load_failed", "Could not load previous evidence index for incremental build", path=str(output_path))
 
         # Build mtime lookup for files referenced in old evidence
         existing_mtimes: Dict[str, float] = {}
@@ -142,8 +143,13 @@ class EvidenceIndexBuilder:
         for ev in old_evidences:
             old_by_path.setdefault(ev.get("source_path", ""), []).append(ev)
 
+        # Track incremental build statistics
+        _reused_count = 0
+        _regenerated_count = 0
+
         # 1. Process Tasks
         if _should_regenerate(task_list_rel):
+            _regenerated_count += len(task_res.tasks)
             for task in task_res.tasks:
                 covers = sorted(
                     list(
@@ -178,7 +184,9 @@ class EvidenceIndexBuilder:
                     }
                 )
         else:
-            for ev in old_by_path.get(task_list_rel, []):
+            old_task_evs = old_by_path.get(task_list_rel, [])
+            _reused_count += len(old_task_evs)
+            for ev in old_task_evs:
                 evidences.append(ev)
                 task_id = ev.get("details", {}).get("task_id")
                 if task_id:
@@ -186,6 +194,7 @@ class EvidenceIndexBuilder:
 
         # 2. Process Claims & Code References
         if _should_regenerate(claims_file_rel):
+            _regenerated_count += len(claims_list)
             for claim in claims_list:
                 covers = task_covers_map.get(claim.related_task, [])
 
@@ -220,7 +229,9 @@ class EvidenceIndexBuilder:
                         }
                     )
         else:
-            for ev in old_by_path.get(claims_file_rel, []):
+            old_claim_evs = old_by_path.get(claims_file_rel, [])
+            _reused_count += len(old_claim_evs)
+            for ev in old_claim_evs:
                 evidences.append(ev)
 
         # 3. Process Tool Reports (always regenerated from ctx)
@@ -263,6 +274,12 @@ class EvidenceIndexBuilder:
                 if is_test or is_coverage:
                     ev["carried_over"] = True
                     evidences.append(ev)
+                    _reused_count += 1
+
+        # Log incremental build statistics
+        _regenerated_count += len(tool_evidence_candidates)
+        OperationalLogger.get().info("evidence_build", "Evidence index build stats",
+            total=len(evidences), reused=_reused_count, regenerated=_regenerated_count)
 
         # Assign sequential evidence IDs to all entries
         for idx, ev in enumerate(evidences):

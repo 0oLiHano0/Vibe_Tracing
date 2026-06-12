@@ -10,6 +10,8 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
+from vibe_tracing.operational_logger import OperationalLogger
+
 
 def git_show(commit: str, path: str, cwd: Path) -> Optional[str]:
     """Read file content at a specific commit.
@@ -33,7 +35,8 @@ def git_show(commit: str, path: str, cwd: Path) -> Optional[str]:
         if result.returncode == 0:
             return result.stdout
         return None
-    except Exception:
+    except Exception as e:
+        OperationalLogger.get().exception("git_utils_error", "Git operation failed: git_show", exc=e)
         return None
 
 
@@ -58,7 +61,8 @@ def git_last_commit_touching(path: str, cwd: Path) -> Optional[str]:
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
         return None
-    except Exception:
+    except Exception as e:
+        OperationalLogger.get().exception("git_utils_error", "Git operation failed: git_last_commit_touching", exc=e)
         return None
 
 
@@ -82,7 +86,8 @@ def git_file_modified_after(path: str, after_commit: str, cwd: Path) -> bool:
             text=True,
         )
         return result.returncode == 0 and bool(result.stdout.strip())
-    except Exception:
+    except Exception as e:
+        OperationalLogger.get().exception("git_utils_error", "Git operation failed: git_file_modified_after", exc=e)
         return False
 
 
@@ -121,5 +126,6 @@ def git_has_uncommitted_changes(path: str, cwd: Path) -> bool:
             return True
 
         return False
-    except Exception:
+    except Exception as e:
+        OperationalLogger.get().exception("git_utils_error", "Git operation failed: git_has_uncommitted_changes", exc=e)
         return False

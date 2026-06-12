@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "claim_id": "CLAIM-VT-002",
+    "related_task": "TASK-VT-015",
+    "code_refs": [
+      "src/vibe_tracing/commands/accept.py",
+      "src/vibe_tracing/merge_gate_engine.py",
+      "src/vibe_tracing/architecture_change_proposal.py",
+      "src/vibe_tracing/schemas/architecture_constraints.schema.json",
+      "src/vibe_tracing/templates/architecture_constraints.template.json",
+      "docs/architecture_constraints.json"
+    ],
+    "test_refs": [
+      "tests/test_cli_analyze.py",
+      "tests/test_merge_gate_engine.py"
+    ],
+    "notes": "Phase 1 补齐：accept 重写、MergeGate accepted_rule、proposals 填充、schema 清理",
+    "content_hash": "640140ebd535aecf"
+  }
+]

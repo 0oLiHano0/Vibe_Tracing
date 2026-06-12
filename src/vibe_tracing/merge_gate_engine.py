@@ -471,6 +471,8 @@ class MergeGateEngine:
         staged_items: Optional[Set[str]],
         evidence_index: Optional[Dict[str, Any]],
         reasons: List[str],
+        accepted_rule_target_ids: Optional[Set[str]] = None,
+        rejected_rule_target_ids: Optional[Set[str]] = None,
     ) -> Dict[str, Any]:
         """Sections 2.5 + 3: Final gate decision computation.
 
@@ -507,12 +509,17 @@ class MergeGateEngine:
             hint = resolve_hint(_gate_hints.get("all_gates_passed", {}), "level1")
             reasons.append(hint if hint else "所有质量门禁规则均已通过，无阻塞项或风险项。")
 
-        return {
+        result: Dict[str, Any] = {
             "gate_decision": gate_decision,
             "reasons": reasons,
             "blocked_items": blocked_items,
             "human_decisions_applied": human_decisions_applied,
         }
+        if accepted_rule_target_ids:
+            result["accepted_rule_target_ids"] = list(accepted_rule_target_ids)
+        if rejected_rule_target_ids:
+            result["rejected_rule_target_ids"] = list(rejected_rule_target_ids)
+        return result
 
     def evaluate(
         self,
@@ -596,16 +603,24 @@ class MergeGateEngine:
 
         accepted_risk_target_ids: Set[str] = set()
         resolved_gap_target_ids: Set[str] = set()
+        accepted_rule_target_ids: Set[str] = set()
+        rejected_rule_target_ids: Set[str] = set()
 
         for d in decisions_list:
             action = d.get("action", "")
             target_id = d.get("targetId", "")
+            category = d.get("category", "")
             if action == "accept_risk" and target_id:
                 accepted_risk_target_ids.add(target_id)
             elif action == "mark_complete" and target_id:
                 resolved_gap_target_ids.add(target_id)
+            elif category == "accepted_rule" and target_id:
+                if action == "reconfirm":
+                    accepted_rule_target_ids.add(target_id)
+                elif action == "reject":
+                    rejected_rule_target_ids.add(target_id)
 
-        human_decisions_applied = len(accepted_risk_target_ids) + len(resolved_gap_target_ids)
+        human_decisions_applied = len(accepted_risk_target_ids) + len(resolved_gap_target_ids) + len(accepted_rule_target_ids) + len(rejected_rule_target_ids)
 
         risk_staged = directly_staged_items if directly_staged_items is not None else staged_items
         gate_decision = "pass"
@@ -755,4 +770,5 @@ class MergeGateEngine:
             current_fail_detected, any_fail_detected,
             human_decisions_applied, staged_items,
             evidence_index, reasons,
+            accepted_rule_target_ids, rejected_rule_target_ids,
         )

@@ -988,10 +988,10 @@ def test_input_files_loaded_once(tmp_path, capsys):
 # =========================================================================
 
 def test_run_accept_rule_found(tmp_path):
-    """Test that run_accept finds and accepts a rule by rule_id."""
+    """Test that run_accept finds a manual rule and writes to human_decisions.json."""
     from vibe_tracing.cli import run_accept
 
-    # Set up architecture_constraints.json with a rule
+    # Set up architecture_constraints.json with a manual rule
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
     constraints = {
         "schema_version": "1.0.0",
@@ -1003,6 +1003,7 @@ def test_run_accept_rule_found(tmp_path):
                 "name": "Core Module",
                 "responsibility": "Core",
                 "related_requirements": [],
+                "verification_method": "manual",
             }
         ],
     }
@@ -1013,15 +1014,28 @@ def test_run_accept_rule_found(tmp_path):
     exit_code = run_accept(tmp_path, "MOD-TEST-001", accepted_by="agent-x")
     assert exit_code == 0
 
-    # Verify the rule was updated
+    # Verify constraints file was NOT modified
     data = json.loads((tmp_path / "docs" / "architecture_constraints.json").read_text())
     rule = data["module_boundaries"][0]
-    assert rule["accepted_by"] == "agent-x"
-    assert "accepted_at" in rule
+    assert "accepted_by" not in rule
+
+    # Verify human_decisions.json was created with the decision
+    decisions_path = tmp_path / ".vibetracing" / "human_decisions.json"
+    assert decisions_path.exists()
+    decisions_data = json.loads(decisions_path.read_text(encoding="utf-8"))
+    assert decisions_data["version"] == "1.0"
+    assert len(decisions_data["decisions"]) == 1
+    entry = decisions_data["decisions"][0]
+    assert entry["decision_id"] == 1
+    assert entry["category"] == "accepted_rule"
+    assert entry["targetId"] == "MOD-TEST-001"
+    assert entry["action"] == "accept"
+    assert entry["decidedBy"] == "agent-x"
+    assert "timestamp" in entry
 
 
 def test_run_accept_rule_already_accepted(tmp_path, capsys):
-    """Test that run_accept returns 0 when a rule is already accepted."""
+    """Test that run_accept returns 0 when a rule is already accepted in human_decisions.json."""
     from vibe_tracing.cli import run_accept
 
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
@@ -1035,8 +1049,7 @@ def test_run_accept_rule_already_accepted(tmp_path, capsys):
                 "name": "Core Module",
                 "responsibility": "Core",
                 "related_requirements": [],
-                "accepted_by": "human",
-                "accepted_at": "2025-01-01T00:00:00Z",
+                "verification_method": "manual",
             }
         ],
     }
@@ -1044,11 +1057,37 @@ def test_run_accept_rule_already_accepted(tmp_path, capsys):
         json.dumps(constraints, indent=2), encoding="utf-8"
     )
 
+    # Pre-populate human_decisions.json with an existing acceptance
+    (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
+    existing_decisions = {
+        "version": "1.0",
+        "decisions": [
+            {
+                "decision_id": 1,
+                "category": "accepted_rule",
+                "targetId": "MOD-TEST-001",
+                "action": "accept",
+                "reason": "",
+                "decidedBy": "human",
+                "timestamp": "2025-01-01T00:00:00Z",
+            }
+        ],
+    }
+    (tmp_path / ".vibetracing" / "human_decisions.json").write_text(
+        json.dumps(existing_decisions, indent=2), encoding="utf-8"
+    )
+
     exit_code = run_accept(tmp_path, "MOD-TEST-001")
     assert exit_code == 0
 
     captured = capsys.readouterr()
-    assert "already accepted" in captured.out
+    assert "already been accepted" in captured.out
+
+    # Verify no duplicate entry was added
+    decisions_data = json.loads(
+        (tmp_path / ".vibetracing" / "human_decisions.json").read_text(encoding="utf-8")
+    )
+    assert len(decisions_data["decisions"]) == 1
 
 
 def test_run_accept_rule_not_found(tmp_path, capsys):
@@ -1086,6 +1125,40 @@ def test_run_accept_missing_file(tmp_path, capsys):
     assert "not found" in captured.err
 
 
+def test_run_accept_non_manual_rule(tmp_path, capsys):
+    """Test that run_accept rejects rules with verification_method != 'manual'."""
+    from vibe_tracing.cli import run_accept
+
+    (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+    constraints = {
+        "schema_version": "1.0.0",
+        "project": {"project_id": "TEST", "name": "Test", "stage": "mvp", "language": "python"},
+        "language_tool_matrix": {},
+        "module_boundaries": [
+            {
+                "rule_id": "MOD-MACHINE-001",
+                "name": "Machine Rule",
+                "responsibility": "Machine verified",
+                "related_requirements": [],
+                "verification_method": "machine",
+            }
+        ],
+    }
+    (tmp_path / "docs" / "architecture_constraints.json").write_text(
+        json.dumps(constraints, indent=2), encoding="utf-8"
+    )
+
+    exit_code = run_accept(tmp_path, "MOD-MACHINE-001")
+    assert exit_code == 1
+
+    captured = capsys.readouterr()
+    assert "programmatic verification" in captured.err
+
+    # Verify human_decisions.json was NOT created
+    decisions_path = tmp_path / ".vibetracing" / "human_decisions.json"
+    assert not decisions_path.exists()
+
+
 def test_run_accept_via_cli(tmp_path, capsys):
     """Test run_accept via CLI main with accept subcommand."""
     from vibe_tracing.cli import run_accept
@@ -1097,7 +1170,7 @@ def test_run_accept_via_cli(tmp_path, capsys):
         "language_tool_matrix": {},
         "module_boundaries": [],
         "security_rules": [
-            {"rule_id": "SEC-001", "description": "No hardcoded secrets"}
+            {"rule_id": "SEC-001", "description": "No hardcoded secrets", "verification_method": "manual"}
         ],
     }
     (tmp_path / "docs" / "architecture_constraints.json").write_text(
@@ -1111,9 +1184,16 @@ def test_run_accept_via_cli(tmp_path, capsys):
     assert "SEC-001" in captured.out
     assert "test-agent" in captured.out
 
-    # Verify acceptance was written
+    # Verify acceptance was written to human_decisions.json
+    decisions_path = tmp_path / ".vibetracing" / "human_decisions.json"
+    assert decisions_path.exists()
+    decisions_data = json.loads(decisions_path.read_text(encoding="utf-8"))
+    assert decisions_data["decisions"][0]["targetId"] == "SEC-001"
+    assert decisions_data["decisions"][0]["decidedBy"] == "test-agent"
+
+    # Verify constraints file was NOT modified
     data = json.loads((tmp_path / "docs" / "architecture_constraints.json").read_text())
-    assert data["security_rules"][0]["accepted_by"] == "test-agent"
+    assert "accepted_by" not in data["security_rules"][0]
 
 
 # =========================================================================

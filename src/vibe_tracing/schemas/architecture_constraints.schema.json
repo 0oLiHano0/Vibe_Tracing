@@ -91,20 +91,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -169,20 +155,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -247,20 +219,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -340,20 +298,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -420,20 +364,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -494,20 +424,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -574,20 +490,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -654,20 +556,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -731,20 +619,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -799,20 +673,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -879,20 +739,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -952,20 +798,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -1026,20 +858,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -1089,20 +907,6 @@
           },
           "verification_method": {
             "type": "string"
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }
@@ -1238,20 +1042,6 @@
               "manual"
             ],
             "description": "Whether this rule can be automatically verified by VT (machine) or requires human review (manual). Manual rules are acknowledged but do not block the gate."
-          },
-          "accepted_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Name or identifier of the human who accepted this manual rule. Null if not yet accepted."
-          },
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "ISO 8601 timestamp of when this manual rule was accepted. Null if not yet accepted."
           }
         }
       }

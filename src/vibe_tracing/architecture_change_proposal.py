@@ -329,4 +329,27 @@ class ArchitectureChangeProposalEngine:
             }
         )
 
-        return _empty_result()
+        # Build proposals from detected diffs
+        proposals = []
+        for i, diff in enumerate(diffs):
+            action = diff.get("action", "modify")
+            path = diff.get("path", "")
+            proposals.append(
+                {
+                    "proposal_id": f"PROP-{i + 1}",
+                    "author": "system (auto-detected)",
+                    "rationale": f"架构约束变更检测：{action} {path}",
+                    "proposed_changes": [
+                        {
+                            "action": action,
+                            "constraint_path": path,
+                        }
+                    ],
+                    "status": "pending",
+                    "human_approval": None,
+                }
+            )
+
+        result = _empty_result()
+        result["proposals"] = proposals
+        return result

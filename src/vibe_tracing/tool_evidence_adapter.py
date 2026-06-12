@@ -949,6 +949,11 @@ class ToolExecutionEngine:
                 continue
 
             for category in self.validation_tools:
+                # Coverage is a batch tool handled separately by
+                # _measure_source_coverage() — skip per-file execution.
+                if category == "coverage":
+                    continue
+
                 config = self._tool_configs.get(category)
                 if config is None:
                     continue

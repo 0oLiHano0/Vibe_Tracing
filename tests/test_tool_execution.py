@@ -797,15 +797,6 @@ class TestExecuteAll:
         assert len(candidates) == 1
         assert mock_run.call_count == 1
 
-    def test_tool_file_type_map_default_values(self) -> None:
-        """covers: AC-VT-015a — TOOL_FILE_TYPE_MAP has expected structure."""
-        expected = {
-            "test": {".py"},
-            "lint": {".py"},
-            "type_check": {".py"},
-            "security": {".py"},
-        }
-        assert ToolExecutionEngine.TOOL_FILE_TYPE_MAP == expected
 
 
 # ---------------------------------------------------------------------------

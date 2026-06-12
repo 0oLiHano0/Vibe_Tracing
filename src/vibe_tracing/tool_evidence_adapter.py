@@ -83,17 +83,6 @@ class ToolExecutionEngine:
 
     DEFAULT_TIMEOUT = 120  # seconds
 
-    # Backward-compatible class attribute.  execute_all() no longer uses this;
-    # it derives the same information from language_tool_matrix at runtime.
-    # Kept here so that downstream code referencing the attribute continues
-    # to work until it is migrated.
-    TOOL_FILE_TYPE_MAP: Dict[str, set] = {
-        "test": {".py"},
-        "lint": {".py"},
-        "type_check": {".py"},
-        "security": {".py"},
-    }
-
     def __init__(
         self,
         language_tool_matrix: Dict[str, Dict[str, Any]],

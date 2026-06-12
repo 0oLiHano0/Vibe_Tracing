@@ -193,7 +193,10 @@ def _execute_tools(
 
 
 def _check_staged_extensions(project_root: Path, constraints: Optional[dict], config_language: Optional[str] = None) -> None:
-    """Warn about staged files whose extensions are not in the configured language_tool_matrix.
+    """Warn about staged code files whose extensions are not in any language's tool configuration.
+
+    Only checks extensions that have actual tool configurations (test/lint/type_check/security),
+    not bare extension declarations. This avoids false warnings for non-code files (.md, .json, .html, etc.).
 
     This is a WARNING-only check: it does not block the analysis pipeline.
     """
@@ -201,9 +204,22 @@ def _check_staged_extensions(project_root: Path, constraints: Optional[dict], co
         return
 
     ltm = constraints.get("language_tool_matrix", {})
-    lang_config = ltm.get(config_language, {})
-    configured_exts = set(lang_config.get("extensions", [".py"]))
-    if not configured_exts:
+    # Collect all extensions that have actual tool configurations
+    tool_configured_exts: Set[str] = set()
+    for lang_config in ltm.values():
+        if not isinstance(lang_config, dict):
+            continue
+        lang_exts = lang_config.get("extensions", [])
+        # Only include extensions from languages that have at least one tool configured
+        has_tools = any(
+            lang_config.get(cat)
+            for cat in ("test", "lint", "type_check", "security", "coverage")
+            if isinstance(lang_config.get(cat), dict)
+        )
+        if has_tools:
+            tool_configured_exts.update(lang_exts)
+
+    if not tool_configured_exts:
         return
 
     try:
@@ -226,8 +242,17 @@ def _check_staged_extensions(project_root: Path, constraints: Optional[dict], co
     unrecognized: Set[str] = set()
     for staged_file in staged_files:
         ext = Path(staged_file).suffix
-        if ext and ext not in configured_exts:
-            unrecognized.add(ext)
+        # Only warn about extensions that look like code but aren't configured
+        if ext and ext not in tool_configured_exts:
+            # Check if this extension is registered in ANY language (even without tools)
+            # If so, it's a known non-code type — skip warning
+            is_known_non_code = any(
+                ext in lang_config.get("extensions", [])
+                for lang_config in ltm.values()
+                if isinstance(lang_config, dict)
+            )
+            if not is_known_non_code:
+                unrecognized.add(ext)
 
     for ext in sorted(unrecognized):
         print(

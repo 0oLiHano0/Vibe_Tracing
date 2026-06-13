@@ -1637,7 +1637,8 @@
             check: `<span class="inline-icon" style="color: var(--status-pass)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`,
             alert: `<span class="inline-icon" style="color: var(--status-fail)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></span>`,
             warning: `<span class="inline-icon" style="color: var(--status-blocked)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>`,
-            search: `<span class="inline-icon" style="color: var(--text-secondary)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`
+            search: `<span class="inline-icon" style="color: var(--text-secondary)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`,
+            'shield-alert': `<span class="inline-icon" style="color: var(--status-blocked)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg></span>`
         };
 
         if (gateDecision === 'pass') {
@@ -2448,6 +2449,36 @@
                 }
             }
 
+            // F. Unaccepted manual rules from unclear_constraints
+            if (reportData.unclear_constraints) {
+                reportData.unclear_constraints.forEach(function(uc) {
+                    var ruleId = uc.rule_id || '';
+                    var reason = uc.reason || '';
+
+                    // Only show manual verification rules (they need human acceptance)
+                    if (reason.indexOf('Manual verification rule') === -1 &&
+                        reason.indexOf('human acceptance') === -1) {
+                        return; // Skip machine-verifiable unclear rules
+                    }
+
+                    decisions.push({
+                        id: 'unclear-' + ruleId,
+                        category: 'accepted_rule',
+                        targetId: ruleId,
+                        categoryLabel: '未接受的架构规则',
+                        icon: 'shield-alert',
+                        title: ruleId,
+                        status: 'pending',
+                        question: '此 manual 规则需要人工确认。是否接受？',
+                        actions: ['接受', '拒绝'],
+                        evidenceChain: [
+                            {label: '规则 ID', value: ruleId},
+                            {label: '原因', value: reason}
+                        ]
+                    });
+                });
+            }
+
             return decisions;
         }
 
@@ -2463,7 +2494,7 @@
 
             let html = '';
             for (const dec of decisions) {
-                const iconMap = { warning: SVG_INLINE.warning, cross: SVG_INLINE.alert, check: SVG_INLINE.check };
+                const iconMap = { warning: SVG_INLINE.warning, cross: SVG_INLINE.alert, check: SVG_INLINE.check, 'shield-alert': SVG_INLINE['shield-alert'] };
                 const icon = iconMap[dec.icon] || '<span class="inline-icon">•</span>';
 
                 html += `<div class="decision-card" data-id="${dec.id}" data-target-id="${dec.targetId || ''}">`;

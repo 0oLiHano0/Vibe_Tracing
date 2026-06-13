@@ -175,6 +175,14 @@ class MergeGateEngine:
                         "task_id": task_id,
                         "reason": "no_claim_for_task",
                     })
+                    OperationalLogger.get().debug("gate_ac_check", "AC coverage check",
+                        ac_id=ac_id,
+                        task_id=task_id,
+                        has_claims=False,
+                        has_test_results=bool(test_results),
+                        test_status="no_claim",
+                        covered=False,
+                        uncovered_reason="no_claim_for_task")
                 continue
 
             for ac_id in related_acs:
@@ -208,6 +216,23 @@ class MergeGateEngine:
                         "task_id": task_id,
                         "reason": reason,
                     })
+                    OperationalLogger.get().debug("gate_ac_check", "AC coverage check",
+                        ac_id=ac_id,
+                        task_id=task_id,
+                        has_claims=bool(related_claims),
+                        has_test_results=bool(test_results),
+                        test_status="failed" if any_claim_has_tests else "no_tests",
+                        covered=False,
+                        uncovered_reason=reason)
+                else:
+                    OperationalLogger.get().debug("gate_ac_check", "AC coverage check",
+                        ac_id=ac_id,
+                        task_id=task_id,
+                        has_claims=bool(related_claims),
+                        has_test_results=bool(test_results),
+                        test_status="passed",
+                        covered=True,
+                        uncovered_reason="")
 
         return uncovered
 
@@ -336,6 +361,7 @@ class MergeGateEngine:
             reason = gap.get("reason", "")
             target_id = gap.get("target_id", "")
             human_resolved = target_id in resolved_gap_target_ids
+            is_stale = gap.get("stale", False)
 
             if item_type == "ac":
                 hint = resolve_hint(_gate_hints.get("ac_missing_evidence", {}), "level1")
@@ -343,11 +369,26 @@ class MergeGateEngine:
                 related = {item_id} if item_id else None
                 if human_resolved:
                     reasons.append(self._tag_reason(f"[已人工完成] {msg}", related, staged_items))
+                    final_status = "human_resolved"
                 else:
                     reasons.append(self._tag_reason(msg, related, staged_items))
                     if self._is_current(related, staged_items):
                         blocked_items.append(msg)
                         has_blocked = True
+                        final_status = "blocked"
+                    else:
+                        final_status = "passed"
+                if is_stale:
+                    final_status = "skipped_stale"
+
+                OperationalLogger.get().debug("gate_gap_eval", "Gap item evaluated",
+                    item_id=item_id,
+                    item_type=item_type,
+                    is_stale=is_stale,
+                    is_human_resolved=human_resolved,
+                    human_decision_type="mark_complete" if human_resolved else "",
+                    final_status=final_status,
+                    reason=reason[:200])
         return has_blocked
 
     def _process_must_risks(
@@ -403,6 +444,16 @@ class MergeGateEngine:
                             msg_missing = hint_missing.format(risk_id=risk_id) if hint_missing else f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
                             blocked_items.append(msg_missing)
                             reasons.append(self._tag_reason(msg_missing, risk_related or None, risk_staged))
+
+                risk_final_status = "accepted" if human_accepted else ("blocked" if self._is_current(risk_related or None, risk_staged) else "passed")
+                OperationalLogger.get().debug("gate_risk_eval", "Risk item evaluated",
+                    risk_id=risk_id,
+                    severity=severity,
+                    is_stale=risk.get("stale", False),
+                    is_human_resolved=human_accepted,
+                    human_decision_type="accept_risk" if human_accepted else "",
+                    final_status=risk_final_status,
+                    business_impact=business_impact[:200])
         return has_blocked
 
     def _process_should_gaps(
@@ -648,8 +699,11 @@ class MergeGateEngine:
 
         OperationalLogger.get().debug("gate_human_decisions", "Human decisions lookup built",
             total_decisions=len(decisions_list),
+            decision_ids=[d.get("decision_id", d.get("targetId", "")) for d in decisions_list],
             accepted_risks=len(accepted_risk_target_ids),
+            accepted_risk_ids=sorted(accepted_risk_target_ids),
             resolved_gaps=len(resolved_gap_target_ids),
+            resolved_gap_ids=sorted(resolved_gap_target_ids),
             accepted_rules=len(accepted_rule_target_ids),
             rejected_rules=len(rejected_rule_target_ids))
 
@@ -801,7 +855,9 @@ class MergeGateEngine:
             any_fail_detected=any_fail_detected,
             current_fail_detected=current_fail_detected,
             blocked_count=len(blocked_items),
-            reasons_count=len(reasons))
+            reasons_count=len(reasons),
+            reasons_detail=[r[:200] for r in reasons[:10]],
+            blocked_ids=blocked_items[:10])
         return self._compute_gate_decision(
             gate_decision, blocked_items,
             current_fail_detected, any_fail_detected,

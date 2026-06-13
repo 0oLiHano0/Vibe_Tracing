@@ -506,10 +506,30 @@ class ClaimEvidenceAnalyzer:
                 }
             )
 
+            # Per-claim evidence chain debug log
+            missing_code_refs = [ref for ref in code_refs if ref not in ev_map]
+            missing_test_refs = [ref for ref in test_refs if ref not in ev_map]
+            claim_log_status = (
+                "self_referential" if has_self_ref_gap
+                else "missing_refs" if mismatches
+                else "valid"
+            )
+            OperationalLogger.get().debug("claim_mapping", "Claim evidence mapping",
+                claim_id=claim_id,
+                related_task=related_task,
+                code_refs_count=len(code_refs),
+                test_refs_count=len(test_refs),
+                evidence_refs_count=len(evidence_refs),
+                missing_code_refs=missing_code_refs[:20],
+                missing_test_refs=missing_test_refs[:20],
+                status=claim_log_status)
+
         OperationalLogger.get().debug("analyzer_result", "ClaimEvidenceAnalyzer complete",
             claims_count=len(claims),
+            claim_ids=[c.claim_id for c in claims],
             evidences_count=len(evidences),
             gaps_count=len(gaps),
+            gap_ids=[g.get("item_id") for g in gaps],
             risks_count=len(risks),
             claims_analysis_count=len(claims_analysis))
 

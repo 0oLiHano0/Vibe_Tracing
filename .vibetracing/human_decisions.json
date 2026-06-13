@@ -1,1 +1,14 @@
-{"version": "1.0", "decisions": []}
+{
+  "version": "1.0",
+  "decisions": [
+    {
+      "decision_id": 1,
+      "category": "accepted_rule",
+      "targetId": "PRINCIPLE-VT-001",
+      "action": "accept",
+      "reason": "",
+      "decidedBy": "human",
+      "timestamp": "2026-06-12T13:47:30Z"
+    }
+  ]
+}

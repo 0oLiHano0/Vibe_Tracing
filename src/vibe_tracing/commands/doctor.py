@@ -4,6 +4,8 @@ Doctor command -- scan governance data health and report issues.
 
 import json
 import sys
+import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
@@ -18,6 +20,20 @@ def run_doctor(project_root: Path) -> int:
       4. ac_mapping -- each task's related_acceptance_criteria exist in the PRD
       5. machine_rule_coverage -- architecture rules with verification_method=="machine" have no obvious checker
     """
+    # ---- Initialize operational logger (safe: doctor must still work if this fails) ----
+    vt_logger = None
+    try:
+        from vibe_tracing.operational_logger import OperationalLogger
+        vt_logger = OperationalLogger.init(
+            run_id=f"DOCTOR-{uuid.uuid4()}",
+            project_root=project_root,
+            level="DEBUG",
+        )
+        vt_logger.info("doctor_start", "Doctor diagnostic scan started")
+    except Exception:
+        vt_logger = None
+
+    _run_start_t = time.perf_counter()
     checks: List[Dict[str, Any]] = []
 
     # ---- Load governance data ----
@@ -29,28 +45,65 @@ def run_doctor(project_root: Path) -> int:
 
     # Load claims (tolerate missing files)
     claims_data: List[Dict[str, Any]] = []
+    _t = time.perf_counter()
     if claims_path.exists():
         try:
             with claims_path.open("r", encoding="utf-8") as f:
                 claims_data = json.load(f)
             if not isinstance(claims_data, list):
                 claims_data = []
-        except Exception:
+            if vt_logger:
+                vt_logger.info("doctor_load", "Loaded claims file",
+                               file="claims", result="pass",
+                               path=str(claims_path),
+                               claims_count=len(claims_data),
+                               duration_ms=int((time.perf_counter() - _t) * 1000))
+        except Exception as e:
             claims_data = []
+            if vt_logger:
+                vt_logger.exception("doctor_load", "Failed to parse claims file",
+                                    exc=e, file="claims", result="fail",
+                                    path=str(claims_path),
+                                    duration_ms=int((time.perf_counter() - _t) * 1000))
+    else:
+        if vt_logger:
+            vt_logger.info("doctor_load", "Claims file not found",
+                           file="claims", result="warning",
+                           path=str(claims_path),
+                           duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # Load tasks
     tasks_data: List[Dict[str, Any]] = []
+    _t = time.perf_counter()
     if task_list_path.exists():
         try:
             with task_list_path.open("r", encoding="utf-8") as f:
                 tldata = json.load(f)
             tasks_data = tldata.get("tasks", []) if isinstance(tldata, dict) else []
-        except Exception:
+            if vt_logger:
+                vt_logger.info("doctor_load", "Loaded task list",
+                               file="task_list", result="pass",
+                               path=str(task_list_path),
+                               tasks_count=len(tasks_data),
+                               duration_ms=int((time.perf_counter() - _t) * 1000))
+        except Exception as e:
             tasks_data = []
+            if vt_logger:
+                vt_logger.exception("doctor_load", "Failed to parse task list",
+                                    exc=e, file="task_list", result="fail",
+                                    path=str(task_list_path),
+                                    duration_ms=int((time.perf_counter() - _t) * 1000))
+    else:
+        if vt_logger:
+            vt_logger.info("doctor_load", "Task list not found",
+                           file="task_list", result="warning",
+                           path=str(task_list_path),
+                           duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # Load PRD requirement and AC IDs
     prd_req_ids: Set[str] = set()
     prd_ac_ids: Set[str] = set()
+    _t = time.perf_counter()
     if prd_path.exists():
         try:
             from vibe_tracing.prd_parser import PrdParser
@@ -60,26 +113,77 @@ def run_doctor(project_root: Path) -> int:
                 prd_req_ids.add(req.req_id)
                 for ac in req.acceptance_criteria:
                     prd_ac_ids.add(ac.ac_id)
-        except Exception:
-            pass
+            if vt_logger:
+                vt_logger.info("doctor_load", "Loaded and parsed PRD",
+                               file="prd", result="pass",
+                               path=str(prd_path),
+                               requirements_count=len(prd_req_ids),
+                               ac_count=len(prd_ac_ids),
+                               duration_ms=int((time.perf_counter() - _t) * 1000))
+        except Exception as e:
+            if vt_logger:
+                vt_logger.exception("doctor_load", "Failed to parse PRD",
+                                    exc=e, file="prd", result="fail",
+                                    path=str(prd_path),
+                                    duration_ms=int((time.perf_counter() - _t) * 1000))
+    else:
+        if vt_logger:
+            vt_logger.info("doctor_load", "PRD file not found",
+                           file="prd", result="warning",
+                           path=str(prd_path),
+                           duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # Load architecture constraints
     constraints_data: Dict[str, Any] = {}
+    _t = time.perf_counter()
     if constraints_path.exists():
         try:
             with constraints_path.open("r", encoding="utf-8") as f:
                 constraints_data = json.load(f)
-        except Exception:
+            if vt_logger:
+                vt_logger.info("doctor_load", "Loaded architecture constraints",
+                               file="constraints", result="pass",
+                               path=str(constraints_path),
+                               duration_ms=int((time.perf_counter() - _t) * 1000))
+        except Exception as e:
             constraints_data = {}
+            if vt_logger:
+                vt_logger.exception("doctor_load", "Failed to parse constraints",
+                                    exc=e, file="constraints", result="fail",
+                                    path=str(constraints_path),
+                                    duration_ms=int((time.perf_counter() - _t) * 1000))
+    else:
+        if vt_logger:
+            vt_logger.info("doctor_load", "Constraints file not found",
+                           file="constraints", result="warning",
+                           path=str(constraints_path),
+                           duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # Load evidence index (optional)
     evidence_index: Dict[str, Any] = {}
+    _t = time.perf_counter()
     if evidence_index_path.exists():
         try:
             with evidence_index_path.open("r", encoding="utf-8") as f:
                 evidence_index = json.load(f)
-        except Exception:
+            if vt_logger:
+                vt_logger.info("doctor_load", "Loaded evidence index",
+                               file="evidence_index", result="pass",
+                               path=str(evidence_index_path),
+                               duration_ms=int((time.perf_counter() - _t) * 1000))
+        except Exception as e:
             evidence_index = {}
+            if vt_logger:
+                vt_logger.exception("doctor_load", "Failed to parse evidence index",
+                                    exc=e, file="evidence_index", result="fail",
+                                    path=str(evidence_index_path),
+                                    duration_ms=int((time.perf_counter() - _t) * 1000))
+    else:
+        if vt_logger:
+            vt_logger.info("doctor_load", "Evidence index not found",
+                           file="evidence_index", result="warning",
+                           path=str(evidence_index_path),
+                           duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # Collect all evidence_ids from the index
     evidence_ids_in_index: Set[str] = set()
@@ -89,6 +193,7 @@ def run_doctor(project_root: Path) -> int:
             evidence_ids_in_index.add(eid)
 
     # ---- Check 1: evidence_refs_integrity ----
+    _t = time.perf_counter()
     issues_1: List[Dict[str, Any]] = []
     for claim in claims_data:
         claim_id = claim.get("claim_id", "")
@@ -106,8 +211,16 @@ def run_doctor(project_root: Path) -> int:
                 "message": f"Evidence ref '{ref}' not found in evidence index or on disk",
             })
     checks.append({"name": "evidence_refs_integrity", "issues": issues_1})
+    if vt_logger:
+        vt_logger.info("doctor_check", "Evidence refs integrity check",
+                       check="evidence_refs_integrity",
+                       result="pass" if not issues_1 else "fail",
+                       issues_count=len(issues_1),
+                       claims_checked=len(claims_data),
+                       duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # ---- Check 2: file_refs_integrity ----
+    _t = time.perf_counter()
     issues_2: List[Dict[str, Any]] = []
     for claim in claims_data:
         claim_id = claim.get("claim_id", "")
@@ -126,8 +239,16 @@ def run_doctor(project_root: Path) -> int:
                         "message": f"Referenced file '{path_part}' does not exist on disk",
                     })
     checks.append({"name": "file_refs_integrity", "issues": issues_2})
+    if vt_logger:
+        vt_logger.info("doctor_check", "File refs integrity check",
+                       check="file_refs_integrity",
+                       result="pass" if not issues_2 else "fail",
+                       issues_count=len(issues_2),
+                       claims_checked=len(claims_data),
+                       duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # ---- Check 3: requirement_mapping ----
+    _t = time.perf_counter()
     issues_3: List[Dict[str, Any]] = []
     for task in tasks_data:
         task_id = task.get("task_id", "")
@@ -139,8 +260,16 @@ def run_doctor(project_root: Path) -> int:
                     "message": f"Requirement '{req_id}' referenced by task '{task_id}' not found in PRD",
                 })
     checks.append({"name": "requirement_mapping", "issues": issues_3})
+    if vt_logger:
+        vt_logger.info("doctor_check", "Requirement mapping check",
+                       check="requirement_mapping",
+                       result="pass" if not issues_3 else "fail",
+                       issues_count=len(issues_3),
+                       tasks_checked=len(tasks_data),
+                       duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # ---- Check 4: ac_mapping ----
+    _t = time.perf_counter()
     issues_4: List[Dict[str, Any]] = []
     for task in tasks_data:
         task_id = task.get("task_id", "")
@@ -152,8 +281,16 @@ def run_doctor(project_root: Path) -> int:
                     "message": f"AC '{ac_id}' referenced by task '{task_id}' not found in PRD",
                 })
     checks.append({"name": "ac_mapping", "issues": issues_4})
+    if vt_logger:
+        vt_logger.info("doctor_check", "AC mapping check",
+                       check="ac_mapping",
+                       result="pass" if not issues_4 else "fail",
+                       issues_count=len(issues_4),
+                       tasks_checked=len(tasks_data),
+                       duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # ---- Check 5: machine_rule_coverage ----
+    _t = time.perf_counter()
     issues_5: List[Dict[str, Any]] = []
     if constraints_data:
         rule_keys = [
@@ -214,6 +351,13 @@ def run_doctor(project_root: Path) -> int:
                         ),
                     })
     checks.append({"name": "machine_rule_coverage", "issues": issues_5})
+    if vt_logger:
+        vt_logger.info("doctor_check", "Machine rule coverage check",
+                       check="machine_rule_coverage",
+                       result="pass" if not issues_5 else "warning",
+                       issues_count=len(issues_5),
+                       constraints_loaded=bool(constraints_data),
+                       duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # ---- Assemble report ----
     total_issues = sum(len(c["issues"]) for c in checks)
@@ -221,6 +365,20 @@ def run_doctor(project_root: Path) -> int:
         "checks": checks,
         "total_issues": total_issues,
     }
+
+    # ---- Log summary and end ----
+    if vt_logger:
+        check_summary = {}
+        for c in checks:
+            name = c["name"]
+            issue_count = len(c["issues"])
+            check_summary[name] = "pass" if issue_count == 0 else "fail"
+        total_duration_ms = int((time.perf_counter() - _run_start_t) * 1000)
+        vt_logger.info("doctor_end", "Doctor diagnostic scan completed",
+                       total_checks=len(checks),
+                       total_issues=total_issues,
+                       check_summary=check_summary,
+                       total_duration_ms=total_duration_ms)
 
     print(json.dumps(report, indent=2, ensure_ascii=False))
     return 0

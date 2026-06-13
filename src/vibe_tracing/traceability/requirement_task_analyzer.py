@@ -88,10 +88,33 @@ class RequirementTaskAnalyzer:
                 }
             )
 
+            # Build task ID lists for per-requirement debug log
+            related_task_ids = []
+            tasks_with_claims = []
+            tasks_without_claims = []
+            for ev in matching_evs:
+                t_id = ev.get("details", {}).get("task_id", ev.get("evidence_id", ""))
+                related_task_ids.append(t_id)
+                # A task evidence with status "covered" means it has claims
+                if ev.get("status") == CoverageStatus.COVERED.value:
+                    tasks_with_claims.append(t_id)
+                else:
+                    tasks_without_claims.append(t_id)
+
+            coverage_status = "missing" if status == CoverageStatus.MISSING.value else ("partial" if status == CoverageStatus.PARTIAL.value else "covered")
+            OperationalLogger.get().debug("req_mapping", "Requirement mapping",
+                req_id=req_id,
+                related_tasks=related_task_ids,
+                tasks_with_claims=tasks_with_claims,
+                tasks_without_claims=tasks_without_claims,
+                coverage_status=coverage_status)
+
         OperationalLogger.get().debug("analyzer_result", "RequirementTaskAnalyzer complete",
             requirements_count=len(prd_requirements),
+            requirement_ids=[r.req_id for r in prd_requirements],
             evidences_count=len(evidences),
             gaps_count=len(gaps),
+            gap_ids=[g.get("item_id") for g in gaps],
             coverage_count=len(requirement_coverage))
 
         return {

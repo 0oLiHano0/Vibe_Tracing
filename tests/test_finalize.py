@@ -933,3 +933,302 @@ def test_finalize_git_commit_failure_returns_1_re_finalize(tmp_path, capsys, mon
     captured = capsys.readouterr()
     assert "Error:" in captured.err
     assert "Failed to automatically commit" in captured.err
+
+
+# ── Operational logging tests ──────────────────────────────────────────────
+
+def _read_log_lines(tmp_path: Path) -> list[dict]:
+    """Read all JSONL log lines from .vibetracing/logs/."""
+    logs_dir = tmp_path / ".vibetracing" / "logs"
+    if not logs_dir.exists():
+        return []
+    log_files = sorted(logs_dir.glob("vt-*.jsonl"))
+    if not log_files:
+        return []
+    lines = []
+    for lf in log_files:
+        for line in lf.read_text(encoding="utf-8").strip().splitlines():
+            if line.strip():
+                lines.append(json.loads(line))
+    return lines
+
+
+def _find_events(log_lines: list[dict], event: str) -> list[dict]:
+    """Find all log entries with the given event name."""
+    return [entry for entry in log_lines if entry.get("event") == event]
+
+
+class TestFinalizeLogging:
+    """Tests for operational logging in vt finalize."""
+
+    def test_first_finalize_logs_run_start_and_run_end(self, tmp_path, capsys):
+        """First finalize must log run_start and run_end events."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        log_lines = _read_log_lines(tmp_path)
+        events = [entry["event"] for entry in log_lines]
+
+        assert "run_start" in events
+        assert "run_end" in events
+        # run_start must come before run_end
+        start_idx = events.index("run_start")
+        end_idx = events.index("run_end")
+        assert start_idx < end_idx
+
+    def test_first_finalize_logs_phase_timing(self, tmp_path, capsys):
+        """First finalize must log phase_end events with duration_ms."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        log_lines = _read_log_lines(tmp_path)
+        phase_ends = _find_events(log_lines, "phase_end")
+
+        phases = {pe["phase"] for pe in phase_ends if "phase" in pe}
+        assert "load_files" in phases
+        assert "prd_arch_mapping" in phases
+        assert "git_operations" in phases
+
+        # All phase_end entries must have duration_ms
+        for pe in phase_ends:
+            assert "duration_ms" in pe
+            assert pe["duration_ms"] >= 0
+
+    def test_first_finalize_logs_subprocess_calls(self, tmp_path, capsys):
+        """First finalize must log subprocess events for git commands."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        log_lines = _read_log_lines(tmp_path)
+        subprocess_entries = _find_events(log_lines, "subprocess")
+
+        assert len(subprocess_entries) > 0
+        # Each subprocess entry must have command and duration_ms
+        for entry in subprocess_entries:
+            assert "command" in entry
+            assert "duration_ms" in entry
+        # Entries from _logged_subprocess_run must also have exit_code
+        entries_with_exit = [e for e in subprocess_entries if "exit_code" in e]
+        assert len(entries_with_exit) > 0
+        for entry in entries_with_exit:
+            assert entry["exit_code"] == 0
+
+    def test_first_finalize_logs_hashes_at_debug(self, tmp_path, capsys):
+        """First finalize must log computed hashes at DEBUG level."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        log_lines = _read_log_lines(tmp_path)
+        hash_entries = _find_events(log_lines, "hashes_computed")
+
+        assert len(hash_entries) == 1
+        entry = hash_entries[0]
+        assert "constraints_hash" in entry
+        assert "prd_hash" in entry
+
+    def test_first_finalize_logs_config_written(self, tmp_path, capsys):
+        """First finalize must log config_written event."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        log_lines = _read_log_lines(tmp_path)
+        config_entries = _find_events(log_lines, "config_written")
+
+        assert len(config_entries) == 1
+        entry = config_entries[0]
+        assert entry.get("language") == "python"
+
+    def test_already_finalized_logs_and_returns(self, tmp_path, capsys):
+        """Re-finalize with no changes must log already_finalized and run_end."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        # First finalize
+        main(["finalize", "--project-root", str(tmp_path)])
+
+        # Reset logger singleton for second run
+        from vibe_tracing.operational_logger import OperationalLogger
+        OperationalLogger.reset()
+
+        # Second finalize
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        log_lines = _read_log_lines(tmp_path)
+        already = _find_events(log_lines, "already_finalized")
+        assert len(already) == 1
+        assert already[0].get("language") == "python"
+
+    def test_re_finalize_logs_git_operations(self, tmp_path, capsys):
+        """Re-finalize with changes must log git operations."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        # First finalize
+        main(["finalize", "--project-root", str(tmp_path)])
+
+        # Modify constraints (format change)
+        constraints_path = tmp_path / "docs" / "architecture_constraints.json"
+        data = json.loads(constraints_path.read_text(encoding="utf-8"))
+        constraints_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
+
+        from vibe_tracing.operational_logger import OperationalLogger
+        OperationalLogger.reset()
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        log_lines = _read_log_lines(tmp_path)
+        git_ops = _find_events(log_lines, "phase_end")
+        git_phases = [e for e in git_ops if e.get("phase") == "git_operations"]
+        assert len(git_phases) >= 1
+        assert "git_commit" in git_phases[-1]
+
+    def test_error_path_logs_error_event(self, tmp_path, capsys):
+        """When config.json is missing, must log error event."""
+        (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 1
+
+        log_lines = _read_log_lines(tmp_path)
+        error_entries = _find_events(log_lines, "config_missing")
+        assert len(error_entries) == 1
+
+    def test_missing_constraints_logs_error(self, tmp_path, capsys):
+        """When constraints file is missing, must log error event."""
+        _setup_project(tmp_path)
+        (tmp_path / "docs" / "architecture_constraints.json").unlink()
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 1
+
+        log_lines = _read_log_lines(tmp_path)
+        error_entries = _find_events(log_lines, "constraints_missing")
+        assert len(error_entries) == 1
+
+    def test_language_conflict_logs_error(self, tmp_path, capsys):
+        """Language conflict must log error event."""
+        _setup_project(tmp_path, config_data={
+            "project_id": "PROJECT-TEST",
+            "project_prefix": "TEST",
+            "project_name": "Test Project",
+            "language": "go",
+            "paths": {},
+        })
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 1
+
+        log_lines = _read_log_lines(tmp_path)
+        error_entries = _find_events(log_lines, "language_conflict")
+        assert len(error_entries) == 1
+
+    def test_git_commit_failure_logs_exception(self, tmp_path, capsys, monkeypatch):
+        """Git commit failure must log exception event."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        original_run = subprocess.run
+
+        def mock_run(args, **kwargs):
+            if isinstance(args, list) and len(args) >= 2 and args[0] == "git" and args[1] == "commit":
+                raise subprocess.CalledProcessError(1, args, stderr=b"commit failed")
+            return original_run(args, **kwargs)
+
+        monkeypatch.setattr(subprocess, "run", mock_run)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 1
+
+        log_lines = _read_log_lines(tmp_path)
+        exc_entries = _find_events(log_lines, "git_commit_failed")
+        assert len(exc_entries) == 1
+
+    def test_subprocess_error_logs_exit_code(self, tmp_path, capsys, monkeypatch):
+        """Failed subprocess must log the non-zero exit_code."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        original_run = subprocess.run
+
+        def mock_run(args, **kwargs):
+            if isinstance(args, list) and len(args) >= 2 and args[0] == "git" and args[1] == "commit":
+                raise subprocess.CalledProcessError(42, args, stderr=b"fail")
+            return original_run(args, **kwargs)
+
+        monkeypatch.setattr(subprocess, "run", mock_run)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 1
+
+        log_lines = _read_log_lines(tmp_path)
+        error_subprocess = _find_events(log_lines, "subprocess_error")
+        assert len(error_subprocess) >= 1
+        assert error_subprocess[0]["exit_code"] == 42
+
+    def test_run_end_includes_total_duration(self, tmp_path, capsys):
+        """run_end event must include total_duration_ms."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        log_lines = _read_log_lines(tmp_path)
+        run_ends = _find_events(log_lines, "run_end")
+        assert len(run_ends) == 1
+        assert "total_duration_ms" in run_ends[0]
+        assert run_ends[0]["total_duration_ms"] >= 0
+
+    def test_all_entries_have_run_id(self, tmp_path, capsys):
+        """Every log entry must contain a run_id starting with RUN-."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        log_lines = _read_log_lines(tmp_path)
+        assert len(log_lines) > 0
+        for entry in log_lines:
+            assert "run_id" in entry
+            assert entry["run_id"].startswith("RUN-")
+
+    def test_logger_init_failure_does_not_block_finalize(self, tmp_path, capsys, monkeypatch):
+        """If logger init fails, finalize must still work."""
+        _setup_project(tmp_path)
+        _init_git_repo(tmp_path)
+
+        # Force null logger by making log dir creation fail
+        from vibe_tracing.operational_logger import OperationalLogger
+
+        original_init = OperationalLogger.__init__
+
+        def failing_init(self, *args, **kwargs):
+            raise PermissionError("cannot create log dir")
+
+        monkeypatch.setattr(OperationalLogger, "__init__", failing_init)
+        monkeypatch.setattr(OperationalLogger, "_instance", None)
+
+        exit_code = main(["finalize", "--project-root", str(tmp_path)])
+        assert exit_code == 0
+
+        captured = capsys.readouterr()
+        assert "Vibe Tracing finalized" in captured.out

@@ -222,6 +222,23 @@ class ArchitectureComplianceChecker:
                         m_violations.append(
                             (f, imp_mod_name, msg)
                         )
+                        OperationalLogger.get().debug("compliance_import_violation", "Forbidden import detected",
+                            file=str(f.relative_to(self.project_root)) if self.project_root in f.parents else str(f),
+                            line=lineno,
+                            import_module=imp_name,
+                            imported_as_module=imp_mod_name,
+                            imported_module_id=imp_mod_id,
+                            rule_type="forbidden",
+                            module_id=m_id)
+                    else:
+                        # Log allowed cross-module imports at DEBUG level
+                        OperationalLogger.get().debug("compliance_import_allowed", "Cross-module import allowed",
+                            file=str(f.relative_to(self.project_root)) if self.project_root in f.parents else str(f),
+                            line=lineno,
+                            import_module=imp_name,
+                            imported_as_module=imp_mod_name,
+                            imported_module_id=imp_mod_id,
+                            module_id=m_id)
 
                     # Check allowed list (if defined, enforce whitelist except for core/self/standard library)
                     if allowed_ids is not None and imp_mod_id is not None and imp_mod_id not in allowed_ids:
@@ -234,6 +251,15 @@ class ArchitectureComplianceChecker:
                         m_violations.append(
                             (f, imp_mod_name, msg)
                         )
+                        OperationalLogger.get().debug("compliance_import_violation", "Import not in allowed whitelist",
+                            file=str(f.relative_to(self.project_root)) if self.project_root in f.parents else str(f),
+                            line=lineno,
+                            import_module=imp_name,
+                            imported_as_module=imp_mod_name,
+                            imported_module_id=imp_mod_id,
+                            rule_type="not_in_whitelist",
+                            module_id=m_id,
+                            allowed_ids=allowed_ids)
 
             # Log module boundary check details at DEBUG level
             _files_in_module = [f for f in file_imports if self._get_module_for_path(f, src_dir)[0] == m_id]
@@ -291,16 +317,23 @@ class ArchitectureComplianceChecker:
                 continue
 
             for imp_name, lineno in ims:
+                rel_f = str(f.relative_to(self.project_root)) if self.project_root in f.parents else str(f)
                 # Check for runtime package imports
-                if any(
-                    runtime in imp_name
-                    for runtime in ("claude_code", "hermes", "deepseek_tui")
-                ):
+                matched_runtime = next(
+                    (runtime for runtime in ("claude_code", "hermes", "deepseek_tui") if runtime in imp_name),
+                    None,
+                )
+                if matched_runtime:
                     hint = resolve_hint(_compliance_hints.get("prohibited_runtime_import", {}), "level1")
                     msg = hint.format(
                         file_name=f.name, line_number=lineno, import_name=imp_name,
                     ) if hint else f"Prohibited import of Agent Runtime package '{imp_name}' at line {lineno} in {f.name}"
                     dep_vt_001_violations.append((f, msg))
+                    OperationalLogger.get().debug("compliance_dep_vt001_match", "DEP-VT-001 runtime import matched",
+                        file=rel_f, line=lineno,
+                        import_module=imp_name,
+                        matched_runtime=matched_runtime,
+                        violation_type="runtime_package")
                 # Check if core imports adapter submodules
                 imp_mod_id, _ = self._get_module_for_import(imp_name)
                 if imp_mod_id == "MOD-VT-001":
@@ -309,6 +342,11 @@ class ArchitectureComplianceChecker:
                         file_name=f.name, line_number=lineno, import_name=imp_name,
                     ) if hint else f"Prohibited import of adapter module '{imp_name}' (module {imp_mod_id}) at line {lineno} in {f.name}"
                     dep_vt_001_violations.append((f, msg))
+                    OperationalLogger.get().debug("compliance_dep_vt001_match", "DEP-VT-001 adapter import matched",
+                        file=rel_f, line=lineno,
+                        import_module=imp_name,
+                        matched_module_id=imp_mod_id,
+                        violation_type="adapter_module")
 
         OperationalLogger.get().debug("compliance_check", "DEP-VT-001 check complete",
             rule_id="DEP-VT-001",
@@ -391,6 +429,15 @@ class ArchitectureComplianceChecker:
                         external_urls=', '.join(external_urls),
                     ) if hint else f"Dashboard references external front-end resources: {', '.join(external_urls)}"
                     dash_violations.append((dash_file, msg))
+
+                OperationalLogger.get().debug("compliance_dep_vt002_check", "DEP-VT-002 dashboard check",
+                    dashboard_file=str(dash_file.relative_to(self.project_root)) if self.project_root in dash_file.parents else str(dash_file),
+                    content_size=len(content),
+                    external_urls_found=len(external_urls),
+                    external_urls=[u[:200] for u in external_urls[:10]],
+                    has_inline_css="<style" in content.lower(),
+                    has_inline_js="<script" in content.lower() and "src=" not in content.lower(),
+                    status="violated" if external_urls else "compliant")
             except Exception as exc:
                 dash_violations.append(
                     (dash_file, f"Failed to check dashboard.html: {exc}")

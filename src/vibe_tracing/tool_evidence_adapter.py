@@ -225,6 +225,10 @@ class ToolExecutionEngine:
                                exit_code=result.returncode,
                                stdout_size=len(result.stdout or ""),
                                stderr_size=len(result.stderr or ""))
+                vt_logger.debug("subprocess_output", "Subprocess stdout/stderr",
+                                command=cmd_name,
+                                stdout_preview=(result.stdout or "")[:500],
+                                stderr_preview=(result.stderr or "")[:500])
             except Exception:
                 pass  # Never block on logging
             return result.returncode, result.stdout, result.stderr, None

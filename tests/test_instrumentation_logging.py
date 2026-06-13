@@ -405,3 +405,596 @@ class TestEvidenceIndexBuildLogging:
         assert "total" in build_events[0]
         assert "reused" in build_events[0]
         assert "regenerated" in build_events[0]
+
+
+# --------------------------------------------------------------------------
+# Per-item decision trace logging (MergeGateEngine)
+# --------------------------------------------------------------------------
+
+class TestMergeGatePerItemLogging:
+    """Tests for per-item DEBUG logging in MergeGateEngine gap/risk/AC evaluation."""
+
+    def test_must_gap_eval_log_emitted(self, tmp_path):
+        """_process_must_gaps must emit gate_gap_eval for each AC gap item."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.merge_gate_engine import MergeGateEngine
+
+        engine = MergeGateEngine(tmp_path)
+        gaps = [
+            {
+                "item_id": "AC-VT-001-01",
+                "item_type": "ac",
+                "target_id": "AC-VT-001-01",
+                "reason": "Must AC missing test coverage.",
+            }
+        ]
+        engine.evaluate(gaps=gaps, risks=[], prd_status="active")
+
+        events = _read_log_events(logger)
+        gap_events = _find_event(events, "gate_gap_eval")
+        assert len(gap_events) >= 1
+        ev = gap_events[0]
+        assert ev["item_id"] == "AC-VT-001-01"
+        assert ev["item_type"] == "ac"
+        assert ev["is_stale"] is False
+        assert ev["is_human_resolved"] is False
+        assert ev["final_status"] == "blocked"
+        assert "Must AC missing test coverage" in ev["reason"]
+
+    def test_must_gap_eval_human_resolved(self, tmp_path):
+        """gate_gap_eval must show human_resolved status when human decision matches."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.merge_gate_engine import MergeGateEngine
+
+        engine = MergeGateEngine(tmp_path)
+        gaps = [
+            {
+                "item_id": "AC-VT-001-01",
+                "item_type": "ac",
+                "target_id": "AC-VT-001-01",
+                "reason": "Missing test.",
+            }
+        ]
+        engine.evaluate(
+            gaps=gaps, risks=[], prd_status="active",
+            human_decisions={"decisions": [
+                {"action": "mark_complete", "targetId": "AC-VT-001-01", "category": ""},
+            ]},
+        )
+
+        events = _read_log_events(logger)
+        gap_events = _find_event(events, "gate_gap_eval")
+        assert len(gap_events) >= 1
+        ev = gap_events[0]
+        assert ev["is_human_resolved"] is True
+        assert ev["final_status"] == "human_resolved"
+        assert ev["human_decision_type"] == "mark_complete"
+
+    def test_must_risk_eval_log_emitted(self, tmp_path):
+        """_process_must_risks must emit gate_risk_eval for each risk item."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.merge_gate_engine import MergeGateEngine
+
+        engine = MergeGateEngine(tmp_path)
+        risks = [
+            {
+                "risk_id": "RISK-VT-001",
+                "severity": "must",
+                "description": "Self-referential claim found.",
+                "suggested_action": "Add external evidence.",
+                "business_impact": "Violates no-self-attestation.",
+            }
+        ]
+        engine.evaluate(gaps=[], risks=risks, prd_status="active")
+
+        events = _read_log_events(logger)
+        risk_events = _find_event(events, "gate_risk_eval")
+        assert len(risk_events) >= 1
+        ev = risk_events[0]
+        assert ev["risk_id"] == "RISK-VT-001"
+        assert ev["severity"] == "must"
+        assert ev["is_human_resolved"] is False
+        assert ev["final_status"] == "blocked"
+
+    def test_must_risk_eval_accepted(self, tmp_path):
+        """gate_risk_eval must show accepted status when human accepts risk."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.merge_gate_engine import MergeGateEngine
+
+        engine = MergeGateEngine(tmp_path)
+        risks = [
+            {
+                "risk_id": "RISK-VT-001",
+                "target_id": "RISK-VT-001",
+                "severity": "must",
+                "description": "Critical risk.",
+                "suggested_action": "Accept for now.",
+                "business_impact": "Low impact.",
+            }
+        ]
+        engine.evaluate(
+            gaps=[], risks=risks, prd_status="active",
+            human_decisions={"decisions": [
+                {"action": "accept_risk", "targetId": "RISK-VT-001", "category": ""},
+            ]},
+        )
+
+        events = _read_log_events(logger)
+        risk_events = _find_event(events, "gate_risk_eval")
+        assert len(risk_events) >= 1
+        ev = risk_events[0]
+        assert ev["is_human_resolved"] is True
+        assert ev["final_status"] == "accepted"
+        assert ev["human_decision_type"] == "accept_risk"
+
+    def test_gate_ac_check_log_emitted(self, tmp_path):
+        """check_ac_coverage must emit gate_ac_check for each AC checked."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.merge_gate_engine import MergeGateEngine
+
+        engine = MergeGateEngine(tmp_path)
+        tasks = [
+            {
+                "task_id": "TASK-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        engine.evaluate(
+            gaps=[], risks=[], prd_status="active",
+            claims=[], tasks=tasks,
+        )
+
+        events = _read_log_events(logger)
+        ac_events = _find_event(events, "gate_ac_check")
+        assert len(ac_events) >= 1
+        ev = ac_events[0]
+        assert ev["ac_id"] == "AC-VT-001-01"
+        assert ev["task_id"] == "TASK-001"
+        assert ev["has_claims"] is False
+        assert ev["covered"] is False
+        assert ev["uncovered_reason"] == "no_claim_for_task"
+
+    def test_gate_ac_check_covered_ac(self, tmp_path):
+        """gate_ac_check must show covered=True when AC has passing test."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.merge_gate_engine import MergeGateEngine
+
+        engine = MergeGateEngine(tmp_path)
+        tasks = [
+            {
+                "task_id": "TASK-001",
+                "priority": "must",
+                "related_acceptance_criteria": ["AC-VT-001-01"],
+            }
+        ]
+        claims = [
+            {
+                "claim_id": "CLAIM-001",
+                "related_task": "TASK-001",
+                "test_refs": ["tests/test_foo.py::test_bar"],
+            }
+        ]
+        evidence_index = {
+            "evidences": [
+                {
+                    "source_path": "tests/test_foo.py::test_bar",
+                    "status": "passed",
+                    "details": {"test_category": "test"},
+                }
+            ]
+        }
+        engine.evaluate(
+            gaps=[], risks=[], prd_status="active",
+            claims=claims, tasks=tasks,
+            evidence_index=evidence_index,
+        )
+
+        events = _read_log_events(logger)
+        ac_events = _find_event(events, "gate_ac_check")
+        assert len(ac_events) >= 1
+        covered_events = [e for e in ac_events if e.get("covered") is True]
+        assert len(covered_events) >= 1
+        assert covered_events[0]["test_status"] == "passed"
+
+
+# --------------------------------------------------------------------------
+# Import-level detail logging (ArchitectureComplianceChecker)
+# --------------------------------------------------------------------------
+
+class TestComplianceImportLogging:
+    """Tests for import-level DEBUG logging in ArchitectureComplianceChecker."""
+
+    def test_module_boundary_logs_allowed_imports(self, tmp_path):
+        """Module boundary check must log allowed cross-module imports."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+
+        # Create a minimal source file with an import
+        src_dir = tmp_path / "src" / "vibe_tracing"
+        src_dir.mkdir(parents=True, exist_ok=True)
+        (src_dir / "__init__.py").write_text("")
+
+        # Create a file in MOD-VT-002 that imports from MOD-VT-003
+        (src_dir / "raw_input_loader.py").write_text(
+            "from vibe_tracing.schema_validator import validate\n"
+        )
+        # Create the imported module file
+        (src_dir / "schema_validator.py").write_text("def validate(): pass\n")
+
+        constraints = {
+            "module_boundaries": [
+                {
+                    "module_id": "MOD-VT-002",
+                    "name": "raw_input_loader",
+                    "responsibility": "Loader",
+                    "allowed_to_call": ["MOD-VT-003"],
+                    "forbidden_to_call": [],
+                    "owned_files": ["raw_input_loader.py"],
+                },
+                {
+                    "module_id": "MOD-VT-003",
+                    "name": "schema_validator",
+                    "responsibility": "Validator",
+                    "allowed_to_call": [],
+                    "forbidden_to_call": [],
+                    "owned_files": ["schema_validator.py"],
+                },
+            ],
+            "quality_gates": [],
+        }
+
+        checker = ArchitectureComplianceChecker(tmp_path)
+        checker.check([], constraints_data=constraints)
+
+        events = _read_log_events(logger)
+        allowed_events = _find_event(events, "compliance_import_allowed")
+        assert len(allowed_events) >= 1
+        ev = allowed_events[0]
+        assert "raw_input_loader.py" in ev["file"]
+        assert ev["imported_module_id"] == "MOD-VT-003"
+        assert ev["module_id"] == "MOD-VT-002"
+
+    def test_module_boundary_logs_violation_imports(self, tmp_path):
+        """Module boundary check must log forbidden import violations."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+
+        src_dir = tmp_path / "src" / "vibe_tracing"
+        src_dir.mkdir(parents=True, exist_ok=True)
+        (src_dir / "__init__.py").write_text("")
+
+        # Create a file in MOD-VT-002 that imports from MOD-VT-006 (forbidden)
+        (src_dir / "raw_input_loader.py").write_text(
+            "from vibe_tracing.traceability_analyzer import analyze\n"
+        )
+        (src_dir / "traceability_analyzer.py").write_text("def analyze(): pass\n")
+
+        constraints = {
+            "module_boundaries": [
+                {
+                    "module_id": "MOD-VT-002",
+                    "name": "raw_input_loader",
+                    "responsibility": "Loader",
+                    "allowed_to_call": [],
+                    "forbidden_to_call": ["MOD-VT-006"],
+                    "owned_files": ["raw_input_loader.py"],
+                },
+                {
+                    "module_id": "MOD-VT-006",
+                    "name": "traceability_analyzer",
+                    "responsibility": "Analyzer",
+                    "allowed_to_call": [],
+                    "forbidden_to_call": [],
+                    "owned_files": ["traceability_analyzer.py"],
+                },
+            ],
+            "quality_gates": [],
+        }
+
+        checker = ArchitectureComplianceChecker(tmp_path)
+        checker.check([], constraints_data=constraints)
+
+        events = _read_log_events(logger)
+        violation_events = _find_event(events, "compliance_import_violation")
+        assert len(violation_events) >= 1
+        ev = violation_events[0]
+        assert ev["rule_type"] == "forbidden"
+        assert ev["imported_module_id"] == "MOD-VT-006"
+        assert ev["module_id"] == "MOD-VT-002"
+
+    def test_dep_vt002_logs_dashboard_check(self, tmp_path):
+        """DEP-VT-002 must log what was checked in dashboard.html."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+
+        # Create a dashboard.html with inline content
+        dash_dir = tmp_path / "output"
+        dash_dir.mkdir(parents=True, exist_ok=True)
+        (dash_dir / "dashboard.html").write_text(
+            "<html><head><style>body{}</style></head><body>Hello</body></html>"
+        )
+
+        constraints = {"module_boundaries": [], "quality_gates": []}
+        checker = ArchitectureComplianceChecker(tmp_path)
+        checker.check([], constraints_data=constraints)
+
+        events = _read_log_events(logger)
+        dep_events = _find_event(events, "compliance_dep_vt002_check")
+        assert len(dep_events) >= 1
+        ev = dep_events[0]
+        assert ev["external_urls_found"] == 0
+        assert ev["status"] == "compliant"
+        assert ev["has_inline_css"] is True
+
+    def test_dep_vt002_logs_external_url_violation(self, tmp_path):
+        """DEP-VT-002 must log external URLs found in dashboard."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+
+        dash_dir = tmp_path / "output"
+        dash_dir.mkdir(parents=True, exist_ok=True)
+        (dash_dir / "dashboard.html").write_text(
+            '<html><head><script src="https://cdn.example.com/lib.js"></script></head></html>'
+        )
+
+        constraints = {"module_boundaries": [], "quality_gates": []}
+        checker = ArchitectureComplianceChecker(tmp_path)
+        checker.check([], constraints_data=constraints)
+
+        events = _read_log_events(logger)
+        dep_events = _find_event(events, "compliance_dep_vt002_check")
+        assert len(dep_events) >= 1
+        ev = dep_events[0]
+        assert ev["external_urls_found"] >= 1
+        assert ev["status"] == "violated"
+
+
+# --------------------------------------------------------------------------
+# Mapping chain logging (Traceability Analyzers)
+# --------------------------------------------------------------------------
+
+class TestRequirementMappingLogging:
+    """Tests for per-requirement mapping DEBUG logs."""
+
+    def test_req_mapping_log_emitted(self, tmp_path):
+        """RequirementTaskAnalyzer must emit req_mapping for each requirement."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
+
+        analyzer = RequirementTaskAnalyzer()
+
+        mock_req = MagicMock()
+        mock_req.req_id = "REQ-VT-001"
+        mock_req.priority = "must"
+        mock_req.title = "Test Req"
+
+        analyzer.analyze([mock_req], [])
+
+        events = _read_log_events(logger)
+        mapping_events = _find_event(events, "req_mapping")
+        assert len(mapping_events) >= 1
+        ev = mapping_events[0]
+        assert ev["req_id"] == "REQ-VT-001"
+        assert ev["related_tasks"] == []
+        assert ev["coverage_status"] == "missing"
+
+    def test_req_mapping_with_task_evidence(self, tmp_path):
+        """req_mapping must include task IDs when task evidence exists."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
+
+        analyzer = RequirementTaskAnalyzer()
+
+        mock_req = MagicMock()
+        mock_req.req_id = "REQ-VT-001"
+        mock_req.priority = "must"
+        mock_req.title = "Test Req"
+
+        evidences = [
+            {
+                "evidence_id": "EV-001",
+                "source_type": "task",
+                "status": "covered",
+                "covers": ["REQ-VT-001"],
+                "details": {"task_id": "TASK-VT-001"},
+            }
+        ]
+
+        analyzer.analyze([mock_req], evidences)
+
+        events = _read_log_events(logger)
+        mapping_events = _find_event(events, "req_mapping")
+        assert len(mapping_events) >= 1
+        ev = mapping_events[0]
+        assert ev["req_id"] == "REQ-VT-001"
+        assert "TASK-VT-001" in ev["related_tasks"]
+        assert ev["coverage_status"] == "covered"
+
+
+class TestAcMappingLogging:
+    """Tests for per-AC test mapping DEBUG logs."""
+
+    def test_ac_mapping_log_emitted(self, tmp_path):
+        """AcTestAnalyzer must emit ac_mapping for each AC."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
+
+        analyzer = AcTestAnalyzer()
+
+        mock_ac = MagicMock()
+        mock_ac.ac_id = "AC-VT-001-01"
+        mock_ac.is_testing_required = True
+
+        mock_req = MagicMock()
+        mock_req.priority = "must"
+        mock_req.acceptance_criteria = [mock_ac]
+
+        analyzer.analyze([mock_req], [])
+
+        events = _read_log_events(logger)
+        mapping_events = _find_event(events, "ac_mapping")
+        assert len(mapping_events) >= 1
+        ev = mapping_events[0]
+        assert ev["ac_id"] == "AC-VT-001-01"
+        assert ev["covered"] is False
+        assert ev["uncovered_reason"] == "no_tests"
+
+    def test_ac_mapping_with_passing_test(self, tmp_path):
+        """ac_mapping must show covered=True when passing test exists."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
+
+        analyzer = AcTestAnalyzer()
+
+        mock_ac = MagicMock()
+        mock_ac.ac_id = "AC-VT-001-01"
+        mock_ac.is_testing_required = True
+
+        mock_req = MagicMock()
+        mock_req.priority = "must"
+        mock_req.acceptance_criteria = [mock_ac]
+
+        evidences = [
+            {
+                "evidence_id": "EV-001",
+                "source_type": "test",
+                "source_path": "tests/test_foo.py::test_bar",
+                "status": "covered",
+                "covers": ["AC-VT-001-01"],
+                "details": {},
+            },
+            {
+                "evidence_id": "EV-002",
+                "source_type": "task",
+                "status": "covered",
+                "covers": ["AC-VT-001-01"],
+                "details": {"task_id": "TASK-001"},
+            },
+        ]
+
+        analyzer.analyze([mock_req], evidences)
+
+        events = _read_log_events(logger)
+        mapping_events = _find_event(events, "ac_mapping")
+        assert len(mapping_events) >= 1
+        ev = mapping_events[0]
+        assert ev["ac_id"] == "AC-VT-001-01"
+        assert ev["covered"] is True
+        assert ev["parent_task_id"] == "TASK-001"
+        assert "tests/test_foo.py::test_bar" in ev["test_refs"]
+
+
+class TestClaimMappingLogging:
+    """Tests for per-claim evidence chain DEBUG logs."""
+
+    def test_claim_mapping_log_emitted(self, tmp_path):
+        """ClaimEvidenceAnalyzer must emit claim_mapping for each claim."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+
+        analyzer = ClaimEvidenceAnalyzer(tmp_path)
+
+        mock_claim = MagicMock()
+        mock_claim.claim_id = "CLAIM-001"
+        mock_claim.claimed_status = "covered"
+        mock_claim.related_task = "TASK-001"
+        mock_claim.evidence_refs = []
+        mock_claim.code_refs = ["src/foo.py"]
+        mock_claim.test_refs = ["tests/test_foo.py"]
+
+        analyzer.analyze([mock_claim], [])
+
+        events = _read_log_events(logger)
+        mapping_events = _find_event(events, "claim_mapping")
+        assert len(mapping_events) >= 1
+        ev = mapping_events[0]
+        assert ev["claim_id"] == "CLAIM-001"
+        assert ev["related_task"] == "TASK-001"
+        assert ev["code_refs_count"] == 1
+        assert ev["test_refs_count"] == 1
+        assert ev["status"] == "self_referential"
+
+    def test_claim_mapping_valid_status(self, tmp_path):
+        """claim_mapping must show valid status when evidence is complete."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+
+        analyzer = ClaimEvidenceAnalyzer(tmp_path)
+
+        mock_claim = MagicMock()
+        mock_claim.claim_id = "CLAIM-001"
+        mock_claim.claimed_status = "covered"
+        mock_claim.related_task = "TASK-001"
+        mock_claim.evidence_refs = ["EV-001"]
+        mock_claim.code_refs = []
+        mock_claim.test_refs = []
+
+        evidences = [
+            {
+                "evidence_id": "EV-001",
+                "source_type": "tool",
+                "source_path": "src/foo.py",
+                "status": "covered",
+                "covers": [],
+                "details": {},
+            },
+            {
+                "evidence_id": "EV-TASK",
+                "source_type": "task",
+                "source_path": "",
+                "status": "covered",
+                "covers": [],
+                "details": {"task_id": "TASK-001"},
+            },
+        ]
+
+        analyzer.analyze([mock_claim], evidences)
+
+        events = _read_log_events(logger)
+        mapping_events = _find_event(events, "claim_mapping")
+        assert len(mapping_events) >= 1
+        ev = mapping_events[0]
+        assert ev["claim_id"] == "CLAIM-001"
+        assert ev["status"] == "valid"
+
+
+# --------------------------------------------------------------------------
+# Subprocess output logging (ToolExecutionEngine)
+# --------------------------------------------------------------------------
+
+class TestSubprocessOutputLogging:
+    """Tests for subprocess stdout/stderr DEBUG logging."""
+
+    def test_subprocess_output_log_emitted(self, tmp_path):
+        """_run_subprocess must emit subprocess_output with stdout/stderr preview."""
+        logger = _init_logger(tmp_path)
+        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+
+        # Create a minimal language_tool_matrix
+        matrix = {
+            "python": {
+                "extensions": [".py"],
+                "test": {
+                    "default_command": "echo hello",
+                    "output_format": "pytest_json",
+                },
+            }
+        }
+        engine = ToolExecutionEngine(
+            language_tool_matrix=matrix,
+            language="python",
+            validation_tools=["test"],
+            project_root=tmp_path,
+        )
+
+        # Run a simple command via _run_subprocess
+        engine._run_subprocess("echo 'test output'")
+
+        events = _read_log_events(logger)
+        output_events = _find_event(events, "subprocess_output")
+        assert len(output_events) >= 1
+        ev = output_events[0]
+        assert "echo" in ev["command"]
+        assert "test output" in ev["stdout_preview"]
+        assert ev["stderr_preview"] == ""

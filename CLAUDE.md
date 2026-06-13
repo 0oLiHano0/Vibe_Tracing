@@ -128,8 +128,8 @@ vt analyze  # 完整分析（不含 --gates-only）
 
 - 只接受 `verification_method == "manual"` 的规则
 - 重复 accept 同一规则会提示"已被接受"
-- machine 规则被拒绝（需程序验证，不支持人工确认）
-- 迁移旧数据：`vt migrate-accepted-rules`（将 constraints.json 中的 embedded accepted_by 迁移到 human_decisions.json）
+- machine 规则被拒绝（需程序验证，无需人工确认）
+- 迁移旧数据已完成（constraints.json 中的 embedded accepted_by 已清理）
 
 ## 不可跳过的行为
 
@@ -305,13 +305,10 @@ for d in data.get('decisions', []):
 "
 
 # 2. 检查 compliance checker 是否读取了 human_decisions
-# 如果 accept 后 constraints.json 中仍有 accepted_by 字段（旧数据），
-# 运行迁移脚本：vt migrate-accepted-rules
 ```
 
 常见原因：
 - accept 写入了 human_decisions.json 但 compliance checker 未收到（检查 pipeline 是否传递了 human_decisions 参数）
-- 旧数据中 constraints.json 仍有 embedded accepted_by（运行 `vt migrate-accepted-rules` 迁移）
 
 **场景 10：coverage_json 格式错误？**
 

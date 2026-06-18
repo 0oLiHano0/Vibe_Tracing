@@ -42,14 +42,14 @@
 
 ### 关键偏离
 
-| 偏离项 | 说明 |
-|---|---|
-| Phase 执行顺序偏离 | 原计划 Phase 1→2→3，实际 Phase 2 先于 Phase 3 完成（domain/ 移动 + claim_loader 重构），但 cli/ 目录（Phase 3）未动 |
-| commands/ 目录残留 | `commands/` 目录及其中 10 个 analyze 子模块仍在原位，import 路径全部仍是 `vibe_tracing.commands.*` |
-| cli.py 未迁移 | `cli.py` 仍在根目录，未移入 `cli/main.py`，仍引用 `vibe_tracing.commands.*` |
-| db.py 零调用 | db.py 接口完整实现，但 pipeline.py 未调用任何 db 函数（init_in_memory_db、load_tasks 等） |
-| current.json 仍被引用 | pipeline.py、ghost_code_reconciler.py、doctor.py、tools.py 等多处仍引用 `claims/current.json` |
-| evidence_index.json 仍被使用 | pipeline.py 仍输出单一 evidence_index.json，未拆分为 evidences/ |
+| 偏离项 | 说明 | 状态 |
+|---|---|---|
+| Phase 执行顺序偏离 | 原计划 Phase 1→2→3，实际 Phase 2 先于 Phase 3 完成 | ✅ 已收敛 |
+| commands/ 目录残留 | 已移入 cli/ | ✅ 已解决 |
+| cli.py 未迁移 | 已移入 cli/main.py | ✅ 已解决 |
+| db.py 零调用 | pipeline.py 已接入 db 函数 | ✅ 已解决 |
+| current.json 引用残留 | 已清理（ghost_code_reconciler 除外） | ✅ 大部分已解决 |
+| evidence_index.json | 已拆分为 evidences/ | ✅ 已解决 |
 
 ---
 
@@ -592,44 +592,44 @@ def load_tasks(conn, tasks):
 
 | # | GAP 编号 | 涉及文件 | 优先级 | 简述 | 状态 |
 |---|---|---|---|---|---|
-| 1 | GAP-CMD-001 | `commands/` 整个目录 | P0 | commands/ 目录未迁入 cli/，10 个 analyze 子模块仍在原位 | [ ] |
-| 2 | GAP-CMD-002 | `cli.py` | P0 | cli.py 未迁移为 cli/main.py，仍引用 `vibe_tracing.commands.*` | [ ] |
-| 3 | GAP-CMD-003 | `cli.py` re-export | P0 | cli.py 仍 re-export `_archive_claims` 和 `_run_claim_tests` | [ ] |
-| 4 | GAP-DB-001 | `pipeline.py` | P0 | pipeline.py 未调用 `init_in_memory_db()` 或任何 db 函数 | [ ] |
-| 5 | GAP-DB-002 | `pipeline.py` | P0 | pipeline.py 仍输出单一 `evidence_index.json`，未拆分 | [ ] |
-| 6 | GAP-CLAIM-001 | `pipeline.py` | P0 | `_auto_generate_claim_from_staged()` 仍写入 `claims/current.json`（第 63 行），需改为写入 `CLAIM-*.json`（每次运行持续产生旧架构产物） | [ ] |
-| 7 | GAP-CLAIM-002 | `ghost_code_reconciler.py` | P1 | ghost_code_reconciler.py 仍引用 `claims/current.json` 路径 | [ ] |
-| 8 | GAP-CLAIM-003 | `doctor.py` | P1 | doctor.py 检查 `claims/current.json` 是否存在（第 40 行），需改为检查 `claims/` 目录或 glob `CLAIM-*.json` | [ ] |
-| 9 | GAP-CLAIM-004 | `tools.py` | P0 | `_archive_claims()` 读取 `current.json` 并移动到 archive（第 271 行）→ **彻底删除该函数**（每次 pipeline 运行持续产生旧架构副作用） | [ ] |
-| 10 | GAP-CLAIM-005 | `config.template.json` | P1 | 模板仍引用 `claims/current.json`（每次 `vt init` 会生成指向旧架构路径的配置，是债务源头） | [ ] |
-| 11 | GAP-CLAIM-006 | `prd_analysis.template.md` | P1 | 模板仍引用 `claims/current.json`（Agent 生成分析文档时会复制旧架构路径） | [ ] |
-| 12 | GAP-CLAIM-007 | `field_hints.json` | P2 | hints 仍引用 `claims/current.json` 和 `evidence_index.json` | [ ] |
-| 12b | GAP-CLAIM-008 | `raw_input_loader.py` | P0 | claims 加载仍 hardcode `current.json` 路径，需改为 git staged 多文件 `CLAIM-*.json`。**此 GAP 是 validation 模块正常工作的前置条件** | [ ] |
-| 12c | GAP-CLAIM-009 | `claim_loader.py` | P0 | `load()` 仍保留单文件分支（第 94-105 行），支持 `claims_path` 指向 `current.json`。需删除该分支，仅保留 content 直接传入和目录 glob 两种模式 | [ ] |
-| 12d | GAP-CLAIM-010 | `init_cmd.py` | P1 | `vt init` 仍创建 `current.json` 模板文件，需改为创建 `claims/` 目录 + `.gitkeep`（不创建 claim 模板文件，Claim 由 Agent 按需创建） | [ ] |
-| 12e | GAP-CLAIM-011 | `output.py` | P3 | 错误提示仍引导用户手动创建 `current.json`，需改为 `CLAIM-*.json` | [ ] |
-| 12f | GAP-CLAIM-012 | `evidence_index_builder.py` | P1 | fallback 路径仍硬编码 `current.json`（第 128 行），需删除该 fallback，manifest 中的 content 已由 raw_input_loader 提供 | [ ] |
-| 13 | GAP-EVID-001 | `pipeline.py` | P1 | `_run_claim_tests()` 仍存在且被调用 | [ ] |
-| 14 | GAP-EVID-002 | `analysis.py` | P1 | `_run_claim_tests()` 函数定义仍存在 | [ ] |
-| 15 | GAP-EVID-003 | `evidence_index_builder.py` | P1 | 类名仍为 `EvidenceIndexBuilder`，未重命名为 `EvidenceBuilder` | [ ] |
-| 16 | GAP-EVID-004 | `evidence_index_builder.py` | P1 | 仍使用 mtime 比对逻辑，未改为 SQLite UPSERT | [ ] |
-| 17 | GAP-EVID-005 | `infra/validation/schemas/evidence_index.schema.json` | P2 | 旧 schema 仍存在，未被拆分 schema 替代 | [ ] |
+| 1 | GAP-CMD-001 | `commands/` 整个目录 | P0 | commands/ 目录未迁入 cli/ | [x] Phase 3 |
+| 2 | GAP-CMD-002 | `cli.py` | P0 | cli.py 未迁移为 cli/main.py | [x] Phase 3 |
+| 3 | GAP-CMD-003 | `cli.py` re-export | P0 | cli.py 仍 re-export 旧函数 | [x] Phase 3 |
+| 4 | GAP-DB-001 | `pipeline.py` | P0 | pipeline.py 未调用 db 函数 | [x] Phase 4 |
+| 5 | GAP-DB-002 | `pipeline.py` | P0 | pipeline.py 仍输出 evidence_index.json | [x] Phase 3 |
+| 6 | GAP-CLAIM-001 | `pipeline.py` | P0 | _auto_generate 仍写入 current.json | [x] Phase 3/8 |
+| 7 | GAP-CLAIM-002 | `ghost_code_reconciler.py` | P1 | 仍引用 current.json 路径 | [ ] Phase 5 |
+| 8 | GAP-CLAIM-003 | `doctor.py` | P1 | 检查 current.json 是否存在 | [x] Phase 8 |
+| 9 | GAP-CLAIM-004 | `tools.py` | P0 | _archive_claims 读取 current.json | [x] Phase 3/8 |
+| 10 | GAP-CLAIM-005 | `config.template.json` | P1 | 模板仍引用 current.json | [x] Phase 8 |
+| 11 | GAP-CLAIM-006 | `prd_analysis.template.md` | P1 | 模板仍引用 current.json | [x] Phase 8 |
+| 12 | GAP-CLAIM-007 | `field_hints.json` | P2 | hints 仍引用 current.json | [x] Phase 8 |
+| 12b | GAP-CLAIM-008 | `raw_input_loader.py` | P0 | claims 加载 hardcode current.json | [x] Phase 3 |
+| 12c | GAP-CLAIM-009 | `claim_loader.py` | P0 | load() 保留单文件分支 | [x] Phase 3 |
+| 12d | GAP-CLAIM-010 | `init_cmd.py` | P1 | vt init 仍创建 current.json | [x] Phase 3/8 |
+| 12e | GAP-CLAIM-011 | `output.py` | P3 | 错误提示引导创建 current.json | [x] Phase 8 |
+| 12f | GAP-CLAIM-012 | `evidence_index_builder.py` | P1 | fallback 硬编码 current.json | [x] Phase 8（文件已删除） |
+| 13 | GAP-EVID-001 | `pipeline.py` | P1 | _run_claim_tests 仍存在 | [ ] Phase 6 |
+| 14 | GAP-EVID-002 | `analysis.py` | P1 | _run_claim_tests 函数定义仍存在 | [ ] Phase 6 |
+| 15 | GAP-EVID-003 | `evidence_index_builder.py` | P1 | 类名未重命名 | [x] Phase 3 |
+| 16 | GAP-EVID-004 | `evidence_index_builder.py` | P1 | 仍使用 mtime 比对 | [x] Phase 3 |
+| 17 | GAP-EVID-005 | `evidence_index.schema.json` | P2 | 旧 schema 仍存在 | [x] Phase 8 |
 | 18 | GAP-GATE-001 | `merge_gate_engine.py` | P1 | 构造函数未接收 `conn` 参数 → ✅ 已完成 | [x] |
 | 19 | GAP-GATE-002 | `merge_gate_engine.py` | P1 | `evaluate()` 仍为 11 参数签名 → ✅ 已简化为 6 参数 | [x] |
 | 20 | GAP-GHOST-001 | `ghost_code_reconciler.py` | P1 | 构造函数未接收 `conn` 参数 | [ ] |
 | 21 | GAP-GHOST-002 | `ghost_code_reconciler.py` | P1 | 仍使用 `git show HEAD` 子进程 | [ ] |
-| 22 | GAP-TEST-001 | `test_integration_v3.py` | P2 | `TestArchiveClaims` 测试类待删除 | [ ] |
-| 23 | GAP-TEST-002 | `test_integration_v3.py` | P2 | `TestRunClaimTests` 测试类待删除 | [ ] |
+| 22 | GAP-TEST-001 | `test_integration_v3.py` | P2 | `TestArchiveClaims` 测试类待删除 | [x] Phase 6 |
+| 23 | GAP-TEST-002 | `test_integration_v3.py` | P2 | `TestRunClaimTests` 测试类待删除 | [x] Phase 6 |
 | 24 | GAP-TEST-003 | `test_timing_instrumentation.py` | P2 | `TestRunClaimTestsTiming` 测试类待删除 | [x] |
 | 25 | GAP-TEST-004 | `test_instrumentation_logging.py` | P2 | `TestClaimTestCacheStats` 测试类待删除 | [x] |
-| 26 | GAP-CONS-001 | `architecture_constraints.json` | P2 | `module_boundaries` 中仍使用旧路径 | [ ] |
-| 27 | GAP-CONS-002 | `architecture_constraints.json` | P2 | 仍引用 `claims/current.json` 和 `evidence_index.json` | [ ] |
+| 26 | GAP-CONS-001 | `architecture_constraints.json` | P2 | `module_boundaries` 中仍使用旧路径 | [ ] Phase 6 |
+| 27 | GAP-CONS-002 | `architecture_constraints.json` | P2 | 仍引用 current.json 和 evidence_index.json | [ ] Phase 6 |
 | 28 | GAP-DASH-001 | `dashboard.template.html` | P3 | 模板仍绑定 `evidenceIndex.evidences[]` | [ ] |
 | 29 | GAP-DASH-002 | `dashboard.template.html` | P3 | 仍使用 `e.details.outcome` 嵌套字段 | [ ] |
 | 30 | GAP-DASH-003 | `dashboard_renderer.py` | P3 | 仍注入 `evidence_idx_json` 变量 | [ ] |
 | 31 | GAP-VAL-001 | `db.py` + `infra/validation/checks.py` | P2 | db.py 与 validation/checks.py 的校验功能重叠 → Phase 1 task/claim 校验已迁移 ✅，Phase 3 test_result/coverage 校验待迁移 | [x] |
 | 32 | GAP-DOC-001 | `docs/architecture_vision.md` | P2 | architecture_vision.md 未提及 infra/validation/ 是第一层格式校验的实现 | [ ] |
-| 33 | GAP-DOCTOR-001 | `doctor.py` | P1 | Check 1 `evidence_refs_integrity` 检查 claim 的 `evidence_refs` 字段（第 198-220 行），但该字段已在 Phase 2 删除 → **删除该检查** | [ ] |
+| 33 | GAP-DOCTOR-001 | `doctor.py` | P1 | Check 1 evidence_refs_integrity 检查已删除字段 | [x] Phase 8 |
 | 34 | GAP-FINALIZE-001 | `docs/analyze_execution_plan.md` | P1 | Phase 6 修改 `architecture_constraints.json` 后必须重新执行 `vt finalize` 更新哈希基线，否则 Gate 1 阻断 | [ ] |
 | 35 | GAP-PIPE-001 | `pipeline.py` | P1 | pipeline.py:349 直接检查 `evidence_index["test_results"]` 是否为空来决定跳过重跑，删除 `_run_claim_tests` 后此判断需同步移除 | [ ] |
 

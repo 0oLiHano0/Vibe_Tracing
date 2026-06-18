@@ -27,7 +27,6 @@ class RiskAdvisor:
         claims_analysis: List[Dict[str, Any]],
         claim_risks: List[Dict[str, Any]],
         compliance_result: Optional[Dict[str, Any]] = None,
-        claims_list: Optional[List[Any]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Evaluate project gaps, claims, and architecture status to build enriched risks.
@@ -37,7 +36,6 @@ class RiskAdvisor:
             claims_analysis: Checked claims analysis results.
             claim_risks: Existing risks identified by the ClaimEvidenceAnalyzer.
             compliance_result: Optional output from ArchitectureComplianceChecker.check.
-            claims_list: Deprecated. No longer used (credibility check removed).
 
         Returns:
             A list of unified risk dictionaries conforming to the report schema.
@@ -61,7 +59,7 @@ class RiskAdvisor:
             if category == "self_referential_claim":
                 hint = _risk_hints.get("self_referential_claim", {})
                 impact = resolve_hint(hint, "level1") if hint else "违反 Agent 不能自证原则，可能掩盖未经外部工具或人类审查的低质量代码。"
-                action = "为关联的开发任务提供独立的外部证据，例如单元测试或人类 Review 记录，并在 Claim 的 `evidence_refs` 中引用该证据 ID。"
+                action = "为关联的开发任务提供独立的外部证据，例如单元测试或人类 Review 记录。"
             elif category == "non_existent_evidence":
                 hint = _risk_hints.get("non_existent_evidence", {})
                 impact = resolve_hint(hint, "level1") if hint else "证据链中断，导致声称的完成状态无法被客观核查。"

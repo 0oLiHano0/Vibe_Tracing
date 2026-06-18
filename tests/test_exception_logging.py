@@ -2,7 +2,6 @@
 
 Verifies that OperationalLogger is called when exceptions are caught in:
 - git_utils.py
-- evidence_index_builder.py
 - commands/analyze/analysis.py
 - hint_loader.py
 - ghost_code_reconciler.py

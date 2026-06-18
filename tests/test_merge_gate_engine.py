@@ -443,9 +443,9 @@ def test_non_staged_claim_gets_pre_existing_prefix():
     assert any("[预存]" in msg and "RISK-VT-011" in msg for msg in res["reasons"])
 
 
-def test_no_staged_items_backward_compatible():
+def test_no_staged_items_passes():
     """
-    Test that without staged_items, all reasons have no prefix (backward compatible).
+    Test that without staged_items, all reasons have no prefix.
     covers: EVO-TASK-025
     """
     engine = MergeGateEngine(Path("/dummy/project/root"), init_in_memory_db())
@@ -1116,9 +1116,9 @@ def test_human_decisions_empty_list_no_effect():
     assert res["human_decisions_applied"] == 0
 
 
-def test_human_decisions_none_backward_compatible():
+def test_human_decisions_none_defaults_to_no_op():
     """
-    human_decisions=None (default) should behave identically to before.
+    human_decisions=None (default) should not affect the gate decision.
     """
     engine = MergeGateEngine(Path("/dummy/project/root"), init_in_memory_db())
 
@@ -1473,8 +1473,8 @@ class TestEvaluateClaimExistence:
         assert res["gate_decision"] == "blocked"
         assert any("src/orphan.py" in item for item in res["blocked_items"])
 
-    def test_backward_compatible_no_staged(self):
-        """Without staged_items, behavior is identical to before."""
+    def test_no_staged_items_passes_in_full_mode(self):
+        """Without staged_items, gate passes with all rules satisfied."""
         engine = MergeGateEngine(Path("/dummy/project/root"), init_in_memory_db())
         gaps = []
         risks = []
@@ -1609,8 +1609,8 @@ class TestEvaluateAcCoverage:
         assert res["gate_decision"] == "blocked"
         assert any("test_failed" in msg for msg in res["reasons"])
 
-    def test_backward_compatible_no_tasks(self):
-        """Without tasks in DB, behavior is identical to before."""
+    def test_no_tasks_passes(self):
+        """Without tasks in DB, gate passes with all rules satisfied."""
         engine = MergeGateEngine(Path("/dummy/project/root"), init_in_memory_db())
         res = engine.evaluate([], [], {})
         assert res["gate_decision"] == "pass"

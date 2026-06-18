@@ -4,8 +4,7 @@ CLI Entrypoint for Vibe Tracing.
 Provides the ``main()`` function with argparse-based sub-command routing.
 All command implementations live in ``vibe_tracing.cli.*`` modules.
 
-This module re-exports public symbols so that
-existing ``from vibe_tracing.cli import X`` imports continue to work.
+This module re-exports public symbols for convenient access.
 """
 
 import argparse

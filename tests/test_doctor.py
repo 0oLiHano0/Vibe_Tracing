@@ -88,7 +88,7 @@ class TestDoctorLoadLogging:
         (tmp_path / "docs").mkdir()
         (tmp_path / "output").mkdir()
         (tmp_path / ".vibetracing" / "claims").mkdir(parents=True)
-        claims = [{"claim_id": "C-1", "code_refs": [], "test_refs": [], "evidence_refs": []}]
+        claims = [{"claim_id": "C-1", "code_refs": [], "test_refs": []}]
         (tmp_path / ".vibetracing" / "claims" / "CLAIM-TEST-001.json").write_text(json.dumps(claims))
 
         run_doctor(tmp_path)
@@ -244,7 +244,6 @@ class TestDoctorCheckLogging:
             "claim_id": "C-1",
             "code_refs": ["src/nonexistent.py"],
             "test_refs": [],
-            "evidence_refs": [],
         }]
         (tmp_path / ".vibetracing" / "claims" / "CLAIM-TEST-001.json").write_text(json.dumps(claims))
 
@@ -285,7 +284,6 @@ class TestDoctorEndLogging:
             "claim_id": "C-1",
             "code_refs": ["src/nonexistent.py"],
             "test_refs": [],
-            "evidence_refs": [],
         }]
         (tmp_path / ".vibetracing" / "claims" / "CLAIM-TEST-001.json").write_text(json.dumps(claims))
 

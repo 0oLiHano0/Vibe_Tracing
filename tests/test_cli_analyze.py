@@ -1263,8 +1263,6 @@ must
         {
             "claim_id": "CLAIM-001",
             "related_task": "TASK-TEST-001",
-            "claimed_status": "covered",
-            "evidence_refs": ["EVIDENCE-001"],
             "timestamp": "2025-01-01T00:00:00Z",
             "code_refs": ["src/main.py"],
             "test_refs": [],
@@ -1297,11 +1295,14 @@ def test_run_doctor_all_passing(tmp_path):
 
 
 def test_run_doctor_broken_evidence_refs(tmp_path, capsys):
-    """Test run_doctor detects broken evidence_refs."""
+    """Test run_doctor detects broken evidence_refs.
+
+    Since evidence_refs was removed from the Claim schema, there are no
+    broken evidence refs to detect -- the check passes cleanly.
+    """
     from vibe_tracing.cli import run_doctor
 
     _setup_doctor_project(tmp_path)
-    # No evidence index -> evidence ref EVIDENCE-001 not found
 
     exit_code = run_doctor(tmp_path)
     assert exit_code == 0  # Doctor always returns 0
@@ -1309,8 +1310,7 @@ def test_run_doctor_broken_evidence_refs(tmp_path, capsys):
     captured = capsys.readouterr()
     output = json.loads(captured.out)
     checks = {c["name"]: c for c in output["checks"]}
-    assert len(checks["evidence_refs_integrity"]["issues"]) > 0
-    assert "EVIDENCE-001" in checks["evidence_refs_integrity"]["issues"][0]["evidence_ref"]
+    assert len(checks["evidence_refs_integrity"]["issues"]) == 0
 
 
 def test_run_doctor_broken_file_refs(tmp_path, capsys):
@@ -1323,8 +1323,6 @@ def test_run_doctor_broken_file_refs(tmp_path, capsys):
         {
             "claim_id": "CLAIM-001",
             "related_task": "TASK-TEST-001",
-            "claimed_status": "covered",
-            "evidence_refs": [],
             "timestamp": "2025-01-01T00:00:00Z",
             "code_refs": ["src/nonexistent.py"],
             "test_refs": ["tests/nonexistent_test.py"],
@@ -1614,8 +1612,6 @@ def test_run_doctor_with_fragment_refs(tmp_path, capsys):
         {
             "claim_id": "CLAIM-001",
             "related_task": "TASK-TEST-001",
-            "claimed_status": "covered",
-            "evidence_refs": [],
             "timestamp": "2025-01-01T00:00:00Z",
             "code_refs": ["src/main.py#L1-L10"],
             "test_refs": [],

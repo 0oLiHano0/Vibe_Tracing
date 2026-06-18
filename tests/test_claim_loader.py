@@ -27,8 +27,6 @@ def get_valid_claims_list(claims=None):
             {
                 "claim_id": "CLAIM-VT-001",
                 "related_task": "TASK-VT-001",
-                "claimed_status": "covered",
-                "evidence_refs": ["EVIDENCE-VT-001"],
                 "timestamp": "2026-01-01T00:00:00Z",
             }
         ]
@@ -94,8 +92,6 @@ def test_references_non_existent_task_forms_gap(claim_loader):
         {
             "claim_id": "CLAIM-VT-001",
             "related_task": "TASK-VT-999",  # Non-existent task
-            "claimed_status": "partial",
-            "evidence_refs": ["EVIDENCE-VT-001"],
             "timestamp": "2026-01-01T00:00:00Z",
         }
     ]

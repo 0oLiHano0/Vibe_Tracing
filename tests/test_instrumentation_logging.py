@@ -1,7 +1,7 @@
 """Tests for operational logging instrumentation added across VT modules.
 
 Covers:
-- Task 5: Cache and data volume statistics (analysis.py, evidence_index_builder.py, pipeline.py)
+- Task 5: Cache and data volume statistics (analysis.py, pipeline.py)
 - Task 6: Hint fallback monitoring (hint_loader.py, tool_evidence_adapter.py)
 - Task 8: DEBUG-level instrumentation (merge_gate_engine.py, architecture_compliance_checker.py,
   requirement_task_analyzer.py, ac_test_analyzer.py, claim_evidence_analyzer.py)
@@ -586,9 +586,9 @@ class TestComplianceImportLogging:
 
         # Create a file in MOD-VT-002 that imports from MOD-VT-006 (forbidden)
         (src_dir / "raw_input_loader.py").write_text(
-            "from vibe_tracing.traceability_analyzer import analyze\n"
+            "from vibe_tracing.analyzers.claim_evidence_analyzer import analyze\n"
         )
-        (src_dir / "traceability_analyzer.py").write_text("def analyze(): pass\n")
+        (src_dir / "claim_evidence_analyzer.py").write_text("def analyze(): pass\n")
 
         constraints = {
             "module_boundaries": [
@@ -817,9 +817,7 @@ class TestClaimMappingLogging:
 
         mock_claim = MagicMock()
         mock_claim.claim_id = "CLAIM-001"
-        mock_claim.claimed_status = "covered"
         mock_claim.related_task = "TASK-001"
-        mock_claim.evidence_refs = []
         mock_claim.code_refs = ["src/foo.py"]
         mock_claim.test_refs = ["tests/test_foo.py"]
 
@@ -844,9 +842,7 @@ class TestClaimMappingLogging:
 
         mock_claim = MagicMock()
         mock_claim.claim_id = "CLAIM-001"
-        mock_claim.claimed_status = "covered"
         mock_claim.related_task = "TASK-001"
-        mock_claim.evidence_refs = ["EV-001"]
         mock_claim.code_refs = []
         mock_claim.test_refs = []
 

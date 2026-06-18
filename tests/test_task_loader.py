@@ -326,7 +326,7 @@ def test_strict_link_rejects_req_only_task(task_loader):
     assert res.gaps[0].item_id == "TASK-VT-001"
 
 
-def test_legacy_or_logic_allows_req_only_task(task_loader):
+def test_or_logic_allows_req_only_task(task_loader):
     """
     When id_rules.all_tasks_must_link_requirements_and_acceptance_criteria is false
     or absent, a task with only REQ but no AC should pass the isolated check (OR logic).

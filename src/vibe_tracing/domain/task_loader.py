@@ -221,7 +221,7 @@ class TaskLoader:
                     errors.append(full_msg)
                     gaps.append(TaskGap(item_id=task_id, reason="Task is isolated"))
             else:
-                # OR logic (legacy): must have at least one of REQ or AC
+                # OR logic: must have at least one of REQ or AC
                 if not related_requirements and not related_acceptance_criteria:
                     task_obj.is_valid = False
                     base_msg = f"Task {task_id} is isolated (no related requirements or acceptance criteria)."

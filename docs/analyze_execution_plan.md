@@ -25,7 +25,7 @@
 | Phase 5 | 幽灵代码检测 SQL 化 | ❌ 未开始 | ghost_code_reconciler.py 未改 |
 | Phase 6 | 流水线集成 | ❌ 未开始 | pipeline.py 未改，仍引用 current.json |
 | Phase 7 | Dashboard 模板迁移 + 清理 | ❌ 未开始 | dashboard 未适配新 evidence 格式 |
-| Phase 8 | 历史债务清理（current.json 残留 + 向后兼容代码） | ❌ 未开始 | 30+ 文件仍有 current.json 引用，evidence_index_builder.py 未删除 |
+| Phase 8 | 历史债务清理（current.json 残留 + 向后兼容代码） | ✅ 已完成 | 53 文件修改，删除旧架构核心组件，957 测试通过 |
 
 ### 已完成的额外工作
 

@@ -86,7 +86,6 @@ def _run_analyzers(
         claims_analysis=claim_res.get("claims_analysis", []),
         claim_risks=claim_risks,
         compliance_result=compliance_res,
-        claims_list=claims_list,
     )
 
     if compliance_res:

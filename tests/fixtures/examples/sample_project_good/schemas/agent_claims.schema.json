@@ -9,8 +9,6 @@
     "required": [
       "claim_id",
       "related_task",
-      "claimed_status",
-      "evidence_refs",
       "timestamp"
     ],
     "additionalProperties": true,
@@ -24,27 +22,6 @@
         "type": "string",
         "pattern": "^TASK-VT-\\d+$",
         "description": "Task ID this claim is associated with."
-      },
-      "claimed_status": {
-        "type": "string",
-        "enum": [
-          "covered",
-          "partial",
-          "missing",
-          "unclear",
-          "low_confidence",
-          "blocked",
-          "compliant",
-          "violated"
-        ],
-        "description": "The coverage/compliance status claimed by the agent."
-      },
-      "evidence_refs": {
-        "type": "array",
-        "description": "References to evidence supporting this claim.",
-        "items": {
-          "type": "string"
-        }
       },
       "timestamp": {
         "type": "string",

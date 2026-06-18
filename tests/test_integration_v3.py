@@ -28,16 +28,12 @@ class _FakeClaim:
     """Lightweight claim stand-in for tests that only need test_refs / code_refs."""
     claim_id: str = "CL-001"
     related_task: str = "TASK-001"
-    claimed_status: str = "done"
-    evidence_refs: List[str] = field(default_factory=list)
     timestamp: str = ""
     code_refs: List[str] = field(default_factory=list)
     test_refs: List[str] = field(default_factory=list)
     notes: str = ""
     is_valid: bool = True
     errors: List[str] = field(default_factory=list)
-    credibility: str = ""
-    credibility_warnings: List[str] = field(default_factory=list)
 
 
 # ===========================================================================

@@ -73,19 +73,17 @@ class ArchitectureComplianceChecker:
         """Maps a Python file path to its architectural module ID and module name.
 
         Uses ``owned_files`` from the loaded architecture constraints as the
-        single source of truth.  Files inside the ``traceability/`` directory
-        are still mapped to MOD-VT-006 as a special case.
+        single source of truth.  Files inside the ``analyzers/`` directory
+        are mapped to MOD-VT-006 as a special case.
         """
         try:
             rel_path = file_path.relative_to(src_dir)
             parts = rel_path.parts
             if len(parts) < 1:
                 return None, None
-            if len(parts) >= 2 and parts[0] == "vibe_tracing" and parts[1] == "core":
-                return None, None
 
             filename = parts[-1]
-            if "traceability" in parts:
+            if "analyzers" in parts:
                 return "MOD-VT-006", "traceability_analyzer"
 
             for boundary in self.constraints.get("module_boundaries", []):
@@ -103,15 +101,13 @@ class ArchitectureComplianceChecker:
         Derives the mapping from ``owned_files`` in the loaded architecture
         constraints: the import's submodule name is matched against each
         module's owned filenames with the ``.py`` suffix stripped.  The
-        ``traceability`` subpackage is treated as a special case mapped to
+        ``analyzers`` subpackage is treated as a special case mapped to
         MOD-VT-006.
         """
         if not imported_module.startswith("vibe_tracing"):
             return None, None
         parts = imported_module.split(".")
         if len(parts) < 2:
-            return None, None
-        if parts[1] == "core":
             return None, None
 
         # Handle nested packages: vibe_tracing.{pkg}.{module}
@@ -120,8 +116,8 @@ class ArchitectureComplianceChecker:
         else:
             sub = parts[1]
 
-        # Special case: the traceability subpackage
-        if sub == "traceability":
+        # Special case: the analyzers subpackage
+        if parts[1] == "analyzers":
             return "MOD-VT-006", "traceability_analyzer"
 
         for boundary in self.constraints.get("module_boundaries", []):
@@ -817,10 +813,10 @@ class ArchitectureComplianceChecker:
                 verification = rule.get("verification_method", "machine")
 
                 if verification == "manual":
-                    # Check embedded accepted_by first (legacy), then human_decisions
-                    accepted_by = rule.get("accepted_by")
-                    accepted_at = rule.get("accepted_at", "")
-                    if not accepted_by and human_decisions:
+                    # Check human_decisions for accepted rules
+                    accepted_by = None
+                    accepted_at = ""
+                    if human_decisions:
                         decisions_list = human_decisions.get("decisions", [])
                         for d in decisions_list:
                             if (d.get("category") == "accepted_rule"

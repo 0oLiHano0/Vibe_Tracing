@@ -1,7 +1,7 @@
 import json
 import re
+import sqlite3
 import subprocess
-import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set
 
@@ -16,8 +16,9 @@ class GhostCodeReconciler:
     Enforces the First Principle (State is Delta) to detect Reusable Receipt
     Exploits, and validates task coverage and AC freshness for staged code.
     """
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path, conn: sqlite3.Connection):
         self.project_root = project_root
+        self.conn = conn
         self.claims_dir = project_root / ".vibetracing" / "claims"
 
         # Exact Whitelist (The ledger itself shouldn't require a receipt)
@@ -45,6 +46,31 @@ class GhostCodeReconciler:
                 return True
         return False
 
+    def _read_claims_from_filesystem(self) -> List[dict]:
+        """Read all CLAIM-*.json files from the claims directory on disk."""
+        all_claims = []
+        if not self.claims_dir.is_dir():
+            return all_claims
+        for claim_file in sorted(self.claims_dir.glob("CLAIM-*.json")):
+            try:
+                data = json.loads(claim_file.read_text(encoding="utf-8"))
+                items = data if isinstance(data, list) else [data]
+                for item in items:
+                    # Skip template records
+                    if item.get("claim_id", "").endswith("-9999"):
+                        continue
+                    # Skip claims missing required fields (load_claims needs claim_id + related_task)
+                    if not item.get("claim_id") or not item.get("related_task"):
+                        continue
+                    all_claims.append(item)
+            except (json.JSONDecodeError, OSError) as exc:
+                OperationalLogger.get().debug(
+                    "claim_file_load_failed",
+                    f"Could not load claim file {claim_file}",
+                    exc=exc,
+                )
+        return all_claims
+
     def _get_staged_files(self) -> Set[str]:
         try:
             result = subprocess.run(
@@ -60,83 +86,6 @@ class GhostCodeReconciler:
             print("Warning: git 未安装或不在 PATH 中，跳过检查。")
             return set()
 
-    def _get_active_claims_code_refs(self) -> Set[str]:
-        """Collect code_refs from staged CLAIM-*.json files (directory mode)."""
-        staged_claims = []
-        try:
-            result = subprocess.run(
-                ["git", "diff", "--cached", "--name-only"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            staged_claim_files = [
-                f for f in result.stdout.splitlines()
-                if f.startswith(".vibetracing/claims/") and f.endswith(".json") and f.strip()
-            ]
-            for claim_file in staged_claim_files:
-                try:
-                    show_result = subprocess.run(
-                        ["git", "show", f":{claim_file}"],
-                        cwd=self.project_root,
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                    )
-                    data = json.loads(show_result.stdout)
-                    items = data if isinstance(data, list) else [data]
-                    staged_claims.extend(items)
-                except (subprocess.CalledProcessError, json.JSONDecodeError, Exception) as exc:
-                    OperationalLogger.get().debug("claim_file_load_failed", f"Could not load staged claim file {claim_file}", exc=exc)
-        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-            OperationalLogger.get().warning("git_subprocess_failed", "Git operation failed: _get_active_claims_code_refs", exc=exc)
-            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
-
-        # Get HEAD claims for delta calculation
-        head_claims = []
-        try:
-            result = subprocess.run(
-                ["git", "ls-tree", "-r", "--name-only", "HEAD", ".vibetracing/claims/"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            for claim_file in result.stdout.splitlines():
-                claim_file = claim_file.strip()
-                if not claim_file.endswith(".json"):
-                    continue
-                try:
-                    show_result = subprocess.run(
-                        ["git", "show", f"HEAD:{claim_file}"],
-                        cwd=self.project_root,
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                    )
-                    data = json.loads(show_result.stdout)
-                    items = data if isinstance(data, list) else [data]
-                    head_claims.extend(items)
-                except (subprocess.CalledProcessError, json.JSONDecodeError, Exception):
-                    pass
-        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-            OperationalLogger.get().debug("head_claims_not_found", "No HEAD claims available", exc=exc)
-
-        # 3. Calculate Delta (State is Delta)
-        active_code_refs = set()
-        for staged_claim in staged_claims:
-            # Check if it exists and is identical in HEAD
-            # Ignore template records
-            if staged_claim.get("claim_id", "").endswith("-9999"):
-                continue
-            if staged_claim not in head_claims:
-                # It is a NEW or MODIFIED claim in this commit!
-                active_code_refs.update(staged_claim.get("code_refs", []))
-                active_code_refs.update(staged_claim.get("test_refs", []))
-
-        return active_code_refs
-
     def reconcile(self) -> Tuple[bool, str]:
         staged_files = self._get_staged_files()
 
@@ -151,9 +100,11 @@ class GhostCodeReconciler:
             # No business code modified, perfect agility for governance assets
             return True, ""
 
-        active_refs = self._get_active_claims_code_refs()
-
-        ghost_files = business_code_files - active_refs
+        claims = self._read_claims_from_filesystem()
+        from vibe_tracing.infra.db import load_staged_files, load_claims, check_ghost_code
+        load_staged_files(self.conn, business_code_files)
+        load_claims(self.conn, claims)
+        ghost_files = set(check_ghost_code(self.conn))
 
         if ghost_files:
             files_str = "\n".join(f"  - {f}" for f in ghost_files)
@@ -167,7 +118,7 @@ class GhostCodeReconciler:
         # Gate 2.5 checks (merged from AcFreshnessChecker)
         all_warnings: List[str] = []
 
-        blocked, warnings = self._check_task_coverage(business_code_files, active_refs)
+        blocked, warnings = self._check_task_coverage(business_code_files)
         if blocked:
             return False, "\n".join(blocked)
         all_warnings.extend(warnings)
@@ -185,119 +136,32 @@ class GhostCodeReconciler:
     # ------------------------------------------------------------------
 
     def _get_staged_claims(self) -> List[dict]:
-        """Read staged CLAIM-*.json files from the git index (directory mode)."""
-        all_claims = []
-        try:
-            result = subprocess.run(
-                ["git", "diff", "--cached", "--name-only"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            staged_claim_files = [
-                f for f in result.stdout.splitlines()
-                if f.startswith(".vibetracing/claims/") and f.endswith(".json") and f.strip()
-            ]
-            for claim_file in staged_claim_files:
-                try:
-                    show_result = subprocess.run(
-                        ["git", "show", f":{claim_file}"],
-                        cwd=self.project_root,
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                    )
-                    data = json.loads(show_result.stdout)
-                    items = data if isinstance(data, list) else [data]
-                    all_claims.extend(items)
-                except (subprocess.CalledProcessError, json.JSONDecodeError, Exception):
-                    pass
-        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-            OperationalLogger.get().warning("git_subprocess_failed", "Git operation failed: _get_staged_claims", exc=exc)
-        return all_claims
+        """Read CLAIM-*.json files from the claims directory on disk."""
+        return self._read_claims_from_filesystem()
 
     def _get_staged_tasks(self) -> Optional[dict]:
-        """Read staged task_list.json from the git index."""
+        """Read task_list.json from the filesystem."""
+        task_list_path = self.project_root / "docs" / "task_list.json"
         try:
-            result = subprocess.run(
-                ["git", "show", ":docs/task_list.json"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                check=True,
+            return json.loads(task_list_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            OperationalLogger.get().warning(
+                "task_list_load_failed", "Could not load task_list.json", exc=exc
             )
-            return json.loads(result.stdout)
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as exc:
-            OperationalLogger.get().warning("task_list_load_failed", "Could not load staged task_list.json", exc=exc)
             return None
-
-    def _get_head_tasks(self) -> Optional[dict]:
-        """Read HEAD task_list.json."""
-        try:
-            result = subprocess.run(
-                ["git", "show", "HEAD:docs/task_list.json"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            return json.loads(result.stdout)
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as exc:
-            OperationalLogger.get().warning("task_list_load_failed", "Could not load HEAD task_list.json", exc=exc)
-            return None
-
-    def _get_modified_task_ids(self) -> Set[str]:
-        """Return set of task_ids whose content differs between staged and HEAD.
-
-        Detects both *new* tasks (exist in staged but not HEAD) and *modified*
-        tasks (exist in both but content differs).
-        """
-        staged_data = self._get_staged_tasks()
-        head_data = self._get_head_tasks()
-
-        if not staged_data:
-            return set()
-
-        if head_data is None:
-            # No HEAD version -- every task in staged is new
-            return {t.get("task_id") for t in staged_data.get("tasks", []) if t.get("task_id")}
-
-        head_tasks_by_id = {
-            t.get("task_id"): t for t in head_data.get("tasks", []) if t.get("task_id")
-        }
-
-        modified: Set[str] = set()
-        for task in staged_data.get("tasks", []):
-            task_id = task.get("task_id")
-            if not task_id:
-                continue
-            head_task = head_tasks_by_id.get(task_id)
-            if head_task is None:
-                modified.add(task_id)
-            elif task != head_task:
-                modified.add(task_id)
-
-        return modified
 
     # ------------------------------------------------------------------
     # Gate 2.5 -- Reverse coverage check
     # ------------------------------------------------------------------
 
     def _check_task_coverage(
-        self, staged_files: Set[str], active_code_refs: Set[str]
+        self, staged_files: Set[str]
     ) -> Tuple[List[str], List[str]]:
         """Reverse coverage check: staged code files vs covering tasks.
 
         Returns ``(blocked_messages, warning_messages)``.
 
-        * **BLOCKED** -- A staged code file IS covered by a claim, but NO task
-          exists for that claim.
-        * **WARNING** -- A staged code file IS covered by a claim, and a task
-          exists but was NOT modified in this commit.
-
-        Files with no covering claim are skipped (already handled by ghost code
-        check).
+        Only checks if referenced tasks exist in task_list.json (BLOCKED).
         """
         staged_claims = self._get_staged_claims()
 
@@ -312,29 +176,18 @@ class GhostCodeReconciler:
                 if clean_ref:
                     file_to_tasks.setdefault(clean_ref, set()).add(task_id)
 
-        modified_task_ids = self._get_modified_task_ids()
         all_task_ids = self._get_all_task_ids()
-        task_statuses = self._get_task_statuses()
 
         blocked: List[str] = []
-        warnings: List[str] = []
         for code_file in sorted(staged_files):
             if code_file not in file_to_tasks:
-                # No claim covers this file -- already handled by ghost code check
                 continue
-
             task_ids = file_to_tasks[code_file]
             for task_id in sorted(task_ids):
                 if task_id not in all_task_ids:
                     blocked.append(
                         f"  - 代码文件 {code_file} 关联的 Claim 引用任务 {task_id}，"
                         f"但该任务不存在于 task_list.json 中。"
-                    )
-                elif task_id not in modified_task_ids and task_statuses.get(task_id) != "done":
-                    warnings.append(
-                        f"  - 代码文件 {code_file} 被活跃任务 {task_id} 覆盖，"
-                        f"但该任务未在本次提交中修改。"
-                        f"请确认是否需要更新任务状态或提交 Claim。"
                     )
 
         blocked_messages: List[str] = []
@@ -346,105 +199,69 @@ class GhostCodeReconciler:
                 + "\n请确保 task_list.json 中包含对应的 Task 定义。"
             )
 
-        warning_messages: List[str] = []
-        if warnings:
-            warning_messages.append(
-                "反向覆盖检查提醒："
-                "以下代码文件的覆盖任务未在本次提交中修改：\n"
-                + "\n".join(warnings)
-                + "\n如果这是有意为之"
-                "（例如仅修改实现细节），可忽略此警告。"
-            )
-
-        return blocked_messages, warning_messages
+        return blocked_messages, []
 
     def _get_all_task_ids(self) -> Set[str]:
-        """Return set of all task_ids in the staged task_list.json."""
-        staged_data = self._get_staged_tasks()
-        if not staged_data:
+        """Return set of all task_ids in task_list.json."""
+        data = self._get_staged_tasks()
+        if not data:
             return set()
-        return {t.get("task_id") for t in staged_data.get("tasks", []) if t.get("task_id")}
-
-    def _get_task_statuses(self) -> Dict[str, str]:
-        """Return mapping of task_id -> status from staged task_list.json."""
-        staged_data = self._get_staged_tasks()
-        if not staged_data:
-            return {}
-        return {t.get("task_id"): t.get("status", "") for t in staged_data.get("tasks", []) if t.get("task_id")}
+        return {t.get("task_id") for t in data.get("tasks", []) if t.get("task_id")}
 
     # ------------------------------------------------------------------
     # Gate 2.5 -- Forward AC freshness check
     # ------------------------------------------------------------------
 
     def _check_ac_freshness(self) -> List[str]:
-        """Forward AC freshness check: new tasks referencing ACs not in staged PRD.
+        """Forward AC freshness check: tasks referencing ACs not in PRD.
 
         Returns warning messages (never blocks).
         """
         staged_data = self._get_staged_tasks()
-        head_data = self._get_head_tasks()
-
         if not staged_data:
             return []
 
-        head_task_ids = set()
-        if head_data:
-            head_task_ids = {t.get("task_id") for t in head_data.get("tasks", []) if t.get("task_id")}
-
-        # Find new tasks
-        new_tasks: Dict[str, Set[str]] = {}
+        # Collect all AC IDs referenced by tasks
+        task_acs: Dict[str, Set[str]] = {}
         for task in staged_data.get("tasks", []):
-            task_id = task.get("task_id")
-            if task_id and task_id not in head_task_ids:
-                ac_ids = set(task.get("related_acceptance_criteria", []))
-                new_tasks[task_id] = ac_ids
+            task_id = task.get("task_id", "")
+            ac_ids = set(task.get("related_acceptance_criteria", []))
+            if task_id and ac_ids:
+                task_acs[task_id] = ac_ids
 
-        if not new_tasks:
+        if not task_acs:
             return []
 
-        # Check if PRD is staged
-        prd_path = "docs/prd.md"
-        prd_is_staged = False
-        try:
-            subprocess.run(
-                ["git", "show", f":{prd_path}"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            prd_is_staged = True
-        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-            OperationalLogger.get().debug("prd_not_staged", "PRD file not in git index", exc=exc)
+        # Check if PRD exists on disk
+        prd_path = self.project_root / "docs" / "prd.md"
+        prd_exists = prd_path.is_file()
 
-        # Get AC IDs from staged PRD
+        # Get AC IDs from PRD
         staged_ac_ids: Set[str] = set()
-        if prd_is_staged:
+        if prd_exists:
             staged_ac_ids = self._get_staged_prd_ac_ids()
 
         warnings: List[str] = []
-        for task_id, ac_ids in new_tasks.items():
-            if not ac_ids:
-                continue
+        for task_id, ac_ids in task_acs.items():
             for ac_id in ac_ids:
-                if prd_is_staged and ac_id in staged_ac_ids:
+                if prd_exists and ac_id in staged_ac_ids:
                     continue
-                if not prd_is_staged:
+                if not prd_exists:
                     warnings.append(
                         f"  - 任务 {task_id} 引用 AC {ac_id}，"
-                        f"但本次提交未更新 PRD。"
-                        f"请确认需求文档是否需要同步更新。"
+                        f"但 PRD 文件不存在。"
+                        f"请确认需求文档是否需要创建。"
                     )
                 else:
                     warnings.append(
                         f"  - 任务 {task_id} 引用 AC {ac_id}，"
-                        f"但该 AC 不在本次 PRD 更新范围内。"
+                        f"但该 AC 不在 PRD 中。"
                     )
 
         if warnings:
             return [
                 "AC 新鲜度提醒："
-                "以下新增任务引用的 AC 未在本次提交中更新：\n"
+                "以下任务引用的 AC 未在 PRD 中找到：\n"
                 + "\n".join(warnings)
                 + "\n如果这是有意为之"
                 "（例如复用已有 AC），可忽略此警告。"
@@ -453,18 +270,14 @@ class GhostCodeReconciler:
         return []
 
     def _get_staged_prd_ac_ids(self) -> Set[str]:
-        """Parse staged PRD content and extract all AC IDs."""
+        """Parse PRD content from filesystem and extract all AC IDs."""
+        prd_path = self.project_root / "docs" / "prd.md"
         try:
-            result = subprocess.run(
-                ["git", "show", ":docs/prd.md"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            content = result.stdout
+            content = prd_path.read_text(encoding="utf-8")
             ac_pattern = re.compile(r"AC-[A-Z]+-\d+-\d+")
             return set(ac_pattern.findall(content))
-        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-            OperationalLogger.get().warning("prd_ac_parse_failed", "Could not read staged PRD for AC extraction", exc=exc)
+        except OSError as exc:
+            OperationalLogger.get().warning(
+                "prd_ac_parse_failed", "Could not read PRD for AC extraction", exc=exc
+            )
             return set()

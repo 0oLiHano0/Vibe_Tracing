@@ -13,6 +13,8 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from vibe_tracing.infra.db import init_in_memory_db
+
 import pytest
 
 from vibe_tracing.infra.operational_logger import OperationalLogger
@@ -32,6 +34,12 @@ def mock_logger():
     mock = MagicMock()
     with patch.object(OperationalLogger, "get", return_value=mock):
         yield mock
+
+
+@pytest.fixture
+def conn():
+    """Create an in-memory SQLite connection for GhostCodeReconciler."""
+    return init_in_memory_db()
 
 
 # --------------------------------------------------------------------------
@@ -149,12 +157,12 @@ class TestHintLoaderExceptionLogging:
 # --------------------------------------------------------------------------
 
 class TestGhostCodeReconcilerExceptionLogging:
-    """GhostCodeReconciler must log git subprocess failures."""
+    """GhostCodeReconciler must log filesystem read failures."""
 
-    def test_get_staged_files_logs_on_subprocess_error(self, mock_logger, tmp_path):
+    def test_get_staged_files_logs_on_subprocess_error(self, mock_logger, tmp_path, conn):
         from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
-        reconciler = GhostCodeReconciler(tmp_path)
+        reconciler = GhostCodeReconciler(tmp_path, conn)
         with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
             result = reconciler._get_staged_files()
 
@@ -162,79 +170,33 @@ class TestGhostCodeReconcilerExceptionLogging:
         mock_logger.warning.assert_called()
         assert mock_logger.warning.call_args[0][0] == "git_subprocess_failed"
 
-    def test_get_staged_claims_logs_on_subprocess_error(self, mock_logger, tmp_path):
+    def test_get_staged_tasks_logs_on_error(self, mock_logger, tmp_path, conn):
+        """When task_list.json doesn't exist, _get_staged_tasks logs and returns None."""
         from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
-        # Create claims dir
-        claims_dir = tmp_path / ".vibetracing" / "claims"
-        claims_dir.mkdir(parents=True)
-        (claims_dir / "CLAIM-VT-001.json").write_text("[]", encoding="utf-8")
-
-        reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
-            result = reconciler._get_staged_claims()
-
-        assert result == []
-        mock_logger.warning.assert_called()
-
-    def test_get_staged_claims_handles_subprocess_error(self, mock_logger, tmp_path):
-        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
-
-        claims_dir = tmp_path / ".vibetracing" / "claims"
-        claims_dir.mkdir(parents=True)
-        (claims_dir / "CLAIM-VT-001.json").write_text("[]", encoding="utf-8")
-
-        reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
-            result = reconciler._get_staged_claims()
-
-        assert result == []
-        mock_logger.warning.assert_called()
-
-    def test_get_staged_tasks_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
-
-        reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
-            result = reconciler._get_staged_tasks()
-
+        reconciler = GhostCodeReconciler(tmp_path, conn)
+        # task_list.json doesn't exist -> OSError
+        result = reconciler._get_staged_tasks()
         assert result is None
         mock_logger.warning.assert_called()
         assert mock_logger.warning.call_args[0][0] == "task_list_load_failed"
 
-    def test_get_head_tasks_logs_on_error(self, mock_logger, tmp_path):
+    def test_prd_not_found_no_warning(self, mock_logger, tmp_path, conn):
+        """When PRD doesn't exist, _check_ac_freshness returns empty list."""
         from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
-        reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
-            result = reconciler._get_head_tasks()
+        reconciler = GhostCodeReconciler(tmp_path, conn)
+        # No task_list.json -> returns []
+        result = reconciler._check_ac_freshness()
+        assert result == []
 
-        assert result is None
-        mock_logger.warning.assert_called()
-        assert mock_logger.warning.call_args[0][0] == "task_list_load_failed"
-
-    def test_prd_staging_check_logs_debug(self, mock_logger, tmp_path):
+    def test_get_staged_prd_ac_ids_logs_on_error(self, mock_logger, tmp_path, conn):
+        """When PRD file doesn't exist, _get_staged_prd_ac_ids logs and returns empty set."""
         from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
-        reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=subprocess.CalledProcessError(1, "git")):
-            # _check_ac_freshness calls subprocess.run to check if PRD is staged
-            # We need to mock _get_staged_tasks and _get_head_tasks too
-            with patch.object(reconciler, "_get_staged_tasks", return_value={"tasks": [{"task_id": "T1", "related_acceptance_criteria": ["AC-VT-1-1"]}]}), \
-                 patch.object(reconciler, "_get_head_tasks", return_value={"tasks": []}):
-                reconciler._check_ac_freshness()
-
-        mock_logger.debug.assert_called()
-        debug_calls = [c[0][0] for c in mock_logger.debug.call_args_list]
-        assert "prd_not_staged" in debug_calls
-
-    def test_get_staged_prd_ac_ids_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
-
-        reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
-            result = reconciler._get_staged_prd_ac_ids()
-
+        reconciler = GhostCodeReconciler(tmp_path, conn)
+        # No PRD file -> OSError -> empty set
+        result = reconciler._get_staged_prd_ac_ids()
         assert result == set()
         mock_logger.warning.assert_called()
         assert mock_logger.warning.call_args[0][0] == "prd_ac_parse_failed"

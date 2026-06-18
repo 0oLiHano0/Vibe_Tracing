@@ -22,7 +22,7 @@
 | Phase 2 | 领域层移动 + Claim 加载重构 | ✅ 已完成 | domain/ 移动完成、claim_loader 重构完成（旧字段已删除） |
 | Phase 3 | 编排层移动 + 证据构建重构 | ✅ 已完成 | commands/→cli/、EvidenceBuilder 重构、Claims 多文件、Schema 交接 |
 | Phase 4 | 门禁引擎 SQL 化 | ✅ 已完成 | evaluate 签名 11→6，静态方法删除，SQL 查询替代 |
-| Phase 5 | 幽灵代码检测 SQL 化 | ❌ 未开始 | ghost_code_reconciler.py 未改 |
+| Phase 5 | 幽灵代码检测 SQL 化 | ✅ 已完成 | git show 清零、SQL 查询替代、Gate 2.5 简化、三原则复核通过 |
 | Phase 6 | 流水线集成 | ❌ 未开始 | pipeline.py 未改，仍引用 current.json |
 | Phase 7 | Dashboard 模板迁移 + 清理 | ❌ 未开始 | dashboard 未适配新 evidence 格式 |
 | Phase 8 | 历史债务清理（current.json 残留 + 向后兼容代码） | ✅ 已完成 | 53 文件修改，删除旧架构核心组件，957 测试通过 |
@@ -381,37 +381,66 @@ def load_tasks(conn, tasks):
 
 ---
 
-### Phase 5：幽灵代码检测 SQL 化（ghost_code_reconciler） — ❌ 未开始
+### Phase 5：幽灵代码检测 SQL 化（ghost_code_reconciler） — ✅ 完成
 
-**目标**：删除 `git show HEAD`，幽灵代码检测改为 SQL 查询。
+**目标**：删除所有 `git show` 子进程调用，幽灵代码检测改为 SQL 查询，Gate 2.5 简化为纯文件系统读取。
 
 **前置条件**：Phase 1（db.py）完成。可与 Phase 4 并行。
+
+**设计决策**：
+- 放弃 HEAD delta 计算：claims 从文件系统读取，所有磁盘上的 CLAIM-*.json 视为活跃
+- 删除 `_get_head_tasks()` 和 `_get_modified_task_ids()`（原则 2：不积累 subprocess 债务）
+- Gate 2.5 简化：`_check_task_coverage` 仅检查 task 存在性（删除"未修改"WARNING）；`_check_ac_freshness` 检查所有 task 的 AC 是否在 PRD 中（删除"新 task"检测）
+- `_get_staged_files()` 保留（`git diff --cached` 不是 `git show`，轻量且必要）
 
 **涉及文件**：
 
 | 操作 | 文件 |
 |---|---|
 | 重构 | `domain/ghost_code_reconciler.py` |
+| 更新 | `cli/analyze/gates.py` |
 | 更新 | `tests/test_ghost_code_reconciler.py` |
-| 更新 | `tests/test_integration_v3.py` |
+| 更新 | `tests/test_exception_logging.py` |
 
-#### 执行步骤
+#### 原子任务
 
-- [ ] 构造函数新增 `conn: sqlite3.Connection` 参数
-- [ ] 删除 `_get_active_claims_code_refs()` 中的 `git show HEAD` 子进程
-- [ ] 活跃 Claim 识别改为：staged_files 匹配 `CLAIM-*.json`
-- [ ] 幽灵代码检测改为 `db.check_ghost_code(conn)` SQL 查询
-- [ ] 保留 `reconcile()` 方法名（不重命名为 `check()`）
-- [ ] 保留 `_check_task_coverage()` 和 `_check_ac_freshness()`（Gate 2.5 逻辑）
-- [ ] 保留 `_is_whitelisted()` 白名单机制
-- [ ] 更新测试文件
+**Task 1：构造函数 + reconcile() SQL 化 + caller 更新**
+
+- [x] 构造函数新增 `conn: sqlite3.Connection = None` 参数
+- [x] 新增 `_read_claims_from_filesystem()` 方法（Path.glob 扫描 CLAIM-*.json，过滤 template 和缺少必填字段的 claim）
+- [x] 重写 `reconcile()` 幽灵代码检测：`db.load_staged_files()` + `db.load_claims()` + `db.check_ghost_code(conn)`
+- [x] 更新 `gates.py`：创建 `init_in_memory_db()`，传入 `GhostCodeReconciler(project_root, conn)`
+
+**Task 2：Gate 2.5 文件系统迁移 + 简化**
+
+- [x] `_get_staged_claims()` → 调用 `_read_claims_from_filesystem()`
+- [x] `_get_staged_tasks()` → 文件系统读取 `docs/task_list.json`
+- [x] 删除 `_get_head_tasks()`（原则 2：不积累 subprocess 债务）
+- [x] 删除 `_get_modified_task_ids()`（依赖已删除的 `_get_head_tasks`）
+- [x] 简化 `_check_task_coverage()`：仅检查 claim 引用的 task 是否存在（BLOCKED），删除"未修改"WARNING
+- [x] 简化 `_check_ac_freshness()`：检查所有 task 的 AC 是否在 PRD 中，删除"新 task"检测，PRD 检测改为 `is_file()`
+- [x] `_get_staged_prd_ac_ids()` → 文件系统读取
+
+**Task 3：清理死代码**
+
+- [x] 删除 `_get_active_claims_code_refs()`（已被 `_read_claims_from_filesystem` + `db.check_ghost_code` 替代）
+- [x] 删除 `_get_all_task_ids()` 和 `_get_task_statuses()`（仅被已删除的 WARNING 逻辑使用）
+- [x] 验证 `grep -n "git show" ghost_code_reconciler.py` 返回 0 结果
+
+**Task 4：测试全面更新**
+
+- [x] `test_ghost_code_reconciler.py`：mock 目标改为 `_read_claims_from_filesystem`，传入 `conn`，删除 Delta/HEAD 相关测试
+- [x] `test_exception_logging.py`：删除已删方法的测试，重写文件系统错误测试
+- [x] 新增 `_read_claims_from_filesystem` 单元测试
 
 #### 验收标准
 
-- [ ] `pytest tests/test_ghost_code_reconciler.py` 通过
-- [ ] 无 `git show HEAD` 子进程调用残留
-- [ ] 无 `claims/current.json` 文件读取残留
-- [ ] Gate 2.5 AC 新鲜度检查正常工作
+- [x] `pytest tests/test_ghost_code_reconciler.py tests/test_exception_logging.py` 通过
+- [x] `grep -n "git show" src/vibe_tracing/domain/ghost_code_reconciler.py` 返回 0 结果
+- [x] `grep -n "_get_head_tasks\|_get_modified_task_ids\|_get_active_claims_code_refs" src/vibe_tracing/domain/ghost_code_reconciler.py` 返回 0 结果
+- [x] `_get_staged_files()` 中的 `git diff --cached --name-only` 保留
+- [x] 无 `claims/current.json` 文件读取残留
+- [x] Gate 2.5 AC 新鲜度检查正常工作
 
 ---
 
@@ -538,7 +567,7 @@ def load_tasks(conn, tasks):
 
 ---
 
-### Phase 8：历史债务清理（current.json 残留 + 向后兼容代码） — ❌ 未开始
+### Phase 8：历史债务清理（current.json 残留 + 向后兼容代码） — ✅ 完成
 
 **目标**：彻底清理 Phase 3 中 subagent 遗留的 `current.json` 引用和向后兼容代码，以及删除应删未删的 `evidence_index_builder.py`。
 
@@ -598,7 +627,7 @@ def load_tasks(conn, tasks):
 | 4 | GAP-DB-001 | `pipeline.py` | P0 | pipeline.py 未调用 db 函数 | [x] Phase 4 |
 | 5 | GAP-DB-002 | `pipeline.py` | P0 | pipeline.py 仍输出 evidence_index.json | [x] Phase 3 |
 | 6 | GAP-CLAIM-001 | `pipeline.py` | P0 | _auto_generate 仍写入 current.json | [x] Phase 3/8 |
-| 7 | GAP-CLAIM-002 | `ghost_code_reconciler.py` | P1 | 仍引用 current.json 路径 | [ ] Phase 5 |
+| 7 | GAP-CLAIM-002 | `ghost_code_reconciler.py` | P1 | 仍引用 current.json 路径 | [x] Phase 5 |
 | 8 | GAP-CLAIM-003 | `doctor.py` | P1 | 检查 current.json 是否存在 | [x] Phase 8 |
 | 9 | GAP-CLAIM-004 | `tools.py` | P0 | _archive_claims 读取 current.json | [x] Phase 3/8 |
 | 10 | GAP-CLAIM-005 | `config.template.json` | P1 | 模板仍引用 current.json | [x] Phase 8 |

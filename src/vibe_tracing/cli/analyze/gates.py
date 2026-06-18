@@ -138,8 +138,10 @@ def _gate2_code_claim_alignment(
     if not is_pre_commit:
         return None
 
+    from vibe_tracing.infra.db import init_in_memory_db
     from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
-    reconciler = GhostCodeReconciler(project_root)
+    conn = init_in_memory_db()
+    reconciler = GhostCodeReconciler(project_root, conn)
     success, error_msg = reconciler.reconcile()
     if error_msg:
         print(error_msg, file=sys.stderr)

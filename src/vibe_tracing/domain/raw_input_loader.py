@@ -69,12 +69,6 @@ class RawInputLoader:
         # For agent_claims: always resolve to the claims directory
         if key == "agent_claims":
             claims_dir = self.project_root / ".vibetracing" / "claims"
-            if claims_dir.is_dir() and list(claims_dir.glob("CLAIM-*.json")):
-                return claims_dir
-            current_json = claims_dir / "current.json"
-            if current_json.exists():
-                return current_json
-            # Return the directory path (ClaimLoader handles empty dirs)
             return claims_dir
 
         # 优先检查 config.json 中的自定义路径
@@ -145,10 +139,6 @@ class RawInputLoader:
         if abs_path.is_dir() and file_key == "agent_claims":
             claim_files = sorted(_glob_mod.glob(str(abs_path / "CLAIM-*.json")))
             if not claim_files:
-                # 尝试 current.json (backward compat)
-                current_json = abs_path / "current.json"
-                if current_json.exists():
-                    return self._load_file(file_key, current_json, is_required)
                 return InputFileRecord(
                     file_key=file_key,
                     file_path=path_str,

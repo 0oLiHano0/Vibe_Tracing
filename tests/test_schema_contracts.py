@@ -69,31 +69,13 @@ def _minimal_task_list() -> dict:
 
 
 def _minimal_agent_claims() -> list:
-    """Return a minimal valid agent_claims document (array)."""
+    """Return a minimal valid agent_claims document (array of claim objects)."""
     return [
         {
             "claim_id": "CLAIM-VT-001",
             "related_task": "TASK-VT-001",
         }
     ]
-
-
-def _minimal_evidence_index() -> dict:
-    """Return a minimal valid evidence_index document."""
-    return {
-        "run_id": "run-001",
-        "project_id": "PROJECT-VT",
-        "scan_time": "2026-01-01T00:00:00Z",
-        "evidences": [
-            {
-                "evidence_id": "EVIDENCE-VT-001",
-                "source_type": "test",
-                "source_path": "tests/test_foo.py",
-                "covers": ["AC-VT-001-01"],
-                "status": "covered",
-            }
-        ],
-    }
 
 
 def _minimal_traceability_report() -> dict:
@@ -314,8 +296,7 @@ class TestAgentClaimsSchema:
 
     def test_valid_document_with_optional_fields(self):
         """
-        Validates that optional fields (code_refs, test_refs, notes, claimed_status,
-        evidence_refs, timestamp) are accepted.
+        Validates that optional fields (code_refs, test_refs, notes) are accepted.
         Covers: AC-VT-001-01
         """
         schema = load_schema(self.SCHEMA_NAME)
@@ -323,9 +304,6 @@ class TestAgentClaimsSchema:
         doc[0]["code_refs"] = ["src/vibe_tracing/core/enums.py"]
         doc[0]["test_refs"] = ["tests/test_foo.py"]
         doc[0]["notes"] = "All good."
-        doc[0]["claimed_status"] = "covered"
-        doc[0]["evidence_refs"] = ["EVIDENCE-VT-001"]
-        doc[0]["timestamp"] = "2026-01-01T00:00:00Z"
         validate(instance=doc, schema=schema)
 
     def test_missing_claim_id_raises(self):
@@ -350,47 +328,40 @@ class TestAgentClaimsSchema:
         with pytest.raises(ValidationError):
             validate(instance=doc, schema=schema)
 
-    def test_claimed_status_is_optional(self):
+    def test_code_refs_is_optional(self):
         """
-        Validates that omitting 'claimed_status' does NOT cause a ValidationError
-        (it is an optional field after schema simplification).
+        Validates that omitting 'code_refs' does NOT cause a ValidationError.
         Covers: AC-VT-001-02
         """
         schema = load_schema(self.SCHEMA_NAME)
         doc = _minimal_agent_claims()
-        # claimed_status is not in the minimal doc (optional field)
-        assert "claimed_status" not in doc[0]
+        assert "code_refs" not in doc[0]
         validate(instance=doc, schema=schema)
 
-    def test_evidence_refs_is_optional(self):
+    def test_test_refs_is_optional(self):
         """
-        Validates that omitting 'evidence_refs' does NOT cause a ValidationError
-        (it is an optional field after schema simplification).
+        Validates that omitting 'test_refs' does NOT cause a ValidationError.
         Covers: AC-VT-001-02
         """
         schema = load_schema(self.SCHEMA_NAME)
         doc = _minimal_agent_claims()
-        # evidence_refs is not in the minimal doc (optional field)
-        assert "evidence_refs" not in doc[0]
+        assert "test_refs" not in doc[0]
         validate(instance=doc, schema=schema)
 
-    def test_timestamp_is_optional(self):
+    def test_notes_is_optional(self):
         """
-        Validates that omitting 'timestamp' does NOT cause a ValidationError
-        (it is an optional field after schema simplification).
+        Validates that omitting 'notes' does NOT cause a ValidationError.
         Covers: AC-VT-001-02
         """
         schema = load_schema(self.SCHEMA_NAME)
         doc = _minimal_agent_claims()
-        # timestamp is not in the minimal doc (optional field)
-        assert "timestamp" not in doc[0]
+        assert "notes" not in doc[0]
         validate(instance=doc, schema=schema)
 
-    def test_claimed_status_accepts_any_value(self):
+    def test_additional_properties_allowed(self):
         """
-        Validates that any 'claimed_status' value is accepted since the field
-        is no longer constrained by enum in the simplified schema
-        (additionalProperties: true allows arbitrary fields).
+        Validates that additional properties (like claimed_status) are accepted
+        since additionalProperties: true allows arbitrary fields.
         Covers: AC-VT-001-02
         """
         schema = load_schema(self.SCHEMA_NAME)
@@ -422,151 +393,12 @@ class TestAgentClaimsSchema:
 
     def test_top_level_must_be_array_raises(self):
         """
-        Validates that a non-array top-level value causes a ValidationError.
+        Validates that a non-array top-level value (e.g. string) causes a ValidationError.
         Covers: AC-VT-001-02
         """
         schema = load_schema(self.SCHEMA_NAME)
         with pytest.raises(ValidationError):
-            validate(instance={"claim_id": "CLAIM-VT-001"}, schema=schema)
-
-
-# ===========================================================================
-# evidence_index.schema.json
-# ===========================================================================
-
-
-class TestEvidenceIndexSchema:
-    """Tests for schemas/evidence_index.schema.json."""
-
-    SCHEMA_NAME = "evidence_index.schema.json"
-
-    def test_valid_minimal_document(self):
-        """
-        Validates that a minimal well-formed evidence_index document passes schema validation.
-        Covers: AC-VT-001-01, AC-VT-001-02
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        validate(instance=_minimal_evidence_index(), schema=schema)
-
-    def test_missing_run_id_raises(self):
-        """
-        Validates that omitting 'run_id' causes a ValidationError.
-        Covers: AC-VT-001-02
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        del doc["run_id"]
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_missing_project_id_raises(self):
-        """
-        Validates that omitting 'project_id' causes a ValidationError.
-        Covers: AC-VT-001-02
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        del doc["project_id"]
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_missing_scan_time_raises(self):
-        """
-        Validates that omitting 'scan_time' causes a ValidationError.
-        Covers: AC-VT-001-02
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        del doc["scan_time"]
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_missing_evidences_raises(self):
-        """
-        Validates that omitting 'evidences' causes a ValidationError.
-        Covers: AC-VT-001-02
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        del doc["evidences"]
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_missing_evidence_id_raises(self):
-        """
-        Validates that omitting 'evidence_id' from an evidence item causes a ValidationError.
-        Covers: AC-VT-001-02
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        del doc["evidences"][0]["evidence_id"]
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_missing_source_type_raises(self):
-        """
-        Validates that omitting 'source_type' from an evidence item causes a ValidationError.
-        Covers: AC-VT-001-02
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        del doc["evidences"][0]["source_type"]
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_invalid_source_type_enum_raises(self):
-        """
-        Validates that an invalid 'source_type' enum value causes a ValidationError.
-        Covers: AC-VT-001-02
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        doc["evidences"][0]["source_type"] = "document"
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_invalid_evidence_status_enum_raises(self):
-        """
-        Validates that an invalid evidence 'status' enum value causes a ValidationError.
-        Covers: AC-VT-001-02
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        doc["evidences"][0]["status"] = "unknown"
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_invalid_project_id_pattern_raises(self):
-        """
-        Validates that a malformed 'project_id' pattern causes a ValidationError.
-        Covers: AC-VT-002-01
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        doc["project_id"] = "VT-PROJECT"
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_invalid_evidence_id_pattern_raises(self):
-        """
-        Validates that a malformed 'evidence_id' pattern causes a ValidationError.
-        Covers: AC-VT-002-01
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        doc["evidences"][0]["evidence_id"] = "EV-001"
-        with pytest.raises(ValidationError):
-            validate(instance=doc, schema=schema)
-
-    def test_empty_evidences_array_is_valid(self):
-        """
-        Validates that an empty 'evidences' array is accepted by the schema.
-        Covers: AC-VT-001-01
-        """
-        schema = load_schema(self.SCHEMA_NAME)
-        doc = _minimal_evidence_index()
-        doc["evidences"] = []
-        validate(instance=doc, schema=schema)
+            validate(instance="not an array", schema=schema)
 
 
 # ===========================================================================

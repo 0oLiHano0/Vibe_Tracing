@@ -16,7 +16,7 @@ def mock_tool_execution(monkeypatch):
     from vibe_tracing.infra.enums import CoverageStatus
     import json
 
-    def mock_execute_all(self, execution_paths, baseline_path=None):
+    def mock_execute_all(self, execution_paths):
         opts_path = self.project_root / "test_opts.json"
         if not opts_path.exists():
             return []
@@ -260,11 +260,11 @@ must
         ]
         if extra_claims:
             agent_claims.extend(extra_claims)
-        (base / ".vibetracing" / "claims" / "current.json").write_text(
+        (base / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
             json.dumps(agent_claims), encoding="utf-8"
         )
     else:
-        (base / ".vibetracing" / "claims" / "current.json").write_text("[]", encoding="utf-8")
+        (base / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text("[]", encoding="utf-8")
 
     # Write config.json (required by the new "Project not finalized" check in run_analyze)
     config_data = {
@@ -277,7 +277,7 @@ must
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/claims/current.json",
+            "agent_claims": ".vibetracing/claims",
             "output_dir": ".vibetracing/output",
         },
     }
@@ -651,7 +651,7 @@ def test_gate_vt_014_architecture_change_log(tmp_path, capsys):
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/claims/current.json",
+            "agent_claims": ".vibetracing/claims",
             "output_dir": ".vibetracing/output",
         },
     }

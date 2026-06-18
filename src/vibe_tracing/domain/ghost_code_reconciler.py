@@ -18,14 +18,16 @@ class GhostCodeReconciler:
     """
     def __init__(self, project_root: Path):
         self.project_root = project_root
-        self.claims_path = project_root / ".vibetracing" / "claims" / "current.json"
+        self.claims_dir = project_root / ".vibetracing" / "claims"
 
         # Exact Whitelist (The ledger itself shouldn't require a receipt)
         self.whitelist_paths = {
-            ".vibetracing/claims/current.json",
             ".vibetracing/config.json",
             "docs/task_list.json",
         }
+
+        # Prefix Whitelist for claims directory files
+        self.whitelist_prefixes_claims = ".vibetracing/claims/"
 
         # Prefix Whitelist
         self.whitelist_prefixes = [
@@ -35,6 +37,8 @@ class GhostCodeReconciler:
 
     def _is_whitelisted(self, file_path: str) -> bool:
         if file_path in self.whitelist_paths:
+            return True
+        if file_path.startswith(self.whitelist_prefixes_claims):
             return True
         for prefix in self.whitelist_prefixes:
             if file_path.startswith(prefix):
@@ -57,53 +61,67 @@ class GhostCodeReconciler:
             return set()
 
     def _get_active_claims_code_refs(self) -> Set[str]:
-        # 1. Get Staged Claims (from git index, NOT working directory)
+        """Collect code_refs from staged CLAIM-*.json files (directory mode)."""
         staged_claims = []
         try:
-            claims_rel = str(self.claims_path.relative_to(self.project_root))
             result = subprocess.run(
-                ["git", "show", f":{claims_rel}"],
+                ["git", "diff", "--cached", "--name-only"],
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
-            staged_claims = json.loads(result.stdout)
-        except FileNotFoundError as exc:
-            OperationalLogger.get().warning("git_subprocess_failed", "Git not available for staged claims", exc=exc)
+            staged_claim_files = [
+                f for f in result.stdout.splitlines()
+                if f.startswith(".vibetracing/claims/") and f.endswith(".json") and f.strip()
+            ]
+            for claim_file in staged_claim_files:
+                try:
+                    show_result = subprocess.run(
+                        ["git", "show", f":{claim_file}"],
+                        cwd=self.project_root,
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                    data = json.loads(show_result.stdout)
+                    items = data if isinstance(data, list) else [data]
+                    staged_claims.extend(items)
+                except (subprocess.CalledProcessError, json.JSONDecodeError, Exception) as exc:
+                    OperationalLogger.get().debug("claim_file_load_failed", f"Could not load staged claim file {claim_file}", exc=exc)
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            OperationalLogger.get().warning("git_subprocess_failed", "Git operation failed: _get_active_claims_code_refs", exc=exc)
             print("Warning: git 未安装或不在 PATH 中，跳过检查。")
-            staged_claims = []
-        except subprocess.CalledProcessError as exc:
-            OperationalLogger.get().debug("claims_not_staged", "Claims file not in git index", exc=exc)
-            staged_claims = []
-        except Exception as exc:
-            OperationalLogger.get().exception("claims_parse_failed", "Could not parse staged claims", exc=exc)
-            print(f"Warning: claims/current.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
-            staged_claims = []
 
-        # 2. Get HEAD Claims (unchanged)
+        # Get HEAD claims for delta calculation
         head_claims = []
         try:
-            claims_rel = str(self.claims_path.relative_to(self.project_root))
             result = subprocess.run(
-                ["git", "show", f"HEAD:{claims_rel}"],
+                ["git", "ls-tree", "-r", "--name-only", "HEAD", ".vibetracing/claims/"],
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
-            head_claims = json.loads(result.stdout)
-        except FileNotFoundError as exc:
-            OperationalLogger.get().warning("git_subprocess_failed", "Git not available for head claims", exc=exc)
-            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
-            head_claims = []
-        except subprocess.CalledProcessError as exc:
+            for claim_file in result.stdout.splitlines():
+                claim_file = claim_file.strip()
+                if not claim_file.endswith(".json"):
+                    continue
+                try:
+                    show_result = subprocess.run(
+                        ["git", "show", f"HEAD:{claim_file}"],
+                        cwd=self.project_root,
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                    data = json.loads(show_result.stdout)
+                    items = data if isinstance(data, list) else [data]
+                    head_claims.extend(items)
+                except (subprocess.CalledProcessError, json.JSONDecodeError, Exception):
+                    pass
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
             OperationalLogger.get().debug("head_claims_not_found", "No HEAD claims available", exc=exc)
-            head_claims = []
-        except Exception as exc:
-            OperationalLogger.get().exception("head_claims_parse_failed", "Could not parse HEAD claims", exc=exc)
-            print(f"Warning: claims/current.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
-            head_claims = []
 
         # 3. Calculate Delta (State is Delta)
         active_code_refs = set()
@@ -143,7 +161,7 @@ class GhostCodeReconciler:
                 "发现未经报备的幽灵代码！\n"
                 f"{files_str}\n"
                 "上述文件在本次提交中没有对应的【活跃发票】（Claim）。\n"
-                "如果它是合法代码，请在 .vibetracing/claims/current.json 中增加或更新对应的发票，并将其与代码一同提交。"
+                "如果它是合法代码，请在 .vibetracing/claims/ 中创建或更新对应的 Claim 文件，并将其与代码一同提交。"
             )
 
         # Gate 2.5 checks (merged from AcFreshnessChecker)
@@ -167,27 +185,37 @@ class GhostCodeReconciler:
     # ------------------------------------------------------------------
 
     def _get_staged_claims(self) -> List[dict]:
-        """Read staged claims/current.json from the git index."""
+        """Read staged CLAIM-*.json files from the git index (directory mode)."""
+        all_claims = []
         try:
-            claims_rel = str(self.claims_path.relative_to(self.project_root))
             result = subprocess.run(
-                ["git", "show", f":{claims_rel}"],
+                ["git", "diff", "--cached", "--name-only"],
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
                 check=True,
             )
-            data = json.loads(result.stdout)
-            if isinstance(data, list):
-                return data
-            return []
+            staged_claim_files = [
+                f for f in result.stdout.splitlines()
+                if f.startswith(".vibetracing/claims/") and f.endswith(".json") and f.strip()
+            ]
+            for claim_file in staged_claim_files:
+                try:
+                    show_result = subprocess.run(
+                        ["git", "show", f":{claim_file}"],
+                        cwd=self.project_root,
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                    data = json.loads(show_result.stdout)
+                    items = data if isinstance(data, list) else [data]
+                    all_claims.extend(items)
+                except (subprocess.CalledProcessError, json.JSONDecodeError, Exception):
+                    pass
         except (subprocess.CalledProcessError, FileNotFoundError) as exc:
             OperationalLogger.get().warning("git_subprocess_failed", "Git operation failed: _get_staged_claims", exc=exc)
-            return []
-        except (json.JSONDecodeError, Exception) as exc:
-            OperationalLogger.get().exception("claims_parse_failed", "Could not parse staged claims", exc=exc)
-            print(f"Warning: claims/current.json 格式解析失败，将按无 claims 处理: {exc}", file=sys.stderr)
-            return []
+        return all_claims
 
     def _get_staged_tasks(self) -> Optional[dict]:
         """Read staged task_list.json from the git index."""

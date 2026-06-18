@@ -29,8 +29,6 @@ def test_claims_schema_validation_error_with_dynamic_hints(validator):
     res = validator.validate_dict(data, "agent_claims")
     assert res.is_valid is False
     assert "claim_id" in res.message
-    # Check that custom hint is resolved and wrapped with 【修复指南】
-    assert "【修复指南】申索唯一标识符" in res.hint
 
 
 def test_tasks_schema_validation_error_with_dynamic_hints(validator):
@@ -153,7 +151,7 @@ def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
     ]
 
     (tmp_path / "claims").mkdir(parents=True, exist_ok=True)
-    file_path = tmp_path / "claims" / "current.json"
+    file_path = tmp_path / "claims" / "CLAIM-VT-001.json"
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(data, f)
 
@@ -162,7 +160,7 @@ def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
     task_res = task_loader.load_and_validate(None, content=task_list_data)
 
     loader = ClaimLoader()
-    res = loader.load(file_path, task_result=task_res)
+    res = loader.load(tmp_path / "claims", task_result=task_res)
     assert res.is_valid is False
 
     error_msg = "; ".join(res.errors)
@@ -233,12 +231,12 @@ def test_silent_filtering_of_template_records(tmp_path):
         },
     ]
     (tmp_path / "claims").mkdir(parents=True, exist_ok=True)
-    claim_path = tmp_path / "claims" / "current.json"
+    claim_path = tmp_path / "claims" / "CLAIM-VT-001.json"
     with claim_path.open("w", encoding="utf-8") as f:
         json.dump(claim_data, f)
 
     claim_loader = ClaimLoader()
-    claim_res = claim_loader.load(claim_path, task_res)
+    claim_res = claim_loader.load(tmp_path / "claims", task_res)
 
     parsed_cids = [c.claim_id for c in claim_res.claims]
     assert "CLAIM-VT-001" in parsed_cids

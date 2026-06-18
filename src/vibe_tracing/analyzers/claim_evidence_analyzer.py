@@ -18,8 +18,7 @@ with task completeness or test results, and flags nonexistent or outdated file r
 #   - Validation checks task completion and AC test coverage via evidence.
 #   - File hash comparison detects staleness in code_refs and test_refs.
 #   - Invalidation detection via _check_invalidation() is available for
-#     callers who maintain fingerprint snapshots externally (e.g. evidence_index),
-#     but analyze() itself does not load or store fingerprints.
+#     callers who pass an evidence_index dict for hash-based validation.
 #
 # Sections in analyze():
 #   0. (reserved — invalidation is now caller-driven, not embedded)
@@ -72,55 +71,23 @@ class ClaimEvidenceAnalyzer:
         except Exception:
             return None
 
-    def _check_invalidation(self, claim, stored_fingerprints: dict, evidence_index=None) -> Optional[dict]:
+    def _check_invalidation(self, claim, evidence_index: dict) -> Optional[dict]:
         """Check if claim's referenced files have changed since last analysis.
 
-        When evidence_index is provided, validates file hashes against it.
-        Otherwise, falls back to stored_fingerprints for backward compatibility.
+        Validates file hashes against the evidence_index dict (output/evidences/).
 
-        Note: analyze() no longer calls this method or loads fingerprints.
-        Callers who need invalidation detection should pass evidence_index
-        or manage stored_fingerprints externally.
+        Note: analyze() no longer calls this method.
+        Callers who need invalidation detection should pass evidence_index.
 
         Args:
             claim: The claim object to check.
-            stored_fingerprints: Fingerprint data keyed by claim_id (legacy path).
-            evidence_index: Optional evidence_index dict for hash-based validation.
+            evidence_index: Evidence index dict for hash-based validation.
 
         Returns:
             A dict with invalidation details if files changed, else None.
         """
         cid = claim.claim_id if hasattr(claim, 'claim_id') else claim.get('claim_id')
-
-        if evidence_index is not None:
-            return self._check_invalidation_from_evidence_index(claim, cid, evidence_index)
-
-        # Legacy path: compare against stored_fingerprints
-        if stored_fingerprints is None:
-            return None
-
-        stored = stored_fingerprints.get(cid)
-        if not stored:
-            return None
-
-        changed_files = []
-        for ref_path, old_hash in stored.get("fingerprints", {}).items():
-            full_path = self.project_root / ref_path
-            if not full_path.exists():
-                changed_files.append({"file": ref_path, "old_hash": old_hash, "reason": f"File {ref_path} has been deleted"})
-            else:
-                current_hash = _file_sha256(full_path)
-                if current_hash and current_hash != old_hash:
-                    changed_files.append({"file": ref_path, "old_hash": old_hash, "new_hash": current_hash, "reason": f"File {ref_path} hash has changed"})
-
-        if changed_files:
-            return {
-                "claim_id": cid,
-                "status": CoverageStatus.NEEDS_REVERIFICATION.value,
-                "files": changed_files,
-                "stored_timestamp": stored.get("timestamp"),
-            }
-        return None
+        return self._check_invalidation_from_evidence_index(claim, cid, evidence_index)
 
     def _check_invalidation_from_evidence_index(
         self, claim, cid: str, evidence_index: dict

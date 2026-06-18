@@ -9,7 +9,6 @@ import uuid
 from pathlib import Path
 from typing import Optional, Set, Tuple
 
-from vibe_tracing.domain.evidence_index_builder import EvidenceIndexBuilder
 from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 from vibe_tracing.domain.context import UnifiedContext
 
@@ -321,20 +320,115 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                        )
 
         # Build evidence index
-        index_builder = EvidenceIndexBuilder(project_root)
-        index_path = output_dir / "evidence_index.json"
         _t_build = time.perf_counter()
+
+        # Convert ToolEvidenceCandidate dataclass instances to dicts for downstream
+        def _tc_to_dict(tc):
+            """Convert a ToolEvidenceCandidate to a plain dict."""
+            d = {
+                "source_type": tc.source_type,
+                "source_path": tc.source_path,
+                "covers": tc.covers,
+                "status": tc.status,
+                "details": dict(tc.details) if tc.details else {},
+            }
+            if tc.tool_category:
+                d["details"]["tool_category"] = tc.tool_category
+            if tc.command:
+                d["details"]["command"] = tc.command
+            if tc.exit_code != 0 or tc.command:
+                d["details"]["exit_code"] = tc.exit_code
+            if tc.stderr:
+                d["details"]["stderr"] = tc.stderr
+            if tc.error_code:
+                d["error_code"] = tc.error_code
+            return d
+
         try:
-            evidences_index = index_builder.build(
-                output_path=index_path,
-                ctx=ctx,
-                tool_evidence_candidates=tool_evidence,
-                prd_record=prd_res,
-                task_result=ctx.task_result,
-                claims_list=ctx.claims_list,
-                manifest=ctx.manifest,
-                config_prefix=config_prefix,
-            )
+            evidence_dicts = []
+
+            # Add task evidence entries
+            from vibe_tracing.infra.enums import CoverageStatus
+            task_covers_map = {}
+            if ctx.task_result and ctx.task_result.tasks:
+                for task in ctx.task_result.tasks:
+                    covers = sorted(list(set(
+                        task.related_requirements + task.related_acceptance_criteria
+                    )))
+                    task_covers_map[task.task_id] = covers
+                    status_map = {
+                        "todo": CoverageStatus.MISSING.value,
+                        "in_progress": CoverageStatus.PARTIAL.value,
+                        "blocked": CoverageStatus.BLOCKED.value,
+                        "done": CoverageStatus.COVERED.value,
+                    }
+                    status = status_map.get(task.status, CoverageStatus.UNCLEAR.value)
+                    evidence_dicts.append({
+                        "source_type": "task",
+                        "source_path": "docs/task_list.json",
+                        "covers": covers,
+                        "status": status,
+                        "details": {
+                            "task_id": task.task_id,
+                            "title": task.title,
+                            "phase_id": task.phase_id,
+                            "priority": task.priority,
+                        },
+                    })
+
+            # Add claim evidence entries
+            for claim in (ctx.claims_list or []):
+                covers = task_covers_map.get(claim.related_task, [])
+                evidence_dicts.append({
+                    "source_type": "claim",
+                    "source_path": ".vibetracing/claims/",
+                    "covers": covers,
+                    "status": CoverageStatus.UNCLEAR.value,
+                    "details": {
+                        "claim_id": claim.claim_id,
+                        "related_task": claim.related_task,
+                        "timestamp": claim.timestamp,
+                        "notes": getattr(claim, "notes", ""),
+                    },
+                })
+
+            # Add code evidence entries from claims
+            for claim in (ctx.claims_list or []):
+                covers = task_covers_map.get(claim.related_task, [])
+                for code_ref in (claim.code_refs or []):
+                    evidence_dicts.append({
+                        "source_type": "code",
+                        "source_path": code_ref,
+                        "covers": covers,
+                        "status": CoverageStatus.COMPLIANT.value,
+                        "details": {
+                            "claim_id": claim.claim_id,
+                            "related_task": claim.related_task,
+                        },
+                    })
+
+            # Add tool evidence entries
+            for tc in (ctx.tool_evidence or []):
+                evidence_dicts.append(_tc_to_dict(tc))
+
+            # Assign sequential evidence IDs
+            for idx, ev in enumerate(evidence_dicts):
+                ev["evidence_id"] = f"EVIDENCE-VT-{idx + 1:03d}"
+
+            evidences_index = {
+                "run_id": f"RUN-{uuid.uuid4()}",
+                "project_id": f"PROJECT-{config_prefix}",
+                "scan_time": "",
+                "evidences": evidence_dicts,
+                "test_results": {},
+                "coverage_baseline": {},
+            }
+
+            # Write evidence_index.json to disk
+            index_path = output_dir / "evidence_index.json"
+            index_path.parent.mkdir(parents=True, exist_ok=True)
+            with index_path.open("w", encoding="utf-8") as f:
+                json.dump(evidences_index, f, indent=2, ensure_ascii=False)
         except Exception as exc:
             print(f"Error building evidence index: {exc}", file=sys.stderr)
             return 1

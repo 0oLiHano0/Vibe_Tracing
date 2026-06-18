@@ -65,7 +65,7 @@ class RiskAdvisor:
             elif category == "non_existent_evidence":
                 hint = _risk_hints.get("non_existent_evidence", {})
                 impact = resolve_hint(hint, "level1") if hint else "证据链中断，导致声称的完成状态无法被客观核查。"
-                action = "核对 `evidence_index.json` 或工具报告输出，确保被引用的证据项已正确生成并包含在索引中。"
+                action = "核对 output/evidences/ 中的证据文件或工具报告输出，确保被引用的证据项已正确生成。"
             elif category == "stale_file":
                 hint = _risk_hints.get("stale_file", {})
                 impact = resolve_hint(hint, "level1") if hint else "文件在此次 Claim 签发后发生了修改，声称的覆盖状态已失效，属于推测性风险。"

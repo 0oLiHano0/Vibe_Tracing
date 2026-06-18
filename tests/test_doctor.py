@@ -89,7 +89,7 @@ class TestDoctorLoadLogging:
         (tmp_path / "output").mkdir()
         (tmp_path / ".vibetracing" / "claims").mkdir(parents=True)
         claims = [{"claim_id": "C-1", "code_refs": [], "test_refs": [], "evidence_refs": []}]
-        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(json.dumps(claims))
+        (tmp_path / ".vibetracing" / "claims" / "CLAIM-TEST-001.json").write_text(json.dumps(claims))
 
         run_doctor(tmp_path)
 
@@ -99,20 +99,21 @@ class TestDoctorLoadLogging:
         assert claims_logs[0]["result"] == "pass"
         assert claims_logs[0]["claims_count"] == 1
 
-    def test_invalid_claims_json_logs_fail(self, tmp_path):
-        """Malformed claims JSON should log fail with exception."""
+    def test_invalid_claims_json_logs_pass_with_skip(self, tmp_path):
+        """Malformed claims JSON file is skipped; doctor logs pass with 0 claims."""
         (tmp_path / "docs").mkdir()
         (tmp_path / "output").mkdir()
         (tmp_path / ".vibetracing" / "claims").mkdir(parents=True)
-        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text("not json!")
+        (tmp_path / ".vibetracing" / "claims" / "CLAIM-TEST-001.json").write_text("not json!")
 
         run_doctor(tmp_path)
 
         load_events = _log_by_event(tmp_path, "doctor_load")
         claims_logs = [e for e in load_events if e.get("file") == "claims"]
         assert len(claims_logs) == 1
-        assert claims_logs[0]["result"] == "fail"
-        assert "exception" in claims_logs[0]
+        # File was found by glob (so pass), but parse failed => claims_count=0
+        assert claims_logs[0]["result"] == "pass"
+        assert claims_logs[0]["claims_count"] == 0
 
     def test_task_list_not_found_logs_warning(self, tmp_path):
         """Missing task list should log a warning."""
@@ -153,17 +154,20 @@ class TestDoctorLoadLogging:
         assert len(constraints_logs) == 1
         assert constraints_logs[0]["result"] == "warning"
 
-    def test_evidence_index_not_found_logs_warning(self, tmp_path):
-        """Missing evidence index should log a warning."""
+    def test_evidences_not_found_logs_warning(self, tmp_path):
+        """Missing evidences directory should log warnings for test_results and coverage_reports."""
         (tmp_path / "docs").mkdir()
         (tmp_path / "output").mkdir()
 
         run_doctor(tmp_path)
 
         load_events = _log_by_event(tmp_path, "doctor_load")
-        ei_logs = [e for e in load_events if e.get("file") == "evidence_index"]
-        assert len(ei_logs) == 1
-        assert ei_logs[0]["result"] == "warning"
+        tr_logs = [e for e in load_events if e.get("file") == "test_results"]
+        cr_logs = [e for e in load_events if e.get("file") == "coverage_reports"]
+        assert len(tr_logs) == 1
+        assert tr_logs[0]["result"] == "warning"
+        assert len(cr_logs) == 1
+        assert cr_logs[0]["result"] == "warning"
 
 
 class TestDoctorCheckLogging:
@@ -242,7 +246,7 @@ class TestDoctorCheckLogging:
             "test_refs": [],
             "evidence_refs": [],
         }]
-        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(json.dumps(claims))
+        (tmp_path / ".vibetracing" / "claims" / "CLAIM-TEST-001.json").write_text(json.dumps(claims))
 
         run_doctor(tmp_path)
 
@@ -283,7 +287,7 @@ class TestDoctorEndLogging:
             "test_refs": [],
             "evidence_refs": [],
         }]
-        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(json.dumps(claims))
+        (tmp_path / ".vibetracing" / "claims" / "CLAIM-TEST-001.json").write_text(json.dumps(claims))
 
         run_doctor(tmp_path)
 

@@ -1,7 +1,7 @@
 """
 Agent Claim 加载器与校验器。
 
-从文件系统加载 claim 文件（current.json 或 CLAIM-*.json 批量模式），
+从文件系统加载 claim 文件（CLAIM-*.json 批量模式），
 与 task_list 进行交叉引用校验。
 """
 
@@ -60,8 +60,7 @@ class ClaimLoader:
         """
         加载 agent claims，与 task_list 交叉引用校验。
 
-        claims_path 可以是单个文件（向后兼容的 current.json 模式），
-        也可以是目录（批量模式：加载目录下所有 CLAIM-*.json 文件并合并）。
+        claims_path 必须是目录（批量模式：加载目录下所有 CLAIM-*.json 文件并合并）。
         """
         if content is not None:
             # 直接使用外部传入的数据（测试或内存模式）
@@ -92,17 +91,11 @@ class ClaimLoader:
                     )
             source_label = str(claims_path)
         else:
-            # 单文件模式（向后兼容）
-            try:
-                with claims_path.open("r", encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception as exc:
-                return ClaimListLoadResult(
-                    claims=[],
-                    is_valid=False,
-                    errors=[f"Failed to read/parse file {claims_path}: {exc}"],
-                )
-            source_label = str(claims_path)
+            return ClaimListLoadResult(
+                claims=[],
+                is_valid=False,
+                errors=[f"claims_path is not a directory: {claims_path}"],
+            )
 
         return self.validate_data(data, task_result, source_label=source_label)
 

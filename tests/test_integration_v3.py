@@ -153,29 +153,26 @@ class TestArchiveClaims:
         assert len(remaining_claims) == 0
 
     def test_archive_claims_empty(self, tmp_path: Path) -> None:
-        """Empty current.json should not produce an archive file."""
+        """Empty claims directory should not produce an archive file."""
         claims_dir = tmp_path / ".vibetracing" / "claims"
         archive_dir = claims_dir / "archive"
         claims_dir.mkdir(parents=True, exist_ok=True)
-
-        current_path = claims_dir / "current.json"
-        current_path.write_text("[]", encoding="utf-8")
 
         _archive_claims(tmp_path)
 
         # No archive file should be created
         assert not any(archive_dir.iterdir()) if archive_dir.exists() else True
 
-    def test_archive_claims_missing_file(self, tmp_path: Path) -> None:
-        """Missing current.json should not raise."""
+    def test_archive_claims_missing_dir(self, tmp_path: Path) -> None:
+        """Missing claims directory should not raise."""
         # Should return silently without error
         _archive_claims(tmp_path)
 
     def test_archive_claims_corrupt_json(self, tmp_path: Path) -> None:
-        """Corrupt current.json should not raise."""
+        """Corrupt CLAIM-*.json should not raise."""
         claims_dir = tmp_path / ".vibetracing" / "claims"
         claims_dir.mkdir(parents=True, exist_ok=True)
-        (claims_dir / "current.json").write_text("NOT JSON!!!", encoding="utf-8")
+        (claims_dir / "CLAIM-VT-001.json").write_text("NOT JSON!!!", encoding="utf-8")
 
         # Should not raise
         _archive_claims(tmp_path)

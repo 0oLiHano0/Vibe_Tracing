@@ -34,7 +34,7 @@ class MergeGateEngine:
         """Check if an item is related to current staged changes.
 
         Returns ``True`` when:
-        - *staged_items* is ``None`` (full-analysis mode, backward-compatible).
+        - *staged_items* is ``None`` (full-analysis mode: all items considered current).
         - *related_ids* overlaps with *staged_items*.
 
         Returns ``False`` when:
@@ -57,7 +57,7 @@ class MergeGateEngine:
         """Prefix *msg* with a source tag based on staged_items.
 
         If *staged_items* is ``None``, the message is returned unchanged
-        (backward-compatible).  Otherwise:
+        (full-analysis mode).  Otherwise:
         - If any of *related_ids* is in *staged_items* → ``[当前]``
         - If none of *related_ids* is in *staged_items* → ``[预存]``
         - If *related_ids* is empty/None → ``[预存]`` (cannot prove relation)

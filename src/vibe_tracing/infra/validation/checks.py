@@ -61,6 +61,8 @@ def _check_schemas(
     schema_map = {
         "task_list": "task_list",
         "agent_claims": "agent_claims",
+        "test_results": "test_results",
+        "coverage_reports": "coverage_reports",
         "architecture_constraints": "architecture_constraints",
     }
 

@@ -96,7 +96,7 @@ def _build_metadata(
     manifest = ctx.manifest
     claims_list = ctx.claims_list
     gate_decision = gate_res["gate_decision"]
-    index_path = output_dir / "evidence_index.json"
+    evidences_dir = output_dir / "evidences"
     report_path = output_dir / "traceability_report.json"
     dashboard_path = output_dir / "dashboard.html"
     exit_code = 2 if gate_decision == "blocked" else 0
@@ -121,7 +121,7 @@ def _build_metadata(
         "scan_time": report_doc.get("scan_time"),
         "input_files": input_files_meta,
         "output_files": {
-            "evidence_index": _rel_path_str(index_path, project_root),
+            "evidences_dir": _rel_path_str(evidences_dir, project_root),
             "traceability_report": _rel_path_str(report_path, project_root),
             "dashboard": _rel_path_str(dashboard_path, project_root),
         },

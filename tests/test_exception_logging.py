@@ -86,50 +86,6 @@ class TestGitUtilsExceptionLogging:
 
 
 # --------------------------------------------------------------------------
-# evidence_index_builder.py
-# --------------------------------------------------------------------------
-
-class TestEvidenceIndexBuilderExceptionLogging:
-    """EvidenceIndexBuilder must log when loading old evidence index fails."""
-
-    def test_build_logs_on_corrupt_evidence_index(self, mock_logger, tmp_path):
-        from vibe_tracing.domain.evidence_index_builder import EvidenceIndexBuilder
-
-        # Create a corrupt evidence_index.json
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
-        (output_dir / "evidence_index.json").write_text("NOT JSON", encoding="utf-8")
-
-        builder = EvidenceIndexBuilder(tmp_path)
-        # We need to mock ctx to avoid full pipeline; just verify the warning was called
-        # by patching at a lower level
-        mock_ctx = MagicMock()
-        mock_ctx.prd.is_valid = True
-        mock_ctx.prd.status = "draft"
-        mock_ctx.prd.requirements = []
-        mock_ctx.task_result = None
-        mock_ctx.claims_list = []
-        mock_ctx.manifest.inputs_used = []
-        mock_ctx.config_prefix = "TEST"
-        mock_ctx.tool_evidence = []
-        mock_ctx.config = {}
-
-        # Patch schema validator to avoid validation
-        with patch.object(builder.schema_validator, "validate_file") as mock_val:
-            mock_val.return_value = MagicMock(is_valid=True, message="", field_path="")
-            try:
-                builder.build(output_dir / "new_index.json", mock_ctx)
-            except Exception:
-                pass  # May fail for other reasons; we only care about the warning
-
-        mock_logger.warning.assert_any_call(
-            "evidence_index_load_failed",
-            "Could not load previous evidence index for incremental build",
-            path=str(output_dir / "new_index.json"),
-        )
-
-
-# --------------------------------------------------------------------------
 # commands/analyze/analysis.py
 # --------------------------------------------------------------------------
 
@@ -213,7 +169,7 @@ class TestGhostCodeReconcilerExceptionLogging:
         # Create claims dir
         claims_dir = tmp_path / ".vibetracing" / "claims"
         claims_dir.mkdir(parents=True)
-        (claims_dir / "current.json").write_text("[]", encoding="utf-8")
+        (claims_dir / "CLAIM-VT-001.json").write_text("[]", encoding="utf-8")
 
         reconciler = GhostCodeReconciler(tmp_path)
         with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
@@ -222,22 +178,19 @@ class TestGhostCodeReconcilerExceptionLogging:
         assert result == []
         mock_logger.warning.assert_called()
 
-    def test_get_staged_claims_logs_on_json_error(self, mock_logger, tmp_path):
+    def test_get_staged_claims_handles_subprocess_error(self, mock_logger, tmp_path):
         from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
         claims_dir = tmp_path / ".vibetracing" / "claims"
         claims_dir.mkdir(parents=True)
-        (claims_dir / "current.json").write_text("[]", encoding="utf-8")
+        (claims_dir / "CLAIM-VT-001.json").write_text("[]", encoding="utf-8")
 
         reconciler = GhostCodeReconciler(tmp_path)
-        mock_result = MagicMock()
-        mock_result.stdout = "NOT JSON"
-        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", return_value=mock_result):
+        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
             result = reconciler._get_staged_claims()
 
         assert result == []
-        mock_logger.exception.assert_called()
-        assert mock_logger.exception.call_args[0][0] == "claims_parse_failed"
+        mock_logger.warning.assert_called()
 
     def test_get_staged_tasks_logs_on_error(self, mock_logger, tmp_path):
         from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler

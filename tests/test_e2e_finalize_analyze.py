@@ -69,7 +69,7 @@ def _make_config():
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/claims/current.json",
+            "agent_claims": ".vibetracing/claims",
             "output_dir": "output",
         },
     }
@@ -149,7 +149,7 @@ def _make_claims(
     test_refs=None,
     code_refs=None,
 ):
-    """Return a minimal valid claims/current.json list.
+    """Return a minimal valid claims list.
 
     Args:
         test_refs: Test file paths referenced by the claim.
@@ -202,9 +202,9 @@ def _setup_project(
         json.dumps(_make_task_list(), indent=2), encoding="utf-8"
     )
 
-    # claims/current.json
+    # claims/CLAIM-VT-001.json
     claims = claims_data if claims_data is not None else _make_claims()
-    (base / ".vibetracing" / "claims" / "current.json").write_text(
+    (base / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
         json.dumps(claims, indent=2), encoding="utf-8"
     )
 

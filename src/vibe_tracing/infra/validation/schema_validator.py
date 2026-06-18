@@ -118,7 +118,8 @@ class SchemaValidator:
     KNOWN_SCHEMAS = {
         "task_list": "task_list.schema.json",
         "agent_claims": "agent_claims.schema.json",
-        "evidence_index": "evidence_index.schema.json",
+        "test_results": "test_results.schema.json",
+        "coverage_reports": "coverage_reports.schema.json",
         "traceability_report": "traceability_report.schema.json",
         "architecture_constraints": "architecture_constraints.schema.json",
         "human_decisions": "human_decisions.schema.json",

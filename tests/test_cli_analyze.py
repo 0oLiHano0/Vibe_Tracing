@@ -22,7 +22,7 @@ def mock_tool_execution(request, monkeypatch):
             return _real_which(cmd) or f"/usr/bin/{cmd}"
         monkeypatch.setattr(shutil, "which", mock_which)
 
-    def mock_execute_all(self, execution_paths, baseline_path=None):
+    def mock_execute_all(self, execution_paths):
         opts_path = self.project_root / "test_opts.json"
         if not opts_path.exists():
             return []
@@ -221,11 +221,11 @@ must
                 "notes": "Core implemented successfully",
             }
         ]
-        (base / ".vibetracing" / "claims" / "current.json").write_text(
+        (base / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
             json.dumps(agent_claims), encoding="utf-8"
         )
     else:
-        (base / ".vibetracing" / "claims" / "current.json").write_text("[]", encoding="utf-8")
+        (base / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text("[]", encoding="utf-8")
 
 
 
@@ -261,9 +261,6 @@ def test_cli_analyze_pass(tmp_path, capsys):
 
     # Validate schema compliance
     validator = SchemaValidator()
-    val_ev = validator.validate_file(evidence_index_path, "evidence_index")
-    assert val_ev.is_valid is True, val_ev.message
-
     val_rep = validator.validate_file(traceability_report_path, "traceability_report")
     assert val_rep.is_valid is True, val_rep.message
 
@@ -911,7 +908,7 @@ def test_input_files_loaded_once(tmp_path, capsys):
     """
     covers: AC-VT-009-12
     Input files (config.json, prd.md, architecture_constraints.json,
-    task_list.json, claims/current.json) should be read from disk only once
+    task_list.json, claims/) should be read from disk only once
     during the analyze pipeline. Parsed results should be passed through
     UnifiedContext rather than re-read.
     """
@@ -932,7 +929,7 @@ def test_input_files_loaded_once(tmp_path, capsys):
         "prd": str(tmp_path / "docs" / "prd.md"),
         "architecture_constraints": str(tmp_path / "docs" / "architecture_constraints.json"),
         "task_list": str(tmp_path / "docs" / "task_list.json"),
-        "agent_claims": str(tmp_path / ".vibetracing" / "claims" / "current.json"),
+        "agent_claims": str(tmp_path / ".vibetracing" / "claims" / "CLAIM-VT-001.json"),
         "config": str(tmp_path / ".vibetracing" / "config.json"),
     }
     # Invert: file_path_string -> file_key for lookup in spies
@@ -1274,7 +1271,7 @@ must
             "notes": "Test claim",
         }
     ]
-    (base / ".vibetracing" / "claims" / "current.json").write_text(
+    (base / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
         json.dumps(claims), encoding="utf-8"
     )
 
@@ -1334,7 +1331,7 @@ def test_run_doctor_broken_file_refs(tmp_path, capsys):
             "notes": "Test claim",
         }
     ]
-    (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(
+    (tmp_path / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
         json.dumps(claims), encoding="utf-8"
     )
 
@@ -1494,7 +1491,7 @@ def test_run_doctor_with_bad_json(tmp_path, capsys):
 
     _setup_doctor_project(tmp_path)
     # Write invalid JSON
-    (tmp_path / ".vibetracing" / "claims" / "current.json").write_text("not json!!!", encoding="utf-8")
+    (tmp_path / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text("not json!!!", encoding="utf-8")
     (tmp_path / "docs" / "task_list.json").write_text("{broken", encoding="utf-8")
 
     exit_code = run_doctor(tmp_path)
@@ -1599,7 +1596,7 @@ def test_run_doctor_claims_not_list(tmp_path, capsys):
 
     _setup_doctor_project(tmp_path)
     # Write claims as a dict instead of list
-    (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(
+    (tmp_path / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
         json.dumps({"invalid": "format"}), encoding="utf-8"
     )
 
@@ -1625,7 +1622,7 @@ def test_run_doctor_with_fragment_refs(tmp_path, capsys):
             "notes": "Test",
         }
     ]
-    (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(
+    (tmp_path / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
         json.dumps(claims), encoding="utf-8"
     )
 

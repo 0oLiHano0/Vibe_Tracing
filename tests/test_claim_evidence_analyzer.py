@@ -803,21 +803,19 @@ class TestClaimInvalidation:
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )
 
-        # Stored fingerprints reflect the original content
-        stored_fingerprints = {
-            "CLAIM-VT-001": {
-                "timestamp": "2026-05-22T10:00:00Z",
-                "fingerprints": {
-                    str(code_file.relative_to(temp_project_dir.parent.parent)): original_hash,
-                },
-            }
+        # Evidence index with hash from the original content
+        ref_path = str(code_file.relative_to(temp_project_dir.parent.parent))
+        evidence_index = {
+            "evidences": [
+                {"source_path": ref_path, "file_hash": original_hash},
+            ]
         }
 
-        # Change the file content after fingerprints were stored
+        # Change the file content after the evidence index was built
         code_file.write_text("print('modified content')")
 
         analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
-        result = analyzer._check_invalidation(claim, stored_fingerprints)
+        result = analyzer._check_invalidation(claim, evidence_index)
 
         assert result is not None
         assert result["claim_id"] == "CLAIM-VT-001"
@@ -843,17 +841,15 @@ class TestClaimInvalidation:
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )
 
-        stored_fingerprints = {
-            "CLAIM-VT-001": {
-                "timestamp": "2026-05-22T10:00:00Z",
-                "fingerprints": {
-                    str(code_file.relative_to(temp_project_dir.parent.parent)): file_hash,
-                },
-            }
+        ref_path = str(code_file.relative_to(temp_project_dir.parent.parent))
+        evidence_index = {
+            "evidences": [
+                {"source_path": ref_path, "file_hash": file_hash},
+            ]
         }
 
         analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
-        result = analyzer._check_invalidation(claim, stored_fingerprints)
+        result = analyzer._check_invalidation(claim, evidence_index)
 
         assert result is None
 
@@ -873,20 +869,18 @@ class TestClaimInvalidation:
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )
 
-        stored_fingerprints = {
-            "CLAIM-VT-001": {
-                "timestamp": "2026-05-22T10:00:00Z",
-                "fingerprints": {
-                    str(code_file.relative_to(temp_project_dir.parent.parent)): file_hash,
-                },
-            }
+        ref_path = str(code_file.relative_to(temp_project_dir.parent.parent))
+        evidence_index = {
+            "evidences": [
+                {"source_path": ref_path, "file_hash": file_hash},
+            ]
         }
 
         # Delete the file
         code_file.unlink()
 
         analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
-        result = analyzer._check_invalidation(claim, stored_fingerprints)
+        result = analyzer._check_invalidation(claim, evidence_index)
 
         assert result is not None
         assert result["claim_id"] == "CLAIM-VT-001"
@@ -897,8 +891,8 @@ class TestClaimInvalidation:
             for f in result.get("files", [result])
         )
 
-    def test_no_stored_fingerprints_skips_check(self, temp_project_dir) -> None:
-        """When no fingerprints exist for a claim, skip invalidation check."""
+    def test_no_evidence_for_claim_triggers_invalidation(self, temp_project_dir) -> None:
+        """When no evidence exists for a claim's referenced files, claim is invalidated."""
         code_file = temp_project_dir / "app.py"
         code_file.write_text("print('hello')")
 
@@ -909,16 +903,19 @@ class TestClaimInvalidation:
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )
 
-        # Empty stored fingerprints -- no entry for this claim
-        stored_fingerprints: dict = {}
+        # Empty evidence index -- no evidence entries
+        evidence_index: dict = {"evidences": []}
 
         analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
-        result = analyzer._check_invalidation(claim, stored_fingerprints)
+        result = analyzer._check_invalidation(claim, evidence_index)
 
-        assert result is None
+        # File exists but no hash record -> needs_reverification
+        assert result is not None
+        assert result["claim_id"] == "CLAIM-VT-001"
+        assert result["status"] == CoverageStatus.NEEDS_REVERIFICATION.value
 
-    def test_fingerprints_file_not_found_skips_check(self, temp_project_dir) -> None:
-        """When claim_fingerprints.json doesn't exist, skip check without errors."""
+    def test_no_hash_record_triggers_invalidation(self, temp_project_dir) -> None:
+        """When file exists but has no hash in evidence_index, claim is invalidated."""
         code_file = temp_project_dir / "app.py"
         code_file.write_text("print('hello')")
 
@@ -929,9 +926,13 @@ class TestClaimInvalidation:
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )
 
-        analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
-        # Passing None as stored_fingerprints simulates the fingerprint file not existing
-        result = analyzer._check_invalidation(claim, None)
+        # Evidence index exists but has no hash for this file
+        evidence_index: dict = {"evidences": []}
 
-        assert result is None
+        analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
+        result = analyzer._check_invalidation(claim, evidence_index)
+
+        assert result is not None
+        assert result["claim_id"] == "CLAIM-VT-001"
+        assert result["status"] == CoverageStatus.NEEDS_REVERIFICATION.value
 

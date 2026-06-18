@@ -359,55 +359,6 @@ class TestClaimTestsCacheLogging:
 
 
 # --------------------------------------------------------------------------
-# Task 5: Evidence index build stats
-# --------------------------------------------------------------------------
-
-class TestEvidenceIndexBuildLogging:
-    """Tests for evidence build stats logging in EvidenceIndexBuilder.build()."""
-
-    def test_build_logs_evidence_stats(self, tmp_path):
-        """build() must log evidence build statistics."""
-        logger = _init_logger(tmp_path)
-        from vibe_tracing.domain.evidence_index_builder import EvidenceIndexBuilder
-
-        builder = EvidenceIndexBuilder(tmp_path)
-
-        # Create minimal ctx mock
-        mock_ctx = MagicMock()
-        mock_ctx.prd.is_valid = True
-        mock_ctx.prd.status = "active"
-        mock_ctx.prd.requirements = []
-        mock_ctx.task_result.tasks = []
-        mock_ctx.task_result.is_valid = True
-        mock_ctx.claims_list = []
-        mock_ctx.manifest.inputs_used = []
-        mock_ctx.config_prefix = "TEST"
-        mock_ctx.tool_evidence = []
-
-        # Create schemas dir with minimal schema
-        schemas_dir = tmp_path / "schemas"
-        schemas_dir.mkdir(parents=True, exist_ok=True)
-        # Write a minimal schema that accepts anything
-        schema = {
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "type": "object",
-        }
-        (schemas_dir / "evidence_index.schema.json").write_text(
-            json.dumps(schema), encoding="utf-8"
-        )
-
-        output_path = tmp_path / "output" / "evidence_index.json"
-        result = builder.build(output_path=output_path, ctx=mock_ctx)
-
-        events = _read_log_events(logger)
-        build_events = _find_event(events, "evidence_build")
-        assert len(build_events) == 1
-        assert "total" in build_events[0]
-        assert "reused" in build_events[0]
-        assert "regenerated" in build_events[0]
-
-
-# --------------------------------------------------------------------------
 # Per-item decision trace logging (MergeGateEngine)
 # --------------------------------------------------------------------------
 

@@ -41,14 +41,15 @@ def run_doctor(project_root: Path) -> int:
     task_list_path = project_root / "docs" / "task_list.json"
     prd_path = project_root / "docs" / "prd.md"
     constraints_path = project_root / "docs" / "architecture_constraints.json"
-    evidence_index_path = project_root / "output" / "evidence_index.json"
+    evidences_dir = project_root / "output" / "evidences"
+    test_results_path = evidences_dir / "test_results.json"
+    coverage_reports_path = evidences_dir / "coverage_reports.json"
 
-    # Load claims (tolerate missing files) - supports both CLAIM-*.json directory and current.json
+    # Load claims (tolerate missing files) - CLAIM-*.json directory mode
     import glob as glob_mod
     claims_data: List[Dict[str, Any]] = []
     _t = time.perf_counter()
     claim_files = sorted(glob_mod.glob(str(claims_dir / "CLAIM-*.json")))
-    current_json = claims_dir / "current.json"
     if claim_files:
         for fp in claim_files:
             try:
@@ -66,28 +67,9 @@ def run_doctor(project_root: Path) -> int:
                            path=str(claims_dir),
                            claims_count=len(claims_data),
                            duration_ms=int((time.perf_counter() - _t) * 1000))
-    elif current_json.exists():
-        try:
-            with current_json.open("r", encoding="utf-8") as f:
-                claims_data = json.load(f)
-            if not isinstance(claims_data, list):
-                claims_data = []
-            if vt_logger:
-                vt_logger.info("doctor_load", "Loaded claims file",
-                               file="claims", result="pass",
-                               path=str(current_json),
-                               claims_count=len(claims_data),
-                               duration_ms=int((time.perf_counter() - _t) * 1000))
-        except Exception as e:
-            claims_data = []
-            if vt_logger:
-                vt_logger.exception("doctor_load", "Failed to parse claims file",
-                                    exc=e, file="claims", result="fail",
-                                    path=str(current_json),
-                                    duration_ms=int((time.perf_counter() - _t) * 1000))
     else:
         if vt_logger:
-            vt_logger.info("doctor_load", "Claims file not found",
+            vt_logger.info("doctor_load", "No CLAIM-*.json files found",
                            file="claims", result="warning",
                            path=str(claims_dir),
                            duration_ms=int((time.perf_counter() - _t) * 1000))
@@ -179,38 +161,70 @@ def run_doctor(project_root: Path) -> int:
                            path=str(constraints_path),
                            duration_ms=int((time.perf_counter() - _t) * 1000))
 
-    # Load evidence index (optional)
-    evidence_index: Dict[str, Any] = {}
+    # Load test results from evidences/ directory
+    test_results_data: Dict[str, Any] = {}
     _t = time.perf_counter()
-    if evidence_index_path.exists():
+    if test_results_path.exists():
         try:
-            with evidence_index_path.open("r", encoding="utf-8") as f:
-                evidence_index = json.load(f)
+            with test_results_path.open("r", encoding="utf-8") as f:
+                test_results_data = json.load(f)
             if vt_logger:
-                vt_logger.info("doctor_load", "Loaded evidence index",
-                               file="evidence_index", result="pass",
-                               path=str(evidence_index_path),
+                vt_logger.info("doctor_load", "Loaded test results",
+                               file="test_results", result="pass",
+                               path=str(test_results_path),
                                duration_ms=int((time.perf_counter() - _t) * 1000))
         except Exception as e:
-            evidence_index = {}
+            test_results_data = {}
             if vt_logger:
-                vt_logger.exception("doctor_load", "Failed to parse evidence index",
-                                    exc=e, file="evidence_index", result="fail",
-                                    path=str(evidence_index_path),
+                vt_logger.exception("doctor_load", "Failed to parse test results",
+                                    exc=e, file="test_results", result="fail",
+                                    path=str(test_results_path),
                                     duration_ms=int((time.perf_counter() - _t) * 1000))
     else:
         if vt_logger:
-            vt_logger.info("doctor_load", "Evidence index not found",
-                           file="evidence_index", result="warning",
-                           path=str(evidence_index_path),
+            vt_logger.info("doctor_load", "Test results not found",
+                           file="test_results", result="warning",
+                           path=str(test_results_path),
                            duration_ms=int((time.perf_counter() - _t) * 1000))
 
-    # Collect all evidence_ids from the index
+    # Load coverage reports from evidences/ directory
+    coverage_reports_data: Dict[str, Any] = {}
+    _t = time.perf_counter()
+    if coverage_reports_path.exists():
+        try:
+            with coverage_reports_path.open("r", encoding="utf-8") as f:
+                coverage_reports_data = json.load(f)
+            if vt_logger:
+                vt_logger.info("doctor_load", "Loaded coverage reports",
+                               file="coverage_reports", result="pass",
+                               path=str(coverage_reports_path),
+                               duration_ms=int((time.perf_counter() - _t) * 1000))
+        except Exception as e:
+            coverage_reports_data = {}
+            if vt_logger:
+                vt_logger.exception("doctor_load", "Failed to parse coverage reports",
+                                    exc=e, file="coverage_reports", result="fail",
+                                    path=str(coverage_reports_path),
+                                    duration_ms=int((time.perf_counter() - _t) * 1000))
+    else:
+        if vt_logger:
+            vt_logger.info("doctor_load", "Coverage reports not found",
+                           file="coverage_reports", result="warning",
+                           path=str(coverage_reports_path),
+                           duration_ms=int((time.perf_counter() - _t) * 1000))
+
+    # Collect all evidence_ids from test results and coverage reports
     evidence_ids_in_index: Set[str] = set()
-    for ev in evidence_index.get("evidences", []):
-        eid = ev.get("evidence_id", "")
-        if eid:
-            evidence_ids_in_index.add(eid)
+    for nodeid, tr_data in test_results_data.items():
+        if isinstance(tr_data, dict):
+            eid = tr_data.get("evidence_id", nodeid)
+            if eid:
+                evidence_ids_in_index.add(eid)
+    for source_path, cr_data in coverage_reports_data.items():
+        if isinstance(cr_data, dict):
+            eid = cr_data.get("evidence_id", source_path)
+            if eid:
+                evidence_ids_in_index.add(eid)
 
     # ---- Check 1: evidence_refs_integrity ----
     _t = time.perf_counter()

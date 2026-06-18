@@ -267,8 +267,6 @@ def _archive_claims(project_root: Path) -> None:
 
     Called after a successful pre-commit gate evaluation so that claims
     are preserved alongside the commit they belong to.
-
-    Supports both CLAIM-*.json directory mode and legacy current.json mode.
     """
     import glob as glob_mod
 
@@ -278,31 +276,19 @@ def _archive_claims(project_root: Path) -> None:
     # Collect all CLAIM-*.json files
     claim_files = sorted(glob_mod.glob(str(claims_dir / "CLAIM-*.json")))
     if not claim_files:
-        # Try legacy current.json mode
-        current_path = claims_dir / "current.json"
-        if current_path.exists():
-            try:
-                with current_path.open("r", encoding="utf-8") as f:
-                    data = json.load(f)
-                if not data:
-                    return
-                claim_files = []  # will use data directly
-            except (json.JSONDecodeError, OSError):
-                return
-        else:
-            return
-    else:
-        data = []
-        for cf in claim_files:
-            try:
-                with open(cf, "r", encoding="utf-8") as f:
-                    claim = json.load(f)
-                if isinstance(claim, dict):
-                    data.append(claim)
-            except (json.JSONDecodeError, OSError):
-                continue
-        if not data:
-            return
+        return
+
+    data = []
+    for cf in claim_files:
+        try:
+            with open(cf, "r", encoding="utf-8") as f:
+                claim = json.load(f)
+            if isinstance(claim, dict):
+                data.append(claim)
+        except (json.JSONDecodeError, OSError):
+            continue
+    if not data:
+        return
 
     # Resolve archive filename: prefer short git commit hash, fallback to timestamp
     archive_name = None

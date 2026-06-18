@@ -139,7 +139,7 @@ def _make_constraints():
 
 
 def _make_claims(test_refs=None, code_refs=None):
-    """Return a claims/current.json list."""
+    """Return a claims list."""
     return [
         {
             "claim_id": "CLAIM-VT-001",
@@ -184,7 +184,7 @@ def _setup_base_project(
         project_root: Target directory.
         constraints_data: Override for architecture_constraints.json.
         task_list_data: Override for task_list.json.
-        claims_data: Override for claims/current.json.  None means no claims
+        claims_data: Override for claims/CLAIM-VT-001.json.  None means no claims
             file is created.
         prd_content: Override PRD markdown content.
         tool_report: Optional dict to write as
@@ -228,7 +228,7 @@ def _setup_base_project(
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/claims/current.json",
+            "agent_claims": ".vibetracing/claims",
             "output_dir": "output",
         },
         "language": "python",
@@ -278,7 +278,7 @@ class TestFullAnalyzePipeline:
         # Create claims directory (empty claims)
         claims_dir = tmp_path / ".vibetracing" / "claims"
         claims_dir.mkdir(parents=True, exist_ok=True)
-        (claims_dir / "current.json").write_text("[]", encoding="utf-8")
+        # Empty claims directory -- no CLAIM-*.json files needed
 
         # Copy existing tool reports (if any)
         src_output = VT_PROJECT_ROOT / "output"
@@ -307,7 +307,7 @@ class TestFullAnalyzePipeline:
                 "prd": "docs/prd.md",
                 "architecture_constraints": "docs/architecture_constraints.json",
                 "task_list": "docs/task_list.json",
-                "agent_claims": ".vibetracing/claims/current.json",
+                "agent_claims": ".vibetracing/claims",
                 "output_dir": "output",
             },
             "language": "python",
@@ -513,7 +513,7 @@ class TestClaimArchiveAfterCommit:
         covers: AC-VT-002-01, AC-VT-002-02
         Create a project with claims, commit everything, then run analyze in
         pre-commit + gates-only mode.  Verify claims are archived and
-        current.json is cleared.
+        claims are archived.
 
         Uses --gates-only mode because:
         - It matches the fast pre-commit hook path

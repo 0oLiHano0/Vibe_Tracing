@@ -84,16 +84,12 @@ def test_valid_task_list_dict_passes(validator):
     assert result.error_code is None
 
 
-def test_valid_agent_claims_empty_array_passes(validator):
-    """Validate [] against agent_claims schema → is_valid=True. Covers: AC-VT-001-03."""
-    result = validator.validate_dict([], "agent_claims")
-    assert result.is_valid is True
-    assert result.error_code is None
-
-
-def test_valid_evidence_index_dict_passes(validator):
-    """Validate minimal evidence_index dict → is_valid=True. Covers: AC-VT-001-03."""
-    result = validator.validate_dict(_VALID_EVIDENCE_INDEX, "evidence_index")
+def test_valid_agent_claims_object_passes(validator):
+    """Validate a minimal agent_claims array → is_valid=True. Covers: AC-VT-001-03."""
+    result = validator.validate_dict(
+        [{"claim_id": "CLAIM-VT-001", "related_task": "TASK-VT-001"}],
+        "agent_claims",
+    )
     assert result.is_valid is True
     assert result.error_code is None
 
@@ -200,12 +196,14 @@ def test_validate_file_valid_raw_task_list(validator):
     )
 
 
-def test_validate_file_valid_raw_agent_claims(validator):
-    """Validate actual .vibetracing/claims/current.json (empty array) → is_valid=True. Covers: AC-VT-001-03."""
-    claims_path = VIBETRACING_DIR / "claims" / "current.json"
-    if not claims_path.exists():
-        pytest.skip(f"Agent claims file not found: {claims_path}")
-    result = validator.validate_file(claims_path, "agent_claims")
+def test_validate_file_valid_raw_agent_claims(validator, tmp_path):
+    """Validate a merged claims array file → is_valid=True. Covers: AC-VT-001-03."""
+    claim_file = tmp_path / "CLAIM-VT-001.json"
+    claim_file.write_text(
+        '[{"claim_id": "CLAIM-VT-001", "related_task": "TASK-VT-001"}]',
+        encoding="utf-8",
+    )
+    result = validator.validate_file(claim_file, "agent_claims")
     assert result.is_valid is True, (
         f"Validation failed: {result.error_code} | {result.field_path} | {result.message}"
     )

@@ -55,7 +55,7 @@ class TestPipelinePhaseTiming:
         schemas_dir.mkdir()
         (tmp_path / ".vibetracing").mkdir(parents=True)
         (tmp_path / ".vibetracing" / "claims").mkdir(parents=True)
-        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text("[]")
+        # Empty claims directory -- no CLAIM-*.json files needed
         (tmp_path / "docs").mkdir()
         (tmp_path / "output").mkdir()
 

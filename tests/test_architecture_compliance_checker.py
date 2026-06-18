@@ -99,7 +99,7 @@ def temp_workspace(tmp_path, base_constraints_data):
     # Write other standard files
     (docs_dir / "prd.md").write_text("# PRD", encoding="utf-8")
     (docs_dir / "task_list.json").write_text("[]", encoding="utf-8")
-    (vibetracing_dir / "claims/current.json").write_text("[]", encoding="utf-8")
+    # Empty claims directory -- no CLAIM-*.json files needed
 
     # Create source directory
     src_dir = tmp_path / "src/vibe_tracing"

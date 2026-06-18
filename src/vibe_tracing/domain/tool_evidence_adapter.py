@@ -913,7 +913,6 @@ class ToolExecutionEngine:
     def execute_all(
         self,
         paths,
-        baseline_path: Optional[str] = None,
     ) -> List[ToolEvidenceCandidate]:
         """
         Execute all whitelisted tools for the given paths.
@@ -926,7 +925,6 @@ class ToolExecutionEngine:
                   "source") to path lists.  Path type is used to route tools:
                   "test" paths run only the ``test`` category;
                   "source" paths run everything else.
-            baseline_path: Deprecated; kept for backward compatibility.
 
         Returns:
             Flat list of all ToolEvidenceCandidate objects.
@@ -980,7 +978,7 @@ class ToolExecutionEngine:
                 all_candidates.extend(candidates)
 
         # Append per-source-file coverage evidence from the baseline.
-        all_candidates.extend(self._measure_source_coverage(baseline_path))
+        all_candidates.extend(self._measure_source_coverage())
 
         return all_candidates
 

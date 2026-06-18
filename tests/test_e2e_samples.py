@@ -41,9 +41,6 @@ def test_e2e_good_project(tmp_path):
 
     # Validate output files schemas
     validator = SchemaValidator()
-    val_ev = validator.validate_file(evidence_index_path, "evidence_index")
-    assert val_ev.is_valid is True, val_ev.message
-
     val_rep = validator.validate_file(traceability_report_path, "traceability_report")
     assert val_rep.is_valid is True, val_rep.message
 

@@ -49,7 +49,7 @@ def _setup_finalize_project(base: Path, constraints_data: dict = None,
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/claims/current.json",
+            "agent_claims": ".vibetracing/claims",
             "output_dir": "output",
         },
     }
@@ -235,7 +235,7 @@ def _make_analyze_project(base: Path, *,
                 "test_refs": [],
             }
         ]
-    (base / ".vibetracing" / "claims" / "current.json").write_text(
+    (base / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
         json.dumps(claims_data), encoding="utf-8"
     )
 
@@ -490,7 +490,7 @@ class TestACVT00909VTExecutesVerificationTools:
                 "test_refs": ["tests/test_feature.py"],
             }
         ]
-        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text(
+        (tmp_path / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
 
@@ -584,7 +584,7 @@ class TestACVT00909VTExecutesVerificationTools:
         (tmp_path / "docs" / "task_list.json").write_text(
             json.dumps(task_list), encoding="utf-8"
         )
-        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text("[]", encoding="utf-8")
+        (tmp_path / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text("[]", encoding="utf-8")
         (tmp_path / "dashboard.html").write_text("<html></html>", encoding="utf-8")
 
         exit_code = main(["analyze", "--project-root", str(tmp_path)])
@@ -721,7 +721,7 @@ class TestACVT00910PreciseErrorFeedback:
             json.dumps({"schema_version": "0.1", "project": {"project_id": "PROJECT-VT", "name": "T", "stage": "mvp"}, "tasks": []}),
             encoding="utf-8",
         )
-        (tmp_path / ".vibetracing" / "claims" / "current.json").write_text("[]", encoding="utf-8")
+        (tmp_path / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text("[]", encoding="utf-8")
         (tmp_path / "dashboard.html").write_text("<html></html>", encoding="utf-8")
 
         exit_code = main(["analyze", "--project-root", str(tmp_path)])
@@ -1193,7 +1193,7 @@ class TestACVT00907ZeroPromptGuidance:
         """covers: AC-VT-009-07
         vt init should generate standard template files in the target project
         including prd.md, task_list.json, architecture_constraints.json,
-        claims/current.json, and config.json.
+        claims/ directory, and config.json.
         """
         exit_code = run_init(tmp_path, name="Guidance Test", prefix="GT")
         assert exit_code == 0

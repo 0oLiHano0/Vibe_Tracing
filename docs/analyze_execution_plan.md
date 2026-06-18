@@ -18,7 +18,7 @@
 
 | Phase | 名称 | 状态 | 说明 |
 |---|---|---|---|
-| Phase 1 | 基础层（infra/ + analyzers/ + db.py） | 🔄 进行中 | 目录移动完成、db.py 已实现，但零调用（孤岛） |
+| Phase 1 | 基础层（infra/ + analyzers/ + db.py） | ✅ 已完成 | 目录移动 + db.py + validate_* 迁移到 validation 模块 |
 | Phase 2 | 领域层移动 + Claim 加载重构 | ✅ 已完成 | domain/ 移动完成、claim_loader 重构完成（旧字段已删除） |
 | Phase 3 | 编排层移动 + 证据构建重构 | ❌ 未开始 | commands/ 仍在原位，cli/ 目录尚未建立 |
 | Phase 4 | 门禁引擎 SQL 化 | ❌ 未开始 | merge_gate_engine.py 未改 |
@@ -37,7 +37,7 @@
 | core/ 目录清理 | ✅ | 已删除，内容移至 infra/ |
 | traceability/ 目录清理 | ✅ | 已删除，内容移至 analyzers/ |
 | Claim 数据类清理 | ✅ | claimed_status、credibility、evidence_refs 字段已从 Claim dataclass 中删除 |
-| validation 第一层校验收拢 | 🔄 | 决策已确认：`validate_task`/`validate_claim` 将从 db.py 迁移到 validation 模块。Phase 1 目录移动已完成，db.py 已实现，但 validate_* 函数尚未迁移，计划在 Phase 1 步骤 10 执行 |
+| validation 第一层校验收拢 | ✅ | db.py 中 `validate_task`/`validate_claim`/`validate_test_result`/`validate_coverage_report` + `_RE_TASK`/`_RE_CLAIM` 已全部删除，`load_tasks`/`load_claims` 改为纯数据泵。`validate_test_result`/`validate_coverage_report` 的 schema 迁移在 Phase 3 步骤 10 执行 |
 
 ### 关键偏离
 
@@ -242,19 +242,13 @@ Phase 1 (infra/ + db.py)
 - [ ] 删除 evidence_id 顺序编号
 - [ ] 输出拆分为 `output/evidences/test_results.json` + `coverage_reports.json`
 - [ ] 接收 `sqlite3.Connection` 而非自行管理文件
+- [ ] `domain/claim_loader.py`：删除 `load()` 中的单文件分支（第 94-105 行 `else` 分支），仅保留 `content` 直接传入和目录 glob 两种模式；删除 docstring 中"向后兼容"描述
 
 #### Import 路径替换
 
 - [ ] `vibe_tracing.commands.common` → `vibe_tracing.cli.common`（6 文件）
 - [ ] `vibe_tracing.commands.analyze.*` → `vibe_tracing.cli.analyze.*`（5 文件）
 - [ ] 更新 `pyproject.toml` 的 `[project.scripts]` entry_points
-
-#### Schema 文件
-
-- [ ] 新建 `infra/validation/schemas/test_results.schema.json`
-- [ ] 新建 `infra/validation/schemas/coverage_reports.schema.json`
-- [ ] 新建 `infra/validation/schemas/claim_file.schema.json`
-- [ ] 删除 `infra/validation/schemas/evidence_index.schema.json`
 
 #### 测试
 
@@ -269,30 +263,38 @@ Phase 1 (infra/ + db.py)
 3. 创建 `cli/__init__.py`（re-export 入口）
 4. 批量替换 import 路径
 5. 更新 `pyproject.toml`
-6. 重构 `EvidenceBuilder`
-7. 创建新 Schema，删除旧 Schema
-8. 重构 `raw_input_loader.py` — claims 加载从单文件改为 git staged 多文件：
-    - 删除 `defaults` 中 `"agent_claims": ".vibetracing/claims/current.json"` 的 hardcode 路径
-    - `get_path("agent_claims")` 不再返回单一文件路径，改为返回 claims 目录路径（`.vibetracing/claims/`）
-    - `_load_file()` 对 claims 的加载逻辑改为：扫描目录下所有 `CLAIM-*.json` 文件，合并为一个 record（content 为多文件合并后的 list）
-    - 对非 pre-commit 模式：通过三源 git 命令（`git diff --cached` + `git diff` + `git status`）识别活跃的 `CLAIM-*.json` 文件
-    - 对 pre-commit 模式：仅使用 `git diff --cached` 识别暂存区中的 `CLAIM-*.json`
-    - manifest 中 `agent_claims` record 的 `file_path` 改为目录路径，`content` 为合并后的 claim list
+6. 重构 `EvidenceBuilder`（含 Schema 交接：先创建新 Schema 并注册到 validation 模块，再删除旧 `evidence_index.schema.json`，保证原子性——同一 commit 内完成，避免中间状态 pipeline 失败）
+   - [ ] `build()` 签名简化为 `build(ctx)`——删除 `output_path` 和 `tool_evidence` 参数，`tool_evidence` 直接从 `ctx.tool_evidence` 获取
+7. 重构 `raw_input_loader.py` + `claim_loader.py` — claims 加载从单文件改为 git staged 多文件（**P0，validation 前置条件**）：
+    - **raw_input_loader.py**：
+      - 删除 `defaults` 中 `"agent_claims": ".vibetracing/claims/current.json"` 的 hardcode 路径，改为 `".vibetracing/claims"`
+      - `get_path("agent_claims")` 不再返回单一文件路径，改为返回 claims 目录路径
+      - `_load_file()` 对 `agent_claims` 走新分支 `_load_claims_dir()`，其余 key 逻辑不变
+      - 新增 `_load_claims_dir(claims_dir)`：扫描目录下所有 `CLAIM-*.json`，逐文件 JSON 解析后合并为 list，返回 `InputFileRecord(content=合并后的list)`
+      - 新增 `_find_active_claims(claims_dir)`：通过 git 命令识别活跃 claims 文件
+      - 对非 pre-commit 模式：三源合并（`git diff --cached` + `git diff` + `git status`），过滤 `CLAIM-*.json`
+      - 对 pre-commit 模式：仅使用 `git diff --cached` 识别暂存区中的 `CLAIM-*.json`
+      - manifest 中 `agent_claims` record 的 `file_path` 改为目录路径，`content` 为合并后的 claim list
+    - **claim_loader.py**：
+      - 删除 `load()` 中的单文件分支（第 94-105 行 `else` 分支），即不再支持 `claims_path` 指向单个 `.json` 文件
+      - 仅保留两种模式：`content` 直接传入（内存/测试场景）或 `claims_path.is_dir()` 目录 glob
+      - 删除 docstring 中"向后兼容的 current.json 模式"描述
     - **此步骤是 validation 模块正常工作的前置条件**：validate_inputs() 依赖 manifest 中的 content 进行校验，如果 claims 仍从 current.json 加载，校验的是旧格式
     - 参考设计：`docs/architecture_vision.md` section 三.1 "一任务一声明文件"
-9. 重写相关测试
-10. 运行 `pytest` 全量测试
-11. 将新 Schema 注册到 validation 模块：
+8. 重写相关测试
+9. 运行 `pytest` 全量测试
+10. 将 db.py 的 `validate_test_result`/`validate_coverage_report` 逻辑迁移到 validation 模块：
+    - 新建 `validation/checks.py` 中的 `_check_test_results()` 和 `_check_coverage_reports()` 函数
     - 在 `validation/schema_validator.py` 的 `KNOWN_SCHEMAS` 中注册 `test_results` 和 `coverage_reports`
     - 在 `validation/checks.py` 的 `_check_schemas` 中添加 `test_results` 和 `coverage_reports` 的映射
-    - 将 db.py 的 `validate_test_result`/`validate_coverage_report` 逻辑迁移到 validation 模块
     - 从 db.py 的 `load_initial_cache`/`upsert_test_result`/`upsert_coverage_report` 中移除格式校验调用
-12. 删除空旧目录 `commands/`
-13. 将 db.py 的 `validate_task`/`validate_claim` 逻辑迁移到 validation 模块：
+11. 将 db.py 的 `validate_task`/`validate_claim` 逻辑迁移到 validation 模块：
     - 在 `validation/checks.py` 中确保 `_check_id_formats` 和 `_check_path_safety` 覆盖 db.py 原有的校验规则
     - 从 db.py 的 `load_tasks`/`load_claims` 中移除 `validate_task`/`validate_claim` 调用
     - 更新 db.py 的 `load_tasks`/`load_claims` 注释，明确"数据已通过 validation 模块校验"
     - 运行 `pytest` 确认无回归
+12. 删除空旧目录 `commands/`
+13. 删除 `.vibetracing/claims/current.json` 和 `.vibetracing/claims/archive/` 目录（原则：历史债务完全清理，不保留旧架构文件）
 
 #### db.py → validation 归口映射表
 
@@ -337,6 +339,9 @@ def load_tasks(conn, tasks):
 - [ ] `output/evidence_index.json` 不再生成
 - [ ] db.py 的 `validate_task`/`validate_claim` 已移除，`load_*` 函数仅执行 INSERT
 - [ ] validation 模块覆盖 task_list 和 agent_claims 的全部第一层格式校验规则
+- [ ] `grep -rn "current\.json" src/` 无结果（`raw_input_loader.py`、`claim_loader.py`、`init_cmd.py`、`doctor.py`、`tools.py`、`output.py`、`evidence_index_builder.py`、`ghost_code_reconciler.py` 均无 `current.json` 引用）
+- [ ] `claim_loader.py` 的 `load()` 无单文件分支（`else: json.load(claims_path)` 已删除）
+- [ ] `raw_input_loader.py` 的 `defaults["agent_claims"]` 指向目录而非文件
 
 ---
 
@@ -442,7 +447,7 @@ def load_tasks(conn, tasks):
 
 #### 执行步骤
 
-- [ ] `cli/common.py`：`_load_context` 中 claims 加载改为 glob `CLAIM-*.json`
+- [ ] `cli/common.py`：`_load_context` 中 claims 加载已由 Phase 3 step 8 完成（raw_input_loader 输出 content → claim_loader.load(content=...)），Phase 6 不需重复操作
 - [ ] `cli/analyze/tools.py`：删除 `_archive_claims` 函数
 - [ ] `cli/analyze/analysis.py`：删除 `_run_claim_tests` 函数
 - [ ] `cli/analyze/pipeline.py`：
@@ -452,17 +457,28 @@ def load_tasks(conn, tasks):
   - [ ] `MergeGateEngine` 接收 `conn`
   - [ ] 删除 `_archive_claims` 调用
   - [ ] 删除 `_run_claim_tests` 调用
+  - [ ] 删除 `evidence_index["test_results"]` 跳过判断逻辑（pipeline.py:349），统一由 `execute_all()` 处理
+  - [ ] `_auto_generate_claim_from_staged()` 改为写入 `CLAIM-{prefix}-{seq}.json`，编号逻辑：glob `.vibetracing/claims/CLAIM-{prefix}-*.json` → 提取所有编号 → 取 max+1 → 零填充为 3 位
   - [ ] `conn.close()` 在 finally 块中
 - [ ] `cli/analyze/reports.py`：适配 evidence 拆分格式
 - [ ] `cli/analyze/output.py`：Dashboard 内嵌数据改为三份 JSON
 - [ ] `cli/main.py`：清理 `_archive_claims` / `_run_claim_tests` 的 re-export
-- [ ] `cli/doctor.py`：改用 `ClaimLoader.load()` 加载多文件 Claim；读取 `test_results.json` + `coverage_reports.json`
-- [ ] `cli/init_cmd.py`：不再生成 `current.json`，改为创建 `CLAIM-*.json` 模板
+- [ ] `cli/doctor.py`：
+  - [ ] 删除硬编码 `current.json` 路径（第 40 行），改为 `ClaimLoader().load(claims_path)` 加载多文件
+  - [ ] 删除 Check 1 `evidence_refs_integrity`（claim 的 `evidence_refs` 字段已在 Phase 2 删除，该检查已无意义）
+  - [ ] Check 2 `file_refs_integrity` 逻辑不变（检查 code_refs/test_refs 磁盘存在性，与数据来源解耦）
+  - [ ] 新增 Check：逐个 claim 的 `related_task` 是否存在于 task_list 中（复用 `db.check_dangling_claims(conn)` 或等效 SQL）
+- [ ] `cli/init_cmd.py`：
+  - [ ] 不再创建 `current.json` 和 `archive/` 目录
+  - [ ] 创建 `.vibetracing/claims/` 目录 + `.gitkeep`
+  - [ ] `config.template.json` 的 `paths.agent_claims` 默认值改为 `.vibetracing/claims`（目录路径）
+  - [ ] 不创建初始 `CLAIM-*.json` 模板文件（Claim 由 Agent 在开发过程中按需创建）
 - [ ] `docs/architecture_constraints.json`：
   - [ ] `module_boundaries` 中所有 `owned_files` 更新为嵌套包路径
   - [ ] `claims/current.json` 引用改为 `claims/CLAIM-*.json`
   - [ ] `evidence_index.json` 引用改为 `evidences/test_results.json` + `evidences/coverage_reports.json`
   - [ ] `governance_boundary` 中的 `included_patterns` 更新
+  - [ ] **修改后必须重新执行 `vt finalize`**，更新 `architecture_constraints_hash` 基线，否则 Gate 1 哈希校验会阻断 `vt analyze`
 - [ ] 删除 `.vibetracing/claims/current.json` 和 `archive/` 目录
 - [ ] 清理被删除函数的测试类
 - [ ] 运行 `pytest` 全量测试
@@ -534,14 +550,18 @@ def load_tasks(conn, tasks):
 | 3 | GAP-CMD-003 | `cli.py` re-export | P0 | cli.py 仍 re-export `_archive_claims` 和 `_run_claim_tests` | [ ] |
 | 4 | GAP-DB-001 | `pipeline.py` | P0 | pipeline.py 未调用 `init_in_memory_db()` 或任何 db 函数 | [ ] |
 | 5 | GAP-DB-002 | `pipeline.py` | P0 | pipeline.py 仍输出单一 `evidence_index.json`，未拆分 | [ ] |
-| 6 | GAP-CLAIM-001 | `pipeline.py` | P1 | pipeline.py 仍读取 `claims/current.json` | [ ] |
+| 6 | GAP-CLAIM-001 | `pipeline.py` | P0 | `_auto_generate_claim_from_staged()` 仍写入 `claims/current.json`（第 63 行），需改为写入 `CLAIM-*.json`（每次运行持续产生旧架构产物） | [ ] |
 | 7 | GAP-CLAIM-002 | `ghost_code_reconciler.py` | P1 | ghost_code_reconciler.py 仍引用 `claims/current.json` 路径 | [ ] |
-| 8 | GAP-CLAIM-003 | `doctor.py` | P1 | doctor.py 仍读取 `claims/current.json` | [ ] |
-| 9 | GAP-CLAIM-004 | `tools.py` | P1 | `_archive_claims()` 函数仍存在，引用 `current.json` | [ ] |
-| 10 | GAP-CLAIM-005 | `config.template.json` | P2 | 模板仍引用 `claims/current.json` | [ ] |
-| 11 | GAP-CLAIM-006 | `prd_analysis.template.md` | P2 | 模板仍引用 `claims/current.json` | [ ] |
+| 8 | GAP-CLAIM-003 | `doctor.py` | P1 | doctor.py 检查 `claims/current.json` 是否存在（第 40 行），需改为检查 `claims/` 目录或 glob `CLAIM-*.json` | [ ] |
+| 9 | GAP-CLAIM-004 | `tools.py` | P0 | `_archive_claims()` 读取 `current.json` 并移动到 archive（第 271 行）→ **彻底删除该函数**（每次 pipeline 运行持续产生旧架构副作用） | [ ] |
+| 10 | GAP-CLAIM-005 | `config.template.json` | P1 | 模板仍引用 `claims/current.json`（每次 `vt init` 会生成指向旧架构路径的配置，是债务源头） | [ ] |
+| 11 | GAP-CLAIM-006 | `prd_analysis.template.md` | P1 | 模板仍引用 `claims/current.json`（Agent 生成分析文档时会复制旧架构路径） | [ ] |
 | 12 | GAP-CLAIM-007 | `field_hints.json` | P2 | hints 仍引用 `claims/current.json` 和 `evidence_index.json` | [ ] |
 | 12b | GAP-CLAIM-008 | `raw_input_loader.py` | P0 | claims 加载仍 hardcode `current.json` 路径，需改为 git staged 多文件 `CLAIM-*.json`。**此 GAP 是 validation 模块正常工作的前置条件** | [ ] |
+| 12c | GAP-CLAIM-009 | `claim_loader.py` | P0 | `load()` 仍保留单文件分支（第 94-105 行），支持 `claims_path` 指向 `current.json`。需删除该分支，仅保留 content 直接传入和目录 glob 两种模式 | [ ] |
+| 12d | GAP-CLAIM-010 | `init_cmd.py` | P1 | `vt init` 仍创建 `current.json` 模板文件，需改为创建 `claims/` 目录 + `.gitkeep`（不创建 claim 模板文件，Claim 由 Agent 按需创建） | [ ] |
+| 12e | GAP-CLAIM-011 | `output.py` | P3 | 错误提示仍引导用户手动创建 `current.json`，需改为 `CLAIM-*.json` | [ ] |
+| 12f | GAP-CLAIM-012 | `evidence_index_builder.py` | P1 | fallback 路径仍硬编码 `current.json`（第 128 行），需删除该 fallback，manifest 中的 content 已由 raw_input_loader 提供 | [ ] |
 | 13 | GAP-EVID-001 | `pipeline.py` | P1 | `_run_claim_tests()` 仍存在且被调用 | [ ] |
 | 14 | GAP-EVID-002 | `analysis.py` | P1 | `_run_claim_tests()` 函数定义仍存在 | [ ] |
 | 15 | GAP-EVID-003 | `evidence_index_builder.py` | P1 | 类名仍为 `EvidenceIndexBuilder`，未重命名为 `EvidenceBuilder` | [ ] |
@@ -560,8 +580,11 @@ def load_tasks(conn, tasks):
 | 28 | GAP-DASH-001 | `dashboard.template.html` | P3 | 模板仍绑定 `evidenceIndex.evidences[]` | [ ] |
 | 29 | GAP-DASH-002 | `dashboard.template.html` | P3 | 仍使用 `e.details.outcome` 嵌套字段 | [ ] |
 | 30 | GAP-DASH-003 | `dashboard_renderer.py` | P3 | 仍注入 `evidence_idx_json` 变量 | [ ] |
-| 31 | GAP-VAL-001 | `db.py` + `infra/validation/checks.py` | P2 | db.py 与 validation/checks.py 的校验功能重叠 → Phase 1 整合 task/claim 校验，Phase 3 整合 test_result/coverage 校验 | [ ] |
+| 31 | GAP-VAL-001 | `db.py` + `infra/validation/checks.py` | P2 | db.py 与 validation/checks.py 的校验功能重叠 → Phase 1 task/claim 校验已迁移 ✅，Phase 3 test_result/coverage 校验待迁移 | [x] |
 | 32 | GAP-DOC-001 | `docs/architecture_vision.md` | P2 | architecture_vision.md 未提及 infra/validation/ 是第一层格式校验的实现 | [ ] |
+| 33 | GAP-DOCTOR-001 | `doctor.py` | P1 | Check 1 `evidence_refs_integrity` 检查 claim 的 `evidence_refs` 字段（第 198-220 行），但该字段已在 Phase 2 删除 → **删除该检查** | [ ] |
+| 34 | GAP-FINALIZE-001 | `docs/analyze_execution_plan.md` | P1 | Phase 6 修改 `architecture_constraints.json` 后必须重新执行 `vt finalize` 更新哈希基线，否则 Gate 1 阻断 | [ ] |
+| 35 | GAP-PIPE-001 | `pipeline.py` | P1 | pipeline.py:349 直接检查 `evidence_index["test_results"]` 是否为空来决定跳过重跑，删除 `_run_claim_tests` 后此判断需同步移除 | [ ] |
 
 ### 优先级说明
 
@@ -586,7 +609,7 @@ def load_tasks(conn, tasks):
                   Phase 7（Dashboard + 清理）
 ```
 
-**当前阻塞项**：Phase 3 是下一个必须执行的 Phase。Phase 4 和 Phase 5 只依赖 Phase 1（db.py 已完成），理论上可与 Phase 3 并行，但由于 commands/ 目录尚未迁入 cli/，并行执行会增加 merge 冲突风险。
+**当前阻塞项**：Phase 3 是下一个必须执行的 Phase。Phase 4 和 Phase 5 只依赖 Phase 1（db.py 已完成），理论上可与 Phase 3 并行，但由于 Phase 4/5 的测试文件与 Phase 3 的测试清理有重叠（如 `test_integration_v3.py`），并行会增加测试维护负担。建议按串行执行以减少冲突风险。
 
 **预估工作量**：
 
@@ -605,7 +628,7 @@ def load_tasks(conn, tasks):
 | 风险 | 影响 Phase | 缓解措施 |
 |---|---|---|
 | import 路径替换遗漏 | Phase 3 | 每个 Phase 结束后运行 `grep` 验证无旧路径残留 |
-| SQLite FK 在内存模式不生效 | Phase 3 | `init_in_memory_db()` 必须执行 `PRAGMA foreign_keys = ON`，测试中验证 |
+| ~~SQLite FK 在内存模式不生效~~ | ~~Phase 3~~ | ~~已删除~~：所有 FK 均为软校验（LEFT JOIN），DDL 无 FOREIGN KEY 声明，不需要 PRAGMA。与 `architecture_vision.md` 5.5 节一致 |
 | 移动 + 重构同 Phase 导致 diff 过大 | Phase 3 | 拆为两个 commit：先移动（纯 import 变更），再重构（逻辑变更） |
 | evidence 格式变更导致分析器异常 | Phase 3, 6 | 分析器接口不变，但需验证 `evidence_list` 的数据结构兼容性 |
 | Dashboard 模板 JS 逻辑复杂 | Phase 7 | 按函数逐一迁移，每个函数迁移后在浏览器中验证 |

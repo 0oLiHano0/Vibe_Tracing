@@ -6,10 +6,8 @@ Only imports from the Python standard library.
 """
 
 import json
-import re
 import sqlite3
 from pathlib import Path
-from typing import List
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,154 +75,15 @@ def init_in_memory_db() -> sqlite3.Connection:
     return conn
 
 
-# ── 2. Format validation (Layer 1) ──────────────────────────────────────────
+# ── 2. Data loaders (write) ─────────────────────────────────────────────────
 
-# Compiled patterns for reuse.
-_RE_TASK = re.compile(r"^TASK-[A-Z]+-\d{3,4}$")
-_RE_CLAIM = re.compile(r"^CLAIM-[A-Z]+-\d{3,4}$")
-
-
-def validate_task(task: dict) -> List[str]:
-    """Validate a single task dict.
-
-    Rules:
-      - *task_id* must match ``TASK-[A-Z]+-\d{3,4}``
-      - *priority* is one of ``must``, ``should``, ``could``
-      - *status* is one of ``todo``, ``in_progress``, ``done``, ``blocked``
-    Returns a list of error strings (empty means valid).
-    """
-    errors: List[str] = []
-
-    task_id = task.get("task_id", "")
-    if not isinstance(task_id, str) or not _RE_TASK.match(task_id):
-        errors.append(f"task_id {task_id!r}: must match TASK-[A-Z]+-\\d{{3,4}}")
-
-    priority = task.get("priority", "")
-    if priority not in ("must", "should", "could"):
-        errors.append(f"priority {priority!r}: must be must|should|could")
-
-    status = task.get("status", "")
-    if status not in ("todo", "in_progress", "done", "blocked"):
-        errors.append(f"status {status!r}: must be todo|in_progress|done|blocked")
-
-    return errors
-
-
-def validate_claim(claim: dict) -> List[str]:
-    """Validate a single claim dict.
-
-    Rules:
-      - *claim_id* must match ``CLAIM-[A-Z]+-\d{3,4}``
-      - *related_task* must match ``TASK-[A-Z]+-\d{3,4}``
-      - *code_refs* / *test_refs* paths must not contain ``..`` traversal and
-        must not be absolute paths.
-    Returns a list of error strings.
-    """
-    errors: List[str] = []
-
-    claim_id = claim.get("claim_id", "")
-    if not isinstance(claim_id, str) or not _RE_CLAIM.match(claim_id):
-        errors.append(f"claim_id {claim_id!r}: must match CLAIM-[A-Z]+-\\d{{3,4}}")
-
-    related_task = claim.get("related_task", "")
-    if not isinstance(related_task, str) or not _RE_TASK.match(related_task):
-        errors.append(
-            f"related_task {related_task!r}: must match TASK-[A-Z]+-\\d{{3,4}}"
-        )
-
-    for key, refs in (("code_refs", _coerce_strlist(claim.get("code_refs"))),
-                      ("test_refs", _coerce_strlist(claim.get("test_refs")))):
-        for ref in refs:
-            if not isinstance(ref, str):
-                errors.append(f"{key} item {ref!r}: must be a string")
-                continue
-            if ref.startswith("/"):
-                errors.append(f"{key} {ref!r}: absolute paths not allowed")
-            if ".." in ref.split("/"):
-                errors.append(f"{key} {ref!r}: parent-directory traversal (..) not allowed")
-
-    return errors
-
-
-def validate_test_result(entry: dict) -> List[str]:
-    """Validate a single test result entry.
-
-    Rules:
-      - *nodeid* is non-empty and contains ``::``
-      - *outcome* is one of ``passed``, ``failed``, ``skipped``
-      - *exit_code* >= 0
-    """
-    errors: List[str] = []
-
-    nodeid = entry.get("nodeid", "")
-    if not isinstance(nodeid, str) or not nodeid or "::" not in nodeid:
-        errors.append(f"nodeid {nodeid!r}: must be non-empty and contain '::'")
-
-    outcome = entry.get("outcome", "")
-    if outcome not in ("passed", "failed", "skipped"):
-        errors.append(f"outcome {outcome!r}: must be passed|failed|skipped")
-
-    exit_code = entry.get("exit_code", -1)
-    if not isinstance(exit_code, int) or exit_code < 0:
-        errors.append(f"exit_code {exit_code!r}: must be >= 0")
-
-    return errors
-
-
-def validate_coverage_report(entry: dict) -> List[str]:
-    """Validate a single coverage report entry.
-
-    Rules:
-      - *source_path* is a valid relative path (not absolute, no .. traversal)
-      - *percent_covered* is between 0.0 and 100.0 inclusive
-      - *status* is one of ``compliant``, ``violated``
-    """
-    errors: List[str] = []
-
-    source_path = entry.get("source_path", "")
-    if not isinstance(source_path, str) or not source_path:
-        errors.append(f"source_path {source_path!r}: must be a non-empty string")
-    else:
-        if source_path.startswith("/"):
-            errors.append(f"source_path {source_path!r}: absolute paths not allowed")
-        if ".." in source_path.split("/"):
-            errors.append(
-                f"source_path {source_path!r}: parent-directory traversal (..) not allowed"
-            )
-
-    percent_covered = entry.get("percent_covered")
-    if percent_covered is None:
-        errors.append("percent_covered: missing")
-    elif not isinstance(percent_covered, (int, float)):
-        errors.append(f"percent_covered {percent_covered!r}: must be numeric")
-    elif not (0.0 <= float(percent_covered) <= 100.0):
-        errors.append(f"percent_covered {percent_covered}: must be in range 0.0-100.0")
-
-    status = entry.get("status", "")
-    if status not in ("compliant", "violated"):
-        errors.append(f"status {status!r}: must be compliant|violated")
-
-    return errors
-
-
-# ── 3. Data loaders (write) ─────────────────────────────────────────────────
-
-def load_tasks(conn: sqlite3.Connection, tasks: list) -> List[str]:
+def load_tasks(conn: sqlite3.Connection, tasks: list) -> None:
     """Bulk-load tasks into the database.
 
-    For each dict in *tasks*:
-      1. Validate via :func:`validate_task`.
-      2. If valid, INSERT into ``tasks`` and ``task_acs``.
-
-    Returns a flat list of all validation error strings (empty = all pass).
+    前置条件：数据已通过 validation/checks.py 的格式校验。
+    仅执行 INSERT，不进行格式校验。
     """
-    all_errors: List[str] = []
     for task in tasks:
-        errs = validate_task(task)
-        if errs:
-            all_errors.extend(errs)
-            continue
-
         conn.execute(
             "INSERT OR REPLACE INTO tasks (task_id, priority, status) VALUES (?, ?, ?)",
             (task["task_id"], task["priority"], task["status"]),
@@ -235,25 +94,15 @@ def load_tasks(conn: sqlite3.Connection, tasks: list) -> List[str]:
                 (task["task_id"], ac),
             )
     conn.commit()
-    return all_errors
 
 
-def load_claims(conn: sqlite3.Connection, claims: list) -> List[str]:
+def load_claims(conn: sqlite3.Connection, claims: list) -> None:
     """Bulk-load claims into the database.
 
-    For each dict in *claims*:
-      1. Validate via :func:`validate_claim`.
-      2. If valid, INSERT into ``claims``, ``claim_code_refs``, ``claim_test_refs``.
-
-    Returns a flat list of all validation error strings.
+    前置条件：数据已通过 validation/checks.py 的格式校验。
+    仅执行 INSERT，不进行格式校验。
     """
-    all_errors: List[str] = []
     for claim in claims:
-        errs = validate_claim(claim)
-        if errs:
-            all_errors.extend(errs)
-            continue
-
         conn.execute(
             "INSERT OR REPLACE INTO claims (claim_id, related_task) VALUES (?, ?)",
             (claim["claim_id"], claim["related_task"]),
@@ -273,7 +122,6 @@ def load_claims(conn: sqlite3.Connection, claims: list) -> List[str]:
                 (claim["claim_id"], ref),
             )
     conn.commit()
-    return all_errors
 
 
 def load_staged_files(conn: sqlite3.Connection, files: set) -> list:

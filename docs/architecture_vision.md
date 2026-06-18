@@ -46,7 +46,8 @@
 
 ### 4. 彻底废除 Claims 的"清除与归档"机制 (Eliminate Claims Archiving)
 在老架构下，门禁通过后系统会运行 `_archive_claims` 将当前 `current.json` 里的声明移动到 `archive/commit-{hash}.json` 并清空该文件。这导致后续分析失去了历史声明上下文，使得全量分析无法正确校验历史任务。
-* **解决方案**：完全删除 `_archive_claims` 代码及对应的 `archive/` 物理目录，Claims 账本转为累积式。
+* **解决方案**：完全删除 `_archive_claims` 代码、`current.json` 文件及对应的 `archive/` 物理目录。Claims 账本转为累积式（`CLAIM-*.json` 文件保留在 `.vibetracing/claims/` 目录下）。
+* **清理策略**：VT 项目处于开发重构阶段，不要求向后兼容。已完成的 Claim 文件保留在 `.vibetracing/claims/` 目录下，由 Git 历史自然管理。VT 不提供自动归档或删除机制（归档已被废除）。`CLAIM-*.json` 文件必须被 Git 跟踪。
 
 ---
 
@@ -71,7 +72,7 @@
 * **第一层：格式静态校验 (Syntax/Validation)**
   * **执行时机**：在 `RawInputLoader.load()` 之后、数据灌入 SQLite 之前，由 `infra/validation/checks.py` 的 `validate_inputs()` 统一执行。
   * **唯一实现位置**：`infra/validation/` 包。db.py 的 `load_*` 函数不再执行格式校验，只负责数据泵（INSERT）。
-  * **设计决策**：所有第一层格式校验收拢到 validation 模块单一入口，db.py 失去自保护能力但通过文档约定确保调用方先执行校验。
+  * **设计决策**：所有第一层格式校验收拢到 validation 模块单一入口，db.py 的 `load_*` 函数通过 docstring 前置条件注释（如 `# 前置条件：数据已通过 validation/checks.py 的格式校验`）声明契约，调用方必须在调用前执行 `validate_inputs()`。
   * **校验内容**：检查 ID 命名是否符合正则、字段是否存在、枚举值（如 `status`、`priority`）是否合法、路径是否越界等静态规则。
   * **处理方式**：只要第一层校验失败，**直接拒绝灌入 SQLite**，当场阻断并打印单点错误。
 * **第二层：关系存在性校验 (Relational/Referential Validation)**
@@ -92,7 +93,7 @@
 >
 > **与 db.py 的关系**：db.py 中原有的 `validate_task`、`validate_claim`、`validate_test_result`、`validate_coverage_report` 函数将被移除，其逻辑下沉到 validation 模块。db.py 的 `load_*` 函数仅负责数据泵（INSERT），不再执行格式校验。
 >
-> ⚠️ **当前状态**：上述为目标架构。当前 db.py 仍包含 validate_* 函数且被 load_* 调用，计划在 Phase 1（task/claim）和 Phase 3（test_result/coverage）中迁移到 validation 模块。详见 [`analyze_execution_plan.md`](analyze_execution_plan.md) 的 GAP-VAL-001。
+> ⚠️ **当前状态**：上述为目标架构。当前 db.py 中残留的 validate_* 函数是旧架构债务，必须在 Phase 1（task/claim）和 Phase 3（test_result/coverage）中被完全删除，不得保留任何兼容性包装。详见 [`analyze_execution_plan.md`](analyze_execution_plan.md) 的 GAP-VAL-001。
 
 ---
 
@@ -212,8 +213,7 @@
       "nodeid": "tests/test_auth.py::test_login_success",
       "outcome": "passed",                      // 枚举："passed" | "failed" | "skipped"
       "exit_code": 0,
-      "command": "pytest tests/test_auth.py...",
-      "carried_over": false
+      "command": "pytest tests/test_auth.py..."
     }
   ]
   ```
@@ -226,8 +226,7 @@
       "source_path": "src/vibe_tracing/db.py",
       "percent_covered": 85.5,
       "num_statements": 42,
-      "status": "compliant",                      // 枚举："compliant" | "violated"
-      "carried_over": false
+      "status": "compliant"                       // 枚举："compliant" | "violated"
     }
   ]
   ```

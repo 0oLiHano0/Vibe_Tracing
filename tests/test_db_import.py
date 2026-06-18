@@ -2,10 +2,6 @@
 
 from src.vibe_tracing.infra.db import (
     init_in_memory_db,
-    validate_task,
-    validate_claim,
-    validate_test_result,
-    validate_coverage_report,
     load_tasks,
     load_claims,
     load_staged_files,
@@ -20,111 +16,29 @@ from src.vibe_tracing.infra.db import (
 
 
 class TestLayer1FormatValidation:
-    def test_validate_task_invalid_id_rejected(self):
-        errors = validate_task({"task_id": "INVALID-ID", "priority": "must", "status": "todo"})
-        assert any("task_id" in e for e in errors), (
-            f"Expected task_id error, got: {errors}"
-        )
-
-    def test_validate_task_invalid_priority_rejected(self):
-        errors = validate_task(
-            {"task_id": "TASK-VT-001", "priority": "urgent", "status": "todo"}
-        )
-        assert any("priority" in e for e in errors), (
-            f"Expected priority error, got: {errors}"
-        )
-
-    def test_validate_claim_path_traversal_rejected(self):
-        errors = validate_claim(
-            {
-                "claim_id": "CLAIM-VT-001",
-                "related_task": "TASK-VT-001",
-                "code_refs": ["src/../../secret.py"],
-                "test_refs": [],
-            }
-        )
-        assert any("traversal" in e.lower() or ".." in e for e in errors), (
-            f"Expected path traversal error, got: {errors}"
-        )
-
-    def test_validate_claim_absolute_path_rejected(self):
-        errors = validate_claim(
-            {
-                "claim_id": "CLAIM-VT-002",
-                "related_task": "TASK-VT-002",
-                "code_refs": [],
-                "test_refs": ["/etc/passwd"],
-            }
-        )
-        assert any("absolute" in e.lower() for e in errors), (
-            f"Expected absolute path error, got: {errors}"
-        )
-
-    def test_load_tasks_rejects_invalid_and_accepts_valid(self):
+    def test_load_tasks_inserts_all_tasks(self):
         conn = init_in_memory_db()
         tasks = [
             {"task_id": "TASK-VT-001", "priority": "must", "status": "todo",
              "related_acceptance_criteria": ["AC-VT-01"]},
-            {"task_id": "BAD-ID", "priority": "must", "status": "todo",
-             "related_acceptance_criteria": []},
             {"task_id": "TASK-VT-002", "priority": "should", "status": "in_progress",
              "related_acceptance_criteria": ["AC-VT-02", "AC-VT-03"]},
         ]
-        errors = load_tasks(conn, tasks)
+        result = load_tasks(conn, tasks)
+        assert result is None, "load_tasks should return None (pure data pump)"
 
-        # The invalid task should produce an error
-        assert any("BAD-ID" in e for e in errors), (
-            f"Expected error for BAD-ID task, got: {errors}"
-        )
-
-        # Only valid tasks should be in the database
         db_tasks = conn.execute("SELECT task_id FROM tasks ORDER BY task_id").fetchall()
         db_ids = [r[0] for r in db_tasks]
-        assert "TASK-VT-001" in db_ids
-        assert "TASK-VT-002" in db_ids
-        assert "BAD-ID" not in db_ids, "Invalid task should not have been inserted"
+        assert db_ids == ["TASK-VT-001", "TASK-VT-002"]
 
-        # ACs should be present for the valid tasks
         acs = conn.execute(
             "SELECT ac_id FROM task_acs WHERE task_id = ? ORDER BY ac_id",
             ("TASK-VT-002",),
         ).fetchall()
         ac_ids = [r[0] for r in acs]
-        assert "AC-VT-02" in ac_ids
-        assert "AC-VT-03" in ac_ids
+        assert ac_ids == ["AC-VT-02", "AC-VT-03"]
 
         conn.close()
-
-    def test_validate_test_result_invalid_nodeid(self):
-        errors = validate_test_result(
-            {"nodeid": "", "outcome": "passed", "exit_code": 0}
-        )
-        assert any("nodeid" in e for e in errors), (
-            f"Expected nodeid error for empty string, got: {errors}"
-        )
-
-        errors2 = validate_test_result(
-            {"nodeid": "no_separator", "outcome": "passed", "exit_code": 0}
-        )
-        assert any("nodeid" in e for e in errors2), (
-            f"Expected nodeid error for missing '::', got: {errors2}"
-        )
-
-    def test_validate_test_result_invalid_outcome(self):
-        errors = validate_test_result(
-            {"nodeid": "test.py::test_x", "outcome": "unknown", "exit_code": 0}
-        )
-        assert any("outcome" in e for e in errors), (
-            f"Expected outcome error, got: {errors}"
-        )
-
-    def test_validate_coverage_report_invalid_range(self):
-        errors = validate_coverage_report(
-            {"source_path": "src/foo.py", "percent_covered": 150.0, "status": "compliant"}
-        )
-        assert any("range" in e.lower() or "0.0-100" in e for e in errors), (
-            f"Expected range error, got: {errors}"
-        )
 
 
 # ── Layer 2: Relation validation ──────────────────────────────────────────────

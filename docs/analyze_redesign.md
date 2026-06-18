@@ -175,7 +175,7 @@ def init_in_memory_db() -> sqlite3.Connection:
 
 # ---- 格式校验（第一层）— 已移至 validation 模块 ----
 
-> **架构决策**：所有第一层格式校验收拢到 `infra/validation/` 模块统一执行。db.py 不再包含格式校验函数，`load_*` 函数仅负责数据泵（INSERT）。
+> **架构决策**：所有第一层格式校验收拢到 `infra/validation/` 模块统一执行。db.py 不再包含格式校验函数，`load_*` 函数仅负责数据泵（INSERT），通过 docstring 前置条件注释声明契约（如 `# 前置条件：数据已通过 validation/checks.py 的格式校验`）。
 >
 > 格式校验的接口定义见 `infra/validation/checks.py` 的 `validate_inputs(manifest, project_prefix, schemas_dir) -> PreImportResult`。
 
@@ -187,10 +187,14 @@ def init_in_memory_db() -> sqlite3.Connection:
 # ---- 数据泵（写入） ----
 
 def load_tasks(conn, tasks: List[Task]) -> List[str]:
-    """批量插入 tasks + task_acs。数据已通过 validation 模块校验，此处仅执行 INSERT。返回插入的记录列表。"""
+    """批量插入 tasks + task_acs。调用方必须先通过 validate_inputs() 校验。
+    # 前置条件：数据已通过 validation/checks.py 的格式校验
+    返回插入的记录列表。"""
 
 def load_claims(conn, claims: List[Claim]) -> List[str]:
-    """批量插入 claims + claim_code_refs + claim_test_refs。数据已通过 validation 模块校验，此处仅执行 INSERT。返回插入的记录列表。"""
+    """批量插入 claims + claim_code_refs + claim_test_refs。调用方必须先通过 validate_inputs() 校验。
+    # 前置条件：数据已通过 validation/checks.py 的格式校验
+    返回插入的记录列表。"""
 
 def load_staged_files(conn, files: Set[str]) -> list:
     """插入 staged_files 表。返回插入的文件路径列表。"""
@@ -318,16 +322,16 @@ class ClaimLoader:
 class EvidenceBuilder:  # 原名 EvidenceIndexBuilder
     def __init__(self, project_root: Path, conn: sqlite3.Connection): ...
 
-    def build(self, ctx: UnifiedContext, tool_evidence: List[ToolEvidenceCandidate]) -> dict:
+    def build(self, ctx: UnifiedContext) -> dict:
         """
         原签名: build(self, output_path: Path, ctx: Any, **kwargs) -> Dict
-        新签名: build(self, ctx: UnifiedContext, tool_evidence: List[ToolEvidenceCandidate]) -> dict
+        新签名: build(self, ctx: UnifiedContext) -> dict
 
         output_path 参数移除——输出路径由 db.persist_evidences(conn, output_dir) 管理。
-        tool_evidence 参数新增——从 ctx.tool_evidence 解耦，改为显式传入。
+        tool_evidence 参数移除——直接从 ctx.tool_evidence 获取（已在 ctx 中赋值，无需重复传入）。
 
         1. 调用 db.load_initial_cache() 装载历史缓存
-        2. 遍历 tool_evidence，对 test/coverage 类型调用 upsert_*
+        2. 遍历 ctx.tool_evidence，对 test/coverage 类型调用 upsert_*
         3. 调用 db.persist_evidences() 写入拆分 JSON
         4. 返回 summary dict（供 reports.py 使用）
         """
@@ -335,7 +339,7 @@ class EvidenceBuilder:  # 原名 EvidenceIndexBuilder
 
 **变更点**：
 - 类重命名 `EvidenceIndexBuilder` → `EvidenceBuilder`，文件重命名 `evidence_index_builder.py` → `evidence_builder.py`
-- `build()` 删除 `output_path` 参数，新增显式 `tool_evidence` 参数
+- `build()` 删除 `output_path` 和 `tool_evidence` 参数，签名简化为 `build(ctx)`——`tool_evidence` 直接从 `ctx.tool_evidence` 获取
 - 删除 mtime 比对逻辑（`_should_regenerate` 闭包）
 - 删除 evidence_id 顺序编号
 - 删除通用外壳 `details` 嵌套
@@ -486,7 +490,7 @@ def run_analyze(project_root, output_dir, is_pre_commit, gates_only) -> int:
                     └────────────────┬────────────────────────┘
                                      │
                     ┌────────────────▼────────────────────────┐
-                    │  9. EvidenceBuilder.build()             │
+                    │  9. EvidenceBuilder.build(ctx)          │
                     │     UPSERT test_results (carried=0)     │
                     │     UPSERT coverage_reports (carried=0) │
                     │     persist_evidences() → 拆分 JSON     │
@@ -496,6 +500,8 @@ def run_analyze(project_root, output_dir, is_pre_commit, gates_only) -> int:
                     │  10. _run_analyzers()                   │
                     │      REQ→Task, AC→Test, Claim→Evidence │
                     │      接口不变，消费 evidence_list        │
+                    │      （_run_claim_tests 已删除，         │
+                    │       统一由 execute_all 处理）          │
                     └────────────────┬────────────────────────┘
                                      │
                     ┌────────────────▼────────────────────────┐
@@ -557,16 +563,13 @@ def run_analyze(project_root, output_dir, is_pre_commit, gates_only) -> int:
 
 | 文件 | 理由 |
 |---|---|
-| `cli/main.py` | 入口不变，参数不变；需清理 `_archive_claims` / `_run_claim_tests` 的 re-export |
 | `cli/analyze/gates.py` | Gate 1/2/2.5 逻辑不变（内部调用 `reconcile()`） |
 | `cli/analyze/formatting.py` | 输出格式化不变 |
 | `cli/analyze/actions.py` | Agent action 提取不变 |
 | `cli/analyze/helpers.py` | 杂项辅助不变 |
 | `domain/task_loader.py` | 任务加载逻辑不变 |
 | `domain/prd_parser.py` | PRD 解析不变 |
-| `domain/raw_input_loader.py` | [修改] claims 加载从单文件 `current.json` 改为 git staged 多文件 `CLAIM-*.json` |
 | `domain/tool_evidence_adapter.py` | 工具执行引擎不变（输出 `ToolEvidenceCandidate`） |
-| `domain/architecture_compliance_checker.py` | 架构合规检查不变 |
 | `domain/risk_advisor.py` | 风险生成不变 |
 | `analyzers/*.py` | 三个分析器接口不变 |
 | `infra/enums.py` | 枚举不变 |
@@ -579,11 +582,8 @@ def run_analyze(project_root, output_dir, is_pre_commit, gates_only) -> int:
 | `infra/operational_logger.py` | 日志不变 |
 | `infra/hint_loader.py` | Hints 不变 |
 | `infra/tool_resolver.py` | 工具检测不变 |
-| `cli/init_cmd.py` | 需适配：不再生成 `current.json`，改为创建 `CLAIM-*.json` 模板目录 |
 | `cli/finalize.py` | 不在范围 |
 | `cli/accept.py` | 不在范围 |
-| `cli/doctor.py` | 需适配：改用 `ClaimLoader.load()` + 读取 `test_results.json`/`coverage_reports.json` |
-| `domain/architecture_compliance_checker.py` | 需适配：`_get_module_for_import` 兼容嵌套包路径（`vibe_tracing.domain.X`） |
 
 ---
 
@@ -669,6 +669,39 @@ def purge_stale_cache(conn, target_files: List[str]) -> None:
 
 **实现位置**：`cli/common.py` 的 `_get_staged_files()` 函数扩展为 `_get_active_files(is_pre_commit: bool)`。
 
+### 5.10 `vt init` 适配到多文件模式
+
+**现状**：`init.py` 创建 `.vibetracing/claims/current.json`（内容 `[]`）和 `.vibetracing/claims/archive/` 目录。`config.template.json` 硬编码 `paths.agent_claims = ".vibetracing/claims/current.json"`。
+
+**决策**（原则：不向后兼容，历史债务完全清理）：
+- **不再创建** `current.json` 和 `archive/` 目录
+- 创建 `.vibetracing/claims/` 目录 + `.gitkeep`
+- `config.template.json` 的 `paths.agent_claims` 默认值改为 `.vibetracing/claims`（目录路径）
+- **不创建初始 `CLAIM-*.json` 模板文件**——Claim 由 Agent 在开发过程中通过 `_auto_generate_claim_from_staged()` 按需创建，或由开发者手动创建
+
+### 5.11 `vt doctor` 适配到多文件模式
+
+**现状**：`doctor.py:40` 硬编码 `current.json` 路径，做了两类检查：
+1. Check 1 `evidence_refs_integrity`：遍历 claim 的 `evidence_refs` 字段，检查是否在 `evidence_index.json` 中存在
+2. Check 2 `file_refs_integrity`：遍历 claim 的 `code_refs` / `test_refs`，检查磁盘存在性
+
+**决策**（原则：不向后兼容，旧字段删除后对应检查一并删除）：
+- 加载逻辑改为 `ClaimLoader().load(claims_path)`，自动获得文件/目录双模式支持
+- **删除 Check 1 `evidence_refs_integrity`**——`evidence_refs` 字段已在 Phase 2 从 Claim dataclass 中删除，该检查已无意义
+- Check 2 `file_refs_integrity` 逻辑不变（与数据来源解耦）
+- **新增 Check**：逐个 claim 的 `related_task` 是否存在于 task_list 中（复用 `db.check_dangling_claims(conn)` 或等效 SQL 查询）
+
+### 5.12 `_run_claim_tests` 删除方案
+
+**现状**：`_run_claim_tests` 对每个 claim 的 test_refs 逐文件运行 pytest，输出写入 `evidence_index["test_results"]`。`ToolExecutionEngine.execute_all()` 也能逐文件执行测试，输出 `List[ToolEvidenceCandidate]`。
+
+**决策**（原则：不向后兼容，统一执行入口）：
+- **删除 `_run_claim_tests` 函数**（`analysis.py:160-314`）及其在 `pipeline.py:345-373` 的调用
+- **删除 `pipeline.py:349` 的跳过判断逻辑**——该逻辑检查 `evidence_index["test_results"]` 是否为空来决定是否重跑，删除后统一由 `execute_all()` 处理
+- `execute_all()` 已能从 claims 的 test_refs 发现测试文件并逐文件执行，功能等价
+- mtime 缓存丢失可通过 SQLite UPSERT 的 `carried_over` 机制补偿（历史缓存全量入表，新结果覆盖）
+- **同步清理**：删除 `cli.py` 中 `_run_claim_tests` 的 re-export，删除 4 个测试类（`TestRunClaimTests`、`TestArchiveClaims`、`TestClaimTestsTiming`、`TestClaimTestsCacheLogging`，共 240 行 12 个方法，零跨测试复用）
+
 ---
 
 ## 六、 Dashboard 模板迁移计划
@@ -699,7 +732,7 @@ Dashboard 模板（`templates/dashboard.template.html`，144KB）深度耦合当
 ### 6.3 迁移策略
 
 1. **模板注入**：`output.py` 的 `_render_dashboard()` 需要将 `test_results_json` 和 `coverage_reports_json` 分别注入模板
-2. **向后兼容**：迁移期间可保留 `evidenceIndex` 变量作为 wrapper（`{testResults: [], coverageReports: []}`），逐步替换引用
+2. **直接替换**：删除所有 `evidenceIndex` 变量引用，一次性切换为 `testResults[]` + `coverageReports[]`，不保留任何 wrapper 或过渡层
 3. **测试方法**：迁移完成后运行 `vt analyze`，在浏览器中打开 `output/dashboard.html` 验证所有 Tab 渲染正常
 
 ---

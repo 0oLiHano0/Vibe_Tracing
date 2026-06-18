@@ -283,16 +283,12 @@ Phase 1 (infra/ + db.py)
     - 参考设计：`docs/architecture_vision.md` section 三.1 "一任务一声明文件"
 8. 重写相关测试
 9. 运行 `pytest` 全量测试
-10. 将 db.py 的 `validate_test_result`/`validate_coverage_report` 逻辑迁移到 validation 模块：
+10. 将 `validate_test_result`/`validate_coverage_report` 的 schema 校验注册到 validation 模块：
     - 新建 `validation/checks.py` 中的 `_check_test_results()` 和 `_check_coverage_reports()` 函数
     - 在 `validation/schema_validator.py` 的 `KNOWN_SCHEMAS` 中注册 `test_results` 和 `coverage_reports`
     - 在 `validation/checks.py` 的 `_check_schemas` 中添加 `test_results` 和 `coverage_reports` 的映射
-    - 从 db.py 的 `load_initial_cache`/`upsert_test_result`/`upsert_coverage_report` 中移除格式校验调用
-11. 将 db.py 的 `validate_task`/`validate_claim` 逻辑迁移到 validation 模块：
-    - 在 `validation/checks.py` 中确保 `_check_id_formats` 和 `_check_path_safety` 覆盖 db.py 原有的校验规则
-    - 从 db.py 的 `load_tasks`/`load_claims` 中移除 `validate_task`/`validate_claim` 调用
-    - 更新 db.py 的 `load_tasks`/`load_claims` 注释，明确"数据已通过 validation 模块校验"
-    - 运行 `pytest` 确认无回归
+    - 注：`validate_test_result`/`validate_coverage_report` 函数已在 Phase 1 从 db.py 中删除，此步骤仅需创建新 Schema 并注册
+11. ~~db.py validate_task/validate_claim 迁移~~ ✅ **已在 Phase 1 完成**（db.py 已删除全部 validate_* 函数，load_tasks/load_claims 已改为纯数据泵）
 12. 删除空旧目录 `commands/`
 13. 删除 `.vibetracing/claims/current.json` 和 `.vibetracing/claims/archive/` 目录（原则：历史债务完全清理，不保留旧架构文件）
 
@@ -310,8 +306,8 @@ Phase 1 (infra/ + db.py)
 | `_RE_CLAIM` (L84) | 正则 `^CLAIM-[A-Z]+-\d{3,4}$` | 删除 | 已被 `validation/ids.py` 的 CLAIM 正则覆盖 |
 
 **迁移顺序**：
-1. Phase 1 步骤 10：迁移 `validate_task` + `validate_claim` + 删除 `_RE_TASK`/`_RE_CLAIM`
-2. Phase 3 步骤 11：迁移 `validate_test_result` + `validate_coverage_report`（依赖新 Schema 文件）
+1. Phase 1：✅ 已删除 `validate_task` + `validate_claim` + `validate_test_result` + `validate_coverage_report` + `_RE_TASK`/`_RE_CLAIM`（全部 6 个符号）
+2. Phase 3 步骤 10：创建 `test_results.schema.json` + `coverage_reports.schema.json` 并注册到 validation 模块（函数已删除，仅需 Schema 注册）
 
 **迁移后 db.py 的 load_* 函数变化**：
 

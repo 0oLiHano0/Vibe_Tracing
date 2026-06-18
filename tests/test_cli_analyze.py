@@ -1823,8 +1823,9 @@ def test_load_human_decisions_missing_file(monkeypatch):
 def test_apply_human_decisions_accepted_rule_reconfirm(tmp_path):
     """Test human_decisions reconfirm applied via MergeGateEngine."""
     from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.infra.db import init_in_memory_db
 
-    engine = MergeGateEngine(tmp_path)
+    engine = MergeGateEngine(tmp_path, init_in_memory_db())
     gate_res = engine.evaluate(
         gaps=[], risks=[],
         human_decisions={
@@ -1844,8 +1845,9 @@ def test_apply_human_decisions_accepted_rule_reconfirm(tmp_path):
 def test_apply_human_decisions_mark_complete(tmp_path):
     """Test human_decisions mark_complete resolves gaps via MergeGateEngine."""
     from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.infra.db import init_in_memory_db
 
-    engine = MergeGateEngine(tmp_path)
+    engine = MergeGateEngine(tmp_path, init_in_memory_db())
     gaps = [{"item_id": "AC-001", "item_type": "ac", "severity": "must", "reason": "no test"}]
     gate_res = engine.evaluate(
         gaps=gaps, risks=[],
@@ -1865,8 +1867,9 @@ def test_apply_human_decisions_mark_complete(tmp_path):
 def test_apply_human_decisions_stale_debt_defer(tmp_path):
     """Test human_decisions accept_risk on risks via MergeGateEngine."""
     from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.infra.db import init_in_memory_db
 
-    engine = MergeGateEngine(tmp_path)
+    engine = MergeGateEngine(tmp_path, init_in_memory_db())
     risks = [{"risk_id": "R-001", "severity": "must", "title": "Old debt", "claim_id": "CLAIM-001"}]
     gate_res = engine.evaluate(
         gaps=[], risks=risks,
@@ -1886,8 +1889,9 @@ def test_apply_human_decisions_stale_debt_defer(tmp_path):
 def test_apply_human_decisions_accepted_rule_reject(tmp_path):
     """Test human_decisions applied count with no matching items."""
     from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.infra.db import init_in_memory_db
 
-    engine = MergeGateEngine(tmp_path)
+    engine = MergeGateEngine(tmp_path, init_in_memory_db())
     gate_res = engine.evaluate(
         gaps=[], risks=[],
         human_decisions={"decisions": []},
@@ -1898,8 +1902,9 @@ def test_apply_human_decisions_accepted_rule_reject(tmp_path):
 def test_apply_human_decisions_no_decisions(tmp_path):
     """Test human_decisions with empty decisions list."""
     from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.infra.db import init_in_memory_db
 
-    engine = MergeGateEngine(tmp_path)
+    engine = MergeGateEngine(tmp_path, init_in_memory_db())
     gate_res = engine.evaluate(gaps=[], risks=[], human_decisions={"decisions": []})
     assert gate_res["human_decisions_applied"] == 0
 

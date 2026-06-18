@@ -163,20 +163,21 @@ def _run_gate_evaluation(
     active_risks: list,
     compliance_res: Optional[dict],
     ctx: UnifiedContext,
-    evidence_index: dict,
     staged_items: Optional[Set[str]],
     directly_staged_items: Optional[Set[str]],
     human_decisions: Optional[dict] = None,
 ) -> dict:
     """Run MergeGateEngine and return gate result dict."""
+    from vibe_tracing.infra.db import init_in_memory_db
     if human_decisions is None:
         human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
-    gate_engine = MergeGateEngine(project_root)
+    conn = init_in_memory_db()
+    gate_engine = MergeGateEngine(project_root, conn)
     gate_res = gate_engine.evaluate(
-        active_gaps, active_risks, compliance_res,
-        prd_status=ctx.prd.status, staged_items=staged_items,
+        active_gaps, active_risks,
+        compliance_res=compliance_res,
+        staged_items=staged_items,
         directly_staged_items=directly_staged_items,
-        evidence_index=evidence_index,
         human_decisions=human_decisions,
     )
     hd_applied = gate_res.get("human_decisions_applied", 0)
@@ -211,7 +212,7 @@ def _evaluate_and_output(
     # Phase 2: Gate evaluation
     gate_res = _run_gate_evaluation(
         project_root, active_gaps, active_risks, compliance_res,
-        ctx, evidence_index, staged_items, directly_staged_items,
+        ctx, staged_items, directly_staged_items,
         human_decisions=human_decisions,
     )
 

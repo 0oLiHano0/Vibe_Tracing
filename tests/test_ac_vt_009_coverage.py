@@ -744,7 +744,9 @@ class TestACVT00911ClaimDowngradeWithoutToolEvidence:
         covers: AC-VT-009-11
         When a low_confidence claim has MUST severity, the merge gate must block.
         """
-        engine = MergeGateEngine(Path("/dummy"))
+        from vibe_tracing.infra.db import init_in_memory_db
+
+        engine = MergeGateEngine(Path("/dummy"), init_in_memory_db())
         risks = [
             {
                 "risk_id": "RISK-VT-001",
@@ -756,7 +758,7 @@ class TestACVT00911ClaimDowngradeWithoutToolEvidence:
             }
         ]
 
-        res = engine.evaluate(gaps=[], risks=risks, compliance_result=None)
+        res = engine.evaluate(gaps=[], risks=risks, compliance_res=None)
         assert res["gate_decision"] == "blocked"
         assert any("低可信度" in r or "low_confidence" in r.lower() for r in res["reasons"])
 
@@ -775,7 +777,9 @@ class TestACVT00913GateDoesNotSuppressWarnings:
         must also include REQ/task gaps (fail level). Lower-level warnings must
         not be suppressed by the higher-level block decision.
         """
-        engine = MergeGateEngine(Path("/dummy"))
+        from vibe_tracing.infra.db import init_in_memory_db
+
+        engine = MergeGateEngine(Path("/dummy"), init_in_memory_db())
 
         gaps = [
             {
@@ -816,7 +820,9 @@ class TestACVT00913GateDoesNotSuppressWarnings:
         covers: AC-VT-009-13
         When gate is blocked, should-level risks must still appear in reasons.
         """
-        engine = MergeGateEngine(Path("/dummy"))
+        from vibe_tracing.infra.db import init_in_memory_db
+
+        engine = MergeGateEngine(Path("/dummy"), init_in_memory_db())
 
         gaps = [
             {

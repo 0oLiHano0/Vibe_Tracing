@@ -29,7 +29,9 @@ def test_empty_evidence_index_blocks_on_must_ac():
     """Empty evidence_index should not prevent must AC gaps from blocking
     the gate.  Bug: empty evidence_index dict caused check_ac_coverage to
     silently skip must AC enforcement."""
-    engine = MergeGateEngine(Path("/dummy/project/root"))
+    from vibe_tracing.infra.db import init_in_memory_db
+
+    engine = MergeGateEngine(Path("/dummy/project/root"), init_in_memory_db())
 
     gaps = [
         {
@@ -46,7 +48,7 @@ def test_empty_evidence_index_blocks_on_must_ac():
     }
 
     # Empty evidence_index — no keys at all
-    res = engine.evaluate(gaps, risks, compliance, evidence_index={})
+    res = engine.evaluate(gaps, risks, compliance)
 
     assert res["gate_decision"] != "pass"
     assert res["gate_decision"] == "blocked"
@@ -54,7 +56,7 @@ def test_empty_evidence_index_blocks_on_must_ac():
     assert len(res["blocked_items"]) > 0
 
     # Also verify with evidence_index missing the "evidences" key
-    res2 = engine.evaluate(gaps, risks, compliance, evidence_index={"run_id": "test"})
+    res2 = engine.evaluate(gaps, risks, compliance)
     assert res2["gate_decision"] == "blocked"
 
 
@@ -66,7 +68,9 @@ def test_proposal_risks_consumed_by_gate():
     """Risks derived from proposal_risks (with must severity and description)
     are consumed by the gate engine: they appear in reasons and blocked_items,
     and the gate_decision is blocked."""
-    engine = MergeGateEngine(Path("/dummy/project/root"))
+    from vibe_tracing.infra.db import init_in_memory_db
+
+    engine = MergeGateEngine(Path("/dummy/project/root"), init_in_memory_db())
 
     gaps = []
     risks = [
@@ -148,7 +152,9 @@ def test_incremental_mode_blocks_must_arch_violations():
     architecture compliance status violations must still block the gate.
     Bug: incremental mode accidentally bypassed must arch violations
     from architecture_compliance_status."""
-    engine = MergeGateEngine(Path("/dummy/project/root"))
+    from vibe_tracing.infra.db import init_in_memory_db
+
+    engine = MergeGateEngine(Path("/dummy/project/root"), init_in_memory_db())
 
     gaps = []
     risks = []

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from vibe_tracing.cli import main
 from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+from vibe_tracing.infra.db import init_in_memory_db
 import pytest
 
 @pytest.fixture(autouse=True)
@@ -480,7 +481,7 @@ def test_gate_vt_008_high_risk_missing_details():
     Verify that any high/MUST risk item lacking Suggested Action or Business Impact details
     is marked as missing details and blocks the gate decision.
     """
-    engine = MergeGateEngine(Path("."))
+    engine = MergeGateEngine(Path("."), init_in_memory_db())
     gaps = []
 
     # 1. High risk with action and impact

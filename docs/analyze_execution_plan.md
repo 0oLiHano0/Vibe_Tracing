@@ -21,7 +21,7 @@
 | Phase 1 | 基础层（infra/ + analyzers/ + db.py） | ✅ 已完成 | 目录移动 + db.py + validate_* 迁移到 validation 模块 |
 | Phase 2 | 领域层移动 + Claim 加载重构 | ✅ 已完成 | domain/ 移动完成、claim_loader 重构完成（旧字段已删除） |
 | Phase 3 | 编排层移动 + 证据构建重构 | ❌ 未开始 | commands/ 仍在原位，cli/ 目录尚未建立 |
-| Phase 4 | 门禁引擎 SQL 化 | ❌ 未开始 | merge_gate_engine.py 未改 |
+| Phase 4 | 门禁引擎 SQL 化 | ✅ 已完成 | evaluate 签名 11→6，静态方法删除，SQL 查询替代 |
 | Phase 5 | 幽灵代码检测 SQL 化 | ❌ 未开始 | ghost_code_reconciler.py 未改 |
 | Phase 6 | 流水线集成 | ❌ 未开始 | pipeline.py 未改，仍引用 current.json |
 | Phase 7 | Dashboard 模板迁移 + 清理 | ❌ 未开始 | dashboard 未适配新 evidence 格式 |
@@ -563,8 +563,8 @@ def load_tasks(conn, tasks):
 | 15 | GAP-EVID-003 | `evidence_index_builder.py` | P1 | 类名仍为 `EvidenceIndexBuilder`，未重命名为 `EvidenceBuilder` | [ ] |
 | 16 | GAP-EVID-004 | `evidence_index_builder.py` | P1 | 仍使用 mtime 比对逻辑，未改为 SQLite UPSERT | [ ] |
 | 17 | GAP-EVID-005 | `infra/validation/schemas/evidence_index.schema.json` | P2 | 旧 schema 仍存在，未被拆分 schema 替代 | [ ] |
-| 18 | GAP-GATE-001 | `merge_gate_engine.py` | P1 | 构造函数未接收 `conn` 参数 | [ ] |
-| 19 | GAP-GATE-002 | `merge_gate_engine.py` | P1 | `evaluate()` 仍为 11 参数签名 | [ ] |
+| 18 | GAP-GATE-001 | `merge_gate_engine.py` | P1 | 构造函数未接收 `conn` 参数 → ✅ 已完成 | [x] |
+| 19 | GAP-GATE-002 | `merge_gate_engine.py` | P1 | `evaluate()` 仍为 11 参数签名 → ✅ 已简化为 6 参数 | [x] |
 | 20 | GAP-GHOST-001 | `ghost_code_reconciler.py` | P1 | 构造函数未接收 `conn` 参数 | [ ] |
 | 21 | GAP-GHOST-002 | `ghost_code_reconciler.py` | P1 | 仍使用 `git show HEAD` 子进程 | [ ] |
 | 22 | GAP-TEST-001 | `test_integration_v3.py` | P2 | `TestArchiveClaims` 测试类待删除 | [ ] |

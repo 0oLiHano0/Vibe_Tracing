@@ -7,10 +7,10 @@ Evaluates quality gate conditions to produce a machine gate decision:
 - 'pass': if there are no issues.
 """
 
+import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from vibe_tracing.infra.governance import is_in_scope
 from vibe_tracing.infra.hint_loader import load_hints, resolve_hint
 from vibe_tracing.infra.operational_logger import OperationalLogger
 
@@ -20,9 +20,10 @@ _gate_hints = load_hints("gate_decision")
 class MergeGateEngine:
     """Deterministic rules engine to evaluate merge gate criteria."""
 
-    def __init__(self, project_root: Path) -> None:
-        """Initialize the engine with project root."""
+    def __init__(self, project_root: Path, conn: "sqlite3.Connection") -> None:
+        """Initialize the engine with project root and database connection."""
         self.project_root = project_root
+        self.conn = conn
         self.coverage_threshold = 80
 
     @staticmethod
@@ -67,210 +68,25 @@ class MergeGateEngine:
             return f"[当前] {msg}"
         return f"[预存] {msg}"
 
-    @staticmethod
-    def check_claim_exists(
-        staged_files: Set[str],
-        claims: List[Dict[str, Any]],
-        boundary: Optional[Dict[str, Any]] = None,
-    ) -> tuple:
-        """Check whether staged business files are covered by at least one Claim.
-
-        Args:
-            staged_files: Set of file paths that are staged in the current commit.
-            claims: List of claim dicts, each having ``code_refs`` and/or
-                ``test_refs`` keys (lists of file paths).
-            boundary: Optional governance boundary dict with
-                ``included_patterns`` / ``excluded_patterns``.  When
-                provided, only files matching the boundary are considered
-                business files; non-matching files are ignored.
-
-        Returns:
-            ``(passed, unclaimed_files)`` where *passed* is ``True`` when
-            every business file is covered by at least one claim.
-        """
-        if not staged_files:
-            return (True, set())
-
-        # Filter to business files within the governance boundary.
-        if boundary is not None:
-            business_files = {f for f in staged_files if is_in_scope(f, boundary)}
-        else:
-            business_files = set(staged_files)
-
-        if not business_files:
-            return (True, set())
-
-        # Collect all files referenced by any claim.
-        all_claimed_files: Set[str] = set()
-        for claim in claims:
-            for ref in claim.get("code_refs", []):
-                all_claimed_files.add(ref)
-            for ref in claim.get("test_refs", []):
-                all_claimed_files.add(ref)
-
-        unclaimed = business_files - all_claimed_files
-        if unclaimed:
-            return (False, unclaimed)
-        return (True, set())
-
-    @staticmethod
-    def check_ac_coverage(
-        claims: List[Dict[str, Any]],
-        tasks: List[Dict[str, Any]],
-        evidence_index: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
-        """Derive AC coverage status from claims, tasks, and test evidence.
-
-        For each MUST-level task (priority == "must"), this method checks
-        whether its acceptance criteria are covered by passing tests via
-        the claim chain: Task -> Claim -> test_refs -> evidence.
-
-        Args:
-            claims: List of Claim dicts.  Each should have
-                ``related_task``, ``test_refs``, and optionally
-                ``claim_id`` keys.
-            tasks: List of Task dicts from ``task_list.json``.  Each should
-                have ``task_id``, ``priority``, and
-                ``related_acceptance_criteria`` keys.
-            evidence_index: Optional evidence index dict.  When provided
-                and it contains test results (entries with
-                ``details.test_category`` == ``"test"``), the method
-                checks whether referenced tests actually passed.
-
-        Returns:
-            A list of dicts ``[{ac_id, task_id, reason}]`` for each
-            uncovered MUST AC.  Empty list means all MUST ACs are covered.
-        """
-        uncovered: List[Dict[str, Any]] = []
-
-        # Build task_id -> claims lookup
-        task_claims: Dict[str, List[Dict[str, Any]]] = {}
-        for claim in claims:
-            task_id = claim.get("related_task", "")
-            if task_id:
-                task_claims.setdefault(task_id, []).append(claim)
-
-        # Build test file -> result lookup from evidence_index
-        test_results: Dict[str, bool] = {}
-        if evidence_index:
-            for ev in evidence_index.get("evidences", []):
-                details = ev.get("details", {})
-                if details.get("test_category") == "test":
-                    source = ev.get("source_path", "")
-                    if source:
-                        test_results[source] = ev.get("status") == "passed"
-
-        for task in tasks:
-            if task.get("priority") != "must":
-                continue
-
-            task_id = task.get("task_id", "")
-            related_acs = task.get("related_acceptance_criteria", [])
-
-            related_claims = task_claims.get(task_id, [])
-            if not related_claims:
-                for ac_id in related_acs:
-                    uncovered.append({
-                        "ac_id": ac_id,
-                        "task_id": task_id,
-                        "reason": "no_claim_for_task",
-                    })
-                    OperationalLogger.get().debug("gate_ac_check", "AC coverage check",
-                        ac_id=ac_id,
-                        task_id=task_id,
-                        has_claims=False,
-                        has_test_results=bool(test_results),
-                        test_status="no_claim",
-                        covered=False,
-                        uncovered_reason="no_claim_for_task")
-                continue
-
-            for ac_id in related_acs:
-                has_passing_test = False
-                for claim in related_claims:
-                    test_refs = claim.get("test_refs", [])
-                    if not test_refs:
-                        continue
-                    if not test_results:
-                        # No test evidence available; cannot verify pass
-                        has_passing_test = False
-                        break
-                    for ref in test_refs:
-                        if test_results.get(ref, False):
-                            has_passing_test = True
-                            break
-                    if has_passing_test:
-                        break
-
-                if not has_passing_test:
-                    any_claim_has_tests = any(
-                        c.get("test_refs") for c in related_claims
-                    )
-                    reason = (
-                        "test_failed"
-                        if (any_claim_has_tests and test_results)
-                        else "no_tests_declared"
-                    )
-                    uncovered.append({
-                        "ac_id": ac_id,
-                        "task_id": task_id,
-                        "reason": reason,
-                    })
-                    OperationalLogger.get().debug("gate_ac_check", "AC coverage check",
-                        ac_id=ac_id,
-                        task_id=task_id,
-                        has_claims=bool(related_claims),
-                        has_test_results=bool(test_results),
-                        test_status="failed" if any_claim_has_tests else "no_tests",
-                        covered=False,
-                        uncovered_reason=reason)
-                else:
-                    OperationalLogger.get().debug("gate_ac_check", "AC coverage check",
-                        ac_id=ac_id,
-                        task_id=task_id,
-                        has_claims=bool(related_claims),
-                        has_test_results=bool(test_results),
-                        test_status="passed",
-                        covered=True,
-                        uncovered_reason="")
-
-        return uncovered
-
     def _check_claim_existence(
         self,
-        claims: List[Dict[str, Any]],
         staged_items: Set[str],
-        boundary: Optional[Dict[str, Any]],
         gaps: List[Dict[str, Any]],
         reasons: List[str],
         blocked_items: List[str],
     ) -> bool:
-        """Section 0.5: Claim existence check.
+        """Section 0.5: Claim existence check via SQL.
 
         Returns ``True`` if the gate should be set to ``blocked``.
         Mutates *gaps*, *reasons*, and *blocked_items* in-place.
         """
-        passed, unclaimed = self.check_claim_exists(
-            staged_files=staged_items,
-            claims=claims,
-            boundary=boundary,
-        )
-        # Compute counts for DEBUG logging
-        if boundary is not None:
-            _biz_files = {f for f in staged_items if is_in_scope(f, boundary)}
-        else:
-            _biz_files = set(staged_items)
-        _all_claimed = set()
-        for _c in claims:
-            for _r in _c.get("code_refs", []):
-                _all_claimed.add(_r)
-            for _r in _c.get("test_refs", []):
-                _all_claimed.add(_r)
+        from vibe_tracing.infra.db import check_ghost_code
+
+        ghost_files = check_ghost_code(self.conn)
         OperationalLogger.get().debug("gate_claim_existence", "Claim existence check",
-            business_files=len(_biz_files), claimed_files=len(_all_claimed),
-            unclaimed=len(unclaimed), passed=passed)
-        if not passed and unclaimed:
-            for f in sorted(unclaimed):
+            ghost_count=len(ghost_files))
+        if ghost_files:
+            for f in sorted(ghost_files):
                 hint = resolve_hint(
                     _gate_hints.get("missing_claim", {}), "level1"
                 )
@@ -293,33 +109,25 @@ class MergeGateEngine:
 
     def _check_ac_coverage(
         self,
-        claims: List[Dict[str, Any]],
-        tasks: List[Dict[str, Any]],
-        evidence_index: Optional[Dict[str, Any]],
         staged_items: Optional[Set[str]],
         gaps: List[Dict[str, Any]],
         reasons: List[str],
         blocked_items: List[str],
     ) -> bool:
-        """Section 0.6: AC coverage derivation.
+        """Section 0.6: AC coverage check via SQL.
 
         Returns ``True`` if the gate should be set to ``blocked``.
         Mutates *gaps*, *reasons*, and *blocked_items* in-place.
         """
-        ac_gaps = self.check_ac_coverage(claims, tasks, evidence_index)
-        # Compute total MUST ACs for DEBUG logging
-        _total_must_acs = sum(
-            len(t.get("related_acceptance_criteria", []))
-            for t in tasks if t.get("priority") == "must"
-        )
-        _covered_acs = _total_must_acs - len(ac_gaps)
+        from vibe_tracing.infra.db import check_ac_coverage
+
+        ac_gaps = check_ac_coverage(self.conn)
         OperationalLogger.get().debug("gate_ac_coverage", "AC coverage check",
-            total_must_acs=_total_must_acs, covered=_covered_acs,
             uncovered=len(ac_gaps))
         for gap in ac_gaps:
             ac_id = gap["ac_id"]
             task_id = gap["task_id"]
-            reason = gap["reason"]
+            reason = gap.get("reason", gap.get("coverage_status", "no_test_coverage"))
             hint = resolve_hint(
                 _gate_hints.get("ac_not_covered", {}), "level1"
             )
@@ -544,7 +352,6 @@ class MergeGateEngine:
         any_fail_detected: bool,
         human_decisions_applied: int,
         staged_items: Optional[Set[str]],
-        evidence_index: Optional[Dict[str, Any]],
         reasons: List[str],
         accepted_rule_target_ids: Optional[Set[str]] = None,
         rejected_rule_target_ids: Optional[Set[str]] = None,
@@ -560,15 +367,12 @@ class MergeGateEngine:
             gate_decision = "fail"
 
         # 2.5 Check coverage violations (always [当前] — fresh measurement)
-        coverage_violations = []
-        if evidence_index:
-            for ev in evidence_index.get("evidences", []):
-                if (ev.get("details", {}).get("tool_category") == "coverage" and
-                        ev.get("status") == "violated"):
-                    coverage_violations.append({
-                        "file": ev.get("source_path", ""),
-                        "percent": ev.get("details", {}).get("percent_covered", 0),
-                    })
+        from vibe_tracing.infra.db import check_coverage_violations
+        cv_raw = check_coverage_violations(self.conn)
+        coverage_violations = [
+            {"file": r["source_path"], "percent": r["percent_covered"]}
+            for r in cv_raw
+        ]
         if coverage_violations:
             threshold = getattr(self, 'coverage_threshold', 80)
             for cv in coverage_violations:
@@ -600,15 +404,10 @@ class MergeGateEngine:
         self,
         gaps: List[Dict[str, Any]],
         risks: List[Dict[str, Any]],
-        compliance_result: Optional[Dict[str, Any]] = None,
-        prd_status: str = "active",
+        compliance_res: Optional[Dict[str, Any]] = None,
         staged_items: Optional[Set[str]] = None,
         directly_staged_items: Optional[Set[str]] = None,
-        evidence_index: Optional[Dict[str, Any]] = None,
         human_decisions: Optional[Any] = None,
-        claims: Optional[List[Dict[str, Any]]] = None,
-        boundary: Optional[Dict[str, Any]] = None,
-        tasks: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate merge gate criteria based on gaps, risks, and compliance checker results.
@@ -616,8 +415,7 @@ class MergeGateEngine:
         Args:
             gaps: Identified gaps from analyzers.
             risks: Enriched risks from RiskAdvisor.
-            compliance_result: Result from ArchitectureComplianceChecker.
-            prd_status: Current PRD status ('draft', 'active', 'frozen', 'deprecated').
+            compliance_res: Result from ArchitectureComplianceChecker.
             staged_items: Set of claim/task/AC/requirement IDs affected by the
                 current commit (superset including indirectly affected items).
                 Used for gap evaluation and architecture violation tagging.
@@ -626,10 +424,6 @@ class MergeGateEngine:
                 provided, risk evaluation uses this set instead of
                 *staged_items* so that old claims merely referencing modified
                 files are tagged ``[预存]`` and do not block the gate.
-            evidence_index: Evidence index dict containing tool execution
-                results.  When provided, coverage violations (source files
-                with < 80% coverage) are extracted from evidences with
-                tool_category ``coverage`` and status ``violated``.
             human_decisions: Optional list of human decisions.  Each element is a
                 dict with keys ``decision_id``, ``category``, ``targetId``,
                 ``action``, ``reason``, ``decidedBy``, ``timestamp``.
@@ -637,27 +431,6 @@ class MergeGateEngine:
                 Supported actions: ``accept_risk`` (downgrades matching risk
                 severity to ``"accepted"``), ``mark_complete`` (marks matching
                 gap as ``"human_resolved"``).
-            claims: Optional list of Claim dicts for Claim existence check.
-                Each dict should have ``code_refs`` and/or ``test_refs``
-                keys.  When provided together with *staged_items*, the
-                engine verifies that every staged business file (within the
-                governance boundary) is referenced by at least one Claim.
-                Unclaimed files produce a ``must``-severity gap with
-                category ``missing_claim``, which blocks the gate.  When
-                ``None``, the check is skipped (backward compatible).
-            boundary: Optional governance boundary dict (with
-                ``included_patterns`` / ``excluded_patterns``) used to
-                filter staged files to business files during Claim
-                existence check.  When ``None``, all staged files are
-                treated as business files.
-            tasks: Optional list of Task dicts from ``task_list.json``.
-                When provided together with *claims*, the engine derives
-                AC coverage status for each MUST-level task's acceptance
-                criteria via the claim chain (Task -> Claim -> test_refs
-                -> evidence).  Uncovered MUST ACs produce ``must``-severity
-                gaps with category ``ac_not_covered``, which block the
-                gate.  When ``None``, the check is skipped (backward
-                compatible).
 
         Returns:
             A dict containing:
@@ -712,30 +485,19 @@ class MergeGateEngine:
         reasons: List[str] = []
         blocked_items: List[str] = []
 
-        if prd_status == "draft":
-            draft_hint = resolve_hint(_gate_hints.get("draft_approved", {}), "level1")
-            return {
-                "gate_decision": "draft_approved",
-                "reasons": [draft_hint if draft_hint else "项目处于需求草稿阶段（draft），跳过强阻塞门禁规则校验。"],
-                "blocked_items": [],
-                "human_decisions_applied": human_decisions_applied,
-            }
-
         # ----------------------------------------------------
         # Section 0.5 + 0.6
         # ----------------------------------------------------
-        if claims is not None and staged_items is not None:
+        if staged_items is not None:
             if self._check_claim_existence(
-                claims, staged_items, boundary, gaps, reasons, blocked_items
+                staged_items, gaps, reasons, blocked_items
             ):
                 gate_decision = "blocked"
 
-        if claims is not None and tasks is not None:
-            if self._check_ac_coverage(
-                claims, tasks, evidence_index, staged_items,
-                gaps, reasons, blocked_items,
-            ):
-                gate_decision = "blocked"
+        if self._check_ac_coverage(
+            staged_items, gaps, reasons, blocked_items,
+        ):
+            gate_decision = "blocked"
 
         # ----------------------------------------------------
         # Section 1: Evaluate 'blocked' conditions (MUST/critical)
@@ -751,8 +513,8 @@ class MergeGateEngine:
             gate_decision = "blocked"
 
         # 1.3 Check Must architecture violations (inline)
-        if compliance_result:
-            violations = compliance_result.get("architecture_violations", [])
+        if compliance_res:
+            violations = compliance_res.get("architecture_violations", [])
             for v in violations:
                 rule_id = v.get("rule_id", "")
                 msg_violation = v.get("message", "")
@@ -762,7 +524,7 @@ class MergeGateEngine:
                 blocked_items.append(msg)
                 gate_decision = "blocked"
 
-            status_list = compliance_result.get("architecture_compliance_status", [])
+            status_list = compliance_res.get("architecture_compliance_status", [])
             for status_item in status_list:
                 rule_id = status_item.get("rule_id", "")
                 status = status_item.get("status")
@@ -776,8 +538,8 @@ class MergeGateEngine:
                         gate_decision = "blocked"
 
         # 1.4 Process proposal risks/gaps from architecture change governance
-        if compliance_result:
-            for risk in compliance_result.get("proposal_risks", []):
+        if compliance_res:
+            for risk in compliance_res.get("proposal_risks", []):
                 risk_id = risk.get("risk_id", "")
                 desc = risk.get("description", "")
                 msg = f"[架构变更提案风险] {risk_id}: {desc}"
@@ -786,7 +548,7 @@ class MergeGateEngine:
                     blocked_items.append(msg)
                     gate_decision = "blocked"
 
-            for gap in compliance_result.get("proposal_gaps", []):
+            for gap in compliance_res.get("proposal_gaps", []):
                 gap_id = gap.get("item_id", "")
                 reason_text = gap.get("reason", "")
                 msg = f"[架构变更治理缺口] {gap_id}: {reason_text}"
@@ -807,8 +569,8 @@ class MergeGateEngine:
         current_fail_detected = False
 
         # 2.1 Check unclear architecture constraints (inline)
-        if compliance_result:
-            unclear_constraints = compliance_result.get("unclear_constraints", [])
+        if compliance_res:
+            unclear_constraints = compliance_res.get("unclear_constraints", [])
             for uc in unclear_constraints:
                 rule_id = uc.get("rule_id", "")
                 reason = uc.get("reason", "")
@@ -819,7 +581,7 @@ class MergeGateEngine:
                 if staged_items is None:
                     current_fail_detected = True
 
-            status_list = compliance_result.get(
+            status_list = compliance_res.get(
                 "architecture_compliance_status", []
             )
             for status_item in status_list:
@@ -862,6 +624,6 @@ class MergeGateEngine:
             gate_decision, blocked_items,
             current_fail_detected, any_fail_detected,
             human_decisions_applied, staged_items,
-            evidence_index, reasons,
+            reasons,
             accepted_rule_target_ids, rejected_rule_target_ids,
         )

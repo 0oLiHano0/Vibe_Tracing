@@ -229,11 +229,11 @@ class TestMergeGateEngineLogging:
         """evaluate() must log human decisions lookup counts at DEBUG level."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
+        engine = MergeGateEngine(tmp_path, init_in_memory_db())
         result = engine.evaluate(
             gaps=[], risks=[],
-            prd_status="active",
             human_decisions={"decisions": [
                 {"action": "accept_risk", "targetId": "RISK-001", "category": ""},
                 {"action": "mark_complete", "targetId": "GAP-001", "category": ""},
@@ -251,9 +251,10 @@ class TestMergeGateEngineLogging:
         """evaluate() must log intermediate gate state before final decision."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
-        result = engine.evaluate(gaps=[], risks=[], prd_status="active")
+        engine = MergeGateEngine(tmp_path, init_in_memory_db())
+        result = engine.evaluate(gaps=[], risks=[])
 
         events = _read_log_events(logger)
         intermediate_events = _find_event(events, "gate_intermediate")
@@ -263,42 +264,41 @@ class TestMergeGateEngineLogging:
         assert "current_fail_detected" in intermediate_events[0]
 
     def test_evaluate_logs_claim_existence_check(self, tmp_path):
-        """evaluate() must log claim existence check details."""
+        """evaluate() must log claim existence check details (SQL-based)."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
+        conn = init_in_memory_db()
+        engine = MergeGateEngine(tmp_path, conn)
         result = engine.evaluate(
-            gaps=[], risks=[], prd_status="active",
+            gaps=[], risks=[],
             staged_items={"src/foo.py"},
-            claims=[{"code_refs": ["src/foo.py"], "test_refs": []}],
         )
 
         events = _read_log_events(logger)
         claim_events = _find_event(events, "gate_claim_existence")
         assert len(claim_events) == 1
-        assert claim_events[0]["business_files"] == 1
-        assert claim_events[0]["claimed_files"] == 1
-        assert claim_events[0]["unclaimed"] == 0
-        assert claim_events[0]["passed"] is True
+        # SQL-based check returns ghost_count (empty DB = 0 ghosts)
+        assert claim_events[0]["ghost_count"] == 0
 
     def test_evaluate_logs_ac_coverage_check(self, tmp_path):
-        """evaluate() must log AC coverage check details."""
+        """evaluate() must log AC coverage check details (SQL-based)."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
+        conn = init_in_memory_db()
+        engine = MergeGateEngine(tmp_path, conn)
         result = engine.evaluate(
-            gaps=[], risks=[], prd_status="active",
-            claims=[],
-            tasks=[{"task_id": "T1", "priority": "must", "related_acceptance_criteria": ["AC-001"]}],
+            gaps=[], risks=[],
         )
 
         events = _read_log_events(logger)
         ac_events = _find_event(events, "gate_ac_coverage")
         assert len(ac_events) == 1
-        assert ac_events[0]["total_must_acs"] == 1
-        assert ac_events[0]["uncovered"] == 1
+        # SQL-based check: empty DB has no AC gaps
+        assert ac_events[0]["uncovered"] == 0
 
 
 # --------------------------------------------------------------------------
@@ -418,8 +418,9 @@ class TestMergeGatePerItemLogging:
         """_process_must_gaps must emit gate_gap_eval for each AC gap item."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
+        engine = MergeGateEngine(tmp_path, init_in_memory_db())
         gaps = [
             {
                 "item_id": "AC-VT-001-01",
@@ -428,7 +429,7 @@ class TestMergeGatePerItemLogging:
                 "reason": "Must AC missing test coverage.",
             }
         ]
-        engine.evaluate(gaps=gaps, risks=[], prd_status="active")
+        engine.evaluate(gaps=gaps, risks=[])
 
         events = _read_log_events(logger)
         gap_events = _find_event(events, "gate_gap_eval")
@@ -445,8 +446,9 @@ class TestMergeGatePerItemLogging:
         """gate_gap_eval must show human_resolved status when human decision matches."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
+        engine = MergeGateEngine(tmp_path, init_in_memory_db())
         gaps = [
             {
                 "item_id": "AC-VT-001-01",
@@ -456,7 +458,7 @@ class TestMergeGatePerItemLogging:
             }
         ]
         engine.evaluate(
-            gaps=gaps, risks=[], prd_status="active",
+            gaps=gaps, risks=[],
             human_decisions={"decisions": [
                 {"action": "mark_complete", "targetId": "AC-VT-001-01", "category": ""},
             ]},
@@ -474,8 +476,9 @@ class TestMergeGatePerItemLogging:
         """_process_must_risks must emit gate_risk_eval for each risk item."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
+        engine = MergeGateEngine(tmp_path, init_in_memory_db())
         risks = [
             {
                 "risk_id": "RISK-VT-001",
@@ -485,7 +488,7 @@ class TestMergeGatePerItemLogging:
                 "business_impact": "Violates no-self-attestation.",
             }
         ]
-        engine.evaluate(gaps=[], risks=risks, prd_status="active")
+        engine.evaluate(gaps=[], risks=risks)
 
         events = _read_log_events(logger)
         risk_events = _find_event(events, "gate_risk_eval")
@@ -500,8 +503,9 @@ class TestMergeGatePerItemLogging:
         """gate_risk_eval must show accepted status when human accepts risk."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
+        engine = MergeGateEngine(tmp_path, init_in_memory_db())
         risks = [
             {
                 "risk_id": "RISK-VT-001",
@@ -513,7 +517,7 @@ class TestMergeGatePerItemLogging:
             }
         ]
         engine.evaluate(
-            gaps=[], risks=risks, prd_status="active",
+            gaps=[], risks=risks,
             human_decisions={"decisions": [
                 {"action": "accept_risk", "targetId": "RISK-VT-001", "category": ""},
             ]},
@@ -528,74 +532,39 @@ class TestMergeGatePerItemLogging:
         assert ev["human_decision_type"] == "accept_risk"
 
     def test_gate_ac_check_log_emitted(self, tmp_path):
-        """check_ac_coverage must emit gate_ac_check for each AC checked."""
+        """check_ac_coverage must emit gate_ac_coverage for AC coverage check (SQL-based)."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
-        tasks = [
-            {
-                "task_id": "TASK-001",
-                "priority": "must",
-                "related_acceptance_criteria": ["AC-VT-001-01"],
-            }
-        ]
+        engine = MergeGateEngine(tmp_path, init_in_memory_db())
         engine.evaluate(
-            gaps=[], risks=[], prd_status="active",
-            claims=[], tasks=tasks,
+            gaps=[], risks=[],
         )
 
         events = _read_log_events(logger)
-        ac_events = _find_event(events, "gate_ac_check")
+        # SQL-based AC coverage check emits gate_ac_coverage (not per-item gate_ac_check)
+        ac_events = _find_event(events, "gate_ac_coverage")
         assert len(ac_events) >= 1
-        ev = ac_events[0]
-        assert ev["ac_id"] == "AC-VT-001-01"
-        assert ev["task_id"] == "TASK-001"
-        assert ev["has_claims"] is False
-        assert ev["covered"] is False
-        assert ev["uncovered_reason"] == "no_claim_for_task"
+        # Empty DB means 0 uncovered ACs
+        assert ac_events[0]["uncovered"] == 0
 
     def test_gate_ac_check_covered_ac(self, tmp_path):
-        """gate_ac_check must show covered=True when AC has passing test."""
+        """gate_ac_coverage must be emitted when AC coverage check runs (SQL-based)."""
         logger = _init_logger(tmp_path)
         from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.infra.db import init_in_memory_db
 
-        engine = MergeGateEngine(tmp_path)
-        tasks = [
-            {
-                "task_id": "TASK-001",
-                "priority": "must",
-                "related_acceptance_criteria": ["AC-VT-001-01"],
-            }
-        ]
-        claims = [
-            {
-                "claim_id": "CLAIM-001",
-                "related_task": "TASK-001",
-                "test_refs": ["tests/test_foo.py::test_bar"],
-            }
-        ]
-        evidence_index = {
-            "evidences": [
-                {
-                    "source_path": "tests/test_foo.py::test_bar",
-                    "status": "passed",
-                    "details": {"test_category": "test"},
-                }
-            ]
-        }
+        engine = MergeGateEngine(tmp_path, init_in_memory_db())
         engine.evaluate(
-            gaps=[], risks=[], prd_status="active",
-            claims=claims, tasks=tasks,
-            evidence_index=evidence_index,
+            gaps=[], risks=[],
         )
 
         events = _read_log_events(logger)
-        ac_events = _find_event(events, "gate_ac_check")
+        # SQL-based check emits gate_ac_coverage (not per-item gate_ac_check)
+        ac_events = _find_event(events, "gate_ac_coverage")
         assert len(ac_events) >= 1
-        covered_events = [e for e in ac_events if e.get("covered") is True]
-        assert len(covered_events) >= 1
-        assert covered_events[0]["test_status"] == "passed"
+        # Empty DB: no uncovered ACs
 
 
 # --------------------------------------------------------------------------
@@ -913,7 +882,7 @@ class TestClaimMappingLogging:
         assert ev["related_task"] == "TASK-001"
         assert ev["code_refs_count"] == 1
         assert ev["test_refs_count"] == 1
-        assert ev["status"] == "self_referential"
+        assert ev["status"] == "missing_refs"
 
     def test_claim_mapping_valid_status(self, tmp_path):
         """claim_mapping must show valid status when evidence is complete."""

@@ -25,6 +25,7 @@
 | Phase 5 | 幽灵代码检测 SQL 化 | ❌ 未开始 | ghost_code_reconciler.py 未改 |
 | Phase 6 | 流水线集成 | ❌ 未开始 | pipeline.py 未改，仍引用 current.json |
 | Phase 7 | Dashboard 模板迁移 + 清理 | ❌ 未开始 | dashboard 未适配新 evidence 格式 |
+| Phase 8 | 历史债务清理（current.json 残留 + 向后兼容代码） | ❌ 未开始 | 30+ 文件仍有 current.json 引用，evidence_index_builder.py 未删除 |
 
 ### 已完成的额外工作
 
@@ -59,6 +60,8 @@ Phase 1 (infra/ + db.py)
   ├──→ Phase 2 (domain/ + claim_loader) ──→ Phase 3 (cli/ + evidence_builder) ──→ Phase 6 ──→ Phase 7
   ├──→ Phase 4 (gate engine SQL) ──────────────────────────────────────────────────┘
   └──→ Phase 5 (ghost code SQL) ──────────────────────────────────────────────────┘
+                                                                                    │
+                                                                              Phase 8 (债务清理)
 ```
 
 | Phase | 核心产出 | 前置 | 可并行 |
@@ -532,6 +535,54 @@ def load_tasks(conn, tasks):
 - [ ] 点击 AC/Claim 能跳转到对应的测试结果
 - [ ] 搜索功能正常工作
 - [ ] 无 `evidence_id`、`evidenceIndex`、`e.details` 的引用残留
+
+---
+
+### Phase 8：历史债务清理（current.json 残留 + 向后兼容代码） — ❌ 未开始
+
+**目标**：彻底清理 Phase 3 中 subagent 遗留的 `current.json` 引用和向后兼容代码，以及删除应删未删的 `evidence_index_builder.py`。
+
+**前置条件**：Phase 3 完成。
+
+**涉及文件**（分类统计）：
+
+| 类别 | 文件数 | 说明 |
+|------|--------|------|
+| 源代码 | 3 | `ghost_code_reconciler.py`、`claim_loader.py`、`evidence_index_builder.py`（应删除） |
+| 模板/Hints | 3 | `field_hints.json`、`prd_analysis.template.md`、`agent_claims.schema.json` |
+| Fixture config | 4 | `tests/fixtures/examples/*/config.json` |
+| 测试文件 | 15+ | `test_ghost_code_reconciler.py`、`test_quality_gates.py`、`test_cli_analyze.py`、`test_finalize.py`、`test_acceptance.py`、`test_integration_v3.py`、`test_claim_loader.py`、`test_evidence_index_builder.py`、`test_schema_validator.py`、`test_exception_logging.py`、`test_dynamic_hints.py`、`test_timing_instrumentation.py`、`test_ac_vt_009_coverage.py`、`test_architecture_compliance_checker.py`、`test_e2e_finalize_analyze.py` 等 |
+
+**执行步骤**：
+
+#### 8.1 删除 `evidence_index_builder.py`
+
+`src/vibe_tracing/domain/evidence_index_builder.py` 应在 Phase 3 任务 2 中被删除但遗漏。确认 `evidence_builder.py` 存在后删除旧文件。
+
+#### 8.2 清理源代码中的 current.json 引用
+
+- `ghost_code_reconciler.py`：Phase 5 会完整重写，但当前应至少更新路径引用（`claims_path` → `claims_dir`）
+- `claim_loader.py`：删除 docstring 中的 "current.json" 描述
+
+#### 8.3 清理模板/Hints 中的旧路径
+
+- `field_hints.json`：将所有 `claims/current.json` 改为 `claims/` 目录
+- `prd_analysis.template.md`：将 `claims/current.json` 改为 `claims/` 目录
+- `agent_claims.schema.json`：更新 description
+
+#### 8.4 清理 Fixture config
+
+4 个 `tests/fixtures/examples/*/config.json` 中的 `agent_claims` 路径改为目录
+
+#### 8.5 清理测试文件
+
+所有测试文件中的 `current.json` 引用改为 `CLAIM-*.json` 目录模式
+
+#### 8.6 验收标准
+
+- [ ] `grep -rn "current\.json" src/ tests/` 无功能性引用（仅注释/日志消息可保留）
+- [ ] `evidence_index_builder.py` 已删除
+- [ ] `pytest tests/ -v` 全量通过
 
 ---
 

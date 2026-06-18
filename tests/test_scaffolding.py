@@ -23,24 +23,18 @@ def test_run_init_creates_scaffolding(tmp_path):
 
     # Check files existence
     config_path = tmp_path / ".vibetracing" / "config.json"
-    claims_path = tmp_path / ".vibetracing" / "claims" / "current.json"
+    claims_dir = tmp_path / ".vibetracing" / "claims"
     tasks_path = tmp_path / "docs" / "task_list.json"
     constraints_path = tmp_path / "docs" / "architecture_constraints.json"
     prd_path = tmp_path / "docs" / "prd.md"
     prd_analysis_path = tmp_path / ".vibetracing" / "prompts" / "prd_analysis.md"
 
     assert config_path.is_file()
-    assert claims_path.is_file()
+    assert claims_dir.is_dir()  # Claims directory exists (no longer creates current.json)
     assert tasks_path.is_file()
     assert constraints_path.is_file()
     assert prd_path.is_file()
     assert prd_analysis_path.is_file()
-
-    # Verify claims/current.json content
-    with claims_path.open("r", encoding="utf-8") as f:
-        claims_data = json.load(f)
-    assert isinstance(claims_data, list)
-    assert len(claims_data) == 0
 
     # Verify task_list.json content
     with tasks_path.open("r", encoding="utf-8") as f:
@@ -78,9 +72,6 @@ def test_run_init_creates_scaffolding(tmp_path):
     
     val_task = validator.validate_file(tasks_path, "task_list")
     assert val_task.is_valid is True, f"Generated task list schema validation failed: {val_task.message}"
-    
-    val_claims = validator.validate_file(claims_path, "agent_claims")
-    assert val_claims.is_valid is True, f"Generated agent claims schema validation failed: {val_claims.message}"
 
     val_constraints = validator.validate_file(constraints_path, "architecture_constraints")
     assert val_constraints.is_valid is True, f"Generated architecture constraints schema validation failed: {val_constraints.message}"
@@ -155,8 +146,9 @@ def test_init_partial_failure_retry_uses_new_params(tmp_path):
         mode = args[0] if args else kwargs.get("mode", "r")
         if "w" in str(mode):
             call_count["new_writes"] += 1
-            # Fail on the 3rd new write (1=agent_claims, 2=task_list, 3=arch_constraints)
-            if call_count["new_writes"] == 3:
+            # Fail on the 2nd new write (1=task_list, 2=arch_constraints)
+            # Note: current.json is no longer created during init
+            if call_count["new_writes"] == 2:
                 raise OSError("No space left on device")
         return original_open(self, *args, **kwargs)
 
@@ -171,7 +163,7 @@ def test_init_partial_failure_retry_uses_new_params(tmp_path):
     assert not config_path.exists(), "config.json should not exist after partial failure"
 
     # Some earlier template files should have been created
-    assert (tmp_path / ".vibetracing" / "claims" / "current.json").exists()
+    assert (tmp_path / ".vibetracing" / "claims").is_dir()
     assert (tmp_path / "docs" / "task_list.json").exists()
 
     # Retry with DIFFERENT params -- config.json does not exist so new params are used

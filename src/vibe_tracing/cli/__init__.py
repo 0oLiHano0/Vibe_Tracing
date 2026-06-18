@@ -2,9 +2,9 @@
 CLI Entrypoint for Vibe Tracing.
 
 Provides the ``main()`` function with argparse-based sub-command routing.
-All command implementations live in ``vibe_tracing.commands.*`` modules.
+All command implementations live in ``vibe_tracing.cli.*`` modules.
 
-This module re-exports public symbols for backward compatibility so that
+This module re-exports public symbols so that
 existing ``from vibe_tracing.cli import X`` imports continue to work.
 """
 
@@ -16,18 +16,18 @@ from pathlib import Path
 from vibe_tracing import __version__
 
 # ---------------------------------------------------------------------------
-# Re-export command entry points (backward compatibility)
+# Re-export command entry points
 # ---------------------------------------------------------------------------
-from vibe_tracing.commands.init import run_init
-from vibe_tracing.commands.finalize import run_finalize
-from vibe_tracing.commands.analyze import run_analyze
-from vibe_tracing.commands.doctor import run_doctor
-from vibe_tracing.commands.accept import run_accept
+from vibe_tracing.cli.init import run_init
+from vibe_tracing.cli.finalize import run_finalize
+from vibe_tracing.cli.analyze import run_analyze
+from vibe_tracing.cli.doctor import run_doctor
+from vibe_tracing.cli.accept import run_accept
 
 # ---------------------------------------------------------------------------
-# Re-export internal helpers used by tests (backward compatibility)
+# Re-export internal helpers used by tests
 # ---------------------------------------------------------------------------
-from vibe_tracing.commands.common import (
+from vibe_tracing.cli.common import (
     _GateBlocked,
     _load_context,
     _rel_path_str,
@@ -35,29 +35,29 @@ from vibe_tracing.commands.common import (
     _determine_affected_items,
     _file_sha256,
 )
-from vibe_tracing.commands.finalize import (
+from vibe_tracing.cli.finalize import (
     _validate_constraints_change,
     _print_post_finalize_guidance,
 )
-from vibe_tracing.commands.analyze.gates import (
+from vibe_tracing.cli.analyze.gates import (
     _gate1_constraints_hash,
     _gate1b_prd_drift,
     _gate1c_mapping,
     _gate2_code_claim_alignment,
     _run_integrity_gates,
 )
-from vibe_tracing.commands.analyze.tools import (
+from vibe_tracing.cli.analyze.tools import (
     _execute_tools,
     _check_staged_extensions,
     _archive_claims,
 )
-from vibe_tracing.commands.analyze.analysis import (
+from vibe_tracing.cli.analyze.analysis import (
     _run_analyzers,
     _run_claim_tests,
     _load_human_decisions,
     _result_hash,
 )
-from vibe_tracing.commands.analyze.helpers import (
+from vibe_tracing.cli.analyze.helpers import (
     _action_hints,
     _hint_title,
     _hint_context,
@@ -67,7 +67,7 @@ from vibe_tracing.commands.analyze.helpers import (
     _get_related_code,
     _get_existing_tests,
 )
-from vibe_tracing.commands.analyze.actions import (
+from vibe_tracing.cli.analyze.actions import (
     _compute_gap_urgency,
     _collect_gap_actions,
     _compute_risk_urgency,
@@ -75,22 +75,22 @@ from vibe_tracing.commands.analyze.actions import (
     _collect_violation_actions,
     _collect_gate_reason_actions,
 )
-from vibe_tracing.commands.analyze.formatting import (
+from vibe_tracing.cli.analyze.formatting import (
     _render_actions,
     _format_agent_actions,
 )
-from vibe_tracing.commands.analyze.reports import (
+from vibe_tracing.cli.analyze.reports import (
     _build_report_document,
     _build_metadata,
     _render_dashboard,
 )
-from vibe_tracing.commands.analyze.output import (
+from vibe_tracing.cli.analyze.output import (
     _print_gate_summary,
     _print_agent_actions,
     _print_reflection_prompts,
     _render_output,
 )
-from vibe_tracing.commands.analyze.pipeline import (
+from vibe_tracing.cli.analyze.pipeline import (
     _run_analysis_phase,
     _run_gate_evaluation,
     _evaluate_and_output,

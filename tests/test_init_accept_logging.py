@@ -90,7 +90,7 @@ class TestInitLogging:
     """run_init must log lifecycle events and phase steps."""
 
     def test_run_start_logged(self, mock_logger, init_project):
-        from vibe_tracing.commands.init import run_init
+        from vibe_tracing.cli.init import run_init
 
         result = run_init(init_project, name="TestProject", prefix="TP")
 
@@ -104,7 +104,7 @@ class TestInitLogging:
         assert start_calls[0].kwargs["prefix"] == "TP"
 
     def test_run_end_logged(self, mock_logger, init_project):
-        from vibe_tracing.commands.init import run_init
+        from vibe_tracing.cli.init import run_init
 
         result = run_init(init_project, name="TestProject", prefix="TP")
 
@@ -118,7 +118,7 @@ class TestInitLogging:
         assert end_calls[0].kwargs["total_duration_ms"] >= 0
 
     def test_init_step_logged_for_created_files(self, mock_logger, init_project):
-        from vibe_tracing.commands.init import run_init
+        from vibe_tracing.cli.init import run_init
 
         result = run_init(init_project, name="TestProject", prefix="TP")
 
@@ -133,7 +133,7 @@ class TestInitLogging:
         assert "docs/architecture_constraints.json" in created_files
 
     def test_init_step_skipped_logged(self, mock_logger, init_project):
-        from vibe_tracing.commands.init import run_init
+        from vibe_tracing.cli.init import run_init
 
         # Run init once to create files
         run_init(init_project, name="TestProject", prefix="TP")
@@ -151,7 +151,7 @@ class TestInitLogging:
         assert "docs/prd.md" in skipped_files
 
     def test_init_error_logged_on_invalid_config(self, mock_logger, init_project):
-        from vibe_tracing.commands.init import run_init
+        from vibe_tracing.cli.init import run_init
 
         # Create a corrupt config.json
         config_dir = init_project / ".vibetracing"
@@ -168,10 +168,10 @@ class TestInitLogging:
         assert "config.json" in exc_calls[0][0][1]
 
     def test_init_fatal_logged_on_unexpected_error(self, mock_logger, init_project):
-        from vibe_tracing.commands.init import run_init
+        from vibe_tracing.cli.init import run_init
 
         with patch(
-            "vibe_tracing.commands.init.pkg_resources.read_text",
+            "vibe_tracing.cli.init.pkg_resources.read_text",
             side_effect=RuntimeError("boom"),
         ):
             result = run_init(init_project, name="TestProject", prefix="TP")
@@ -184,7 +184,7 @@ class TestInitLogging:
 
     def test_init_works_when_logger_init_fails(self, init_project):
         """If OperationalLogger.init raises, init must still succeed."""
-        from vibe_tracing.commands.init import run_init
+        from vibe_tracing.cli.init import run_init
 
         with patch.object(OperationalLogger, "init", side_effect=RuntimeError("no logger")):
             result = run_init(init_project, name="TestProject", prefix="TP")
@@ -201,7 +201,7 @@ class TestAcceptLogging:
     """run_accept must log lifecycle events, validation, and accept decisions."""
 
     def test_run_start_logged(self, mock_logger, accept_project):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         result = run_accept(accept_project, rule_id="RULE-MANUAL-001", accepted_by="tester")
 
@@ -215,7 +215,7 @@ class TestAcceptLogging:
         assert start_calls[0].kwargs["accepted_by"] == "tester"
 
     def test_accept_rule_logged(self, mock_logger, accept_project):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         result = run_accept(accept_project, rule_id="RULE-MANUAL-001", accepted_by="tester")
 
@@ -230,7 +230,7 @@ class TestAcceptLogging:
         assert accept_calls[0].kwargs["decision_id"] == 1
 
     def test_run_end_logged(self, mock_logger, accept_project):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         result = run_accept(accept_project, rule_id="RULE-MANUAL-001", accepted_by="tester")
 
@@ -244,7 +244,7 @@ class TestAcceptLogging:
         assert end_calls[0].kwargs["total_duration_ms"] >= 0
 
     def test_accept_step_constraints_loaded(self, mock_logger, accept_project):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         result = run_accept(accept_project, rule_id="RULE-MANUAL-001", accepted_by="tester")
 
@@ -257,7 +257,7 @@ class TestAcceptLogging:
         assert step_calls[0].kwargs["sections"] > 0
 
     def test_accept_step_rule_found(self, mock_logger, accept_project):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         result = run_accept(accept_project, rule_id="RULE-MANUAL-001", accepted_by="tester")
 
@@ -270,7 +270,7 @@ class TestAcceptLogging:
         assert step_calls[0].kwargs["verification_method"] == "manual"
 
     def test_accept_validation_rule_not_found(self, mock_logger, accept_project):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         result = run_accept(accept_project, rule_id="NONEXISTENT", accepted_by="tester")
 
@@ -283,7 +283,7 @@ class TestAcceptLogging:
         assert warn_calls[0].kwargs["rule_id"] == "NONEXISTENT"
 
     def test_accept_validation_not_manual(self, mock_logger, accept_project):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         result = run_accept(accept_project, rule_id="RULE-AUTO-001", accepted_by="tester")
 
@@ -296,7 +296,7 @@ class TestAcceptLogging:
         assert warn_calls[0].kwargs["verification_method"] == "machine"
 
     def test_accept_already_accepted_logs_run_end(self, mock_logger, accept_project):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         # Accept once
         run_accept(accept_project, rule_id="RULE-MANUAL-001", accepted_by="tester")
@@ -313,7 +313,7 @@ class TestAcceptLogging:
         assert end_calls[0].kwargs["already_accepted"] is True
 
     def test_accept_error_on_missing_constraints(self, mock_logger, tmp_path):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         result = run_accept(tmp_path, rule_id="RULE-001", accepted_by="tester")
 
@@ -325,7 +325,7 @@ class TestAcceptLogging:
         assert "not found" in error_calls[0][0][1].lower()
 
     def test_accept_error_on_corrupt_constraints(self, mock_logger, tmp_path):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
@@ -342,7 +342,7 @@ class TestAcceptLogging:
 
     def test_accept_works_when_logger_init_fails(self, accept_project):
         """If OperationalLogger.init raises, accept must still succeed."""
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         with patch.object(OperationalLogger, "init", side_effect=RuntimeError("no logger")):
             result = run_accept(accept_project, rule_id="RULE-MANUAL-001", accepted_by="tester")
@@ -350,7 +350,7 @@ class TestAcceptLogging:
         assert result == 0
 
     def test_accept_write_error_logged(self, mock_logger, accept_project):
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         # Patch decisions_path.write_text to fail
         decisions_path = accept_project / ".vibetracing" / "human_decisions.json"
@@ -366,7 +366,7 @@ class TestAcceptLogging:
 
     def test_accept_step_decisions_loaded(self, mock_logger, accept_project):
         """When human_decisions.json exists, loading it is logged."""
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         # Pre-create decisions file
         vib_dir = accept_project / ".vibetracing"
@@ -387,7 +387,7 @@ class TestAcceptLogging:
 
     def test_accept_step_write_logged(self, mock_logger, accept_project):
         """Successful write of human_decisions.json is logged."""
-        from vibe_tracing.commands.accept import run_accept
+        from vibe_tracing.cli.accept import run_accept
 
         result = run_accept(accept_project, rule_id="RULE-MANUAL-001", accepted_by="tester")
 

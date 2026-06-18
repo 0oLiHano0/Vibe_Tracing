@@ -10,7 +10,7 @@ URGENCY_DEFAULT = 30
 URGENCY_STALE = 25
 
 
-from vibe_tracing.commands.analyze.helpers import (
+from vibe_tracing.cli.analyze.helpers import (
     _hint_title,
     _hint_context,
     _derive_test_scenarios,

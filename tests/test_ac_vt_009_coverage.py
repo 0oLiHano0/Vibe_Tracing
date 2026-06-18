@@ -1203,11 +1203,12 @@ class TestACVT00907ZeroPromptGuidance:
             tmp_path / "docs" / "prd.md",
             tmp_path / "docs" / "task_list.json",
             tmp_path / "docs" / "architecture_constraints.json",
-            tmp_path / ".vibetracing" / "claims" / "current.json",
             tmp_path / ".vibetracing" / "config.json",
         ]
         for f in expected_files:
             assert f.exists(), f"vt init must create {f.relative_to(tmp_path)}"
+        # Claims directory exists (no longer creates current.json)
+        assert (tmp_path / ".vibetracing" / "claims").is_dir()
 
         # Verify template content is project-specific (placeholders replaced)
         prd_content = (tmp_path / "docs" / "prd.md").read_text(encoding="utf-8")
@@ -1262,13 +1263,9 @@ class TestACVT00907ZeroPromptGuidance:
         assert "language_tool_matrix" in constraints
         assert "module_boundaries" in constraints
 
-        # agent_claims template must be valid JSON array
-        claims = json.loads(
-            (tmp_path / ".vibetracing" / "claims" / "current.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        assert isinstance(claims, list)
+        # Claims directory exists (no longer creates current.json)
+        claims_dir = tmp_path / ".vibetracing" / "claims"
+        assert claims_dir.is_dir()
 
     def test_schema_validation_includes_hints(self, tmp_path):
         """covers: AC-VT-009-07

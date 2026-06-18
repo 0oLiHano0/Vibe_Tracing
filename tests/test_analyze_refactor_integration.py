@@ -18,7 +18,7 @@ import pytest
 
 from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 from vibe_tracing.domain.architecture_compliance_checker import ArchitectureComplianceChecker
-from vibe_tracing.commands.common import _GateBlocked
+from vibe_tracing.cli.common import _GateBlocked
 
 
 # -----------------------------------------------------------------------
@@ -262,7 +262,7 @@ def test_coverage_summary_from_single_source(tmp_path):
     evidence_index, aggregated from a single source (single file entry).
     Bug: coverage_summary was missing or incorrectly computed from
     evidence_index.coverage_baseline."""
-    from vibe_tracing.commands.analyze.reports import _build_report_document
+    from vibe_tracing.cli.analyze.reports import _build_report_document
 
     # Build minimal mock context
     ctx = MagicMock()
@@ -305,7 +305,7 @@ def test_coverage_summary_from_single_source(tmp_path):
     with patch(
         "vibe_tracing.domain.traceability_report_builder.TraceabilityReportBuilder"
     ) as MockBuilder, patch(
-        "vibe_tracing.commands.analyze.reports._build_metadata",
+        "vibe_tracing.cli.analyze.reports._build_metadata",
         return_value={"test": True},
     ):
         instance = MockBuilder.return_value
@@ -330,7 +330,7 @@ def test_coverage_summary_from_single_source(tmp_path):
 
 def test_coverage_summary_multiple_files(tmp_path):
     """Coverage summary correctly aggregates across multiple files."""
-    from vibe_tracing.commands.analyze.reports import _build_report_document
+    from vibe_tracing.cli.analyze.reports import _build_report_document
 
     ctx = MagicMock()
     ctx.config = {"project_prefix": "VT"}
@@ -367,7 +367,7 @@ def test_coverage_summary_multiple_files(tmp_path):
     with patch(
         "vibe_tracing.domain.traceability_report_builder.TraceabilityReportBuilder"
     ) as MockBuilder, patch(
-        "vibe_tracing.commands.analyze.reports._build_metadata",
+        "vibe_tracing.cli.analyze.reports._build_metadata",
         return_value={"test": True},
     ):
         instance = MockBuilder.return_value
@@ -390,7 +390,7 @@ def test_coverage_summary_multiple_files(tmp_path):
 def test_coverage_summary_no_baseline_absent(tmp_path):
     """When coverage_baseline is missing from evidence_index, coverage_summary
     key should NOT be present in report_doc."""
-    from vibe_tracing.commands.analyze.reports import _build_report_document
+    from vibe_tracing.cli.analyze.reports import _build_report_document
 
     ctx = MagicMock()
     ctx.config = {"project_prefix": "VT"}
@@ -424,7 +424,7 @@ def test_coverage_summary_no_baseline_absent(tmp_path):
     with patch(
         "vibe_tracing.domain.traceability_report_builder.TraceabilityReportBuilder"
     ) as MockBuilder, patch(
-        "vibe_tracing.commands.analyze.reports._build_metadata",
+        "vibe_tracing.cli.analyze.reports._build_metadata",
         return_value={"test": True},
     ):
         instance = MockBuilder.return_value

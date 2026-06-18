@@ -20,12 +20,12 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
     config_path = tmp_path / ".vibetracing" / "config.json"
     prd_path = tmp_path / "docs" / "prd.md"
     task_list_path = tmp_path / "docs" / "task_list.json"
-    agent_claims_path = tmp_path / ".vibetracing" / "claims" / "current.json"
+    agent_claims_dir = tmp_path / ".vibetracing" / "claims"
 
     assert config_path.is_file()
     assert prd_path.is_file()
     assert task_list_path.is_file()
-    assert agent_claims_path.is_file()
+    assert agent_claims_dir.is_dir()  # Claims directory exists (no current.json)
 
     # 1. Verify config.json values
     with config_path.open("r", encoding="utf-8") as f:

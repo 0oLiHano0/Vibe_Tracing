@@ -341,7 +341,7 @@ class TestClaimTestsCacheLogging:
     def test_run_claim_tests_logs_cache_stats(self, tmp_path):
         """_run_claim_tests must log cache statistics."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.commands.analyze.analysis import _run_claim_tests
+        from vibe_tracing.cli.analyze.analysis import _run_claim_tests
 
         # Create a mock claim with no test_refs
         mock_claim = MagicMock()

@@ -2389,7 +2389,7 @@ def test_run_init_creates_files(tmp_path):
     assert exit_code == 0
 
     assert (tmp_path / ".vibetracing" / "config.json").exists()
-    assert (tmp_path / ".vibetracing" / "claims" / "current.json").exists()
+    assert (tmp_path / ".vibetracing" / "claims").is_dir()  # Claims directory exists (no current.json)
     assert (tmp_path / "docs" / "task_list.json").exists()
     assert (tmp_path / "docs" / "architecture_constraints.json").exists()
     assert (tmp_path / "docs" / "prd.md").exists()

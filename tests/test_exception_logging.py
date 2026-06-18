@@ -137,7 +137,7 @@ class TestAnalysisExceptionLogging:
     """_load_human_decisions must log when the decisions file is corrupt."""
 
     def test_load_human_decisions_logs_on_corrupt_file(self, mock_logger, tmp_path):
-        from vibe_tracing.commands.analyze.analysis import _load_human_decisions
+        from vibe_tracing.cli.analyze.analysis import _load_human_decisions
 
         hd_dir = tmp_path / ".vibetracing"
         hd_dir.mkdir()

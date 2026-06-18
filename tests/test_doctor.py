@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from vibe_tracing.infra.operational_logger import OperationalLogger
-from vibe_tracing.commands.doctor import run_doctor
+from vibe_tracing.cli.doctor import run_doctor
 
 
 @pytest.fixture(autouse=True)

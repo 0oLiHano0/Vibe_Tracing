@@ -37,25 +37,45 @@ def run_doctor(project_root: Path) -> int:
     checks: List[Dict[str, Any]] = []
 
     # ---- Load governance data ----
-    claims_path = project_root / ".vibetracing" / "claims" / "current.json"
+    claims_dir = project_root / ".vibetracing" / "claims"
     task_list_path = project_root / "docs" / "task_list.json"
     prd_path = project_root / "docs" / "prd.md"
     constraints_path = project_root / "docs" / "architecture_constraints.json"
     evidence_index_path = project_root / "output" / "evidence_index.json"
 
-    # Load claims (tolerate missing files)
+    # Load claims (tolerate missing files) - supports both CLAIM-*.json directory and current.json
+    import glob as glob_mod
     claims_data: List[Dict[str, Any]] = []
     _t = time.perf_counter()
-    if claims_path.exists():
+    claim_files = sorted(glob_mod.glob(str(claims_dir / "CLAIM-*.json")))
+    current_json = claims_dir / "current.json"
+    if claim_files:
+        for fp in claim_files:
+            try:
+                with open(fp, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, list):
+                    claims_data.extend(data)
+                else:
+                    claims_data.append(data)
+            except Exception:
+                continue
+        if vt_logger:
+            vt_logger.info("doctor_load", "Loaded claims from CLAIM-*.json files",
+                           file="claims", result="pass",
+                           path=str(claims_dir),
+                           claims_count=len(claims_data),
+                           duration_ms=int((time.perf_counter() - _t) * 1000))
+    elif current_json.exists():
         try:
-            with claims_path.open("r", encoding="utf-8") as f:
+            with current_json.open("r", encoding="utf-8") as f:
                 claims_data = json.load(f)
             if not isinstance(claims_data, list):
                 claims_data = []
             if vt_logger:
                 vt_logger.info("doctor_load", "Loaded claims file",
                                file="claims", result="pass",
-                               path=str(claims_path),
+                               path=str(current_json),
                                claims_count=len(claims_data),
                                duration_ms=int((time.perf_counter() - _t) * 1000))
         except Exception as e:
@@ -63,13 +83,13 @@ def run_doctor(project_root: Path) -> int:
             if vt_logger:
                 vt_logger.exception("doctor_load", "Failed to parse claims file",
                                     exc=e, file="claims", result="fail",
-                                    path=str(claims_path),
+                                    path=str(current_json),
                                     duration_ms=int((time.perf_counter() - _t) * 1000))
     else:
         if vt_logger:
             vt_logger.info("doctor_load", "Claims file not found",
                            file="claims", result="warning",
-                           path=str(claims_path),
+                           path=str(claims_dir),
                            duration_ms=int((time.perf_counter() - _t) * 1000))
 
     # Load tasks

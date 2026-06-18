@@ -13,20 +13,20 @@ from vibe_tracing.domain.evidence_index_builder import EvidenceIndexBuilder
 from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 from vibe_tracing.domain.context import UnifiedContext
 
-from vibe_tracing.commands.common import (
+from vibe_tracing.cli.common import (
     _GateBlocked,
     _load_context,
     _get_staged_files,
     _determine_affected_items,
 )
-from vibe_tracing.commands.analyze.gates import _run_integrity_gates
-from vibe_tracing.commands.analyze.tools import _execute_tools, _archive_claims
-from vibe_tracing.commands.analyze.analysis import (
+from vibe_tracing.cli.analyze.gates import _run_integrity_gates
+from vibe_tracing.cli.analyze.tools import _execute_tools, _archive_claims
+from vibe_tracing.cli.analyze.analysis import (
     _run_analyzers,
     _run_claim_tests,
 )
-from vibe_tracing.commands.analyze.reports import _build_report_document
-from vibe_tracing.commands.analyze.output import _render_output
+from vibe_tracing.cli.analyze.reports import _build_report_document
+from vibe_tracing.cli.analyze.output import _render_output
 
 
 def _classify_staged_files(staged_files: Set[str], project_root: Path) -> Tuple[list, list]:
@@ -56,11 +56,11 @@ def _auto_generate_claim_from_staged(
     """Auto-generate a claim from git staged files when current claims are empty.
 
     Only called in pre-commit mode.  Writes the generated claim to
-    ``claims/current.json`` and updates ``ctx.claims_list`` in memory.
+    ``claims/CLAIM-{prefix}-001.json`` and updates ``ctx.claims_list`` in memory.
 
     Returns the updated context, or None if no auto-generation was needed.
     """
-    claims_path = project_root / ".vibetracing" / "claims" / "current.json"
+    claims_dir = project_root / ".vibetracing" / "claims"
 
     staged_files = _get_staged_files(project_root)
     if not staged_files:
@@ -71,17 +71,19 @@ def _auto_generate_claim_from_staged(
         return None
 
     config_prefix = ctx.config_prefix
+    claim_id = f"CLAIM-{config_prefix}-001"
     claim = {
-        "claim_id": f"CLAIM-{config_prefix}-001",
+        "claim_id": claim_id,
         "related_task": "",
         "code_refs": code_refs,
         "test_refs": test_refs,
         "notes": "Auto-generated from staged files",
     }
 
-    claims_path.parent.mkdir(parents=True, exist_ok=True)
-    with claims_path.open("w", encoding="utf-8") as f:
-        json.dump([claim], f, indent=2, ensure_ascii=False)
+    claims_dir.mkdir(parents=True, exist_ok=True)
+    claim_path = claims_dir / f"{claim_id}.json"
+    with claim_path.open("w", encoding="utf-8") as f:
+        json.dump(claim, f, indent=2, ensure_ascii=False)
         f.write("\n")
 
     from vibe_tracing.domain.claim_loader import Claim

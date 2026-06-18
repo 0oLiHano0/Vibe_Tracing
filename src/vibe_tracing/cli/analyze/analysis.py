@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from vibe_tracing.domain.context import UnifiedContext
-from vibe_tracing.commands.common import _determine_affected_items
-from vibe_tracing.commands.analyze.tools import _check_staged_extensions
+from vibe_tracing.cli.common import _determine_affected_items
+from vibe_tracing.cli.analyze.tools import _check_staged_extensions
 from vibe_tracing.infra.operational_logger import OperationalLogger
 
 

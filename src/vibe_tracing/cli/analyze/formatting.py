@@ -4,7 +4,7 @@ Action rendering and formatting for agent consumption.
 
 from typing import List, Optional
 
-from vibe_tracing.commands.analyze.actions import (
+from vibe_tracing.cli.analyze.actions import (
     _collect_gap_actions,
     _collect_risk_actions,
     _collect_violation_actions,

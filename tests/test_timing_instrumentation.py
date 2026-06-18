@@ -48,7 +48,7 @@ class TestPipelinePhaseTiming:
 
     def test_run_analyze_logs_run_start_and_run_end(self, tmp_path):
         """run_analyze must log run_start and run_end events."""
-        from vibe_tracing.commands.analyze.pipeline import run_analyze
+        from vibe_tracing.cli.analyze.pipeline import run_analyze
 
         # Set up minimal project structure
         schemas_dir = tmp_path / "schemas"
@@ -96,7 +96,7 @@ class TestPipelinePhaseTiming:
         # We need to mock _load_context to avoid complex setup
         # Instead, test that logger is initialized by checking the log file
         with patch(
-            "vibe_tracing.commands.analyze.pipeline._load_context"
+            "vibe_tracing.cli.analyze.pipeline._load_context"
         ) as mock_load:
             mock_ctx = MagicMock()
             mock_ctx.prd.status = "draft"
@@ -128,11 +128,11 @@ class TestPipelinePhaseTiming:
 
     def test_pipeline_phases_have_duration_ms(self, tmp_path):
         """Each phase_end event must include duration_ms >= 0."""
-        from vibe_tracing.commands.analyze.pipeline import run_analyze
+        from vibe_tracing.cli.analyze.pipeline import run_analyze
 
         config = {"language": "python", "logging": {"level": "DEBUG"}}
         with patch(
-            "vibe_tracing.commands.analyze.pipeline._load_context"
+            "vibe_tracing.cli.analyze.pipeline._load_context"
         ) as mock_load:
             mock_ctx = MagicMock()
             mock_ctx.prd.status = "draft"
@@ -158,11 +158,11 @@ class TestPipelinePhaseTiming:
 
     def test_pipeline_phases_include_expected_names(self, tmp_path):
         """Phase names should match the expected set."""
-        from vibe_tracing.commands.analyze.pipeline import run_analyze
+        from vibe_tracing.cli.analyze.pipeline import run_analyze
 
         config = {"language": "python", "logging": {"level": "DEBUG"}}
         with patch(
-            "vibe_tracing.commands.analyze.pipeline._load_context"
+            "vibe_tracing.cli.analyze.pipeline._load_context"
         ) as mock_load:
             mock_ctx = MagicMock()
             mock_ctx.prd.status = "draft"
@@ -329,7 +329,7 @@ class TestClaimTestsTiming:
 
     def test_run_claim_tests_logs_subprocess_exec(self, tmp_path):
         """_run_claim_tests must log subprocess_exec for pytest calls."""
-        from vibe_tracing.commands.analyze.analysis import _run_claim_tests
+        from vibe_tracing.cli.analyze.analysis import _run_claim_tests
 
         logger = OperationalLogger.init("TEST-RUN", tmp_path, level="DEBUG")
 
@@ -360,7 +360,7 @@ class TestClaimTestsTiming:
 
     def test_run_claim_tests_timing_reflects_actual_execution(self, tmp_path):
         """duration_ms should be a non-negative integer."""
-        from vibe_tracing.commands.analyze.analysis import _run_claim_tests
+        from vibe_tracing.cli.analyze.analysis import _run_claim_tests
 
         logger = OperationalLogger.init("TEST-RUN", tmp_path, level="DEBUG")
 
@@ -382,7 +382,7 @@ class TestClaimTestsTiming:
 
     def test_run_claim_tests_cached_tests_not_logged(self, tmp_path):
         """Cached test results should not produce subprocess_exec events."""
-        from vibe_tracing.commands.analyze.analysis import _run_claim_tests
+        from vibe_tracing.cli.analyze.analysis import _run_claim_tests
 
         logger = OperationalLogger.init("TEST-RUN", tmp_path, level="DEBUG")
 
@@ -437,7 +437,7 @@ class TestNullLoggerSafety:
 
     def test_claim_tests_timing_works_without_logger_init(self, tmp_path):
         """_run_claim_tests should not crash when OperationalLogger.init() was never called."""
-        from vibe_tracing.commands.analyze.analysis import _run_claim_tests
+        from vibe_tracing.cli.analyze.analysis import _run_claim_tests
 
         test_dir = tmp_path / "tests"
         test_dir.mkdir()

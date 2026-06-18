@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Test Results",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["nodeid", "outcome", "exit_code"],
+    "properties": {
+      "nodeid": { "type": "string", "minLength": 1 },
+      "outcome": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+      "exit_code": { "type": "integer", "minimum": 0 },
+      "command": { "type": "string" },
+      "carried_over": { "type": "boolean" }
+    },
+    "additionalProperties": false
+  }
+}

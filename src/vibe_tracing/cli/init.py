@@ -116,8 +116,8 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
                 print(f"Created directory: {d.relative_to(project_root)}")
 
         # 3. Write ALL template files except config.json first
+        # Note: claims are now stored as individual CLAIM-*.json files, not current.json
         other_files = {
-            ".vibetracing/claims/current.json": render_template(claims_text),
             "docs/task_list.json": render_template(task_list_text),
             "docs/architecture_constraints.json": render_template(arch_text),
             "docs/prd.md": render_template(prd_text),

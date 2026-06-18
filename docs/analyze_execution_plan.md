@@ -20,7 +20,7 @@
 |---|---|---|---|
 | Phase 1 | 基础层（infra/ + analyzers/ + db.py） | ✅ 已完成 | 目录移动 + db.py + validate_* 迁移到 validation 模块 |
 | Phase 2 | 领域层移动 + Claim 加载重构 | ✅ 已完成 | domain/ 移动完成、claim_loader 重构完成（旧字段已删除） |
-| Phase 3 | 编排层移动 + 证据构建重构 | ❌ 未开始 | commands/ 仍在原位，cli/ 目录尚未建立 |
+| Phase 3 | 编排层移动 + 证据构建重构 | ✅ 已完成 | commands/→cli/、EvidenceBuilder 重构、Claims 多文件、Schema 交接 |
 | Phase 4 | 门禁引擎 SQL 化 | ✅ 已完成 | evaluate 签名 11→6，静态方法删除，SQL 查询替代 |
 | Phase 5 | 幽灵代码检测 SQL 化 | ❌ 未开始 | ghost_code_reconciler.py 未改 |
 | Phase 6 | 流水线集成 | ❌ 未开始 | pipeline.py 未改，仍引用 current.json |

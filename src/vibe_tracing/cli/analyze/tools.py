@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 from vibe_tracing.domain.context import UnifiedContext
-from vibe_tracing.commands.common import _GateBlocked
+from vibe_tracing.cli.common import _GateBlocked
 
 
 def _execute_tools(
@@ -263,27 +263,46 @@ def _check_staged_extensions(project_root: Path, constraints: Optional[dict], co
 
 
 def _archive_claims(project_root: Path) -> None:
-    """Archive current claims to commit-{hash}.json and clear current.json.
+    """Archive CLAIM-*.json files to commit-{hash}.json and remove them.
 
     Called after a successful pre-commit gate evaluation so that claims
     are preserved alongside the commit they belong to.
+
+    Supports both CLAIM-*.json directory mode and legacy current.json mode.
     """
-    current_path = project_root / ".vibetracing" / "claims" / "current.json"
-    archive_dir = project_root / ".vibetracing" / "claims" / "archive"
+    import glob as glob_mod
 
-    # Nothing to archive if file doesn't exist
-    if not current_path.exists():
-        return
+    claims_dir = project_root / ".vibetracing" / "claims"
+    archive_dir = claims_dir / "archive"
 
-    try:
-        with current_path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return
-
-    # Nothing to archive if list is empty
-    if not data:
-        return
+    # Collect all CLAIM-*.json files
+    claim_files = sorted(glob_mod.glob(str(claims_dir / "CLAIM-*.json")))
+    if not claim_files:
+        # Try legacy current.json mode
+        current_path = claims_dir / "current.json"
+        if current_path.exists():
+            try:
+                with current_path.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if not data:
+                    return
+                claim_files = []  # will use data directly
+            except (json.JSONDecodeError, OSError):
+                return
+        else:
+            return
+    else:
+        data = []
+        for cf in claim_files:
+            try:
+                with open(cf, "r", encoding="utf-8") as f:
+                    claim = json.load(f)
+                if isinstance(claim, dict):
+                    data.append(claim)
+            except (json.JSONDecodeError, OSError):
+                continue
+        if not data:
+            return
 
     # Resolve archive filename: prefer short git commit hash, fallback to timestamp
     archive_name = None
@@ -313,9 +332,8 @@ def _archive_claims(project_root: Path) -> None:
         json.dump(data, f, indent=2, ensure_ascii=False)
         f.write("\n")
 
-    # Clear current.json
-    with current_path.open("w", encoding="utf-8") as f:
-        json.dump([], f)
-        f.write("\n")
+    # Remove individual CLAIM-*.json files (archived)
+    for cf in claim_files:
+        Path(cf).unlink(missing_ok=True)
 
     print(f"Claims archived to {archive_name}.json")

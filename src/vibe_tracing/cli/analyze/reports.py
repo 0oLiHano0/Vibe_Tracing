@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from vibe_tracing.domain.context import UnifiedContext
-from vibe_tracing.commands.common import _GateBlocked, _rel_path_str
+from vibe_tracing.cli.common import _GateBlocked, _rel_path_str
 
 
 def _build_report_document(

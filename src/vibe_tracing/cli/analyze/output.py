@@ -6,8 +6,8 @@ import sys
 from typing import List, Optional, Set
 
 from vibe_tracing.domain.context import UnifiedContext
-from vibe_tracing.commands.analyze.formatting import _format_agent_actions
-from vibe_tracing.commands.analyze.reports import (
+from vibe_tracing.cli.analyze.formatting import _format_agent_actions
+from vibe_tracing.cli.analyze.reports import (
     _build_report_document,
     _build_metadata,
     _render_dashboard,
@@ -134,7 +134,7 @@ def _print_empty_claims_hint(ctx: UnifiedContext, staged_files: Optional[Set[str
     if not ctx.claims_list and not staged_files:
         print("\n[WARNING] 当前无 claims 且无 staged 文件。")
         print("请先 git add 变更文件（VT 会自动生成 claim），")
-        print("或手动创建 .vibetracing/claims/current.json。")
+        print("或在 .vibetracing/claims/ 中创建 Claim 文件（CLAIM-*.json）。")
 
 
 def _render_output(

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Coverage Reports",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["source_path", "percent_covered", "status"],
+    "properties": {
+      "source_path": { "type": "string", "minLength": 1 },
+      "percent_covered": { "type": "number", "minimum": 0, "maximum": 100 },
+      "num_statements": { "type": "integer" },
+      "status": { "type": "string", "enum": ["compliant", "violated"] },
+      "carried_over": { "type": "boolean" }
+    },
+    "additionalProperties": false
+  }
+}

@@ -66,6 +66,17 @@ class RawInputLoader:
 
     def get_path(self, key: str) -> Path:
         """解析文件路径：优先从 config.json 读取，否则使用默认路径。"""
+        # For agent_claims: always resolve to the claims directory
+        if key == "agent_claims":
+            claims_dir = self.project_root / ".vibetracing" / "claims"
+            if claims_dir.is_dir() and list(claims_dir.glob("CLAIM-*.json")):
+                return claims_dir
+            current_json = claims_dir / "current.json"
+            if current_json.exists():
+                return current_json
+            # Return the directory path (ClaimLoader handles empty dirs)
+            return claims_dir
+
         # 优先检查 config.json 中的自定义路径
         paths = self.config_data.get("paths", {})
         if key in paths:
@@ -76,7 +87,6 @@ class RawInputLoader:
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/claims/current.json",
             "output_dir": "output",
         }
         fallback_rel = defaults.get(key)
@@ -121,11 +131,61 @@ class RawInputLoader:
     def _load_file(
         self, file_key: str, abs_path: Path, is_required: bool
     ) -> InputFileRecord:
-        """加载单个文件。JSON 文件解析为 dict/list，MD 文件读取为文本字符串。
+        """加载单个文件或目录。JSON 文件解析为 dict/list，MD 文件读取为文本字符串。
+
+        对于 agent_claims，支持目录模式：加载目录下所有 CLAIM-*.json 文件并合并。
 
         返回包含状态和内容的 InputFileRecord，不会抛出异常。
         """
+        import glob as _glob_mod
+
         path_str = str(abs_path)
+
+        # 目录模式：agent_claims 支持 CLAIM-*.json 批量加载
+        if abs_path.is_dir() and file_key == "agent_claims":
+            claim_files = sorted(_glob_mod.glob(str(abs_path / "CLAIM-*.json")))
+            if not claim_files:
+                # 尝试 current.json (backward compat)
+                current_json = abs_path / "current.json"
+                if current_json.exists():
+                    return self._load_file(file_key, current_json, is_required)
+                return InputFileRecord(
+                    file_key=file_key,
+                    file_path=path_str,
+                    is_required=is_required,
+                    status="missing",
+                    error_message=f"No CLAIM-*.json files found in {path_str}",
+                )
+            all_claims = []
+            for fp in claim_files:
+                try:
+                    with open(fp, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    if isinstance(data, list):
+                        all_claims.extend(data)
+                    else:
+                        all_claims.append(data)
+                except Exception as exc:
+                    return InputFileRecord(
+                        file_key=file_key,
+                        file_path=path_str,
+                        is_required=is_required,
+                        status="parse_error",
+                        error_code=ErrorCode.INVALID_INPUT.value,
+                        error_message=f"Failed to read/parse {fp}: {exc}",
+                    )
+            # Compute hash from all claim files combined
+            h = hashlib.sha256()
+            for fp in claim_files:
+                h.update(Path(fp).read_bytes())
+            return InputFileRecord(
+                file_key=file_key,
+                file_path=path_str,
+                is_required=is_required,
+                status="ok",
+                content=all_claims,
+                sha256_hash=h.hexdigest(),
+            )
 
         # 文件不存在
         if not abs_path.exists():

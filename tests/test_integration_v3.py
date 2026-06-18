@@ -121,18 +121,15 @@ class TestArchiveClaims:
     """Integration tests for _archive_claims."""
 
     def test_archive_claims_basic(self, tmp_path: Path) -> None:
-        """Archive non-empty current.json and verify it is cleared."""
-        # Arrange: create claims directory structure
+        """Archive non-empty CLAIM-*.json files and verify they are removed."""
+        # Arrange: create claims directory structure with CLAIM-*.json files
         claims_dir = tmp_path / ".vibetracing" / "claims"
         archive_dir = claims_dir / "archive"
         claims_dir.mkdir(parents=True, exist_ok=True)
 
-        current_claims = [
-            {"claim_id": "CL-100", "related_task": "T-1", "code_refs": ["src/a.py"]}
-        ]
-        current_path = claims_dir / "current.json"
-        current_path.write_text(
-            json.dumps(current_claims, indent=2), encoding="utf-8"
+        claim = {"claim_id": "CLAIM-CL-100", "related_task": "T-1", "code_refs": ["src/a.py"]}
+        (claims_dir / "CLAIM-CL-100.json").write_text(
+            json.dumps(claim, indent=2), encoding="utf-8"
         )
 
         # Mock git rev-parse to control the archive filename
@@ -140,7 +137,7 @@ class TestArchiveClaims:
         mock_result.returncode = 0
         mock_result.stdout = "abc1234\n"
 
-        with patch("vibe_tracing.cli.subprocess.run", return_value=mock_result):
+        with patch("vibe_tracing.cli.analyze.tools.subprocess.run", return_value=mock_result):
             _archive_claims(tmp_path)
 
         # Assert: archive file was created
@@ -149,11 +146,11 @@ class TestArchiveClaims:
 
         archived_data = json.loads(archive_files[0].read_text(encoding="utf-8"))
         assert len(archived_data) == 1
-        assert archived_data[0]["claim_id"] == "CL-100"
+        assert archived_data[0]["claim_id"] == "CLAIM-CL-100"
 
-        # Assert: current.json was cleared
-        current_data = json.loads(current_path.read_text(encoding="utf-8"))
-        assert current_data == []
+        # Assert: CLAIM-*.json files were removed
+        remaining_claims = list(claims_dir.glob("CLAIM-*.json"))
+        assert len(remaining_claims) == 0
 
     def test_archive_claims_empty(self, tmp_path: Path) -> None:
         """Empty current.json should not produce an archive file."""

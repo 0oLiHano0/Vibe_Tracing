@@ -211,11 +211,13 @@ def _setup_base_project(
     task_list = task_list_data or _make_task_list()
     (docs / "task_list.json").write_text(json.dumps(task_list, indent=2), encoding="utf-8")
 
-    # Claims (optional)
+    # Claims (optional) - write as individual CLAIM-*.json files
     if claims_data is not None:
-        (claims_dir / "current.json").write_text(
-            json.dumps(claims_data, indent=2), encoding="utf-8"
-        )
+        for claim in claims_data:
+            claim_id = claim.get("claim_id", "CLAIM-UNKNOWN")
+            (claims_dir / f"{claim_id}.json").write_text(
+                json.dumps(claim, indent=2), encoding="utf-8"
+            )
 
     # Config (written last so hash is up-to-date)
     cfg = {
@@ -407,7 +409,7 @@ class TestGatePassWithValidClaims:
         # Initialize git and stage the test file so _execute_tools can find it
         _init_git(tmp_path)
         subprocess.run(
-            ["git", "add", "tests/test_feature.py", ".vibetracing/claims/current.json"],
+            ["git", "add", "tests/test_feature.py"],
             cwd=tmp_path, capture_output=True, check=True,
         )
 
@@ -546,10 +548,10 @@ class TestClaimArchiveAfterCommit:
             cwd=tmp_path, capture_output=True, check=True,
         )
 
-        # Verify initial state: current.json has claims
-        current_path = tmp_path / ".vibetracing" / "claims" / "current.json"
-        initial_claims = json.loads(current_path.read_text(encoding="utf-8"))
-        assert len(initial_claims) > 0, "current.json must have claims before analysis"
+        # Verify initial state: CLAIM-*.json files have claims
+        claims_dir = tmp_path / ".vibetracing" / "claims"
+        initial_claim_files = list(claims_dir.glob("CLAIM-*.json"))
+        assert len(initial_claim_files) > 0, "CLAIM-*.json files must exist before analysis"
 
         # Run analyze in pre-commit + gates-only mode
         # This runs integrity gates (1, 1b, 1c, 2) and archives claims
@@ -580,8 +582,8 @@ class TestClaimArchiveAfterCommit:
             "Archived claim_id must match original"
         )
 
-        # Verify current.json was cleared
-        current_data = json.loads(current_path.read_text(encoding="utf-8"))
-        assert current_data == [], (
-            "current.json must be cleared after archival"
+        # Verify CLAIM-*.json files were removed after archival
+        remaining_claims = list(claims_dir.glob("CLAIM-*.json"))
+        assert len(remaining_claims) == 0, (
+            "CLAIM-*.json files must be removed after archival"
         )

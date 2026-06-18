@@ -4,7 +4,7 @@ import pytest
 from dataclasses import dataclass, field
 from typing import List
 
-from vibe_tracing.prd_arch_validator import (
+from vibe_tracing.domain.prd_arch_validator import (
     MappingResult,
     PathValidationResult,
     validate_prd_architecture_mapping,
@@ -679,7 +679,7 @@ class TestValidateFromPath:
         prd_path.parent.mkdir(parents=True, exist_ok=True)
         prd_path.write_text("# Invalid PRD")
 
-        with patch("vibe_tracing.prd_parser.PrdParser") as mock_parser_cls:
+        with patch("vibe_tracing.domain.prd_parser.PrdParser") as mock_parser_cls:
             mock_parser_cls.return_value.parse_file.side_effect = Exception("parse error")
 
             result = validate_prd_architecture_mapping_from_path(
@@ -693,7 +693,7 @@ class TestValidateFromPath:
     def test_empty_requirements_returns_skip(self, tmp_path):
         """When PRD has no requirements, returns exit_code=0 with skip message."""
         from unittest.mock import patch, MagicMock
-        from vibe_tracing.prd_parser import PrdParseResult
+        from vibe_tracing.domain.prd_parser import PrdParseResult
 
         prd_path = tmp_path / "docs" / "prd.md"
         prd_path.parent.mkdir(parents=True, exist_ok=True)
@@ -701,7 +701,7 @@ class TestValidateFromPath:
 
         mock_result = PrdParseResult(requirements=[])
 
-        with patch("vibe_tracing.prd_parser.PrdParser") as mock_parser_cls:
+        with patch("vibe_tracing.domain.prd_parser.PrdParser") as mock_parser_cls:
             mock_parser_cls.return_value.parse_file.return_value = mock_result
 
             result = validate_prd_architecture_mapping_from_path(
@@ -715,7 +715,7 @@ class TestValidateFromPath:
     def test_dead_link_returns_exit_code_1(self, tmp_path):
         """When dead links detected, returns exit_code=1."""
         from unittest.mock import patch
-        from vibe_tracing.prd_parser import PrdParseResult
+        from vibe_tracing.domain.prd_parser import PrdParseResult
 
         prd_path = tmp_path / "docs" / "prd.md"
         prd_path.parent.mkdir(parents=True, exist_ok=True)
@@ -724,7 +724,7 @@ class TestValidateFromPath:
         fake_req = _FakeRequirement("REQ-VT-001", "must")
         mock_result = PrdParseResult(requirements=[fake_req])
 
-        with patch("vibe_tracing.prd_parser.PrdParser") as mock_parser_cls:
+        with patch("vibe_tracing.domain.prd_parser.PrdParser") as mock_parser_cls:
             mock_parser_cls.return_value.parse_file.return_value = mock_result
 
             constraints = {
@@ -743,7 +743,7 @@ class TestValidateFromPath:
     def test_must_uncovered_returns_exit_code_1(self, tmp_path):
         """When MUST REQs uncovered, returns exit_code=1."""
         from unittest.mock import patch
-        from vibe_tracing.prd_parser import PrdParseResult
+        from vibe_tracing.domain.prd_parser import PrdParseResult
 
         prd_path = tmp_path / "docs" / "prd.md"
         prd_path.parent.mkdir(parents=True, exist_ok=True)
@@ -755,7 +755,7 @@ class TestValidateFromPath:
         ]
         mock_result = PrdParseResult(requirements=fake_reqs)
 
-        with patch("vibe_tracing.prd_parser.PrdParser") as mock_parser_cls:
+        with patch("vibe_tracing.domain.prd_parser.PrdParser") as mock_parser_cls:
             mock_parser_cls.return_value.parse_file.return_value = mock_result
 
             constraints = {
@@ -774,7 +774,7 @@ class TestValidateFromPath:
     def test_valid_mapping_returns_exit_code_0(self, tmp_path):
         """When all checks pass, returns exit_code=0 with no error message."""
         from unittest.mock import patch
-        from vibe_tracing.prd_parser import PrdParseResult
+        from vibe_tracing.domain.prd_parser import PrdParseResult
 
         prd_path = tmp_path / "docs" / "prd.md"
         prd_path.parent.mkdir(parents=True, exist_ok=True)
@@ -786,7 +786,7 @@ class TestValidateFromPath:
         ]
         mock_result = PrdParseResult(requirements=fake_reqs)
 
-        with patch("vibe_tracing.prd_parser.PrdParser") as mock_parser_cls:
+        with patch("vibe_tracing.domain.prd_parser.PrdParser") as mock_parser_cls:
             mock_parser_cls.return_value.parse_file.return_value = mock_result
 
             constraints = {
@@ -803,7 +803,7 @@ class TestValidateFromPath:
     def test_should_uncovered_returns_warning(self, tmp_path):
         """When only SHOULD REQs uncovered, returns exit_code=0 with warning."""
         from unittest.mock import patch
-        from vibe_tracing.prd_parser import PrdParseResult
+        from vibe_tracing.domain.prd_parser import PrdParseResult
 
         prd_path = tmp_path / "docs" / "prd.md"
         prd_path.parent.mkdir(parents=True, exist_ok=True)
@@ -815,7 +815,7 @@ class TestValidateFromPath:
         ]
         mock_result = PrdParseResult(requirements=fake_reqs)
 
-        with patch("vibe_tracing.prd_parser.PrdParser") as mock_parser_cls:
+        with patch("vibe_tracing.domain.prd_parser.PrdParser") as mock_parser_cls:
             mock_parser_cls.return_value.parse_file.return_value = mock_result
 
             constraints = {

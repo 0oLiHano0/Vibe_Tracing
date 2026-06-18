@@ -2151,10 +2151,16 @@
             } else {
                 unclearCard.style.display = 'block';
                 archUnclear.forEach(uc => {
+                    // Look up human-readable title and description from architecture_compliance_status
+                    const matchedRule = archRules.find(r => r.rule_id === uc.rule_id);
+                    const ruleTitle = (matchedRule && matchedRule.title) ? matchedRule.title : uc.rule_id;
+                    const ruleDesc = (matchedRule && matchedRule.description) ? matchedRule.description : '';
+
                     const box = document.createElement('div');
                     box.className = 'alert-box unclear';
                     box.innerHTML = `
-                        <div class="alert-title">${SVG_INLINE.search} 需要人工核验: ${escapeHtml(uc.rule_id)}</div>
+                        <div class="alert-title">${SVG_INLINE.search} 需要人工核验: ${escapeHtml(ruleTitle)}</div>
+                        ${ruleDesc ? '<div style="margin-bottom:4px;color:#94a3b8;">' + escapeHtml(ruleDesc) + '</div>' : ''}
                         <div>${escapeHtml(uc.reason || '该约束无法静态或自动化验证，请人工核查是否合规。')}</div>
                     `;
                     unclearList.appendChild(box);
@@ -2451,6 +2457,7 @@
 
             // F. Unaccepted manual rules from unclear_constraints
             if (reportData.unclear_constraints) {
+                var archRulesForDecisions = reportData.architecture_compliance_status || [];
                 reportData.unclear_constraints.forEach(function(uc) {
                     var ruleId = uc.rule_id || '';
                     var reason = uc.reason || '';
@@ -2461,20 +2468,30 @@
                         return; // Skip machine-verifiable unclear rules
                     }
 
+                    // Look up human-readable title and description from architecture_compliance_status
+                    var matchedRule = archRulesForDecisions.find(function(r) { return r.rule_id === ruleId; });
+                    var ruleTitle = (matchedRule && matchedRule.title) ? matchedRule.title : ruleId;
+                    var ruleDesc = (matchedRule && matchedRule.description) ? matchedRule.description : '';
+
+                    var chain = [
+                        {label: '规则 ID', value: ruleId},
+                    ];
+                    if (ruleDesc) {
+                        chain.push({label: '规则描述', value: ruleDesc});
+                    }
+                    chain.push({label: '原因', value: reason});
+
                     decisions.push({
                         id: 'unclear-' + ruleId,
                         category: 'accepted_rule',
                         targetId: ruleId,
                         categoryLabel: '未接受的架构规则',
                         icon: 'shield-alert',
-                        title: ruleId,
+                        title: ruleTitle,
                         status: 'pending',
                         question: '此 manual 规则需要人工确认。是否接受？',
                         actions: ['接受', '拒绝'],
-                        evidenceChain: [
-                            {label: '规则 ID', value: ruleId},
-                            {label: '原因', value: reason}
-                        ]
+                        evidenceChain: chain
                     });
                 });
             }
@@ -2545,7 +2562,7 @@
             const card = document.querySelector(`.decision-card[data-id="${decId}"]`);
             if (!card) return;
 
-            const apiUrl = 'http://localhost:5000/api/decisions';
+            const apiUrl = 'http://localhost:5001/api/decisions';
             const targetId = card.dataset.targetId || '';
             const reason = `Human decided: ${action}`;
 
@@ -2622,7 +2639,7 @@
             const localDecisions = loadLocalDecisions();
 
             try {
-                const resp = await fetch('http://localhost:5000/api/decisions');
+                const resp = await fetch('http://localhost:5001/api/decisions');
                 if (!resp.ok) {
                     renderDecisionHistoryTable(container, localDecisions);
                     return;

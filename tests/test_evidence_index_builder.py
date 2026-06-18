@@ -5,15 +5,15 @@ Unit tests for EvidenceIndexBuilder (TASK-VT-010).
 import json
 import pytest
 from pathlib import Path
-from vibe_tracing.evidence_index_builder import EvidenceIndexBuilder
-from vibe_tracing.schema_validator import SchemaValidator
-from vibe_tracing.context import UnifiedContext
+from vibe_tracing.domain.evidence_index_builder import EvidenceIndexBuilder
+from vibe_tracing.infra.validation.schema_validator import SchemaValidator
+from vibe_tracing.domain.context import UnifiedContext
 
 
 @pytest.fixture
 def schemas_dir() -> Path:
     """Fixture returning the actual schemas directory."""
-    return Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+    return Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
 
 
 def setup_mock_project(base: Path) -> None:
@@ -21,14 +21,14 @@ def setup_mock_project(base: Path) -> None:
     # Create directories
     (base / "docs").mkdir(parents=True, exist_ok=True)
     (base / "output").mkdir(parents=True, exist_ok=True)
-    (base / "schemas").mkdir(parents=True, exist_ok=True)
+    (base / "infra" / "validation" / "schemas").mkdir(parents=True, exist_ok=True)
     (base / ".vibetracing").mkdir(parents=True, exist_ok=True)
     (base / ".vibetracing" / "claims").mkdir(parents=True, exist_ok=True)
 
     # Copy real schemas to mock project so schema validator can load them
-    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
     for schema_file in real_schemas.glob("*.json"):
-        (base / "schemas" / schema_file.name).write_text(
+        (base / "infra" / "validation" / "schemas" / schema_file.name).write_text(
             schema_file.read_text(encoding="utf-8")
         )
 
@@ -123,14 +123,14 @@ must
 
 def _build_ctx(base: Path) -> UnifiedContext:
     """Build a UnifiedContext from the mock project at *base*."""
-    from vibe_tracing.raw_input_loader import RawInputLoader
-    from vibe_tracing.prd_parser import PrdParser
-    from vibe_tracing.task_loader import TaskLoader
-    from vibe_tracing.claim_loader import ClaimLoader
+    from vibe_tracing.domain.raw_input_loader import RawInputLoader
+    from vibe_tracing.domain.prd_parser import PrdParser
+    from vibe_tracing.domain.task_loader import TaskLoader
+    from vibe_tracing.domain.claim_loader import ClaimLoader
 
-    schemas_dir = base / "schemas"
+    schemas_dir = base / "infra" / "validation" / "schemas"
     if not schemas_dir.is_dir():
-        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
 
     raw_loader = RawInputLoader(base)
     manifest = raw_loader.load()
@@ -138,11 +138,11 @@ def _build_ctx(base: Path) -> UnifiedContext:
     prd_parser = PrdParser()
     prd_res = prd_parser.parse_file(base / "docs" / "prd.md")
 
-    task_loader = TaskLoader(schemas_dir)
+    task_loader = TaskLoader()
     task_res = task_loader.load_and_validate(base / "docs" / "task_list.json", prd_res)
 
-    claim_loader = ClaimLoader(schemas_dir)
-    claim_res = claim_loader.load_and_validate(base / ".vibetracing" / "claims" / "current.json", task_res)
+    claim_loader = ClaimLoader()
+    claim_res = claim_loader.load(base / ".vibetracing" / "claims" / "current.json", task_res)
     claims_list = claim_res.claims if claim_res.is_valid else []
 
     config_prefix = raw_loader.config_data.get("project_prefix", "VT")
@@ -179,7 +179,7 @@ def test_build_successful_evidence_index(tmp_path: Path) -> None:
     assert output_path.exists()
 
     # Validate output schema via SchemaValidator
-    validator = SchemaValidator(tmp_path / "schemas")
+    validator = SchemaValidator(tmp_path / "infra" / "validation" / "schemas")
     val_res = validator.validate_file(output_path, "evidence_index")
     assert val_res.is_valid is True, f"Schema validation error: {val_res.message}"
 
@@ -211,7 +211,8 @@ def test_build_successful_evidence_index(tmp_path: Path) -> None:
 
     # Verify Claim mapping
     claim_ev = next(e for e in evidences if e["source_type"] == "claim")
-    assert claim_ev["status"] == "covered"
+    # Claims are always assigned UNCLEAR status by evidence_index_builder
+    assert claim_ev["status"] == "unclear"
     assert claim_ev["source_path"] == ".vibetracing/claims/current.json"
     assert sorted(claim_ev["covers"]) == ["AC-VT-001-01", "REQ-VT-001"]
 
@@ -245,11 +246,11 @@ def test_build_invalid_raw_content_raises_error(tmp_path: Path) -> None:
     )
 
     # Upstream validation catches the error — TaskLoader returns is_valid=False
-    from vibe_tracing.prd_parser import PrdParser
-    from vibe_tracing.task_loader import TaskLoader
-    schemas_dir = tmp_path / "schemas"
+    from vibe_tracing.domain.prd_parser import PrdParser
+    from vibe_tracing.domain.task_loader import TaskLoader
+    schemas_dir = tmp_path / "infra" / "validation" / "schemas"
     prd_res = PrdParser().parse_file(tmp_path / "docs" / "prd.md")
-    task_res = TaskLoader(schemas_dir).load_and_validate(
+    task_res = TaskLoader().load_and_validate(
         tmp_path / "docs" / "task_list.json", prd_res
     )
     assert not task_res.is_valid
@@ -360,7 +361,7 @@ def test_test_evidence_not_carried_over_when_staged(tmp_path: Path) -> None:
     )
 
     # Create a mock tool evidence candidate that simulates fresh test evidence
-    from vibe_tracing.tool_evidence_adapter import ToolEvidenceCandidate
+    from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
 
     fresh_test_evidence = ToolEvidenceCandidate(
         source_type="test",

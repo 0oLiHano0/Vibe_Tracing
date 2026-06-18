@@ -273,7 +273,7 @@ def test_finalize_writes_hash_commit_path(tmp_path, capsys):
 
 def test_finalize_writes_prd_hash(tmp_path, capsys):
     """First finalize computes and stores prd_hash (SHA256 of prd.md) in config.json."""
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix("TEST")
 
     _setup_project(tmp_path, constraints_data=_CONSTRAINTS_WITH_COVERAGE)
@@ -495,7 +495,7 @@ _CONSTRAINTS_WITH_COVERAGE = {
 
 def test_finalize_git_add_does_not_include_task_list(tmp_path, capsys):
     """git add should NOT stage docs/task_list.json."""
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix("TEST")
 
     _setup_project(tmp_path, constraints_data=_CONSTRAINTS_WITH_COVERAGE)
@@ -523,7 +523,7 @@ def test_finalize_git_add_does_not_include_task_list(tmp_path, capsys):
 
 def test_finalize_git_add_precise_files(tmp_path, capsys):
     """Finalize commit should only contain expected files (no task_list.json, etc.)."""
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix("TEST")
 
     _setup_project(tmp_path, constraints_data=_CONSTRAINTS_WITH_COVERAGE)
@@ -558,7 +558,7 @@ def test_finalize_git_add_precise_files(tmp_path, capsys):
 
 def test_finalize_git_add_includes_change_log_when_exists(tmp_path, capsys):
     """git add should include architecture_change_log.md when it exists."""
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix("TEST")
 
     _setup_project(tmp_path, constraints_data=_CONSTRAINTS_WITH_COVERAGE)
@@ -594,7 +594,7 @@ def _setup_project_with_prd(base: Path, constraints_data: dict, prd_reqs: list[d
 
 def test_finalize_dead_link_in_constraints(tmp_path, capsys):
     """Constraints referencing non-existent REQ -> finalize fails."""
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix("TEST")
 
     constraints = {
@@ -632,7 +632,7 @@ def test_finalize_dead_link_in_constraints(tmp_path, capsys):
 
 def test_finalize_must_req_without_architecture_support(tmp_path, capsys):
     """MUST-level REQ with no architecture coverage -> finalize fails."""
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix("TEST")
 
     constraints = {
@@ -673,7 +673,7 @@ def test_finalize_must_req_without_architecture_support(tmp_path, capsys):
 
 def test_finalize_should_req_without_mapping_warns(tmp_path, capsys):
     """SHOULD-level REQ without architecture mapping -> finalize succeeds with warning."""
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix("TEST")
 
     constraints = {
@@ -715,7 +715,7 @@ def test_finalize_should_req_without_mapping_warns(tmp_path, capsys):
 
 def test_finalize_mapping_passes_when_all_must_covered(tmp_path, capsys):
     """All MUST-level REQs covered -> finalize succeeds without warnings."""
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix("TEST")
 
     constraints = {
@@ -1062,7 +1062,7 @@ class TestFinalizeLogging:
         main(["finalize", "--project-root", str(tmp_path)])
 
         # Reset logger singleton for second run
-        from vibe_tracing.operational_logger import OperationalLogger
+        from vibe_tracing.infra.operational_logger import OperationalLogger
         OperationalLogger.reset()
 
         # Second finalize
@@ -1087,7 +1087,7 @@ class TestFinalizeLogging:
         data = json.loads(constraints_path.read_text(encoding="utf-8"))
         constraints_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
 
-        from vibe_tracing.operational_logger import OperationalLogger
+        from vibe_tracing.infra.operational_logger import OperationalLogger
         OperationalLogger.reset()
 
         exit_code = main(["finalize", "--project-root", str(tmp_path)])
@@ -1217,7 +1217,7 @@ class TestFinalizeLogging:
         _init_git_repo(tmp_path)
 
         # Force null logger by making log dir creation fail
-        from vibe_tracing.operational_logger import OperationalLogger
+        from vibe_tracing.infra.operational_logger import OperationalLogger
 
         original_init = OperationalLogger.__init__
 

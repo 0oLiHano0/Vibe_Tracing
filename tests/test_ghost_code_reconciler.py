@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
 
 @pytest.fixture
@@ -382,7 +382,7 @@ class TestMalformedHeadClaims:
                 return r
             return original_run(cmd, **kwargs)
 
-        with patch("vibe_tracing.ghost_code_reconciler.subprocess.run", side_effect=fake_run):
+        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=fake_run):
             refs = reconciler._get_active_claims_code_refs()
 
         assert refs == set()
@@ -393,7 +393,7 @@ class TestMalformedHeadClaims:
 class TestGitNotInstalled:
     """L6: FileNotFoundError from subprocess.run must be caught gracefully."""
 
-    @patch("vibe_tracing.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError)
+    @patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError)
     def test_git_not_installed_graceful(self, mock_run, project):
         """When git is not on PATH, reconcile() returns gracefully without crashing."""
         reconciler = GhostCodeReconciler(project)

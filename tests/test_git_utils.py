@@ -1,4 +1,4 @@
-"""Tests for vibe_tracing.git_utils module.
+"""Tests for vibe_tracing.infra.git_utils module.
 
 Covers all four functions with success, failure, and exception paths.
 """
@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from vibe_tracing.git_utils import (
+from vibe_tracing.infra.git_utils import (
     git_show,
     git_last_commit_touching,
     git_file_modified_after,
@@ -25,7 +25,7 @@ CWD = Path("/fake/project")
 class TestGitShow:
     """Tests for git_show()."""
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_content_on_success(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0, stdout="file content\n")
         result = git_show("abc123", "docs/prd.md", CWD)
@@ -37,13 +37,13 @@ class TestGitShow:
             text=True,
         )
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_none_on_nonzero_exit(self, mock_run):
         mock_run.return_value = MagicMock(returncode=128, stdout="")
         result = git_show("abc123", "nonexistent.txt", CWD)
         assert result is None
 
-    @patch("vibe_tracing.git_utils.subprocess.run", side_effect=FileNotFoundError)
+    @patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=FileNotFoundError)
     def test_returns_none_on_exception(self, mock_run):
         result = git_show("abc123", "docs/prd.md", CWD)
         assert result is None
@@ -56,7 +56,7 @@ class TestGitShow:
 class TestGitLastCommitTouching:
     """Tests for git_last_commit_touching()."""
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_hash_on_success(self, mock_run):
         mock_run.return_value = MagicMock(
             returncode=0, stdout="a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\n"
@@ -70,19 +70,19 @@ class TestGitLastCommitTouching:
             text=True,
         )
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_none_when_no_history(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0, stdout="")
         result = git_last_commit_touching("brand_new_file.txt", CWD)
         assert result is None
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_none_on_nonzero_exit(self, mock_run):
         mock_run.return_value = MagicMock(returncode=128, stdout="")
         result = git_last_commit_touching("docs/prd.md", CWD)
         assert result is None
 
-    @patch("vibe_tracing.git_utils.subprocess.run", side_effect=OSError)
+    @patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=OSError)
     def test_returns_none_on_exception(self, mock_run):
         result = git_last_commit_touching("docs/prd.md", CWD)
         assert result is None
@@ -95,7 +95,7 @@ class TestGitLastCommitTouching:
 class TestGitFileModifiedAfter:
     """Tests for git_file_modified_after()."""
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_true_when_modified(self, mock_run):
         mock_run.return_value = MagicMock(
             returncode=0, stdout="deadbeef12345678deadbeef12345678deadbeef\n"
@@ -109,19 +109,19 @@ class TestGitFileModifiedAfter:
             text=True,
         )
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_false_when_not_modified(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0, stdout="")
         result = git_file_modified_after("docs/prd.md", "abc123", CWD)
         assert result is False
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_false_on_nonzero_exit(self, mock_run):
         mock_run.return_value = MagicMock(returncode=128, stdout="")
         result = git_file_modified_after("docs/prd.md", "abc123", CWD)
         assert result is False
 
-    @patch("vibe_tracing.git_utils.subprocess.run", side_effect=RuntimeError)
+    @patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=RuntimeError)
     def test_returns_false_on_exception(self, mock_run):
         result = git_file_modified_after("docs/prd.md", "abc123", CWD)
         assert result is False
@@ -134,14 +134,14 @@ class TestGitFileModifiedAfter:
 class TestGitHasUncommittedChanges:
     """Tests for git_has_uncommitted_changes()."""
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_true_on_unstaged_changes(self, mock_run):
         # First call (git diff) finds unstaged changes
         mock_run.return_value = MagicMock(returncode=0, stdout="docs/prd.md\n")
         result = git_has_uncommitted_changes("docs/prd.md", CWD)
         assert result is True
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_true_on_staged_changes(self, mock_run):
         # First call (unstaged) returns empty, second call (staged) returns file
         unstaged = MagicMock(returncode=0, stdout="")
@@ -150,18 +150,18 @@ class TestGitHasUncommittedChanges:
         result = git_has_uncommitted_changes("docs/prd.md", CWD)
         assert result is True
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_false_when_clean(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0, stdout="")
         result = git_has_uncommitted_changes("docs/prd.md", CWD)
         assert result is False
 
-    @patch("vibe_tracing.git_utils.subprocess.run", side_effect=PermissionError)
+    @patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=PermissionError)
     def test_returns_false_on_exception(self, mock_run):
         result = git_has_uncommitted_changes("docs/prd.md", CWD)
         assert result is False
 
-    @patch("vibe_tracing.git_utils.subprocess.run")
+    @patch("vibe_tracing.infra.git_utils.subprocess.run")
     def test_returns_false_when_diff_fails(self, mock_run):
         # First call (unstaged) returns non-zero
         mock_run.return_value = MagicMock(returncode=1, stdout="")

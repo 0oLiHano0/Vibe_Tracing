@@ -1,7 +1,7 @@
 """Tests for UnifiedContext domain model."""
 
 import pytest
-from vibe_tracing.context import UnifiedContext
+from vibe_tracing.domain.context import UnifiedContext
 
 
 class _MockPrd:

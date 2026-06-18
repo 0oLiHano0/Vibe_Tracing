@@ -16,8 +16,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vibe_tracing.merge_gate_engine import MergeGateEngine
-from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+from vibe_tracing.domain.architecture_compliance_checker import ArchitectureComplianceChecker
 from vibe_tracing.commands.common import _GateBlocked
 
 
@@ -297,7 +297,7 @@ def test_coverage_summary_from_single_source(tmp_path):
     # and mock _build_metadata to avoid JSON serialization of MagicMock.
     # Patch at the source module where the class is defined.
     with patch(
-        "vibe_tracing.traceability_report_builder.TraceabilityReportBuilder"
+        "vibe_tracing.domain.traceability_report_builder.TraceabilityReportBuilder"
     ) as MockBuilder, patch(
         "vibe_tracing.commands.analyze.reports._build_metadata",
         return_value={"test": True},
@@ -359,7 +359,7 @@ def test_coverage_summary_multiple_files(tmp_path):
     output_dir.mkdir(parents=True)
 
     with patch(
-        "vibe_tracing.traceability_report_builder.TraceabilityReportBuilder"
+        "vibe_tracing.domain.traceability_report_builder.TraceabilityReportBuilder"
     ) as MockBuilder, patch(
         "vibe_tracing.commands.analyze.reports._build_metadata",
         return_value={"test": True},
@@ -416,7 +416,7 @@ def test_coverage_summary_no_baseline_absent(tmp_path):
     output_dir.mkdir(parents=True)
 
     with patch(
-        "vibe_tracing.traceability_report_builder.TraceabilityReportBuilder"
+        "vibe_tracing.domain.traceability_report_builder.TraceabilityReportBuilder"
     ) as MockBuilder, patch(
         "vibe_tracing.commands.analyze.reports._build_metadata",
         return_value={"test": True},

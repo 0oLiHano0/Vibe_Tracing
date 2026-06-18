@@ -129,7 +129,6 @@ vt analyze  # 完整分析（不含 --gates-only）
 - 只接受 `verification_method == "manual"` 的规则
 - 重复 accept 同一规则会提示"已被接受"
 - machine 规则被拒绝（需程序验证，无需人工确认）
-- 迁移旧数据已完成（constraints.json 中的 embedded accepted_by 已清理）
 
 ## 不可跳过的行为
 

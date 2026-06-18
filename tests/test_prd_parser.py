@@ -1,5 +1,5 @@
 from pathlib import Path
-from vibe_tracing.prd_parser import PrdParser
+from vibe_tracing.domain.prd_parser import PrdParser
 
 
 def test_parse_real_prd():

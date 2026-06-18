@@ -144,8 +144,8 @@
     },
     {
       "principle_id": "PRINCIPLE-VT-009",
-      "title": "MVP 不使用数据库",
-      "description": "MVP 阶段不得依赖数据库。所有输入和输出必须以文件形式存在，以保证系统简单、可检查、可移植。",
+      "title": "持久化存储必须是文件",
+      "description": "所有持久化的输入和输出必须以文件形式存在（JSON/Markdown/HTML），以保证系统简单、可检查、可移植。允许使用内存数据库（如 sqlite3 :memory:）作为运行时临时查询引擎，但不得要求外部数据库服务或持久化数据库文件。",
       "severity": "must",
       "verification_method": "manual"
     },
@@ -530,7 +530,8 @@
       "allowed_dependencies": [
         "standard_cli",
         "local_filesystem",
-        "json_schema_validator"
+        "json_schema_validator",
+        "sqlite3_in_memory_query"
       ],
       "forbidden_dependencies": [
         "claude_code_required_runtime",
@@ -781,8 +782,8 @@
   "storage_rules": [
     {
       "rule_id": "STORE-VT-001",
-      "title": "MVP 不使用数据库",
-      "description": "MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。",
+      "title": "持久化存储必须是文件，内存数据库仅作查询引擎",
+      "description": "所有持久化的输入和输出必须以文件形式保存。允许使用 Python 标准库 sqlite3 的内存模式（:memory:）作为运行时临时查询和关联分析引擎，但不得要求外部数据库服务、持久化数据库文件或任何第三方数据库依赖。",
       "severity": "must",
       "data_objects": [
         "raw_prd",
@@ -793,7 +794,19 @@
         "traceability_report",
         "dashboard"
       ],
-      "rationale": "文件化存储可以让 MVP 更容易调试、迁移和嵌入本地 Agent 工作流。",
+      "allowed_dependencies": [
+        "sqlite3_in_memory_query_engine"
+      ],
+      "forbidden_dependencies": [
+        "external_database_service",
+        "persistent_database_file",
+        "postgresql",
+        "mysql",
+        "mongodb",
+        "vector_database",
+        "graph_database"
+      ],
+      "rationale": "内存数据库用于替代复杂的 Python 嵌套循环进行多表关联查询，简化门禁判定逻辑。所有数据仍以 JSON 文件持久化。",
       "verification_method": "machine"
     },
     {
@@ -1122,22 +1135,24 @@
   "technology_constraints": [
     {
       "constraint_id": "TECH-VT-001",
-      "title": "MVP 使用文件化契约",
-      "description": "MVP 必须使用 Markdown 承载人类编写的需求，使用 JSON 承载机器可读契约，使用 HTML 承载人类审查视图。",
+      "title": "MVP 使用文件化契约，内存数据库作查询引擎",
+      "description": "MVP 必须使用 Markdown 承载人类编写的需求，使用 JSON 承载机器可读契约，使用 HTML 承载人类审查视图。允许使用 Python 标准库 sqlite3 内存模式作为运行时关联查询引擎。",
       "severity": "must",
       "allowed": [
         "Markdown",
         "JSON",
         "HTML",
         "embedded CSS",
-        "embedded JavaScript"
+        "embedded JavaScript",
+        "sqlite3_in_memory_query"
       ],
       "forbidden": [
-        "required database",
+        "required external database service",
+        "required persistent database file",
         "required backend service",
         "required frontend build system"
       ],
-      "rationale": "该约束可以保证 MVP 简单、可移植、易检查。",
+      "rationale": "该约束可以保证 MVP 简单、可移植、易检查。内存数据库仅用于运行时多表关联查询，不引入外部依赖。",
       "verification_method": "manual"
     },
     {

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vibe_tracing.operational_logger import OperationalLogger
+from vibe_tracing.infra.operational_logger import OperationalLogger
 from vibe_tracing.commands.doctor import run_doctor
 
 

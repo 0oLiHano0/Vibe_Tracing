@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 import pytest
 
-from vibe_tracing.architecture_change_proposal import ArchitectureChangeProposalEngine
+from vibe_tracing.domain.architecture_change_proposal import ArchitectureChangeProposalEngine
 
 
 # ---------------------------------------------------------------------------
@@ -170,7 +170,7 @@ def test_hash_mismatch_git_show_fails(proj):
 
     _write_config(proj, "different_hash_value", git_commit="deadbeef")
 
-    with patch("vibe_tracing.architecture_change_proposal.git_show", return_value=None):
+    with patch("vibe_tracing.domain.architecture_change_proposal.git_show", return_value=None):
         engine = ArchitectureChangeProposalEngine(proj)
         res = engine.check_governance()
 
@@ -211,7 +211,7 @@ def test_hash_mismatch_with_diff(proj):
     # git_show returns the BASE version (original)
     base_content = json.dumps(BASE_CONSTRAINTS, indent=2)
 
-    with patch("vibe_tracing.architecture_change_proposal.git_show", return_value=base_content):
+    with patch("vibe_tracing.domain.architecture_change_proposal.git_show", return_value=base_content):
         engine = ArchitectureChangeProposalEngine(proj)
         res = engine.check_governance()
 
@@ -244,7 +244,7 @@ def test_hash_mismatch_format_change_only(proj):
     # git_show returns the base with different formatting but same rules
     base_content = json.dumps(BASE_CONSTRAINTS, indent=2)
 
-    with patch("vibe_tracing.architecture_change_proposal.git_show", return_value=base_content):
+    with patch("vibe_tracing.domain.architecture_change_proposal.git_show", return_value=base_content):
         engine = ArchitectureChangeProposalEngine(proj)
         res = engine.check_governance()
 

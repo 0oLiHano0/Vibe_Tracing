@@ -5,11 +5,11 @@ Tests for dynamic Chinese guidance reflection mechanism based on schema descript
 import json
 import pytest
 from pathlib import Path
-from vibe_tracing.schema_validator import SchemaValidator
-from vibe_tracing.task_loader import TaskLoader
-from vibe_tracing.claim_loader import ClaimLoader
+from vibe_tracing.infra.validation.schema_validator import SchemaValidator
+from vibe_tracing.domain.task_loader import TaskLoader
+from vibe_tracing.domain.claim_loader import ClaimLoader
 
-SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
 
 
 @pytest.fixture
@@ -112,25 +112,42 @@ def test_task_loader_logical_validation_error_with_dynamic_hints(tmp_path):
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(data, f)
 
-    loader = TaskLoader(SCHEMAS_DIR)
+    loader = TaskLoader()
     res = loader.load_and_validate(file_path)
     assert res.is_valid is False
 
-    # Check that error contains dynamic guide
+    # Check that error contains dynamic guide for business validation
     error_msg = "; ".join(res.errors)
     assert "TASK-VT-invalid" in error_msg
-    assert "【修复指南】任务ID，必须符合正则格式" in error_msg
+    assert "【修复指南】" in error_msg
 
 
 def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
-    """Test that consistency validation error in ClaimLoader dynamically appends Chinese hint."""
+    """Test that cross-reference validation error in ClaimLoader dynamically appends Chinese hint."""
+    # Create task_list with one task
+    task_list_data = {
+        "schema_version": "0.1",
+        "project": {"project_id": "PROJECT-VT", "name": "Test", "stage": "mvp"},
+        "tasks": [
+            {
+                "task_id": "TASK-VT-001",
+                "title": "Test",
+                "phase_id": "PHASE-VT-001",
+                "priority": "must",
+                "status": "todo",
+                "owner_role": "AI",
+                "objective": "Test",
+                "related_requirements": [],
+                "related_acceptance_criteria": [],
+                "definition_of_done": [],
+            }
+        ],
+    }
+    # Claim references a non-existent task
     data = [
         {
             "claim_id": "CLAIM-VT-001",
-            # Invalid format for related_task
-            "related_task": "TASK-VT-invalid",
-            "claimed_status": "unclear",
-            "evidence_refs": [],
+            "related_task": "TASK-VT-999",  # Does not exist in task_list
             "timestamp": "2026-05-31T10:00:00Z",
         },
     ]
@@ -140,14 +157,17 @@ def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(data, f)
 
-    loader = ClaimLoader(SCHEMAS_DIR)
-    res = loader.load_and_validate(file_path)
+    from vibe_tracing.domain.task_loader import TaskLoader
+    task_loader = TaskLoader()
+    task_res = task_loader.load_and_validate(None, content=task_list_data)
+
+    loader = ClaimLoader()
+    res = loader.load(file_path, task_result=task_res)
     assert res.is_valid is False
 
-    # Check that error contains dynamic guide
     error_msg = "; ".join(res.errors)
-    assert "TASK-VT-invalid" in error_msg
-    assert "【修复指南】关联任务ID，必须符合正则格式" in error_msg
+    assert "TASK-VT-999" in error_msg
+    assert "non-existent task" in error_msg.lower() or "不存在" in error_msg
 
 
 def test_silent_filtering_of_template_records(tmp_path):
@@ -191,7 +211,7 @@ def test_silent_filtering_of_template_records(tmp_path):
         json.dump(task_data, f)
 
     # 1. Load tasks
-    task_loader = TaskLoader(SCHEMAS_DIR)
+    task_loader = TaskLoader()
     task_res = task_loader.load_and_validate(task_path)
 
     # Check that only TASK-VT-001 is present in parsed tasks
@@ -204,15 +224,11 @@ def test_silent_filtering_of_template_records(tmp_path):
         {
             "claim_id": "CLAIM-VT-9999",
             "related_task": "TASK-VT-9999",
-            "claimed_status": "unclear",
-            "evidence_refs": [],
             "timestamp": "2026-05-31T10:00:00Z",
         },
         {
             "claim_id": "CLAIM-VT-001",
             "related_task": "TASK-VT-001",
-            "claimed_status": "unclear",
-            "evidence_refs": [],
             "timestamp": "2026-05-31T10:00:00Z",
         },
     ]
@@ -221,8 +237,8 @@ def test_silent_filtering_of_template_records(tmp_path):
     with claim_path.open("w", encoding="utf-8") as f:
         json.dump(claim_data, f)
 
-    claim_loader = ClaimLoader(SCHEMAS_DIR)
-    claim_res = claim_loader.load_and_validate(claim_path, task_res)
+    claim_loader = ClaimLoader()
+    claim_res = claim_loader.load(claim_path, task_res)
 
     parsed_cids = [c.claim_id for c in claim_res.claims]
     assert "CLAIM-VT-001" in parsed_cids

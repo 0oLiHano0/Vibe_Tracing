@@ -10,12 +10,11 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from vibe_tracing.raw_input_loader import RawInputLoader
-from vibe_tracing.schema_validator import SchemaValidator
-from vibe_tracing.prd_parser import PrdParser
-from vibe_tracing.task_loader import TaskLoader
-from vibe_tracing.claim_loader import ClaimLoader
-from vibe_tracing.context import UnifiedContext
+from vibe_tracing.domain.raw_input_loader import RawInputLoader
+from vibe_tracing.domain.prd_parser import PrdParser
+from vibe_tracing.domain.task_loader import TaskLoader
+from vibe_tracing.domain.claim_loader import ClaimLoader
+from vibe_tracing.domain.context import UnifiedContext
 
 
 class _GateBlocked(Exception):
@@ -26,9 +25,7 @@ class _GateBlocked(Exception):
 
 def _load_context(
     project_root: Path,
-    schemas_dir: Path,
-    validator: SchemaValidator,
-) -> Tuple[UnifiedContext, RawInputLoader, SchemaValidator]:
+) -> Tuple[UnifiedContext, RawInputLoader]:
     """Load all input files, validate schemas, and build UnifiedContext.
 
     Raises _GateBlocked with exit_code=1 on any validation failure.
@@ -37,7 +34,7 @@ def _load_context(
     manifest = raw_loader.load()
 
     config_prefix = raw_loader.config_data.get("project_prefix", "VT")
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix(config_prefix)
 
     # Check for missing required files
@@ -59,54 +56,21 @@ def _load_context(
             )
             raise _GateBlocked(1)
 
+    # 统一格式校验
+    from vibe_tracing.infra.validation import validate_inputs
+    schemas_dir = project_root / "schemas"
+    if not schemas_dir.is_dir():
+        schemas_dir = Path(__file__).parents[1] / "infra" / "validation" / "schemas"
+    validation_result = validate_inputs(manifest, config_prefix, schemas_dir=schemas_dir)
+    if not validation_result.is_valid:
+        print(validation_result.format_errors(), file=sys.stderr)
+        raise _GateBlocked(1)
+
     records_dict = {r.file_key: r for r in manifest.inputs_used}
     prd_record = records_dict.get("prd")
     task_list_record = records_dict.get("task_list")
     constraints_record = records_dict.get("architecture_constraints")
     claims_record = records_dict.get("agent_claims")
-
-    # Schema validation
-    if task_list_record and task_list_record.status == "ok" and task_list_record.content is not None:
-        val_task = validator.validate_dict(
-            task_list_record.content, "task_list",
-            source_label=task_list_record.file_path,
-        )
-        if not val_task.is_valid:
-            print(
-                f"Schema validation failed for task list: {val_task.message} at {val_task.field_path}",
-                file=sys.stderr,
-            )
-            if val_task.hint:
-                print(val_task.hint, file=sys.stderr)
-            raise _GateBlocked(1)
-
-    if constraints_record and constraints_record.status == "ok" and constraints_record.content is not None:
-        val_constraints = validator.validate_dict(
-            constraints_record.content, "architecture_constraints",
-            source_label=constraints_record.file_path,
-        )
-        if not val_constraints.is_valid:
-            print(
-                f"Schema validation failed for architecture constraints: {val_constraints.message} at {val_constraints.field_path}",
-                file=sys.stderr,
-            )
-            if val_constraints.hint:
-                print(val_constraints.hint, file=sys.stderr)
-            raise _GateBlocked(1)
-
-    if claims_record and claims_record.status == "ok" and claims_record.content is not None:
-        val_claims = validator.validate_dict(
-            claims_record.content, "agent_claims",
-            source_label=claims_record.file_path,
-        )
-        if not val_claims.is_valid:
-            print(
-                f"Schema validation failed for agent claims: {val_claims.message} at {val_claims.field_path}",
-                file=sys.stderr,
-            )
-            if val_claims.hint:
-                print(val_claims.hint, file=sys.stderr)
-            raise _GateBlocked(1)
 
     if not prd_record or prd_record.status != "ok":
         print("Error: PRD file missing or failed to load.", file=sys.stderr)
@@ -140,7 +104,7 @@ def _load_context(
     task_res = None
     if task_list_record and task_list_record.status == "ok":
         task_list_path = Path(task_list_record.file_path)
-        task_loader = TaskLoader(schemas_dir)
+        task_loader = TaskLoader()
         arch_data = constraints_record.content if constraints_record and constraints_record.status == "ok" else None
         task_res = task_loader.load_and_validate(
             task_list_path, prd_res, arch_data=arch_data, content=task_list_record.content
@@ -156,8 +120,8 @@ def _load_context(
     claims_list = []
     if claims_record and claims_record.status == "ok" and task_res:
         claims_path = Path(claims_record.file_path)
-        claim_loader = ClaimLoader(schemas_dir)
-        claim_res_loader = claim_loader.load_and_validate(
+        claim_loader = ClaimLoader()
+        claim_res_loader = claim_loader.load(
             claims_path, task_res, content=claims_record.content
         )
         if not claim_res_loader.is_valid:
@@ -168,6 +132,13 @@ def _load_context(
             raise _GateBlocked(1)
         claims_list = claim_res_loader.claims
 
+    # 加载 human_decisions
+    human_decisions_data = None
+    for record in manifest.inputs_used:
+        if record.file_key == "human_decisions" and record.status == "ok" and record.content is not None:
+            human_decisions_data = record.content
+            break
+
     ctx = UnifiedContext(
         config=raw_loader.config_data,
         prd=prd_res,
@@ -175,9 +146,10 @@ def _load_context(
         task_result=task_res,
         claims_list=claims_list,
         manifest=manifest,
+        human_decisions=human_decisions_data,
         config_prefix=config_prefix,
     )
-    return ctx, raw_loader, validator
+    return ctx, raw_loader
 
 
 def _rel_path_str(p: Path, project_root: Path) -> str:
@@ -264,36 +236,3 @@ def _file_sha256(path: Path) -> Optional[str]:
         return None
 
 
-def _compute_claim_hash(claim: dict) -> str:
-    """Compute content hash of a claim (excluding hash and timestamp fields)."""
-    content = {k: v for k, v in claim.items() if k not in ("content_hash", "timestamp")}
-    return hashlib.sha256(
-        json.dumps(content, sort_keys=True, ensure_ascii=False).encode()
-    ).hexdigest()[:16]
-
-
-def _get_directly_modified_claims(
-    old_claims: list,
-    new_claims: list,
-) -> set:
-    """Detect which claims were actually modified by comparing content hashes."""
-    old_hashes = {}
-    for c in old_claims:
-        cid = c.get("claim_id")
-        if cid:
-            old_hashes[cid] = c.get("content_hash")
-
-    new_hashes = {}
-    for c in new_claims:
-        cid = c.get("claim_id")
-        if cid:
-            new_hashes[cid] = c.get("content_hash")
-
-    modified = set()
-    for claim_id, new_hash in new_hashes.items():
-        old_hash = old_hashes.get(claim_id)
-        if old_hash is None:
-            modified.add(claim_id)  # new claim
-        elif old_hash != new_hash:
-            modified.add(claim_id)  # content changed
-    return modified

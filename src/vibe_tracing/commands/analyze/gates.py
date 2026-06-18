@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from vibe_tracing.context import UnifiedContext
+from vibe_tracing.domain.context import UnifiedContext
 
 
 def _gate1_constraints_hash(ctx: UnifiedContext, project_root: Path) -> Optional[int]:
@@ -91,7 +91,7 @@ def _gate1c_mapping(ctx: UnifiedContext, config_prefix: str) -> Optional[int]:
     if not constraints_record_content or not prd_res or not prd_res.is_valid:
         return None
 
-    from vibe_tracing.prd_arch_validator import validate_prd_architecture_mapping
+    from vibe_tracing.domain.prd_arch_validator import validate_prd_architecture_mapping
     mapping_result = validate_prd_architecture_mapping(
         prd_res.requirements,
         constraints_record_content,
@@ -138,7 +138,7 @@ def _gate2_code_claim_alignment(
     if not is_pre_commit:
         return None
 
-    from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+    from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
     reconciler = GhostCodeReconciler(project_root)
     success, error_msg = reconciler.reconcile()
     if error_msg:

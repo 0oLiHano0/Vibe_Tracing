@@ -3,14 +3,14 @@ import json
 from pathlib import Path
 import pytest
 from vibe_tracing.cli import main
-from vibe_tracing.schema_validator import SchemaValidator
+from vibe_tracing.infra.validation.schema_validator import SchemaValidator
 
 
 @pytest.fixture(autouse=True)
 def mock_tool_execution(request, monkeypatch):
     import shutil
-    from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
-    from vibe_tracing.core.enums import CoverageStatus
+    from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
+    from vibe_tracing.infra.enums import CoverageStatus
     import json
 
     # Mock shutil.which so the pre-flight dependency check passes
@@ -65,7 +65,7 @@ def setup_mock_project(
     (base / "dashboard.html").write_text("<html></html>", encoding="utf-8")
 
     # Copy real schemas to mock project so schema validator can load them
-    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
     for schema_file in real_schemas.glob("*.json"):
         (base / "schemas" / schema_file.name).write_text(
             schema_file.read_text(encoding="utf-8")
@@ -211,13 +211,10 @@ must
 
     # Write Agent Claims
     if include_claims:
-        evidence_refs = ["EVIDENCE-VT-005"] if claim_has_evidence else []
         agent_claims = [
             {
                 "claim_id": "CLAIM-VT-001",
                 "related_task": "TASK-VT-001",
-                "claimed_status": "covered",
-                "evidence_refs": evidence_refs,
                 "timestamp": claim_timestamp,
                 "code_refs": ["src/vibe_tracing/core/ids.py#L1-L10"],
                 "test_refs": [],
@@ -389,7 +386,7 @@ def test_cli_analyze_invalid_schema(tmp_path, capsys):
     assert exit_code == 1
 
     captured = capsys.readouterr()
-    assert "Schema validation failed for task list" in captured.err
+    assert "'project' is a required property" in captured.err
 
 
 def test_cli_analyze_custom_output_dir(tmp_path):
@@ -951,7 +948,7 @@ def test_input_files_loaded_once(tmp_path, capsys):
     def _spy_path_open(self_path, *args, **kwargs):
         key = path_to_key.get(str(self_path))
         # Only count read opens (mode "r" or default); writes from
-        # _repair_content_hashes must not inflate the read count.
+        # Write opens must not inflate the read count.
         mode = args[0] if args else kwargs.get("mode", "r")
         if key is not None and "r" in mode and "w" not in mode:
             open_counts[key] += 1
@@ -1825,7 +1822,7 @@ def test_load_human_decisions_missing_file(monkeypatch):
 
 def test_apply_human_decisions_accepted_rule_reconfirm(tmp_path):
     """Test human_decisions reconfirm applied via MergeGateEngine."""
-    from vibe_tracing.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
     engine = MergeGateEngine(tmp_path)
     gate_res = engine.evaluate(
@@ -1846,7 +1843,7 @@ def test_apply_human_decisions_accepted_rule_reconfirm(tmp_path):
 
 def test_apply_human_decisions_mark_complete(tmp_path):
     """Test human_decisions mark_complete resolves gaps via MergeGateEngine."""
-    from vibe_tracing.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
     engine = MergeGateEngine(tmp_path)
     gaps = [{"item_id": "AC-001", "item_type": "ac", "severity": "must", "reason": "no test"}]
@@ -1867,7 +1864,7 @@ def test_apply_human_decisions_mark_complete(tmp_path):
 
 def test_apply_human_decisions_stale_debt_defer(tmp_path):
     """Test human_decisions accept_risk on risks via MergeGateEngine."""
-    from vibe_tracing.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
     engine = MergeGateEngine(tmp_path)
     risks = [{"risk_id": "R-001", "severity": "must", "title": "Old debt", "claim_id": "CLAIM-001"}]
@@ -1888,7 +1885,7 @@ def test_apply_human_decisions_stale_debt_defer(tmp_path):
 
 def test_apply_human_decisions_accepted_rule_reject(tmp_path):
     """Test human_decisions applied count with no matching items."""
-    from vibe_tracing.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
     engine = MergeGateEngine(tmp_path)
     gate_res = engine.evaluate(
@@ -1900,58 +1897,11 @@ def test_apply_human_decisions_accepted_rule_reject(tmp_path):
 
 def test_apply_human_decisions_no_decisions(tmp_path):
     """Test human_decisions with empty decisions list."""
-    from vibe_tracing.merge_gate_engine import MergeGateEngine
+    from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
     engine = MergeGateEngine(tmp_path)
     gate_res = engine.evaluate(gaps=[], risks=[], human_decisions={"decisions": []})
     assert gate_res["human_decisions_applied"] == 0
-
-
-# =========================================================================
-# Tests for _compute_claim_hash and _get_directly_modified_claims
-# =========================================================================
-
-def test_compute_claim_hash():
-    """Test _compute_claim_hash produces consistent hash."""
-    from vibe_tracing.cli import _compute_claim_hash
-
-    claim = {"claim_id": "CLAIM-001", "related_task": "TASK-001"}
-    h1 = _compute_claim_hash(claim)
-    h2 = _compute_claim_hash(claim)
-    assert h1 == h2
-    assert len(h1) == 16
-
-    # Different claim -> different hash
-    claim2 = {"claim_id": "CLAIM-002", "related_task": "TASK-001"}
-    h3 = _compute_claim_hash(claim2)
-    assert h1 != h3
-
-
-def test_get_directly_modified_claims():
-    """Test _get_directly_modified_claims detects modified claims."""
-    from vibe_tracing.cli import _get_directly_modified_claims
-
-    old_claims = [
-        {"claim_id": "CLAIM-001", "content_hash": "abc123"},
-        {"claim_id": "CLAIM-002", "content_hash": "def456"},
-    ]
-    new_claims = [
-        {"claim_id": "CLAIM-001", "content_hash": "abc123"},  # unchanged
-        {"claim_id": "CLAIM-002", "content_hash": "xxx789"},  # changed
-        {"claim_id": "CLAIM-003", "content_hash": "new123"},  # new
-    ]
-
-    modified = _get_directly_modified_claims(old_claims, new_claims)
-    assert "CLAIM-002" in modified
-    assert "CLAIM-003" in modified
-    assert "CLAIM-001" not in modified
-
-
-def test_get_directly_modified_claims_empty():
-    """Test _get_directly_modified_claims with empty lists."""
-    from vibe_tracing.cli import _get_directly_modified_claims
-
-    assert _get_directly_modified_claims([], []) == set()
 
 
 # =========================================================================
@@ -1988,7 +1938,7 @@ def test_file_sha256_missing():
 
 def test_load_governance_boundary_with_data():
     """Test load_boundary with constraints_data provided."""
-    from vibe_tracing.governance import load_boundary
+    from vibe_tracing.infra.governance import load_boundary
 
     constraints_data = {
         "governance_boundary": {
@@ -2002,7 +1952,7 @@ def test_load_governance_boundary_with_data():
 
 def test_load_governance_boundary_no_data():
     """Test load_boundary with no constraints."""
-    from vibe_tracing.governance import load_boundary
+    from vibe_tracing.infra.governance import load_boundary
 
     result = load_boundary(Path("/nonexistent"))
     assert result == {"included_patterns": [], "excluded_patterns": []}
@@ -2010,7 +1960,7 @@ def test_load_governance_boundary_no_data():
 
 def test_is_in_governance_boundary():
     """Test is_in_scope checks file exclusions."""
-    from vibe_tracing.governance import is_in_scope
+    from vibe_tracing.infra.governance import is_in_scope
 
     boundary = {"excluded_patterns": ["vendor/**", "*.min.js"]}
 
@@ -2021,7 +1971,7 @@ def test_is_in_governance_boundary():
 
 def test_is_in_governance_boundary_empty():
     """Test is_in_scope with empty boundary."""
-    from vibe_tracing.governance import is_in_scope
+    from vibe_tracing.infra.governance import is_in_scope
 
     boundary = {}
     assert is_in_scope("any/file.py", boundary) is True
@@ -2029,7 +1979,7 @@ def test_is_in_governance_boundary_empty():
 
 def test_partition_by_governance_boundary():
     """Test partition_by_scope separates files."""
-    from vibe_tracing.governance import partition_by_scope
+    from vibe_tracing.infra.governance import partition_by_scope
 
     constraints_data = {
         "governance_boundary": {
@@ -2051,13 +2001,13 @@ def test_partition_by_governance_boundary():
 
 def test_resolve_hint_string():
     """Test resolve_hint returns plain strings."""
-    from vibe_tracing.hint_loader import resolve_hint
+    from vibe_tracing.infra.hint_loader import resolve_hint
     assert resolve_hint("simple string") == "simple string"
 
 
 def test_resolve_hint_dict():
     """Test resolve_hint resolves dict at given level."""
-    from vibe_tracing.hint_loader import resolve_hint
+    from vibe_tracing.infra.hint_loader import resolve_hint
 
     hint = {"level1": "basic", "level2": "detailed"}
     assert resolve_hint(hint, "level1") == "basic"
@@ -2068,7 +2018,7 @@ def test_resolve_hint_dict():
 
 def test_resolve_hint_non_string():
     """Test resolve_hint returns empty for non-string non-dict."""
-    from vibe_tracing.hint_loader import resolve_hint
+    from vibe_tracing.infra.hint_loader import resolve_hint
     assert resolve_hint(42) == ""
 
 
@@ -2608,7 +2558,7 @@ def test_get_staged_files_no_git(tmp_path):
 
 def test_load_hints():
     """Test load_hints loads hints from field_hints.json."""
-    from vibe_tracing.hint_loader import load_hints
+    from vibe_tracing.infra.hint_loader import load_hints
 
     hints = load_hints("action")
     assert isinstance(hints, dict)
@@ -2633,7 +2583,7 @@ def test_run_init_via_cli_no_name(tmp_path, capsys):
 def test_run_analyze_unexpected_error(tmp_path, capsys, monkeypatch):
     """Test run_analyze handles unexpected exceptions gracefully."""
     from vibe_tracing.cli import run_analyze
-    from vibe_tracing.raw_input_loader import RawInputLoader
+    from vibe_tracing.domain.raw_input_loader import RawInputLoader
 
     setup_mock_project(tmp_path)
 

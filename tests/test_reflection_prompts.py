@@ -2,7 +2,7 @@
 
 import json
 
-from vibe_tracing.reflection_prompts import (
+from vibe_tracing.domain.reflection_prompts import (
     check_uncovered_scopes,
     load_dimensions,
     render_reflection_prompts,

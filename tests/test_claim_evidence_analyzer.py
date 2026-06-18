@@ -6,9 +6,9 @@ import shutil
 from pathlib import Path
 import pytest
 
-from vibe_tracing.claim_loader import Claim
-from vibe_tracing.core.enums import CoverageStatus
-from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+from vibe_tracing.domain.claim_loader import Claim
+from vibe_tracing.infra.enums import CoverageStatus
+from vibe_tracing.analyzers.claim_evidence_analyzer import ClaimEvidenceAnalyzer
 
 
 @pytest.fixture
@@ -42,8 +42,6 @@ def test_successful_claim_validation(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
         code_refs=[
             str(code_file.relative_to(temp_project_dir.parent.parent))
@@ -77,8 +75,8 @@ def test_successful_claim_validation(temp_project_dir) -> None:
 
     analysis = res["claims_analysis"][0]
     assert analysis["claim_id"] == "CLAIM-VT-001"
-    assert analysis["status"] == CoverageStatus.COVERED.value
-    assert analysis["evidence_ids"] == ["EVIDENCE-VT-002"]
+    # Without test_refs, status is UNCLEAR
+    assert analysis["status"] == CoverageStatus.UNCLEAR.value
     assert len(analysis["mismatches"]) == 0
 
 
@@ -87,21 +85,17 @@ def test_self_referential_or_empty_evidence(temp_project_dir) -> None:
     Validate completed claim with empty or self-referential evidence refs.
     covers: AC-VT-002-01, AC-VT-002-02
     """
-    # Empty evidence_refs
+    # No test_refs -> status is UNCLEAR (not considered "completed")
     claim_empty = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=[],
         timestamp="2026-05-22T10:00:00Z",
     )
 
-    # Only self-referential evidence_refs
+    # Also no test_refs
     claim_self = Claim(
         claim_id="CLAIM-VT-002",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["CLAIM-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
     )
 
@@ -118,24 +112,16 @@ def test_self_referential_or_empty_evidence(temp_project_dir) -> None:
     analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
     res = analyzer.analyze([claim_empty, claim_self], evidences)
 
-    # 2 gaps should be generated
-    assert len(res["gaps"]) == 2
-    assert res["gaps"][0]["item_id"] == "CLAIM-VT-001"
-    assert res["gaps"][0]["item_type"] == "claim"
-    assert "only self-referential or empty" in res["gaps"][0]["reason"]
+    # No gaps from claim_evidence_analyzer (self-referential check removed with evidence_refs)
+    assert len(res["gaps"]) == 0
 
-    assert res["gaps"][1]["item_id"] == "CLAIM-VT-002"
-    assert "only self-referential or empty" in res["gaps"][1]["reason"]
+    # No risks - claims without test_refs are UNCLEAR, not "completed"
+    assert len(res["risks"]) == 0
 
-    # Risks generated with must severity
-    assert len(res["risks"]) == 2
-    assert res["risks"][0]["severity"] == "must"
-    assert "only self-referential or empty" in res["risks"][0]["description"]
-
-    # Analyzed status should be blocked
+    # Analyzed status should be unclear (no test_refs)
     assert len(res["claims_analysis"]) == 2
-    assert res["claims_analysis"][0]["status"] == CoverageStatus.BLOCKED.value
-    assert res["claims_analysis"][1]["status"] == CoverageStatus.BLOCKED.value
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.UNCLEAR.value
+    assert res["claims_analysis"][1]["status"] == CoverageStatus.UNCLEAR.value
 
 
 def test_references_non_existent_evidence(temp_project_dir) -> None:
@@ -146,8 +132,6 @@ def test_references_non_existent_evidence(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-999"],
         timestamp="2026-05-22T10:00:00Z",
     )
 
@@ -164,11 +148,8 @@ def test_references_non_existent_evidence(temp_project_dir) -> None:
     analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
     res = analyzer.analyze([claim], evidences)
 
-    assert len(res["risks"]) == 1
-    assert res["risks"][0]["severity"] == "must"
-    assert "references non-existent evidence" in res["risks"][0]["description"]
-
-    assert res["claims_analysis"][0]["status"] == CoverageStatus.LOW_CONFIDENCE.value
+    # No test_refs -> UNCLEAR status, no risks about non-existent evidence
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.UNCLEAR.value
 
 
 def test_references_non_compliant_evidence_status(temp_project_dir) -> None:
@@ -179,8 +160,6 @@ def test_references_non_compliant_evidence_status(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
     )
 
@@ -203,14 +182,8 @@ def test_references_non_compliant_evidence_status(temp_project_dir) -> None:
     analyzer = ClaimEvidenceAnalyzer(temp_project_dir.parent.parent)
     res = analyzer.analyze([claim], evidences)
 
-    assert len(res["risks"]) == 1
-    assert res["risks"][0]["severity"] == "must"
-    assert (
-        "references evidence EVIDENCE-VT-002 which has status 'violated'"
-        in res["risks"][0]["description"]
-    )
-
-    assert res["claims_analysis"][0]["status"] == CoverageStatus.VIOLATED.value
+    # No test_refs -> UNCLEAR status, no risks about evidence status
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.UNCLEAR.value
 
 
 def test_task_not_completed(temp_project_dir) -> None:
@@ -221,9 +194,8 @@ def test_task_not_completed(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
+        test_refs=["tests/test_feature.py"],
     )
 
     evidences = [
@@ -261,9 +233,8 @@ def test_task_non_existent(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-999",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
+        test_refs=["tests/test_feature.py"],
     )
 
     evidences = [
@@ -293,9 +264,8 @@ def test_ac_test_missing(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
+        test_refs=["tests/test_feature.py"],
     )
 
     evidences = [
@@ -336,9 +306,8 @@ def test_ac_test_failed(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
+        test_refs=["tests/test_feature.py"],
     )
 
     evidences = [
@@ -379,10 +348,9 @@ def test_code_ref_non_existent(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
         code_refs=["src/non_existent_file.py"],  # Non-existent path
+        test_refs=["tests/test_feature.py"],
     )
 
     evidences = [
@@ -431,10 +399,9 @@ def test_code_ref_outdated(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
         code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+        test_refs=["tests/test_feature.py"],
     )
 
     evidences = [
@@ -481,10 +448,9 @@ def test_claim_lookup_by_nodeid_and_source_path(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["tests/my_test.py::test_func"],
         timestamp="2026-05-22T10:00:00Z",
         code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+        test_refs=["tests/my_test.py::test_func"],
     )
 
     evidences = [
@@ -533,10 +499,9 @@ def test_claim_lookup_multi_matching_and_fail_fast(temp_project_dir) -> None:
     claim1 = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["tests/my_test.py::test_func"],
         timestamp="2026-05-22T10:00:00Z",
         code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+        test_refs=["tests/my_test.py::test_func"],
     )
 
     evidences1 = [
@@ -569,11 +534,8 @@ def test_claim_lookup_multi_matching_and_fail_fast(temp_project_dir) -> None:
     res1 = analyzer.analyze([claim1], evidences1)
     assert len(res1["risks"]) == 0
     assert res1["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
-    # Links both evidence IDs
-    assert sorted(res1["claims_analysis"][0]["evidence_ids"]) == [
-        "EVIDENCE-VT-002",
-        "EVIDENCE-VT-003",
-    ]
+    # evidence_ids is now always empty (evidence_refs removed from Claim)
+    assert res1["claims_analysis"][0]["evidence_ids"] == []
 
     # Test Case 2: One passes, one fails -> Fail-fast: claim becomes violated + Conflict warning
     evidences2 = [
@@ -604,19 +566,11 @@ def test_claim_lookup_multi_matching_and_fail_fast(temp_project_dir) -> None:
 
     res2 = analyzer.analyze([claim1], evidences2)
     assert res2["claims_analysis"][0]["status"] == CoverageStatus.VIOLATED.value
-    # There should be:
-    # 1. A risk for the failed evidence (must)
-    # 2. A risk for the conflict (should)
-    # 3. An additional risk for AC test coverage checks (must)
-    # Total = 3 risks
-    assert len(res2["risks"]) == 3
+    # There should be a risk for the failed test (has failed tests)
+    assert len(res2["risks"]) >= 1
     assert any(r["severity"] == "must" for r in res2["risks"])
-    assert any(r["severity"] == "should" for r in res2["risks"])
     assert any(
-        "conflicting statuses" in m for m in res2["claims_analysis"][0]["mismatches"]
-    )
-    assert any(
-        "which has status 'violated'" in m
+        "has failed tests" in m
         for m in res2["claims_analysis"][0]["mismatches"]
     )
 
@@ -639,10 +593,9 @@ def test_code_ref_outdated_skipped_in_ci(temp_project_dir, monkeypatch) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
         code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
+        test_refs=["tests/test_feature.py"],
     )
 
     evidences = [
@@ -692,8 +645,6 @@ def test_claim_test_refs_cover_ac(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
         test_refs=[str(test_file.relative_to(temp_project_dir.parent.parent))],
     )
@@ -745,8 +696,6 @@ def test_claim_test_refs_miss_ac_coverage(temp_project_dir) -> None:
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
         test_refs=[str(test_other.relative_to(root))],
     )
@@ -793,12 +742,11 @@ def test_claim_no_test_refs_skips_check(temp_project_dir) -> None:
     """
     Claim has no test_refs -> covers consistency check is skipped.
     No risk from this check should be raised.
+    Without test_refs, claim status is UNCLEAR (not considered completed).
     """
     claim = Claim(
         claim_id="CLAIM-VT-001",
         related_task="TASK-VT-001",
-        claimed_status=CoverageStatus.COVERED.value,
-        evidence_refs=["EVIDENCE-VT-002"],
         timestamp="2026-05-22T10:00:00Z",
         # No test_refs
     )
@@ -826,7 +774,8 @@ def test_claim_no_test_refs_skips_check(temp_project_dir) -> None:
     # No test_covers_mismatch risks should be raised
     covers_risks = [r for r in res["risks"] if r.get("risk_category") == "test_covers_mismatch"]
     assert len(covers_risks) == 0
-    assert res["claims_analysis"][0]["status"] == CoverageStatus.COVERED.value
+    # Without test_refs, status is UNCLEAR
+    assert res["claims_analysis"][0]["status"] == CoverageStatus.UNCLEAR.value
 
 
 # ============================================================================
@@ -850,8 +799,6 @@ class TestClaimInvalidation:
         claim = Claim(
             claim_id="CLAIM-VT-001",
             related_task="TASK-VT-001",
-            claimed_status=CoverageStatus.COVERED.value,
-            evidence_refs=["EVIDENCE-VT-002"],
             timestamp="2026-05-22T10:00:00Z",
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )
@@ -892,8 +839,6 @@ class TestClaimInvalidation:
         claim = Claim(
             claim_id="CLAIM-VT-001",
             related_task="TASK-VT-001",
-            claimed_status=CoverageStatus.COVERED.value,
-            evidence_refs=["EVIDENCE-VT-002"],
             timestamp="2026-05-22T10:00:00Z",
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )
@@ -924,8 +869,6 @@ class TestClaimInvalidation:
         claim = Claim(
             claim_id="CLAIM-VT-001",
             related_task="TASK-VT-001",
-            claimed_status=CoverageStatus.COVERED.value,
-            evidence_refs=["EVIDENCE-VT-002"],
             timestamp="2026-05-22T10:00:00Z",
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )
@@ -962,8 +905,6 @@ class TestClaimInvalidation:
         claim = Claim(
             claim_id="CLAIM-VT-001",
             related_task="TASK-VT-001",
-            claimed_status=CoverageStatus.COVERED.value,
-            evidence_refs=["EVIDENCE-VT-002"],
             timestamp="2026-05-22T10:00:00Z",
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )
@@ -984,8 +925,6 @@ class TestClaimInvalidation:
         claim = Claim(
             claim_id="CLAIM-VT-001",
             related_task="TASK-VT-001",
-            claimed_status=CoverageStatus.COVERED.value,
-            evidence_refs=["EVIDENCE-VT-002"],
             timestamp="2026-05-22T10:00:00Z",
             code_refs=[str(code_file.relative_to(temp_project_dir.parent.parent))],
         )

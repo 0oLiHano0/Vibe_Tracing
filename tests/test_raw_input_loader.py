@@ -7,8 +7,8 @@ All tests cover the pure file-loading layer only — no governance decisions.
 from pathlib import Path
 
 
-from vibe_tracing.core.enums import ErrorCode
-from vibe_tracing.raw_input_loader import RawInputManifest, RawInputLoader
+from vibe_tracing.infra.enums import ErrorCode
+from vibe_tracing.domain.raw_input_loader import RawInputManifest, RawInputLoader
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -269,7 +269,7 @@ def test_self_governance_rules_contract(tmp_path):
     import json
     from unittest.mock import patch
 
-    from vibe_tracing.architecture_change_proposal import (
+    from vibe_tracing.domain.architecture_change_proposal import (
         ArchitectureChangeProposalEngine,
     )
 
@@ -312,7 +312,7 @@ def test_self_governance_rules_contract(tmp_path):
     )
 
     with patch(
-        "vibe_tracing.architecture_change_proposal.git_show",
+        "vibe_tracing.domain.architecture_change_proposal.git_show",
         return_value=json.dumps(base_constraints),
     ):
         proposal = ArchitectureChangeProposalEngine(tmp_path)

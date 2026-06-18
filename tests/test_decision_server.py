@@ -38,8 +38,8 @@ def client():
 # Tests for src/vibe_tracing/decision_server.py  (strict validation)
 # ======================================================================
 
-from vibe_tracing.decision_server import app as src_app
-import vibe_tracing.decision_server as src_ds
+from vibe_tracing.domain.decision_server import app as src_app
+import vibe_tracing.domain.decision_server as src_ds
 
 
 @pytest.fixture(autouse=True)

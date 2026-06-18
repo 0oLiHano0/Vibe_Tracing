@@ -17,7 +17,7 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
         # Initialize operational logger (safe: if it fails, init continues)
         vt_logger = None
         try:
-            from vibe_tracing.operational_logger import OperationalLogger
+            from vibe_tracing.infra.operational_logger import OperationalLogger
             vt_logger = OperationalLogger.init(
                 run_id=f"INIT-{uuid.uuid4()}",
                 project_root=project_root,

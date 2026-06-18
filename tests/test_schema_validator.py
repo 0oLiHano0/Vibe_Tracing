@@ -11,10 +11,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from vibe_tracing.core.enums import ErrorCode
-from vibe_tracing.schema_validator import SchemaValidator, _build_hint
+from vibe_tracing.infra.enums import ErrorCode
+from vibe_tracing.infra.validation.schema_validator import SchemaValidator, _build_hint
 
-SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
 DOCS_DIR = Path(__file__).parent.parent / "docs"
 VIBETRACING_DIR = Path(__file__).parent.parent / ".vibetracing"
 
@@ -225,7 +225,7 @@ def test_validator_does_not_import_analysis_modules(validator):
 
     code = """
 import sys
-import vibe_tracing.schema_validator
+import vibe_tracing.infra.validation.schema_validator
 forbidden = ["traceability", "gate", "dashboard", "analysis"]
 violations = [
     name for name in sys.modules.keys()
@@ -246,9 +246,7 @@ sys.exit(0)
 
 
 # ---------------------------------------------------------------------------
-# Coverage: _build_hint fallback English hints (lines 89-112)
-# These branches are reached when the schema has no "description" field
-# for the failing validator, so the Chinese hint path is skipped.
+# 覆盖: _build_hint 兜底中文修复建议（原英文兜底已改为中文）
 # ---------------------------------------------------------------------------
 
 
@@ -265,78 +263,78 @@ def _make_mock_error(validator, validator_value, path_parts, schema=None, instan
 
 
 def test_build_hint_required_fallback():
-    """_build_hint returns English fallback for 'required' validator with no description."""
+    """_build_hint 对 'required' validator 返回中文兜底建议。"""
     err = _make_mock_error("required", ["name", "age"], ["project"])
     hint = _build_hint(err)
-    assert "Add the required field(s)" in hint
+    assert "请添加必填字段" in hint
     assert "name" in hint
 
 
 def test_build_hint_type_fallback():
-    """_build_hint returns English fallback for 'type' validator with no description."""
+    """_build_hint 对 'type' validator 返回中文兜底建议。"""
     err = _make_mock_error("type", "string", ["schema_version"])
     hint = _build_hint(err)
-    assert "must be of type" in hint
+    assert "必须为类型" in hint
     assert "string" in hint
 
 
 def test_build_hint_enum_fallback():
-    """_build_hint returns English fallback for 'enum' validator with no description."""
+    """_build_hint 对 'enum' validator 返回中文兜底建议。"""
     err = _make_mock_error("enum", ["must", "should", "could"], ["tasks", 0, "priority"])
     hint = _build_hint(err)
-    assert "must be one of" in hint
+    assert "必须为以下值之一" in hint
 
 
 def test_build_hint_pattern_fallback():
-    """_build_hint returns English fallback for 'pattern' validator with no description.
-    Note: the pattern+task_id/related_task Chinese hints are separate branches (lines 62-66).
-    This test uses a path that does NOT end with task_id/related_task to reach the fallback.
+    """_build_hint 对 'pattern' validator 返回中文兜底建议。
+    注意：pattern+task_id/related_task 有专门的中文分支（第 62-66 行），
+    本测试使用不以 task_id/related_task 结尾的路径来触达兜底逻辑。
     """
     err = _make_mock_error("pattern", "^[A-Z]+$", ["project", "project_id"])
     hint = _build_hint(err)
-    assert "must match pattern" in hint
+    assert "必须匹配正则" in hint
 
 
 def test_build_hint_min_length_fallback():
-    """_build_hint returns English fallback for 'minLength' validator."""
+    """_build_hint 对 'minLength' validator 返回中文兜底建议。"""
     err = _make_mock_error("minLength", 3, ["project", "name"])
     hint = _build_hint(err)
-    assert "minimum length" in hint
+    assert "最小长度" in hint
 
 
 def test_build_hint_max_length_fallback():
-    """_build_hint returns English fallback for 'maxLength' validator."""
+    """_build_hint 对 'maxLength' validator 返回中文兜底建议。"""
     err = _make_mock_error("maxLength", 100, ["project", "name"])
     hint = _build_hint(err)
-    assert "maximum length" in hint
+    assert "最大长度" in hint
 
 
 def test_build_hint_minimum_fallback():
-    """_build_hint returns English fallback for 'minimum' validator."""
+    """_build_hint 对 'minimum' validator 返回中文兜底建议。"""
     err = _make_mock_error("minimum", 0, ["config", "retry_count"])
     hint = _build_hint(err)
-    assert "must be >=" in hint or "must be ≥" in hint
+    assert "必须 >=" in hint
 
 
 def test_build_hint_maximum_fallback():
-    """_build_hint returns English fallback for 'maximum' validator."""
+    """_build_hint 对 'maximum' validator 返回中文兜底建议。"""
     err = _make_mock_error("maximum", 100, ["config", "retry_count"])
     hint = _build_hint(err)
-    assert "must be <=" in hint or "must be ≤" in hint
+    assert "必须 <=" in hint
 
 
 def test_build_hint_additional_properties_fallback():
-    """_build_hint returns English fallback for 'additionalProperties' validator."""
+    """_build_hint 对 'additionalProperties' validator 返回中文兜底建议。"""
     err = _make_mock_error("additionalProperties", False, ["project"])
     hint = _build_hint(err)
-    assert "Remove unexpected additional properties" in hint
+    assert "请移除" in hint and "多余属性" in hint
 
 
 def test_build_hint_unknown_validator_fallback():
-    """_build_hint returns generic English fallback for an unknown validator type."""
+    """_build_hint 对未知 validator 类型返回中文兜底建议。"""
     err = _make_mock_error("customValidator", "something", ["project", "field"])
     hint = _build_hint(err)
-    assert "Fix the value at" in hint
+    assert "请修复" in hint
     assert "test error" in hint
 
 

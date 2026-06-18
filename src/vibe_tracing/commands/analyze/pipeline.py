@@ -6,28 +6,24 @@ import json
 import sys
 import time
 import uuid
-from dataclasses import asdict
 from pathlib import Path
 from typing import Optional, Set, Tuple
 
-from vibe_tracing.schema_validator import SchemaValidator
-from vibe_tracing.evidence_index_builder import EvidenceIndexBuilder
-from vibe_tracing.merge_gate_engine import MergeGateEngine
-from vibe_tracing.context import UnifiedContext
+from vibe_tracing.domain.evidence_index_builder import EvidenceIndexBuilder
+from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+from vibe_tracing.domain.context import UnifiedContext
 
 from vibe_tracing.commands.common import (
     _GateBlocked,
     _load_context,
     _get_staged_files,
     _determine_affected_items,
-    _get_directly_modified_claims,
 )
 from vibe_tracing.commands.analyze.gates import _run_integrity_gates
 from vibe_tracing.commands.analyze.tools import _execute_tools, _archive_claims
 from vibe_tracing.commands.analyze.analysis import (
     _run_analyzers,
     _run_claim_tests,
-    _load_human_decisions,
 )
 from vibe_tracing.commands.analyze.reports import _build_report_document
 from vibe_tracing.commands.analyze.output import _render_output
@@ -88,7 +84,7 @@ def _auto_generate_claim_from_staged(
         json.dump([claim], f, indent=2, ensure_ascii=False)
         f.write("\n")
 
-    from vibe_tracing.claim_loader import Claim
+    from vibe_tracing.domain.claim_loader import Claim
     claim_obj = Claim(
         claim_id=claim["claim_id"],
         related_task=claim["related_task"],
@@ -148,27 +144,14 @@ def _run_analysis_phase(
         staged_items.update(affected_acs)
         staged_items.update(affected_reqs)
 
-        # Build directly_staged_items: only items whose definitions were
-        # directly modified in this commit.
-        claims_file_rel = ".vibetracing/claims/current.json"
-        if claims_file_rel in staged_files:
-            from vibe_tracing.git_utils import git_show
-            try:
-                old_json = git_show("HEAD", ".vibetracing/claims/current.json", project_root)
-                old_claims = json.loads(old_json) if old_json else []
-            except Exception:
-                old_claims = []
-            new_claims_raw = []
-            for c in claims_list:
-                if hasattr(c, '__dict__'):
-                    new_claims_raw.append(c.__dict__)
-                elif isinstance(c, dict):
-                    new_claims_raw.append(c)
-                else:
-                    new_claims_raw.append(asdict(c) if hasattr(c, '__dataclass_fields__') else {})
-            directly_staged_claims = _get_directly_modified_claims(old_claims, new_claims_raw)
-        else:
-            directly_staged_claims = set()
+        # 新架构：基于 staged 文件路径判断哪些 claim 被修改
+        # 一任务一文件模式下，staged 的 CLAIM-*.json 文件即为被修改的 claim
+        directly_staged_claims = set()
+        for f in staged_files:
+            if f.startswith(".vibetracing/claims/CLAIM-") and f.endswith(".json"):
+                # 从文件名提取 claim_id（去掉路径前缀和 .json 后缀）
+                claim_id = f.replace(".vibetracing/claims/", "").replace(".json", "")
+                directly_staged_claims.add(claim_id)
         directly_staged_items = set(directly_staged_claims)
 
     return active_gaps, active_risks, evidence_index, staged_items, directly_staged_items
@@ -187,7 +170,7 @@ def _run_gate_evaluation(
 ) -> dict:
     """Run MergeGateEngine and return gate result dict."""
     if human_decisions is None:
-        human_decisions = _load_human_decisions(project_root)
+        human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
     gate_engine = MergeGateEngine(project_root)
     gate_res = gate_engine.evaluate(
         active_gaps, active_risks, compliance_res,
@@ -271,17 +254,12 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             2: Gate decision is 'blocked'.
     """
     try:
-        schemas_dir = project_root / "schemas"
-        if not schemas_dir.is_dir():
-            schemas_dir = Path(__file__).parents[2] / "schemas"
-        validator = SchemaValidator(schemas_dir)
-
         # Initialize operational logger
-        from vibe_tracing.operational_logger import OperationalLogger
+        from vibe_tracing.infra.operational_logger import OperationalLogger
         _run_start_t = time.perf_counter()
 
         _t_ctx = time.perf_counter()
-        ctx, raw_loader, validator = _load_context(project_root, schemas_dir, validator)
+        ctx, raw_loader = _load_context(project_root)
         prd_res = ctx.prd
         is_draft = (prd_res.status == "draft")
         config_prefix = ctx.config_prefix
@@ -399,7 +377,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
         staged_files = _get_staged_files(project_root)
 
-        human_decisions = _load_human_decisions(project_root)
+        human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
 
         _t_analyzers = time.perf_counter()
         merged_gaps, final_risks, compliance_res, claim_res, req_res = _run_analyzers(

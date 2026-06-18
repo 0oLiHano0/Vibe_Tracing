@@ -12,7 +12,7 @@ import pytest
 from pathlib import Path
 from jsonschema import validate, ValidationError
 
-SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
 
 
 def load_schema(name: str) -> dict:

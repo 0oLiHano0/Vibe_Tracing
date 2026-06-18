@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vibe_tracing.operational_logger import OperationalLogger
+from vibe_tracing.infra.operational_logger import OperationalLogger
 
 
 @pytest.fixture(autouse=True)
@@ -43,9 +43,9 @@ class TestGitUtilsExceptionLogging:
     """git_utils functions must log exceptions before returning None/False."""
 
     def test_git_show_logs_on_subprocess_error(self, mock_logger, tmp_path):
-        from vibe_tracing.git_utils import git_show
+        from vibe_tracing.infra.git_utils import git_show
 
-        with patch("vibe_tracing.git_utils.subprocess.run", side_effect=OSError("no git")):
+        with patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=OSError("no git")):
             result = git_show("HEAD", "file.txt", tmp_path)
 
         assert result is None
@@ -55,9 +55,9 @@ class TestGitUtilsExceptionLogging:
         assert "git_show" in call_kwargs[0][1]
 
     def test_git_last_commit_touching_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.git_utils import git_last_commit_touching
+        from vibe_tracing.infra.git_utils import git_last_commit_touching
 
-        with patch("vibe_tracing.git_utils.subprocess.run", side_effect=OSError("no git")):
+        with patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=OSError("no git")):
             result = git_last_commit_touching("file.txt", tmp_path)
 
         assert result is None
@@ -65,9 +65,9 @@ class TestGitUtilsExceptionLogging:
         assert "git_last_commit_touching" in mock_logger.exception.call_args[0][1]
 
     def test_git_file_modified_after_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.git_utils import git_file_modified_after
+        from vibe_tracing.infra.git_utils import git_file_modified_after
 
-        with patch("vibe_tracing.git_utils.subprocess.run", side_effect=OSError("no git")):
+        with patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=OSError("no git")):
             result = git_file_modified_after("file.txt", "abc123", tmp_path)
 
         assert result is False
@@ -75,9 +75,9 @@ class TestGitUtilsExceptionLogging:
         assert "git_file_modified_after" in mock_logger.exception.call_args[0][1]
 
     def test_git_has_uncommitted_changes_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.git_utils import git_has_uncommitted_changes
+        from vibe_tracing.infra.git_utils import git_has_uncommitted_changes
 
-        with patch("vibe_tracing.git_utils.subprocess.run", side_effect=OSError("no git")):
+        with patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=OSError("no git")):
             result = git_has_uncommitted_changes("file.txt", tmp_path)
 
         assert result is False
@@ -93,7 +93,7 @@ class TestEvidenceIndexBuilderExceptionLogging:
     """EvidenceIndexBuilder must log when loading old evidence index fails."""
 
     def test_build_logs_on_corrupt_evidence_index(self, mock_logger, tmp_path):
-        from vibe_tracing.evidence_index_builder import EvidenceIndexBuilder
+        from vibe_tracing.domain.evidence_index_builder import EvidenceIndexBuilder
 
         # Create a corrupt evidence_index.json
         output_dir = tmp_path / "output"
@@ -160,7 +160,7 @@ class TestHintLoaderExceptionLogging:
     """load_hints must log when hints file is missing or corrupt."""
 
     def test_load_hints_logs_on_missing_file(self, mock_logger, tmp_path):
-        from vibe_tracing import hint_loader
+        from vibe_tracing.infra import hint_loader
 
         # Clear module cache
         hint_loader._cache.clear()
@@ -175,7 +175,7 @@ class TestHintLoaderExceptionLogging:
         assert "gate_decision" in call_args[1]
 
     def test_load_hints_logs_on_corrupt_json(self, mock_logger, tmp_path):
-        from vibe_tracing import hint_loader
+        from vibe_tracing.infra import hint_loader
 
         hint_loader._cache.clear()
         bad_file = tmp_path / "field_hints.json"
@@ -197,10 +197,10 @@ class TestGhostCodeReconcilerExceptionLogging:
     """GhostCodeReconciler must log git subprocess failures."""
 
     def test_get_staged_files_logs_on_subprocess_error(self, mock_logger, tmp_path):
-        from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
         reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
+        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
             result = reconciler._get_staged_files()
 
         assert result == set()
@@ -208,7 +208,7 @@ class TestGhostCodeReconcilerExceptionLogging:
         assert mock_logger.warning.call_args[0][0] == "git_subprocess_failed"
 
     def test_get_staged_claims_logs_on_subprocess_error(self, mock_logger, tmp_path):
-        from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
         # Create claims dir
         claims_dir = tmp_path / ".vibetracing" / "claims"
@@ -216,14 +216,14 @@ class TestGhostCodeReconcilerExceptionLogging:
         (claims_dir / "current.json").write_text("[]", encoding="utf-8")
 
         reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
+        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
             result = reconciler._get_staged_claims()
 
         assert result == []
         mock_logger.warning.assert_called()
 
     def test_get_staged_claims_logs_on_json_error(self, mock_logger, tmp_path):
-        from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
         claims_dir = tmp_path / ".vibetracing" / "claims"
         claims_dir.mkdir(parents=True)
@@ -232,7 +232,7 @@ class TestGhostCodeReconcilerExceptionLogging:
         reconciler = GhostCodeReconciler(tmp_path)
         mock_result = MagicMock()
         mock_result.stdout = "NOT JSON"
-        with patch("vibe_tracing.ghost_code_reconciler.subprocess.run", return_value=mock_result):
+        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", return_value=mock_result):
             result = reconciler._get_staged_claims()
 
         assert result == []
@@ -240,10 +240,10 @@ class TestGhostCodeReconcilerExceptionLogging:
         assert mock_logger.exception.call_args[0][0] == "claims_parse_failed"
 
     def test_get_staged_tasks_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
         reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
+        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
             result = reconciler._get_staged_tasks()
 
         assert result is None
@@ -251,10 +251,10 @@ class TestGhostCodeReconcilerExceptionLogging:
         assert mock_logger.warning.call_args[0][0] == "task_list_load_failed"
 
     def test_get_head_tasks_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
         reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
+        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
             result = reconciler._get_head_tasks()
 
         assert result is None
@@ -262,10 +262,10 @@ class TestGhostCodeReconcilerExceptionLogging:
         assert mock_logger.warning.call_args[0][0] == "task_list_load_failed"
 
     def test_prd_staging_check_logs_debug(self, mock_logger, tmp_path):
-        from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
         reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.ghost_code_reconciler.subprocess.run", side_effect=subprocess.CalledProcessError(1, "git")):
+        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=subprocess.CalledProcessError(1, "git")):
             # _check_ac_freshness calls subprocess.run to check if PRD is staged
             # We need to mock _get_staged_tasks and _get_head_tasks too
             with patch.object(reconciler, "_get_staged_tasks", return_value={"tasks": [{"task_id": "T1", "related_acceptance_criteria": ["AC-VT-1-1"]}]}), \
@@ -277,10 +277,10 @@ class TestGhostCodeReconcilerExceptionLogging:
         assert "prd_not_staged" in debug_calls
 
     def test_get_staged_prd_ac_ids_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.ghost_code_reconciler import GhostCodeReconciler
+        from vibe_tracing.domain.ghost_code_reconciler import GhostCodeReconciler
 
         reconciler = GhostCodeReconciler(tmp_path)
-        with patch("vibe_tracing.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
+        with patch("vibe_tracing.domain.ghost_code_reconciler.subprocess.run", side_effect=FileNotFoundError("no git")):
             result = reconciler._get_staged_prd_ac_ids()
 
         assert result == set()
@@ -296,7 +296,7 @@ class TestToolEvidenceAdapterExceptionLogging:
     """ToolExecutionEngine must log JSON parse failures from tool outputs."""
 
     def test_parse_pytest_output_logs_on_json_report_failure(self, mock_logger, tmp_path):
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         engine = ToolExecutionEngine(
             language_tool_matrix={"python": {"test": {"default_command": "pytest {test_path} --json-report-file={output_path}", "output_format": "pytest_json"}}},
@@ -316,7 +316,7 @@ class TestToolEvidenceAdapterExceptionLogging:
         assert "tool_output_parse_failed" in debug_calls
 
     def test_parse_pytest_output_logs_on_stdout_parse_failure(self, mock_logger, tmp_path):
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         engine = ToolExecutionEngine(
             language_tool_matrix={"python": {"test": {"default_command": "pytest {test_path}", "output_format": "pytest_json"}}},
@@ -331,7 +331,7 @@ class TestToolEvidenceAdapterExceptionLogging:
         assert "tool_output_parse_failed" in debug_calls
 
     def test_parse_ruff_output_logs_on_json_failure(self, mock_logger, tmp_path):
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         engine = ToolExecutionEngine(
             language_tool_matrix={"python": {"lint": {"default_command": "ruff check", "output_format": "ruff_json"}}},
@@ -346,7 +346,7 @@ class TestToolEvidenceAdapterExceptionLogging:
         assert "tool_output_parse_failed" in debug_calls
 
     def test_parse_mypy_output_logs_on_json_failure(self, mock_logger, tmp_path):
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         engine = ToolExecutionEngine(
             language_tool_matrix={"python": {"type_check": {"default_command": "mypy --json-report report.json", "output_format": "mypy_json"}}},
@@ -366,7 +366,7 @@ class TestToolEvidenceAdapterExceptionLogging:
         assert "tool_output_parse_failed" in debug_calls
 
     def test_parse_bandit_output_logs_on_file_failure(self, mock_logger, tmp_path):
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         engine = ToolExecutionEngine(
             language_tool_matrix={"python": {"security": {"default_command": "bandit -o output.json", "output_format": "bandit_json"}}},
@@ -386,7 +386,7 @@ class TestToolEvidenceAdapterExceptionLogging:
         assert "tool_output_parse_failed" in debug_calls
 
     def test_parse_bandit_output_logs_on_stdout_failure(self, mock_logger, tmp_path):
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         engine = ToolExecutionEngine(
             language_tool_matrix={"python": {"security": {"default_command": "bandit", "output_format": "bandit_json"}}},
@@ -401,7 +401,7 @@ class TestToolEvidenceAdapterExceptionLogging:
         assert "tool_output_parse_failed" in debug_calls
 
     def test_measure_source_coverage_logs_on_baseline_failure(self, mock_logger, tmp_path):
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         engine = ToolExecutionEngine(
             language_tool_matrix={"python": {}},

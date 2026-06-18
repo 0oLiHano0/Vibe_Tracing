@@ -4,7 +4,7 @@ Unit and integration tests for the Dashboard Renderer (TASK-VT-019).
 
 import json
 from pathlib import Path
-from vibe_tracing.dashboard_renderer import DashboardRenderer
+from vibe_tracing.domain.dashboard_renderer import DashboardRenderer
 from vibe_tracing.cli import main
 from test_cli_analyze import setup_mock_project
 import pytest
@@ -12,8 +12,8 @@ import pytest
 @pytest.fixture(autouse=True)
 def mock_tool_execution(monkeypatch):
     import shutil
-    from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
-    from vibe_tracing.core.enums import CoverageStatus
+    from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
+    from vibe_tracing.infra.enums import CoverageStatus
     import json
 
     # Mock shutil.which so the pre-flight dependency check passes

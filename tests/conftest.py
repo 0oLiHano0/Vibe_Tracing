@@ -14,7 +14,7 @@ def _patch_loader():
     by scanning .vibetracing/tool_reports/ (build() expects this attribute
     but RawInputManifest does not define it).
     """
-    from vibe_tracing.raw_input_loader import RawInputLoader
+    from vibe_tracing.domain.raw_input_loader import RawInputLoader
 
     original_load = RawInputLoader.load
 
@@ -40,7 +40,7 @@ def _patch_loader():
 @pytest.fixture(autouse=True)
 def reset_project_prefix():
     """Reset the global project prefix to 'VT' before and after every test to ensure isolation."""
-    from vibe_tracing.core import ids
+    from vibe_tracing.infra import validation as ids
     ids.set_project_prefix("VT")
     yield
     ids.set_project_prefix("VT")

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Set
 
-from vibe_tracing.context import UnifiedContext
+from vibe_tracing.domain.context import UnifiedContext
 from vibe_tracing.commands.common import _GateBlocked
 
 
@@ -47,8 +47,8 @@ def _execute_tools(
     if not (config_language and ltm):
         return []
 
-    from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
-    from vibe_tracing.tool_resolver import ToolResolver
+    from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
+    from vibe_tracing.infra.tool_resolver import ToolResolver
 
     # Pre-flight dependency check
     required_binaries = set()

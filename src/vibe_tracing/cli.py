@@ -34,8 +34,6 @@ from vibe_tracing.commands.common import (
     _get_staged_files,
     _determine_affected_items,
     _file_sha256,
-    _compute_claim_hash,
-    _get_directly_modified_claims,
 )
 from vibe_tracing.commands.finalize import (
     _validate_constraints_change,

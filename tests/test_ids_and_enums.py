@@ -6,8 +6,8 @@ Every test function declares which AC IDs it covers in its docstring.
 
 import pytest
 
-from vibe_tracing.core.ids import validate_id, get_id_type
-from vibe_tracing.core.enums import CoverageStatus, Severity, ErrorCode
+from vibe_tracing.infra.validation import validate_id, get_id_type
+from vibe_tracing.infra.enums import CoverageStatus, Severity, ErrorCode
 
 
 # ---------------------------------------------------------------------------

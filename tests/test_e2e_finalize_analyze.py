@@ -146,32 +146,19 @@ def _make_task_list():
 
 
 def _make_claims(
-    evidence_refs=None,
     test_refs=None,
     code_refs=None,
-    claimed_status="covered",
 ):
     """Return a minimal valid claims/current.json list.
 
     Args:
-        evidence_refs: Override evidence references.  Defaults to
-            ``["EVIDENCE-VT-003"]`` which is the expected tool-evidence ID
-            when there is 1 task + 1 claim + 0 code_refs (the task gets
-            EVIDENCE-VT-001, the claim gets EVIDENCE-VT-002, and tool
-            evidence starts at EVIDENCE-VT-003).
         test_refs: Test file paths referenced by the claim.
         code_refs: Code file paths referenced by the claim.
-        claimed_status: The claim's status.  Use "covered" for completed
-            claims or "unclear" for claims without external evidence.
     """
-    if evidence_refs is None:
-        evidence_refs = ["EVIDENCE-VT-003"]
     return [
         {
             "claim_id": "CLAIM-VT-001",
             "related_task": "TASK-VT-001",
-            "claimed_status": claimed_status,
-            "evidence_refs": evidence_refs,
             "timestamp": "2026-06-03T00:00:00Z",
             "code_refs": code_refs if code_refs is not None else [],
             "test_refs": test_refs if test_refs is not None else [
@@ -341,7 +328,7 @@ class TestHappyPath:
             return MagicMock(returncode=0, stdout="", stderr="")
 
         with patch(
-            "vibe_tracing.tool_evidence_adapter.subprocess.run",
+            "vibe_tracing.domain.tool_evidence_adapter.subprocess.run",
             side_effect=mock_subprocess,
         ):
             exit_code = run_analyze(tmp_path, output_dir)
@@ -432,10 +419,8 @@ class TestLowConfidenceBlocksGate:
             tmp_path,
             constraints_data=constraints_data,
             claims_data=_make_claims(
-                evidence_refs=[],
                 test_refs=[],
                 code_refs=[],
-                claimed_status="unclear",
             ),
             create_test_file=False,
         )
@@ -448,7 +433,7 @@ class TestLowConfidenceBlocksGate:
         # Mock _get_staged_files to return empty so the claim's credibility
         # risk is treated as "current" (full-analysis mode, not pre-commit).
         with patch(
-            "vibe_tracing.tool_evidence_adapter.subprocess.run",
+            "vibe_tracing.domain.tool_evidence_adapter.subprocess.run",
         ) as mock_run, patch(
             "vibe_tracing.cli._get_staged_files",
             return_value=set(),
@@ -498,7 +483,7 @@ class TestToolExecutionFailure:
             return MagicMock(returncode=1, stdout="", stderr="FAILED")
 
         with patch(
-            "vibe_tracing.tool_evidence_adapter.subprocess.run",
+            "vibe_tracing.domain.tool_evidence_adapter.subprocess.run",
             side_effect=mock_subprocess_fail,
         ):
             exit_code = run_analyze(tmp_path, output_dir)

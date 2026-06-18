@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vibe_tracing.operational_logger import OperationalLogger
+from vibe_tracing.infra.operational_logger import OperationalLogger
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +53,7 @@ class TestHintFallbackLogging:
     def test_resolve_hint_string_returns_directly(self, tmp_path):
         """String hints are returned directly without logging."""
         _init_logger(tmp_path)
-        from vibe_tracing.hint_loader import resolve_hint
+        from vibe_tracing.infra.hint_loader import resolve_hint
 
         result = resolve_hint("hello world", "level1")
         assert result == "hello world"
@@ -63,7 +63,7 @@ class TestHintFallbackLogging:
     def test_resolve_hint_dict_returns_correct_level(self, tmp_path):
         """Dict hints return the requested level without logging."""
         _init_logger(tmp_path)
-        from vibe_tracing.hint_loader import resolve_hint
+        from vibe_tracing.infra.hint_loader import resolve_hint
 
         result = resolve_hint({"level1": "L1", "level2": "L2"}, "level2")
         assert result == "L2"
@@ -73,7 +73,7 @@ class TestHintFallbackLogging:
     def test_resolve_hint_dict_fallback_logs_empty(self, tmp_path):
         """When dict hint resolves to empty, a DEBUG log is emitted."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.hint_loader import resolve_hint
+        from vibe_tracing.infra.hint_loader import resolve_hint
 
         result = resolve_hint({"level2": "L2"}, "level1")
         assert result == ""
@@ -86,7 +86,7 @@ class TestHintFallbackLogging:
     def test_resolve_hint_non_string_non_dict_logs_type(self, tmp_path):
         """When hint value is non-empty, non-dict, non-string, a DEBUG log is emitted."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.hint_loader import resolve_hint
+        from vibe_tracing.infra.hint_loader import resolve_hint
 
         result = resolve_hint(42, "level1")
         assert result == ""
@@ -98,7 +98,7 @@ class TestHintFallbackLogging:
     def test_resolve_hint_none_no_log(self, tmp_path):
         """None hint returns empty string without logging (falsy, non-dict, non-string)."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.hint_loader import resolve_hint
+        from vibe_tracing.infra.hint_loader import resolve_hint
 
         result = resolve_hint(None, "level1")
         assert result == ""
@@ -109,7 +109,7 @@ class TestHintFallbackLogging:
     def test_resolve_hint_empty_dict_logs_fallback(self, tmp_path):
         """Empty dict hint resolves to empty and logs fallback."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.hint_loader import resolve_hint
+        from vibe_tracing.infra.hint_loader import resolve_hint
 
         result = resolve_hint({}, "level1")
         assert result == ""
@@ -124,16 +124,16 @@ class TestToolEvidenceAdapterHintConsistency:
 
     def test_adapter_imports_from_hint_loader(self):
         """tool_evidence_adapter must import resolve_hint from hint_loader."""
-        import vibe_tracing.tool_evidence_adapter as adapter
-        from vibe_tracing.hint_loader import resolve_hint as loader_resolve
+        import vibe_tracing.domain.tool_evidence_adapter as adapter
+        from vibe_tracing.infra.hint_loader import resolve_hint as loader_resolve
 
         # The module-level resolve_hint should be the same function
         assert adapter.resolve_hint is loader_resolve
 
     def test_adapter_loads_hints_from_hint_loader(self):
         """tool_evidence_adapter must use load_hints from hint_loader."""
-        import vibe_tracing.tool_evidence_adapter as adapter
-        from vibe_tracing.hint_loader import load_hints
+        import vibe_tracing.domain.tool_evidence_adapter as adapter
+        from vibe_tracing.infra.hint_loader import load_hints
 
         # _tool_hints should be populated
         assert isinstance(adapter._tool_hints, dict)
@@ -149,7 +149,7 @@ class TestRequirementTaskAnalyzerLogging:
     def test_analyze_logs_debug_result(self, tmp_path):
         """analyze() must emit a DEBUG log with input size and gap count."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
+        from vibe_tracing.analyzers.requirement_task_analyzer import RequirementTaskAnalyzer
 
         analyzer = RequirementTaskAnalyzer()
 
@@ -175,7 +175,7 @@ class TestAcTestAnalyzerLogging:
     def test_analyze_logs_debug_result(self, tmp_path):
         """analyze() must emit a DEBUG log with input size and gap count."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
+        from vibe_tracing.analyzers.ac_test_analyzer import AcTestAnalyzer
 
         analyzer = AcTestAnalyzer()
 
@@ -204,7 +204,7 @@ class TestClaimEvidenceAnalyzerLogging:
     def test_analyze_logs_debug_result(self, tmp_path):
         """analyze() must emit a DEBUG log with input size and gap count."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+        from vibe_tracing.analyzers.claim_evidence_analyzer import ClaimEvidenceAnalyzer
 
         analyzer = ClaimEvidenceAnalyzer(tmp_path)
         result = analyzer.analyze([], [])
@@ -228,7 +228,7 @@ class TestMergeGateEngineLogging:
     def test_evaluate_logs_human_decisions_lookup(self, tmp_path):
         """evaluate() must log human decisions lookup counts at DEBUG level."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         result = engine.evaluate(
@@ -250,7 +250,7 @@ class TestMergeGateEngineLogging:
     def test_evaluate_logs_intermediate_state(self, tmp_path):
         """evaluate() must log intermediate gate state before final decision."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         result = engine.evaluate(gaps=[], risks=[], prd_status="active")
@@ -265,7 +265,7 @@ class TestMergeGateEngineLogging:
     def test_evaluate_logs_claim_existence_check(self, tmp_path):
         """evaluate() must log claim existence check details."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         result = engine.evaluate(
@@ -285,7 +285,7 @@ class TestMergeGateEngineLogging:
     def test_evaluate_logs_ac_coverage_check(self, tmp_path):
         """evaluate() must log AC coverage check details."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         result = engine.evaluate(
@@ -311,7 +311,7 @@ class TestArchitectureComplianceCheckerLogging:
     def test_check_logs_module_boundary(self, tmp_path):
         """check() must log module boundary check details."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+        from vibe_tracing.domain.architecture_compliance_checker import ArchitectureComplianceChecker
 
         # Create minimal constraints
         constraints = {
@@ -368,7 +368,7 @@ class TestEvidenceIndexBuildLogging:
     def test_build_logs_evidence_stats(self, tmp_path):
         """build() must log evidence build statistics."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.evidence_index_builder import EvidenceIndexBuilder
+        from vibe_tracing.domain.evidence_index_builder import EvidenceIndexBuilder
 
         builder = EvidenceIndexBuilder(tmp_path)
 
@@ -417,7 +417,7 @@ class TestMergeGatePerItemLogging:
     def test_must_gap_eval_log_emitted(self, tmp_path):
         """_process_must_gaps must emit gate_gap_eval for each AC gap item."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         gaps = [
@@ -444,7 +444,7 @@ class TestMergeGatePerItemLogging:
     def test_must_gap_eval_human_resolved(self, tmp_path):
         """gate_gap_eval must show human_resolved status when human decision matches."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         gaps = [
@@ -473,7 +473,7 @@ class TestMergeGatePerItemLogging:
     def test_must_risk_eval_log_emitted(self, tmp_path):
         """_process_must_risks must emit gate_risk_eval for each risk item."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         risks = [
@@ -499,7 +499,7 @@ class TestMergeGatePerItemLogging:
     def test_must_risk_eval_accepted(self, tmp_path):
         """gate_risk_eval must show accepted status when human accepts risk."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         risks = [
@@ -530,7 +530,7 @@ class TestMergeGatePerItemLogging:
     def test_gate_ac_check_log_emitted(self, tmp_path):
         """check_ac_coverage must emit gate_ac_check for each AC checked."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         tasks = [
@@ -558,7 +558,7 @@ class TestMergeGatePerItemLogging:
     def test_gate_ac_check_covered_ac(self, tmp_path):
         """gate_ac_check must show covered=True when AC has passing test."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.merge_gate_engine import MergeGateEngine
+        from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 
         engine = MergeGateEngine(tmp_path)
         tasks = [
@@ -608,7 +608,7 @@ class TestComplianceImportLogging:
     def test_module_boundary_logs_allowed_imports(self, tmp_path):
         """Module boundary check must log allowed cross-module imports."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+        from vibe_tracing.domain.architecture_compliance_checker import ArchitectureComplianceChecker
 
         # Create a minimal source file with an import
         src_dir = tmp_path / "src" / "vibe_tracing"
@@ -617,7 +617,7 @@ class TestComplianceImportLogging:
 
         # Create a file in MOD-VT-002 that imports from MOD-VT-003
         (src_dir / "raw_input_loader.py").write_text(
-            "from vibe_tracing.schema_validator import validate\n"
+            "from vibe_tracing.infra.schema_validator import validate\n"
         )
         # Create the imported module file
         (src_dir / "schema_validator.py").write_text("def validate(): pass\n")
@@ -658,7 +658,7 @@ class TestComplianceImportLogging:
     def test_module_boundary_logs_violation_imports(self, tmp_path):
         """Module boundary check must log forbidden import violations."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+        from vibe_tracing.domain.architecture_compliance_checker import ArchitectureComplianceChecker
 
         src_dir = tmp_path / "src" / "vibe_tracing"
         src_dir.mkdir(parents=True, exist_ok=True)
@@ -706,7 +706,7 @@ class TestComplianceImportLogging:
     def test_dep_vt002_logs_dashboard_check(self, tmp_path):
         """DEP-VT-002 must log what was checked in dashboard.html."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+        from vibe_tracing.domain.architecture_compliance_checker import ArchitectureComplianceChecker
 
         # Create a dashboard.html with inline content
         dash_dir = tmp_path / "output"
@@ -730,7 +730,7 @@ class TestComplianceImportLogging:
     def test_dep_vt002_logs_external_url_violation(self, tmp_path):
         """DEP-VT-002 must log external URLs found in dashboard."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
+        from vibe_tracing.domain.architecture_compliance_checker import ArchitectureComplianceChecker
 
         dash_dir = tmp_path / "output"
         dash_dir.mkdir(parents=True, exist_ok=True)
@@ -760,7 +760,7 @@ class TestRequirementMappingLogging:
     def test_req_mapping_log_emitted(self, tmp_path):
         """RequirementTaskAnalyzer must emit req_mapping for each requirement."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
+        from vibe_tracing.analyzers.requirement_task_analyzer import RequirementTaskAnalyzer
 
         analyzer = RequirementTaskAnalyzer()
 
@@ -782,7 +782,7 @@ class TestRequirementMappingLogging:
     def test_req_mapping_with_task_evidence(self, tmp_path):
         """req_mapping must include task IDs when task evidence exists."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
+        from vibe_tracing.analyzers.requirement_task_analyzer import RequirementTaskAnalyzer
 
         analyzer = RequirementTaskAnalyzer()
 
@@ -818,7 +818,7 @@ class TestAcMappingLogging:
     def test_ac_mapping_log_emitted(self, tmp_path):
         """AcTestAnalyzer must emit ac_mapping for each AC."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
+        from vibe_tracing.analyzers.ac_test_analyzer import AcTestAnalyzer
 
         analyzer = AcTestAnalyzer()
 
@@ -843,7 +843,7 @@ class TestAcMappingLogging:
     def test_ac_mapping_with_passing_test(self, tmp_path):
         """ac_mapping must show covered=True when passing test exists."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
+        from vibe_tracing.analyzers.ac_test_analyzer import AcTestAnalyzer
 
         analyzer = AcTestAnalyzer()
 
@@ -891,7 +891,7 @@ class TestClaimMappingLogging:
     def test_claim_mapping_log_emitted(self, tmp_path):
         """ClaimEvidenceAnalyzer must emit claim_mapping for each claim."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+        from vibe_tracing.analyzers.claim_evidence_analyzer import ClaimEvidenceAnalyzer
 
         analyzer = ClaimEvidenceAnalyzer(tmp_path)
 
@@ -918,7 +918,7 @@ class TestClaimMappingLogging:
     def test_claim_mapping_valid_status(self, tmp_path):
         """claim_mapping must show valid status when evidence is complete."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+        from vibe_tracing.analyzers.claim_evidence_analyzer import ClaimEvidenceAnalyzer
 
         analyzer = ClaimEvidenceAnalyzer(tmp_path)
 
@@ -969,7 +969,7 @@ class TestSubprocessOutputLogging:
     def test_subprocess_output_log_emitted(self, tmp_path):
         """_run_subprocess must emit subprocess_output with stdout/stderr preview."""
         logger = _init_logger(tmp_path)
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         # Create a minimal language_tool_matrix
         matrix = {

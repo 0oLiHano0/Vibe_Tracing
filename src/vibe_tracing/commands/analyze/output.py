@@ -5,7 +5,7 @@ Output rendering: gate summary, agent actions, and reflection prompts.
 import sys
 from typing import List, Optional, Set
 
-from vibe_tracing.context import UnifiedContext
+from vibe_tracing.domain.context import UnifiedContext
 from vibe_tracing.commands.analyze.formatting import _format_agent_actions
 from vibe_tracing.commands.analyze.reports import (
     _build_report_document,
@@ -90,8 +90,8 @@ def _print_reflection_prompts(
     project_root,
 ) -> None:
     """Print reflection prompts based on analysis results."""
-    from vibe_tracing.reflection_prompts import render_reflection_prompts
-    from vibe_tracing.governance import load_boundary, partition_by_scope
+    from vibe_tracing.domain.reflection_prompts import render_reflection_prompts
+    from vibe_tracing.infra.governance import load_boundary, partition_by_scope
 
     claims_list = ctx.claims_list
     manifest = ctx.manifest

@@ -2,9 +2,9 @@
 Unit tests for RequirementTaskAnalyzer (TASK-VT-011).
 """
 
-from vibe_tracing.prd_parser import Requirement
-from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
-from vibe_tracing.core.enums import CoverageStatus
+from vibe_tracing.domain.prd_parser import Requirement
+from vibe_tracing.analyzers.requirement_task_analyzer import RequirementTaskAnalyzer
+from vibe_tracing.infra.enums import CoverageStatus
 
 
 def test_full_coverage() -> None:

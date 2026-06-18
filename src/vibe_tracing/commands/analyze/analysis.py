@@ -12,10 +12,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from vibe_tracing.context import UnifiedContext
+from vibe_tracing.domain.context import UnifiedContext
 from vibe_tracing.commands.common import _determine_affected_items
 from vibe_tracing.commands.analyze.tools import _check_staged_extensions
-from vibe_tracing.operational_logger import OperationalLogger
+from vibe_tracing.infra.operational_logger import OperationalLogger
 
 
 def _run_analyzers(
@@ -26,11 +26,11 @@ def _run_analyzers(
     human_decisions: Optional[dict] = None,
 ) -> Tuple[list, list, Optional[dict], dict, dict]:
     """Run all analyzers and return (merged_gaps, final_risks, compliance_res, claim_res, req_res)."""
-    from vibe_tracing.architecture_compliance_checker import ArchitectureComplianceChecker
-    from vibe_tracing.traceability.requirement_task_analyzer import RequirementTaskAnalyzer
-    from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
-    from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
-    from vibe_tracing.risk_advisor import RiskAdvisor
+    from vibe_tracing.domain.architecture_compliance_checker import ArchitectureComplianceChecker
+    from vibe_tracing.analyzers.requirement_task_analyzer import RequirementTaskAnalyzer
+    from vibe_tracing.analyzers.ac_test_analyzer import AcTestAnalyzer
+    from vibe_tracing.analyzers.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+    from vibe_tracing.domain.risk_advisor import RiskAdvisor
 
     prd_res = ctx.prd
     claims_list = ctx.claims_list

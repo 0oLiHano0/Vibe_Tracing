@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from vibe_tracing.architecture_compliance_checker import (
+from vibe_tracing.domain.architecture_compliance_checker import (
     ArchitectureComplianceChecker,
     _is_stale_acceptance,
 )
@@ -218,7 +218,7 @@ def test_forbidden_module_import_violation(temp_workspace):
     tmp_path, constraints_data = temp_workspace
     src_dir = tmp_path / "src/vibe_tracing"
     (src_dir / "raw_input_loader.py").write_text(
-        "import vibe_tracing.traceability.requirement_task_analyzer\n", encoding="utf-8"
+        "import vibe_tracing.analyzers.requirement_task_analyzer\n", encoding="utf-8"
     )
 
     checker = ArchitectureComplianceChecker(project_root=tmp_path)
@@ -249,7 +249,7 @@ def test_allowed_module_import_violation(temp_workspace):
     # schema_validator (MOD-VT-003) is allowed to call []
     # If it imports raw_input_loader, it violates the whitelist
     (src_dir / "schema_validator.py").write_text(
-        "import vibe_tracing.raw_input_loader\n", encoding="utf-8"
+        "import vibe_tracing.domain.raw_input_loader\n", encoding="utf-8"
     )
 
     checker = ArchitectureComplianceChecker(project_root=tmp_path)

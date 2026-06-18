@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
 from vibe_tracing.cli import run_init, run_analyze
-from vibe_tracing.prd_parser import PrdParser
-from vibe_tracing.task_loader import TaskLoader
-from vibe_tracing.schema_validator import SchemaValidator
-from vibe_tracing.core import ids
+from vibe_tracing.domain.prd_parser import PrdParser
+from vibe_tracing.domain.task_loader import TaskLoader
+from vibe_tracing.infra.validation.schema_validator import SchemaValidator
+from vibe_tracing.infra import validation as ids
 
 
 def test_dynamic_prefix_init_and_validation(tmp_path):
@@ -53,14 +53,14 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
     assert ids.validate_id("REQ-VT-123")[0] is False  # Legacy VT should now fail for this run
 
     # 3. Verify task_list schema validation passes
-    schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+    schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
     validator = SchemaValidator(schemas_dir)
 
     val_task = validator.validate_file(task_list_path, "task_list")
     assert val_task.is_valid is True, f"Failed task list validation: {val_task.message}"
 
     # 4. Load tasks using TaskLoader and verify no errors
-    task_loader = TaskLoader(schemas_dir)
+    task_loader = TaskLoader()
     task_res = task_loader.load_and_validate(task_list_path, prd_res)
     assert task_res.is_valid is True, f"Failed to load task list: {task_res.errors}"
     assert len(task_res.tasks) == 0  # Legacy templates -9999 are silently ignored in TaskLoader!

@@ -19,12 +19,12 @@ def test_analyze_draft_phase_guidance(tmp_path, capsys):
     docs_dir.mkdir(parents=True, exist_ok=True)
     (tmp_path / "output").mkdir(parents=True, exist_ok=True)
     (tmp_path / ".vibetracing" / "prompts").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "schemas").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "infra" / "validation" / "schemas").mkdir(parents=True, exist_ok=True)
 
     # Copy real schemas to mock project so schema validator can load them
-    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
     for schema_file in real_schemas.glob("*.json"):
-        (tmp_path / "schemas" / schema_file.name).write_text(
+        (tmp_path / "infra" / "validation" / "schemas" / schema_file.name).write_text(
             schema_file.read_text(encoding="utf-8"), encoding="utf-8"
         )
 

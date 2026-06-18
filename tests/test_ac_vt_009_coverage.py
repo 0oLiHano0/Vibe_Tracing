@@ -19,9 +19,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from vibe_tracing.cli import main, run_init, run_finalize, run_analyze
-from vibe_tracing.core.enums import CoverageStatus, ErrorCode
-from vibe_tracing.merge_gate_engine import MergeGateEngine
-from vibe_tracing.tool_evidence_adapter import ToolEvidenceCandidate, ToolExecutionEngine
+from vibe_tracing.infra.enums import CoverageStatus, ErrorCode
+from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate, ToolExecutionEngine
 
 
 # ── Shared helpers ──────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ def _make_analyze_project(base: Path, *,
     (base / "src" / "vibe_tracing" / "core").mkdir(parents=True, exist_ok=True)
 
     # Copy real schemas
-    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+    real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
     for schema_file in real_schemas.glob("*.json"):
         (base / "schemas" / schema_file.name).write_text(
             schema_file.read_text(encoding="utf-8")
@@ -230,8 +230,6 @@ def _make_analyze_project(base: Path, *,
             {
                 "claim_id": "CLAIM-VT-001",
                 "related_task": "TASK-VT-001",
-                "claimed_status": "covered",
-                "evidence_refs": ["EVIDENCE-VT-003"],
                 "timestamp": "2030-05-22T12:00:00Z",
                 "code_refs": ["src/vibe_tracing/core/ids.py#L1-L10"],
                 "test_refs": [],
@@ -263,7 +261,7 @@ class TestACVT00903SubagentAuditability:
         them auditable. This verifies the schema structure supports the auditability
         requirement.
         """
-        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
         schema_path = schemas_dir / "architecture_constraints.schema.json"
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
@@ -487,8 +485,6 @@ class TestACVT00909VTExecutesVerificationTools:
             {
                 "claim_id": "CLAIM-VT-001",
                 "related_task": "TASK-VT-001",
-                "claimed_status": "covered",
-                "evidence_refs": ["EVIDENCE-VT-003"],
                 "timestamp": "2030-05-22T12:00:00Z",
                 "code_refs": ["src/vibe_tracing/core/ids.py"],
                 "test_refs": ["tests/test_feature.py"],
@@ -521,7 +517,7 @@ class TestACVT00909VTExecutesVerificationTools:
             return MagicMock(returncode=0, stdout="", stderr="")
 
         with patch(
-            "vibe_tracing.tool_evidence_adapter.subprocess.run",
+            "vibe_tracing.domain.tool_evidence_adapter.subprocess.run",
             side_effect=mock_subprocess,
         ):
             exit_code = main(["analyze", "--project-root", str(tmp_path)])
@@ -552,7 +548,7 @@ class TestACVT00909VTExecutesVerificationTools:
         (tmp_path / "schemas").mkdir(parents=True, exist_ok=True)
 
         # Copy schemas
-        real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+        real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
         for sf in real_schemas.glob("*.json"):
             (tmp_path / "schemas" / sf.name).write_text(
                 sf.read_text(encoding="utf-8")
@@ -630,7 +626,7 @@ class TestACVT00910PreciseErrorFeedback:
         )
 
         with patch(
-            "vibe_tracing.tool_evidence_adapter.subprocess.run",
+            "vibe_tracing.domain.tool_evidence_adapter.subprocess.run",
             side_effect=FileNotFoundError("No such file or directory: pytest"),
         ):
             candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
@@ -669,7 +665,7 @@ class TestACVT00910PreciseErrorFeedback:
         )
 
         with patch(
-            "vibe_tracing.tool_evidence_adapter.subprocess.run",
+            "vibe_tracing.domain.tool_evidence_adapter.subprocess.run",
             side_effect=subprocess.TimeoutExpired(cmd="pytest", timeout=120),
         ):
             candidates = engine.execute_tool(tool_category="test", path="tests/test_foo.py")
@@ -694,7 +690,7 @@ class TestACVT00910PreciseErrorFeedback:
         (tmp_path / "output").mkdir(parents=True, exist_ok=True)
         (tmp_path / "schemas").mkdir(parents=True, exist_ok=True)
 
-        real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+        real_schemas = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
         for sf in real_schemas.glob("*.json"):
             (tmp_path / "schemas" / sf.name).write_text(
                 sf.read_text(encoding="utf-8")
@@ -1014,8 +1010,8 @@ class TestACVT00916ClaimTestRefsCoverAC:
         claim's related AC, a must-level risk with risk_category='test_covers_mismatch'
         must be raised.
         """
-        from vibe_tracing.claim_loader import Claim
-        from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+        from vibe_tracing.domain.claim_loader import Claim
+        from vibe_tracing.analyzers.claim_evidence_analyzer import ClaimEvidenceAnalyzer
 
         # Create test files
         tests_dir = tmp_path / "tests"
@@ -1028,8 +1024,6 @@ class TestACVT00916ClaimTestRefsCoverAC:
         claim = Claim(
             claim_id="CLAIM-VT-001",
             related_task="TASK-VT-001",
-            claimed_status="covered",
-            evidence_refs=["EVIDENCE-VT-002"],
             timestamp="2026-05-22T10:00:00Z",
             test_refs=["tests/test_other.py"],
         )
@@ -1076,14 +1070,12 @@ class TestACVT00916ClaimTestRefsCoverAC:
         When a claim has no test_refs, the covers consistency check is skipped
         (no test_covers_mismatch risk).
         """
-        from vibe_tracing.claim_loader import Claim
-        from vibe_tracing.traceability.claim_evidence_analyzer import ClaimEvidenceAnalyzer
+        from vibe_tracing.domain.claim_loader import Claim
+        from vibe_tracing.analyzers.claim_evidence_analyzer import ClaimEvidenceAnalyzer
 
         claim = Claim(
             claim_id="CLAIM-VT-001",
             related_task="TASK-VT-001",
-            claimed_status="covered",
-            evidence_refs=["EVIDENCE-VT-002"],
             timestamp="2026-05-22T10:00:00Z",
             # No test_refs
         )
@@ -1278,9 +1270,9 @@ class TestACVT00907ZeroPromptGuidance:
         in the JSON Schema, prefixed with 【修复指南】, guiding the AI Agent to
         correct input without human prompting.
         """
-        from vibe_tracing.schema_validator import SchemaValidator
+        from vibe_tracing.infra.validation.schema_validator import SchemaValidator
 
-        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
         validator = SchemaValidator(schemas_dir=schemas_dir)
 
         # Create an invalid task_list.json missing required fields in a task
@@ -1314,9 +1306,9 @@ class TestACVT00907ZeroPromptGuidance:
         in the JSON Schema, the hint must include that Chinese description
         so the AI Agent receives actionable guidance.
         """
-        from vibe_tracing.schema_validator import SchemaValidator
+        from vibe_tracing.infra.validation.schema_validator import SchemaValidator
 
-        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
         validator = SchemaValidator(schemas_dir=schemas_dir)
 
         # Create task_list with task missing 'title' field specifically
@@ -1355,9 +1347,9 @@ class TestACVT00907ZeroPromptGuidance:
         When a task_id violates the pattern constraint, the validation hint
         must include guidance about the correct ID format.
         """
-        from vibe_tracing.schema_validator import SchemaValidator
+        from vibe_tracing.infra.validation.schema_validator import SchemaValidator
 
-        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+        schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
         validator = SchemaValidator(schemas_dir=schemas_dir)
 
         invalid_task_list = {

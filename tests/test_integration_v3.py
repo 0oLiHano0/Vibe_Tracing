@@ -18,8 +18,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from vibe_tracing.cli import _run_claim_tests, _archive_claims
-from vibe_tracing.merge_gate_engine import MergeGateEngine
-from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
+from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
 
 
 # ---------------------------------------------------------------------------
@@ -194,7 +194,7 @@ class TestArchiveClaims:
 class TestExecuteAllLanguageFilter:
     """Integration test for execute_all filtering by file extension."""
 
-    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
     def test_execute_all_filters_by_language(
         self, mock_run: MagicMock, tmp_path: Path
     ) -> None:
@@ -238,7 +238,7 @@ class TestExecuteAllLanguageFilter:
         source_paths = [c.source_path for c in candidates]
         assert "docs/readme.md" not in source_paths
 
-    @patch("vibe_tracing.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
     def test_execute_all_skips_all_non_matching(
         self, mock_run: MagicMock, tmp_path: Path
     ) -> None:

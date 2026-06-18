@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch, PropertyMock
 
 import pytest
 
-from vibe_tracing.operational_logger import OperationalLogger
+from vibe_tracing.infra.operational_logger import OperationalLogger
 
 
 @pytest.fixture(autouse=True)
@@ -104,7 +104,7 @@ class TestPipelinePhaseTiming:
             mock_ctx.config = config
             mock_ctx.claims_list = []
             mock_ctx.manifest = None
-            mock_load.return_value = (mock_ctx, MagicMock(), MagicMock())
+            mock_load.return_value = (mock_ctx, MagicMock())
 
             # The function will fail early because manifest is None,
             # but the logger should still be initialized
@@ -140,7 +140,7 @@ class TestPipelinePhaseTiming:
             mock_ctx.config = config
             mock_ctx.claims_list = []
             mock_ctx.manifest = None
-            mock_load.return_value = (mock_ctx, MagicMock(), MagicMock())
+            mock_load.return_value = (mock_ctx, MagicMock())
 
             run_analyze(tmp_path)
 
@@ -170,7 +170,7 @@ class TestPipelinePhaseTiming:
             mock_ctx.config = config
             mock_ctx.claims_list = []
             mock_ctx.manifest = None
-            mock_load.return_value = (mock_ctx, MagicMock(), MagicMock())
+            mock_load.return_value = (mock_ctx, MagicMock())
 
             run_analyze(tmp_path)
 
@@ -196,7 +196,7 @@ class TestSubprocessTiming:
 
     def test_run_subprocess_logs_subprocess_exec_event(self, tmp_path):
         """_run_subprocess must log a subprocess_exec event with timing."""
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         # Initialize the logger so OperationalLogger.get() works
         logger = OperationalLogger.init("TEST-RUN", tmp_path, level="DEBUG")
@@ -238,7 +238,7 @@ class TestSubprocessTiming:
 
     def test_run_subprocess_logs_command_name_only(self, tmp_path):
         """The command field should contain just the tool name, not full args."""
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         logger = OperationalLogger.init("TEST-RUN", tmp_path, level="DEBUG")
 
@@ -260,7 +260,7 @@ class TestSubprocessTiming:
 
     def test_run_subprocess_logs_nonzero_exit_code(self, tmp_path):
         """Non-zero exit codes must be recorded in the log."""
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         logger = OperationalLogger.init("TEST-RUN", tmp_path, level="DEBUG")
 
@@ -281,7 +281,7 @@ class TestSubprocessTiming:
 
     def test_run_subprocess_timing_is_reasonable(self, tmp_path):
         """duration_ms should be a non-negative integer representing real time."""
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         logger = OperationalLogger.init("TEST-RUN", tmp_path, level="DEBUG")
 
@@ -303,7 +303,7 @@ class TestSubprocessTiming:
 
     def test_run_subprocess_stdout_stderr_sizes(self, tmp_path):
         """stdout_size and stderr_size must reflect actual output sizes."""
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         logger = OperationalLogger.init("TEST-RUN", tmp_path, level="DEBUG")
 
@@ -421,7 +421,7 @@ class TestNullLoggerSafety:
 
     def test_subprocess_timing_works_without_logger_init(self, tmp_path):
         """_run_subprocess should not crash when OperationalLogger.init() was never called."""
-        from vibe_tracing.tool_evidence_adapter import ToolExecutionEngine
+        from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
 
         matrix = {"python": {}}
         engine = ToolExecutionEngine(

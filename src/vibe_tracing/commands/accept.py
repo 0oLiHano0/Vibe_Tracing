@@ -22,7 +22,7 @@ def run_accept(project_root: Path, rule_id: str, accepted_by: str = "human") -> 
     # Initialize operational logger (safe: if it fails, accept continues)
     vt_logger = None
     try:
-        from vibe_tracing.operational_logger import OperationalLogger
+        from vibe_tracing.infra.operational_logger import OperationalLogger
         vt_logger = OperationalLogger.init(
             run_id=f"ACCEPT-{uuid.uuid4()}",
             project_root=project_root,

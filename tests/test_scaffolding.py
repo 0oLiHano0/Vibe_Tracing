@@ -72,8 +72,8 @@ def test_run_init_creates_scaffolding(tmp_path):
     assert config_data["prd_hash"] == ""
 
     # Verify both generated files pass schema validation
-    from vibe_tracing.schema_validator import SchemaValidator
-    schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
+    from vibe_tracing.infra.validation.schema_validator import SchemaValidator
+    schemas_dir = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
     validator = SchemaValidator(schemas_dir)
     
     val_task = validator.validate_file(tasks_path, "task_list")

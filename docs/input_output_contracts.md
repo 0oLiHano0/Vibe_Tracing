@@ -13,12 +13,13 @@ Vibe Tracing 运作于清晰划分的配置与治理路径之上，允许项目�
     *   `architecture_change_log.md`：记录架构约束演进的历史与合理性说明的自然语言日志。
 *   **`/.vibetracing/`**：VT 引擎的专属沙箱运行目录（通常被加入到 `.gitignore` 中以防止频繁干扰提交）。
     *   `config.json`：核心配置文件，显式定义项目文件到 VT 引擎的映射路径。
-    *   `claims/current.json`：AI 代理填报的开发事实自证声明审计账本。
+    *   `claims/CLAIM-*.json`：AI 代理填报的开发事实自证声明审计账本（多文件模式，每个 Claim 独立一个文件）。
     *   `architecture_constraints` 的基线状态现在通过 Git 历史自动追溯，不再依赖物理基线文件。
     *   `claude_bootstrap/`：Claude Code 自举环境的权限、子代理与技能配置。
     *   `tool_reports/`：存放开发工具（如 `pytest_report.json`、`coverage.json`、`ruff_report.json` 等）在分析前输出的原始报告文件。
     *   `output/`：在 `vibe-tracing analyze` 分析流中自动生成的审计产物目录，包含：
-        *   `evidence_index.json`：汇总并规范化后的所有证据项索引。
+        *   `evidences/test_results.json`：测试执行结果汇总。
+        *   `evidences/coverage_reports.json`：代码覆盖率报告汇总。
         *   `traceability_report.json`：最终生成的评估报告，包含需求覆盖分析、缺口（Gaps）、风险（Risks）和门禁裁决决定（Gate Decisions）。
         *   `dashboard.html`：支持离线直接打开、内嵌数据的单体可视化 Dashboard 面板。
         *   `run_metadata.json`：分析运行元数据，包含本次运行的统计数据和输入输出路径。
@@ -77,8 +78,8 @@ Vibe Tracing 严格执行**系统门禁决策**与**人类最终决策**的分�
 | **`MOD`** | `^MOD-VT-\d+$` | `MOD-VT-002` | `architecture_constraints.json` | 模块架构编号，对应物理模块或逻辑层级。 |
 | **`TASK`** | `^TASK-VT-\d+$` | `TASK-VT-005` | `task_list.json` | 原子开发任务编号，最小开发单元。 |
 | **`DOD`** | `^DOD-VT-\d+-\d+$` | `DOD-VT-005-01` | `task_list.json` | 完成定义编号，隶属于对应任务。第一段为 TASK 序号。 |
-| **`CLAIM`** | `^CLAIM-VT-\d+$` | `CLAIM-VT-005` | `claims/current.json` | 代理完成声明自证编号，推荐与关联任务 ID 一致。 |
-| **`EVIDENCE`** | `^EVIDENCE-VT-\d+$` | `EVIDENCE-VT-001` | `evidence_index.json` | 编译证据编号，由引擎在分析时动态生成。 |
+| **`CLAIM`** | `^CLAIM-VT-\d+$` | `CLAIM-VT-005` | `claims/CLAIM-*.json` | 代理完成声明自证编号，推荐与关联任务 ID 一致。 |
+| **`EVIDENCE`** | `^EVIDENCE-VT-\d+$` | `EVIDENCE-VT-001` | `evidences/test_results.json` | 编译证据编号，由引擎在分析时动态生成。 |
 | **`RISK`** | `^RISK-VT-\d+$` | `traceability_report.json` | 风险判定编号，由引擎检测异常时生成。 |
 | **`GATE`** | `^GATE-VT-\d+$` | `GATE-VT-001` | `architecture_constraints.json` | 质量门禁红线编号，不可违反的硬性合并拦截规则。 |
 | **`FORBID`** | `^FORBID-VT-\d+$` | `FORBID-VT-001` | `architecture_constraints.json` | 禁用规约编号，禁止调用的库、代码或外部资源。 |

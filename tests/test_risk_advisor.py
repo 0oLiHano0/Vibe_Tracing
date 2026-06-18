@@ -4,7 +4,7 @@ Unit tests for RiskAdvisor (TASK-VT-016).
 
 from pathlib import Path
 
-from vibe_tracing.risk_advisor import RiskAdvisor
+from vibe_tracing.domain.risk_advisor import RiskAdvisor
 
 
 def test_enrich_claim_risks():

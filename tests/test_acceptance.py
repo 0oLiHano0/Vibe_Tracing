@@ -144,8 +144,6 @@ def _make_claims(test_refs=None, code_refs=None):
         {
             "claim_id": "CLAIM-VT-001",
             "related_task": "TASK-VT-001",
-            "claimed_status": "covered",
-            "evidence_refs": ["EVIDENCE-VT-003"],
             "timestamp": "2026-06-11T00:00:00Z",
             "code_refs": code_refs if code_refs is not None else [],
             "test_refs": test_refs if test_refs is not None else [],
@@ -271,9 +269,9 @@ class TestFullAnalyzePipeline:
                 shutil.copy2(src, docs / fname)
 
         # Copy VT project schemas for validation
-        src_schemas = VT_PROJECT_ROOT / "src" / "vibe_tracing" / "schemas"
+        src_schemas = VT_PROJECT_ROOT / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
         if src_schemas.is_dir():
-            shutil.copytree(src_schemas, tmp_path / "schemas")
+            shutil.copytree(src_schemas, tmp_path / "infra" / "validation" / "schemas")
 
         # Create claims directory (empty claims)
         claims_dir = tmp_path / ".vibetracing" / "claims"

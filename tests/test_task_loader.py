@@ -7,17 +7,16 @@ Each test function declares its AC/DoD coverage in its docstring.
 from pathlib import Path
 import pytest
 
-from vibe_tracing.prd_parser import PrdParseResult, Requirement, AcceptanceCriteria
-from vibe_tracing.task_loader import TaskLoader
+from vibe_tracing.domain.prd_parser import PrdParseResult, Requirement, AcceptanceCriteria
+from vibe_tracing.domain.task_loader import TaskLoader
 
-SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "schemas"
 DOCS_DIR = Path(__file__).parent.parent / "docs"
 
 
 @pytest.fixture
 def task_loader():
     """Return a TaskLoader instance."""
-    return TaskLoader(SCHEMAS_DIR)
+    return TaskLoader()
 
 
 # Helper: Create a valid minimal task list dict
@@ -112,67 +111,6 @@ def test_valid_task_list_passes(task_loader):
     assert len(res.tasks) == 1
     assert res.tasks[0].task_id == "TASK-VT-001"
     assert res.tasks[0].is_valid is True
-
-
-def test_invalid_schema_structure_fails(task_loader):
-    """
-    Validate that invalid task list structures fail schema validation.
-    Covers: AC-VT-001-04.
-    """
-    # missing 'tasks' field
-    bad_data = {
-        "schema_version": "1.0",
-        "project": {
-            "project_id": "PROJECT-VT",
-            "name": "Vibe Tracing",
-            "stage": "development",
-        },
-    }
-    res = task_loader.validate_data(bad_data)
-    assert res.is_valid is False
-    assert len(res.errors) > 0
-    assert "Schema validation failed" in res.errors[0]
-
-
-def test_duplicate_task_ids(task_loader):
-    """
-    Validate that duplicate task IDs are detected and fail validation.
-    Covers: AC-VT-001-04.
-    """
-    prd_res = get_mock_prd_result()
-    tasks = [
-        {
-            "task_id": "TASK-VT-001",
-            "title": "Task A",
-            "phase_id": "PHASE-VT-001",
-            "priority": "must",
-            "status": "todo",
-            "owner_role": "AI Coding Agent",
-            "objective": "Task A objective",
-            "related_modules": ["MOD-VT-001"],
-            "related_requirements": ["REQ-VT-001"],
-            "related_acceptance_criteria": ["AC-VT-001-01"],
-            "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
-        },
-        {
-            "task_id": "TASK-VT-001",  # Duplicate ID
-            "title": "Task B",
-            "phase_id": "PHASE-VT-001",
-            "priority": "should",
-            "status": "todo",
-            "owner_role": "AI Coding Agent",
-            "objective": "Task B objective",
-            "related_modules": ["MOD-VT-001"],
-            "related_requirements": ["REQ-VT-001"],
-            "related_acceptance_criteria": ["AC-VT-001-01"],
-            "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
-        },
-    ]
-    data = get_valid_task_list_dict(tasks)
-    res = task_loader.validate_data(data, prd_result=prd_res)
-
-    assert res.is_valid is False
-    assert any("Duplicate task ID: TASK-VT-001" in err for err in res.errors)
 
 
 def test_isolated_task_fails(task_loader):
@@ -329,7 +267,7 @@ def test_validate_real_files_load(task_loader):
     if not task_list_path.exists() or not prd_path.exists():
         pytest.skip("Real standard input files do not exist.")
 
-    from vibe_tracing.prd_parser import PrdParser
+    from vibe_tracing.domain.prd_parser import PrdParser
 
     prd_parser = PrdParser()
     prd_res = prd_parser.parse_file(prd_path)

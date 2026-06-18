@@ -2,9 +2,9 @@
 Unit tests for AcTestAnalyzer (TASK-VT-012).
 """
 
-from vibe_tracing.prd_parser import Requirement, AcceptanceCriteria
-from vibe_tracing.traceability.ac_test_analyzer import AcTestAnalyzer
-from vibe_tracing.core.enums import CoverageStatus
+from vibe_tracing.domain.prd_parser import Requirement, AcceptanceCriteria
+from vibe_tracing.analyzers.ac_test_analyzer import AcTestAnalyzer
+from vibe_tracing.infra.enums import CoverageStatus
 
 
 def test_successful_test_coverage() -> None:

@@ -23,7 +23,7 @@
 | Phase 3 | 编排层移动 + 证据构建重构 | ✅ 已完成 | commands/→cli/、EvidenceBuilder 重构、Claims 多文件、Schema 交接 |
 | Phase 4 | 门禁引擎 SQL 化 | ✅ 已完成 | evaluate 签名 11→6，静态方法删除，SQL 查询替代 |
 | Phase 5 | 幽灵代码检测 SQL 化 | ✅ 已完成 | git show 清零、SQL 查询替代、Gate 2.5 简化、三原则复核通过 |
-| Phase 6 | 流水线集成 | 🔄 进行中 | pipeline.py 重构 + DB 集成 + 旧机制删除 |
+| Phase 6 | 流水线集成 | ✅ 已完成 | DB 统一 + 旧机制删除 + evidence 格式迁移 |
 | Phase 7 | Dashboard 模板迁移 + 清理 | ❌ 未开始 | dashboard 未适配新 evidence 格式 |
 | Phase 8 | 历史债务清理（current.json 残留 + 向后兼容代码） | ✅ 已完成 | 53 文件修改，删除旧架构核心组件，957 测试通过 |
 
@@ -477,36 +477,36 @@ def load_tasks(conn, tasks):
 
 **Task 1：删除旧机制（_archive_claims + _run_claim_tests）**
 
-- [ ] `cli/analyze/tools.py`：删除 `_archive_claims` 函数（lines 265-325）
-- [ ] `cli/analyze/analysis.py`：删除 `_run_claim_tests` 函数（lines 159-313）
-- [ ] `cli/__init__.py`：删除 `_archive_claims` 和 `_run_claim_tests` 的 re-export（lines 51, 55）
+- [x] `cli/analyze/tools.py`：删除 `_archive_claims` 函数（lines 265-325）
+- [x] `cli/analyze/analysis.py`：删除 `_run_claim_tests` 函数（lines 159-313）
+- [x] `cli/__init__.py`：删除 `_archive_claims` 和 `_run_claim_tests` 的 re-export（lines 51, 55）
 
 **Task 2：pipeline.py 重构 + DB 集成**
 
-- [ ] 删除 `_archive_claims` import 和 2 处调用（lines 310, 508）
-- [ ] 删除 `_run_claim_tests` import 和 2 处调用（lines 123, 448-449）
-- [ ] `run_analyze` 入口创建 `conn = init_in_memory_db()`，finally 中 `conn.close()`
-- [ ] 新增 `db.load_tasks(conn, ctx.task_result.get("tasks", []))` 调用
-- [ ] 新增 `db.load_claims(conn, [asdict(c) for c in ctx.claims_list])` 调用
-- [ ] 新增 `db.load_initial_cache(conn, output_dir / "evidences")` 调用
-- [ ] 删除 `evidence_index.json` 写入逻辑（lines 427-431），改为 `EvidenceBuilder(project_root, conn).build(ctx)`
-- [ ] 删除 `_run_claim_tests` 的 test_results 跳过判断（lines 443-451）
-- [ ] `_auto_generate_claim_from_staged` 改为 sequential numbering：glob `CLAIM-{prefix}-*.json` → 提取编号 → max+1 → 3 位零填充
-- [ ] 更新函数签名：`_run_analysis_phase` 和 `_evaluate_and_output` 的 `evidence_index` 参数改为 `evidence_meta: dict`（仅含 run_id, project_id, scan_time）
+- [x] 删除 `_archive_claims` import 和 2 处调用（lines 310, 508）
+- [x] 删除 `_run_claim_tests` import 和 2 处调用（lines 123, 448-449）
+- [x] `run_analyze` 入口创建 `conn = init_in_memory_db()`，finally 中 `conn.close()`
+- [x] 新增 `db.load_tasks(conn, ctx.task_result.get("tasks", []))` 调用
+- [x] 新增 `db.load_claims(conn, [asdict(c) for c in ctx.claims_list])` 调用
+- [x] 新增 `db.load_initial_cache(conn, output_dir / "evidences")` 调用
+- [x] 删除 `evidence_index.json` 写入逻辑（lines 427-431），改为 `EvidenceBuilder(project_root, conn).build(ctx)`
+- [x] 删除 `_run_claim_tests` 的 test_results 跳过判断（lines 443-451）
+- [x] `_auto_generate_claim_from_staged` 改为 sequential numbering：glob `CLAIM-{prefix}-*.json` → 提取编号 → max+1 → 3 位零填充
+- [x] 更新函数签名：`_run_analysis_phase` 和 `_evaluate_and_output` 的 `evidence_index` 参数改为 `evidence_meta: dict`（仅含 run_id, project_id, scan_time）
 
 **Task 3：reports.py + output.py 适配 split evidence 格式**
 
-- [ ] `reports.py`：`_build_report_document` 的 `evidence_index` 参数改为 `evidence_meta: dict` + `test_results: list` + `coverage_reports: list`
-- [ ] `reports.py`：`_render_dashboard` 的 `evidence_index` 参数改为 `evidence_meta: dict`
-- [ ] `output.py`：`_render_output` 和 `_print_agent_actions` 的 `evidence_index` 参数改为 `evidence_meta: dict`
-- [ ] pipeline.py 中所有调用点适配新签名
+- [x] `reports.py`：`_build_report_document` 的 `evidence_index` 参数改为 `evidence_meta: dict` + `test_results: list` + `coverage_reports: list`
+- [x] `reports.py`：`_render_dashboard` 的 `evidence_index` 参数改为 `evidence_meta: dict`
+- [x] `output.py`：`_render_output` 和 `_print_agent_actions` 的 `evidence_index` 参数改为 `evidence_meta: dict`
+- [x] pipeline.py 中所有调用点适配新签名
 
 **Task 4：doctor.py + init.py + constraints 清理**
 
-- [ ] `cli/doctor.py`：删除 Check 1 `evidence_refs_integrity`（lines 229-254，claim 的 `evidence_refs` 字段已在 Phase 2 删除）
-- [ ] `cli/doctor.py`：新增 Check：claim 的 `related_task` 是否存在于 task_list 中
-- [ ] `cli/init.py`：删除 `archive/` 目录创建（line 112-116），仅创建 `claims/` 目录
-- [ ] `docs/architecture_constraints.json`：
+- [x] `cli/doctor.py`：删除 Check 1 `evidence_refs_integrity`（lines 229-254，claim 的 `evidence_refs` 字段已在 Phase 2 删除）
+- [x] `cli/doctor.py`：新增 Check：claim 的 `related_task` 是否存在于 task_list 中
+- [x] `cli/init.py`：删除 `archive/` 目录创建（line 112-116），仅创建 `claims/` 目录
+- [x] `docs/architecture_constraints.json`：
   - `claims/current.json` → `claims/CLAIM-*.json`
   - `evidence_index.json` → `evidences/test_results.json` + `evidences/coverage_reports.json`
   - `owned_files` 更新为嵌套包路径（`evidence_index_builder.py` → `evidence_builder.py`）
@@ -514,20 +514,20 @@ def load_tasks(conn, tasks):
 
 **Task 5：测试清理 + 全量验证**
 
-- [ ] 删除 `TestRunClaimTests` + `TestArchiveClaims` 测试类
-- [ ] 删除 `TestRunClaimTestsTiming` 测试类
-- [ ] 删除 `TestClaimTestCacheStats` 测试类
-- [ ] 更新 pipeline 相关测试（适配新签名）
-- [ ] `pytest` 全量通过
+- [x] 删除 `TestRunClaimTests` + `TestArchiveClaims` 测试类
+- [x] 删除 `TestRunClaimTestsTiming` 测试类
+- [x] 删除 `TestClaimTestCacheStats` 测试类
+- [x] 更新 pipeline 相关测试（适配新签名）
+- [x] `pytest` 全量通过
 
 #### 验收标准
 
-- [ ] `pytest` 全量通过
-- [ ] `grep -rn "_archive_claims\|_run_claim_tests" src/` 无结果
-- [ ] `grep -rn "evidence_index\.json" src/` 无结果（architecture_constraints.json 除外）
-- [ ] `grep -rn "current\.json" src/` 无结果（注释可保留）
-- [ ] `vt analyze` 生成 `output/evidences/test_results.json` + `coverage_reports.json`
-- [ ] Gate 决策正确（blocked/pass）
+- [x] `pytest` 全量通过
+- [x] `grep -rn "_archive_claims\|_run_claim_tests" src/` 无结果
+- [x] `grep -rn "evidence_index\.json" src/` 无结果（architecture_constraints.json 除外）
+- [x] `grep -rn "current\.json" src/` 无结果（注释可保留）
+- [x] `vt analyze` 生成 `output/evidences/test_results.json` + `coverage_reports.json`
+- [x] Gate 决策正确（blocked/pass）
 
 ---
 

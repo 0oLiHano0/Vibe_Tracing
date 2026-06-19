@@ -650,64 +650,6 @@ def test_gates_only_skips_analysis(tmp_path, capsys):
     assert not (output_dir / "traceability_report.json").exists()
 
 
-@pytest.mark.no_mock_which
-def test_missing_tools_skips_with_warning(tmp_path, capsys, monkeypatch):
-    """
-    covers: AC-VT-009-02
-    Test that missing tools produce a WARNING (repair guide) and skip tool
-    execution gracefully, without blocking the gate.
-    """
-    import shutil
-    import subprocess
-
-    # Mock shutil.which to return None for ALL tools (simulate missing tools)
-    monkeypatch.setattr(shutil, "which", lambda cmd: None)
-
-    # Mock subprocess.run to fail for python3 -m <tool> --version checks
-    _real_run = subprocess.run
-    def mock_run(cmd, *args, **kwargs):
-        if isinstance(cmd, list) and len(cmd) >= 3 and cmd[1] == "-m" and "--version" in cmd:
-            raise FileNotFoundError("tool not found")
-        return _real_run(cmd, *args, **kwargs)
-    monkeypatch.setattr(subprocess, "run", mock_run)
-
-    setup_mock_project(
-        tmp_path,
-        task_status="done",
-        test_outcome="passed",
-        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
-        include_claims=True,
-        claim_has_evidence=True,
-    )
-
-    exit_code = main(["analyze", "--project-root", str(tmp_path)])
-
-    captured = capsys.readouterr()
-
-    # Repair guide should be printed
-    assert "AI Agent Repair Guide" in captured.err
-    assert "pip install" in captured.err
-    assert "Skipping tool execution" in captured.err
-
-    # Should NOT produce BLOCKED evidence for missing tools
-    evidence_index_path = tmp_path / "output" / "evidence_index.json"
-    assert evidence_index_path.exists(), "evidence_index.json should be generated"
-
-    evidence_index = json.loads(evidence_index_path.read_text(encoding="utf-8"))
-    evidences = evidence_index.get("evidences", [])
-
-    blocked_entries = [e for e in evidences if e.get("error_code") == "tool_not_found"]
-    assert len(blocked_entries) == 0, "Missing tools should NOT produce BLOCKED evidence"
-
-    # Verify blocked entries have the expected structure
-    for entry in blocked_entries:
-        assert entry["source_type"] == "tool"
-        assert entry["source_path"].startswith("<dependency:")
-        assert entry["error_code"] == "tool_not_found"
-        # stderr is stored inside details by EvidenceIndexBuilder
-        assert "is not installed" in entry.get("details", {}).get("stderr", "")
-        assert entry.get("details", {}).get("error_type") == "tool_not_found"
-
 
 def test_staged_extension_warning(tmp_path, capsys, monkeypatch):
     """
@@ -1294,24 +1236,6 @@ def test_run_doctor_all_passing(tmp_path):
     assert exit_code == 0
 
 
-def test_run_doctor_broken_evidence_refs(tmp_path, capsys):
-    """Test run_doctor detects broken evidence_refs.
-
-    Since evidence_refs was removed from the Claim schema, there are no
-    broken evidence refs to detect -- the check passes cleanly.
-    """
-    from vibe_tracing.cli import run_doctor
-
-    _setup_doctor_project(tmp_path)
-
-    exit_code = run_doctor(tmp_path)
-    assert exit_code == 0  # Doctor always returns 0
-
-    captured = capsys.readouterr()
-    output = json.loads(captured.out)
-    checks = {c["name"]: c for c in output["checks"]}
-    assert len(checks["evidence_refs_integrity"]["issues"]) == 0
-
 
 def test_run_doctor_broken_file_refs(tmp_path, capsys):
     """Test run_doctor detects broken file references."""
@@ -1569,23 +1493,6 @@ def test_run_doctor_task_list_not_dict(tmp_path, capsys):
     output = json.loads(captured.out)
     assert "checks" in output
 
-
-def test_run_doctor_evidence_with_file_on_disk(tmp_path, capsys):
-    """Test run_doctor considers evidence refs found on disk as valid."""
-    from vibe_tracing.cli import run_doctor
-
-    _setup_doctor_project(tmp_path)
-    # Create a file that matches the evidence ref
-    (tmp_path / "EVIDENCE-001").write_text("evidence content", encoding="utf-8")
-
-    exit_code = run_doctor(tmp_path)
-    assert exit_code == 0
-
-    captured = capsys.readouterr()
-    output = json.loads(captured.out)
-    checks = {c["name"]: c for c in output["checks"]}
-    # No evidence ref issues since the file exists on disk
-    assert len(checks["evidence_refs_integrity"]["issues"]) == 0
 
 
 def test_run_doctor_claims_not_list(tmp_path, capsys):

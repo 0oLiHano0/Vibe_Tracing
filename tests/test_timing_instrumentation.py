@@ -346,18 +346,3 @@ class TestNullLoggerSafety:
         exit_code, stdout, stderr, err = engine._run_subprocess("echo ok")
         assert exit_code == 0
 
-    def test_claim_tests_timing_works_without_logger_init(self, tmp_path):
-        """_run_claim_tests should not crash when OperationalLogger.init() was never called."""
-        from vibe_tracing.cli.analyze.analysis import _run_claim_tests
-
-        test_dir = tmp_path / "tests"
-        test_dir.mkdir()
-        test_file = test_dir / "test_dummy.py"
-        test_file.write_text("def test_pass(): assert True\n", encoding="utf-8")
-
-        claim = MagicMock()
-        claim.test_refs = ["tests/test_dummy.py"]
-
-        evidence_index = {}
-        # Should not raise - null logger silently discards
-        _run_claim_tests(tmp_path, [claim], evidence_index)

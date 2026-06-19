@@ -12,7 +12,7 @@ from vibe_tracing.cli.analyze.actions import (
 )
 
 
-def _render_actions(actions: list, coverage_summary: Optional[dict] = None, evidence_index: Optional[dict] = None) -> list:
+def _render_actions(actions: list, coverage_summary: Optional[dict] = None, evidence_meta: Optional[dict] = None) -> list:
     """Render action dicts to text lines for Agent consumption.
 
     Actions are sorted by urgency (descending) so that the most pressing
@@ -21,7 +21,7 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None, evid
     Args:
         actions: List of action dicts.
         coverage_summary: Aggregate coverage info.
-        evidence_index: Evidence index for per-file coverage detail.
+        evidence_meta: Evidence metadata for per-file coverage detail.
     """
     lines: List[str] = []
     if not actions:
@@ -86,8 +86,8 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None, evid
         lines.append("")
         lines.append(f"Coverage: {pct}% ({status}, target: 80%)")
         if pct < 80:
-            # List files below threshold from evidence_index coverage_baseline
-            cb = (evidence_index or {}).get("coverage_baseline", {})
+            # List files below threshold from evidence_meta coverage_baseline
+            cb = (evidence_meta or {}).get("coverage_baseline", {})
             if cb:
                 below = [(f, d["percent_covered"]) for f, d in cb.items()
                          if isinstance(d, dict) and d.get("percent_covered", 100) < 80]
@@ -102,22 +102,22 @@ def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
                           accepted_rules, prd_result=None, task_result=None,
                           claims_list=None, gate_reasons=None, merged_gaps=None,
                           compliance_status=None, coverage_summary=None,
-                          staged_items=None, evidence_index=None):
+                          staged_items=None, evidence_meta=None):
     """Format an Agent-executable action list with full inline context."""
     lines = [f"GATE DECISION: {gate_decision.upper()}", ""]
     gaps_for_actions = merged_gaps if merged_gaps is not None else active_gaps
     actions: list = []
     actions.extend(_collect_gap_actions(
         gaps_for_actions, prd_result, task_result, claims_list,
-        staged_items=staged_items, evidence_index=evidence_index,
+        staged_items=staged_items, evidence_index=evidence_meta,
     ))
     actions.extend(_collect_risk_actions(
         active_risks, merged_gaps or [],
-        staged_items=staged_items, evidence_index=evidence_index,
+        staged_items=staged_items, evidence_index=evidence_meta,
     ))
     actions.extend(_collect_violation_actions(violations, compliance_status or []))
     actions.extend(_collect_gate_reason_actions(
         gate_decision, gate_reasons or [], actions,
     ))
-    lines.extend(_render_actions(actions, coverage_summary, evidence_index=evidence_index))
+    lines.extend(_render_actions(actions, coverage_summary, evidence_meta=evidence_meta))
     return "\n".join(lines)

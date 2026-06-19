@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional, Set, Tuple
 
 from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
+from vibe_tracing.domain.evidence_builder import EvidenceBuilder
 from vibe_tracing.domain.context import UnifiedContext
 
 from vibe_tracing.cli.common import (
@@ -19,10 +20,9 @@ from vibe_tracing.cli.common import (
     _determine_affected_items,
 )
 from vibe_tracing.cli.analyze.gates import _run_integrity_gates
-from vibe_tracing.cli.analyze.tools import _execute_tools, _archive_claims
+from vibe_tracing.cli.analyze.tools import _execute_tools
 from vibe_tracing.cli.analyze.analysis import (
     _run_analyzers,
-    _run_claim_tests,
 )
 from vibe_tracing.cli.analyze.reports import _build_report_document
 from vibe_tracing.cli.analyze.output import _render_output
@@ -70,7 +70,21 @@ def _auto_generate_claim_from_staged(
         return None
 
     config_prefix = ctx.config_prefix
-    claim_id = f"CLAIM-{config_prefix}-001"
+
+    # Sequential numbering: find next available number
+    import glob as glob_mod
+    existing = sorted(glob_mod.glob(str(claims_dir / f"CLAIM-{config_prefix}-*.json")))
+    max_seq = 0
+    for f in existing:
+        name = Path(f).stem  # e.g., "CLAIM-VT-001"
+        parts = name.split("-")
+        if len(parts) >= 3:
+            try:
+                seq = int(parts[-1])
+                max_seq = max(max_seq, seq)
+            except ValueError:
+                pass
+    claim_id = f"CLAIM-{config_prefix}-{max_seq + 1:03d}"
     claim = {
         "claim_id": claim_id,
         "related_task": "",
@@ -108,19 +122,16 @@ def _run_analysis_phase(
     ctx: UnifiedContext,
     merged_gaps: list,
     final_risks: list,
-    evidence_index: dict,
+    evidence_meta: dict,
     project_root: Path,
     staged_files: Optional[Set[str]] = None,
 ):
     """Run claim tests, compute active issues, and build staged_items.
 
-    Returns (active_gaps, active_risks, evidence_index,
+    Returns (active_gaps, active_risks, evidence_meta,
              staged_items, directly_staged_items).
     """
     claims_list = ctx.claims_list
-
-    # Run pytest for claim test_refs and record results in evidence_index
-    evidence_index = _run_claim_tests(project_root, claims_list, evidence_index)
 
     # Filter out stale gaps / risks for gate evaluation.  Stale items are
     # still included in the full report for visibility.
@@ -155,7 +166,7 @@ def _run_analysis_phase(
                 directly_staged_claims.add(claim_id)
         directly_staged_items = set(directly_staged_claims)
 
-    return active_gaps, active_risks, evidence_index, staged_items, directly_staged_items
+    return active_gaps, active_risks, evidence_meta, staged_items, directly_staged_items
 
 
 def _run_gate_evaluation(
@@ -166,13 +177,12 @@ def _run_gate_evaluation(
     ctx: UnifiedContext,
     staged_items: Optional[Set[str]],
     directly_staged_items: Optional[Set[str]],
+    conn,
     human_decisions: Optional[dict] = None,
 ) -> dict:
     """Run MergeGateEngine and return gate result dict."""
-    from vibe_tracing.infra.db import init_in_memory_db
     if human_decisions is None:
         human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
-    conn = init_in_memory_db()
     gate_engine = MergeGateEngine(project_root, conn)
     gate_res = gate_engine.evaluate(
         active_gaps, active_risks,
@@ -193,7 +203,7 @@ def _evaluate_and_output(
     final_risks: list,
     compliance_res: Optional[dict],
     output_dir: Path,
-    evidence_index: dict,
+    evidence_meta: dict,
     claim_res: dict,
     req_res: dict,
     project_root: Path,
@@ -201,31 +211,32 @@ def _evaluate_and_output(
     staged_files: Optional[Set[str]] = None,
     is_pre_commit: bool = False,
     human_decisions: Optional[dict] = None,
+    conn=None,
 ) -> int:
     """Run MergeGateEngine, output all reports, and return exit code."""
     if not ctx.manifest:
         return 1
 
     # Phase 1: Analysis (claim tests, active issues, staged items)
-    active_gaps, active_risks, evidence_index, staged_items, directly_staged_items = \
-        _run_analysis_phase(ctx, merged_gaps, final_risks, evidence_index, project_root, staged_files)
+    active_gaps, active_risks, evidence_meta, staged_items, directly_staged_items = \
+        _run_analysis_phase(ctx, merged_gaps, final_risks, evidence_meta, project_root, staged_files)
 
     # Phase 2: Gate evaluation
     gate_res = _run_gate_evaluation(
         project_root, active_gaps, active_risks, compliance_res,
-        ctx, staged_items, directly_staged_items,
+        ctx, staged_items, directly_staged_items, conn,
         human_decisions=human_decisions,
     )
 
     # Phase 3: Build report document
     report_doc = _build_report_document(
-        ctx, gate_res, evidence_index, merged_gaps, final_risks,
+        ctx, gate_res, evidence_meta, merged_gaps, final_risks,
         compliance_res, req_res, output_dir, project_root,
     )
 
     # Phase 4: Render output (dashboard, summary, agent actions, reflection)
     _render_output(
-        ctx, gate_res, report_doc, evidence_index,
+        ctx, gate_res, report_doc, evidence_meta,
         active_gaps, active_risks, merged_gaps, final_risks, compliance_res,
         staged_items, output_dir, project_root, is_draft,
         is_pre_commit=is_pre_commit, staged_files=staged_files,
@@ -255,9 +266,11 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             1: Execution error, invalid inputs, schema errors.
             2: Gate decision is 'blocked'.
     """
+    conn = None
     try:
         # Initialize operational logger
         from vibe_tracing.infra.operational_logger import OperationalLogger
+        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_staged_files, load_initial_cache
         _run_start_t = time.perf_counter()
 
         _t_ctx = time.perf_counter()
@@ -306,9 +319,10 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
         if gates_only:
             print("Gates-only mode: integrity gates passed. Skipping analysis.")
-            if is_pre_commit:
-                _archive_claims(project_root)
             return 0
+
+        # Create in-memory DB connection for pipeline-wide use
+        conn = init_in_memory_db()
 
         _t_tools = time.perf_counter()
         tool_evidence = _execute_tools(ctx, project_root, is_draft)
@@ -319,31 +333,16 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                        tools_executed=len(tool_evidence),
                        )
 
-        # Build evidence index
+        # Load data into DB for SQL-based checks
+        if ctx.task_result and ctx.task_result.tasks:
+            load_tasks(conn, [t.__dict__ for t in ctx.task_result.tasks])
+        if ctx.claims_list:
+            load_claims(conn, [c.__dict__ for c in ctx.claims_list])
+
+        # Build evidence via EvidenceBuilder (DB + split JSON)
         _t_build = time.perf_counter()
 
-        # Convert ToolEvidenceCandidate dataclass instances to dicts for downstream
-        def _tc_to_dict(tc):
-            """Convert a ToolEvidenceCandidate to a plain dict."""
-            d = {
-                "source_type": tc.source_type,
-                "source_path": tc.source_path,
-                "covers": tc.covers,
-                "status": tc.status,
-                "details": dict(tc.details) if tc.details else {},
-            }
-            if tc.tool_category:
-                d["details"]["tool_category"] = tc.tool_category
-            if tc.command:
-                d["details"]["command"] = tc.command
-            if tc.exit_code != 0 or tc.command:
-                d["details"]["exit_code"] = tc.exit_code
-            if tc.stderr:
-                d["details"]["stderr"] = tc.stderr
-            if tc.error_code:
-                d["error_code"] = tc.error_code
-            return d
-
+        # Build evidence metadata (task/claim/code evidence dicts for analyzers)
         try:
             evidence_dicts = []
 
@@ -409,68 +408,50 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
             # Add tool evidence entries
             for tc in (ctx.tool_evidence or []):
-                evidence_dicts.append(_tc_to_dict(tc))
+                d = {
+                    "source_type": tc.source_type,
+                    "source_path": tc.source_path,
+                    "covers": tc.covers,
+                    "status": tc.status,
+                    "details": dict(tc.details) if tc.details else {},
+                }
+                if tc.tool_category:
+                    d["details"]["tool_category"] = tc.tool_category
+                if tc.command:
+                    d["details"]["command"] = tc.command
+                if tc.exit_code != 0 or tc.command:
+                    d["details"]["exit_code"] = tc.exit_code
+                if tc.stderr:
+                    d["details"]["stderr"] = tc.stderr
+                if tc.error_code:
+                    d["error_code"] = tc.error_code
+                evidence_dicts.append(d)
 
             # Assign sequential evidence IDs
             for idx, ev in enumerate(evidence_dicts):
                 ev["evidence_id"] = f"EVIDENCE-VT-{idx + 1:03d}"
 
-            evidences_index = {
+            # Build evidence via EvidenceBuilder (writes test_results.json + coverage_reports.json)
+            evidence_builder = EvidenceBuilder(project_root, conn)
+            evidence_builder.build(ctx)
+
+            # Evidence metadata for analyzers/reports (no test_results/coverage_baseline fields)
+            evidence_meta = {
                 "run_id": f"RUN-{uuid.uuid4()}",
                 "project_id": f"PROJECT-{config_prefix}",
                 "scan_time": "",
                 "evidences": evidence_dicts,
-                "test_results": {},
-                "coverage_baseline": {},
             }
-
-            # Write evidence_index.json to disk
-            index_path = output_dir / "evidence_index.json"
-            index_path.parent.mkdir(parents=True, exist_ok=True)
-            with index_path.open("w", encoding="utf-8") as f:
-                json.dump(evidences_index, f, indent=2, ensure_ascii=False)
         except Exception as exc:
-            print(f"Error building evidence index: {exc}", file=sys.stderr)
+            print(f"Error building evidence: {exc}", file=sys.stderr)
             return 1
-        vt_logger.info("phase_end", "Evidence index built",
-                       phase="build_evidence_index",
+        vt_logger.info("phase_end", "Evidence built",
+                       phase="build_evidence",
                        duration_ms=int((time.perf_counter() - _t_build) * 1000),
-                       evidences_count=len(evidences_index.get("evidences", [])),
+                       evidences_count=len(evidence_meta.get("evidences", [])),
                        )
 
-        # Auto-run claim tests when claims have test_refs but test_results is empty
-        _t_claim_tests = time.perf_counter()
-        if ctx.claims_list and any(
-            getattr(c, "test_refs", None) for c in ctx.claims_list
-        ):
-            existing_test_results = evidences_index.get("test_results")
-            if not existing_test_results:
-                evidences_index = _run_claim_tests(
-                    project_root, ctx.claims_list, evidences_index
-                )
-                test_results_map = evidences_index.get("test_results", {})
-                total = len(test_results_map)
-                passed = sum(
-                    1 for v in test_results_map.values()
-                    if v.get("status") == "passed"
-                )
-                failed = sum(
-                    1 for v in test_results_map.values()
-                    if v.get("status") == "failed"
-                )
-                cached = 0  # first run, no cache hits possible
-                print(
-                    f"Executed {total} claim tests: "
-                    f"{passed} passed, {failed} failed, {cached} cached",
-                    file=sys.stderr,
-                )
-        vt_logger.info("phase_end", "Claim tests completed",
-                       phase="run_claim_tests",
-                       duration_ms=int((time.perf_counter() - _t_claim_tests) * 1000),
-                       test_results_count=len(evidences_index.get("test_results", {})),
-                       )
-
-        evidence_list = evidences_index.get("evidences", [])
+        evidence_list = evidence_meta.get("evidences", [])
 
         staged_files = _get_staged_files(project_root)
 
@@ -493,10 +474,11 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
         _t_eval = time.perf_counter()
         exit_code = _evaluate_and_output(
             ctx, merged_gaps, final_risks, compliance_res,
-            output_dir, evidences_index, claim_res, req_res,
+            output_dir, evidence_meta, claim_res, req_res,
             project_root, is_draft, staged_files=staged_files,
             is_pre_commit=is_pre_commit,
             human_decisions=human_decisions,
+            conn=conn,
         )
         gate_decision = "blocked" if exit_code == 2 else "pass"
         vt_logger.info("phase_end", "Evaluate and output completed",
@@ -505,7 +487,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                        gate_decision=gate_decision,
                        )
         if exit_code == 0 and is_pre_commit:
-            _archive_claims(project_root)
+            pass  # Claims archival removed — claims are now managed by the commit lifecycle
 
         total_duration_ms = int((time.perf_counter() - _run_start_t) * 1000)
         vt_logger.info("run_end", "Analysis pipeline completed",
@@ -520,3 +502,6 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
     except Exception as exc:
         print(f"Unexpected error running analyze command: {exc}", file=sys.stderr)
         return 1
+    finally:
+        if conn is not None:
+            conn.close()

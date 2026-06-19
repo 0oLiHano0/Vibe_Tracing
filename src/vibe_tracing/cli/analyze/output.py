@@ -42,7 +42,7 @@ def _print_agent_actions(
     ctx: UnifiedContext,
     gate_res: dict,
     report_doc: dict,
-    evidence_index: dict,
+    evidence_meta: dict,
     active_gaps: list,
     active_risks: list,
     merged_gaps: list,
@@ -70,7 +70,7 @@ def _print_agent_actions(
         compliance_status=compliance_status,
         coverage_summary=report_doc.get("coverage_summary"),
         staged_items=staged_items,
-        evidence_index=evidence_index,
+        evidence_meta=evidence_meta,
     )
     print(agent_output)
 
@@ -141,7 +141,7 @@ def _render_output(
     ctx: UnifiedContext,
     gate_res: dict,
     report_doc: dict,
-    evidence_index: dict,
+    evidence_meta: dict,
     active_gaps: list,
     active_risks: list,
     merged_gaps: list,
@@ -155,12 +155,12 @@ def _render_output(
     staged_files: Optional[Set[str]] = None,
 ) -> None:
     """Render dashboard, print gate summary, agent actions, and reflection prompts."""
-    _render_dashboard(ctx, report_doc, evidence_index, output_dir, project_root)
+    _render_dashboard(ctx, report_doc, evidence_meta, output_dir, project_root)
     _print_gate_summary(gate_res, staged_items)
     if not is_pre_commit:
         _print_empty_claims_hint(ctx, staged_files)
     _print_agent_actions(
-        ctx, gate_res, report_doc, evidence_index,
+        ctx, gate_res, report_doc, evidence_meta,
         active_gaps, active_risks, merged_gaps, compliance_res,
         staged_items, project_root,
     )

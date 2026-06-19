@@ -14,7 +14,7 @@ from vibe_tracing.cli.common import _GateBlocked, _rel_path_str
 def _build_report_document(
     ctx: UnifiedContext,
     gate_res: dict,
-    evidence_index: dict,
+    evidence_meta: dict,
     merged_gaps: list,
     final_risks: list,
     compliance_res: Optional[dict],
@@ -28,9 +28,9 @@ def _build_report_document(
     gate_decision = gate_res["gate_decision"]
 
     report_doc = {
-        "run_id": evidence_index.get("run_id"),
-        "project_id": evidence_index.get("project_id"),
-        "scan_time": evidence_index.get("scan_time"),
+        "run_id": evidence_meta.get("run_id"),
+        "project_id": evidence_meta.get("project_id"),
+        "scan_time": evidence_meta.get("scan_time"),
         "gate_decision": gate_decision,
         "requirement_coverage": req_res.get("requirement_coverage", []),
         "gaps": merged_gaps,
@@ -48,7 +48,7 @@ def _build_report_document(
     }
 
     # Add coverage summary to report
-    cb_data = evidence_index.get("coverage_baseline", {})
+    cb_data = evidence_meta.get("coverage_baseline", {})
     if cb_data:
         total_stmts = sum(f.get("num_statements", 0) for f in cb_data.values() if isinstance(f, dict))
         total_covered_f = sum(
@@ -134,7 +134,7 @@ def _build_metadata(
 def _render_dashboard(
     ctx: UnifiedContext,
     report_doc: dict,
-    evidence_index: dict,
+    evidence_meta: dict,
     output_dir: Path,
     project_root: Path,
 ) -> None:
@@ -175,7 +175,7 @@ def _render_dashboard(
                 }
             )
         renderer.render(
-            evidence_index=evidence_index,
+            evidence_index=evidence_meta,
             traceability_report=report_doc,
             output_path=dashboard_path,
             prd_requirements=prd_reqs_serialized,

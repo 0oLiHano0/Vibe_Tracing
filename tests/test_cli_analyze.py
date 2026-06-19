@@ -2238,7 +2238,7 @@ def test_render_actions_coverage_below_threshold(tmp_path):
 
     lines = _render_actions(
         actions, coverage_summary=coverage,
-        evidence_index=evidence_index,
+        evidence_meta=evidence_index,
     )
     assert any("BLOCKED" in l for l in lines)
     assert any("75%" in l for l in lines)

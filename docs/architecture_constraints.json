@@ -180,7 +180,7 @@
     {
       "principle_id": "PRINCIPLE-VT-014",
       "title": "机器契约必须通过 Schema 校验",
-      "description": "architecture_constraints.json、task_list.json、claims/current.json、evidence_index.json、traceability_report.json 等机器可读文件必须通过明确的 Schema 校验。",
+      "description": "architecture_constraints.json、task_list.json、claims/CLAIM-*.json、evidence_index.json、traceability_report.json 等机器可读文件必须通过明确的 Schema 校验。",
       "severity": "must",
       "verification_method": "manual"
     },
@@ -327,7 +327,8 @@
         "MOD-VT-008"
       ],
       "owned_data": [
-        "evidence_index.json"
+        "evidences/test_results.json",
+        "evidences/coverage_reports.json"
       ],
       "must_not_own_data": [
         "dashboard.html",
@@ -338,7 +339,7 @@
         "REQ-VT-002"
       ],
       "owned_files": [
-        "evidence_index_builder.py"
+        "evidence_builder.py"
       ]
     },
     {
@@ -618,7 +619,8 @@
       "description": "Merge Gate 和状态判定必须基于结构化证据和确定性规则，不能依赖自由文本形式的 LLM 解释。",
       "severity": "must",
       "allowed_dependencies": [
-        "evidence_index.json",
+        "evidences/test_results.json",
+        "evidences/coverage_reports.json",
         "traceability_report.json",
         "structured_tool_reports"
       ],
@@ -693,7 +695,7 @@
       "title": "Evidence Index 流入 Traceability Report",
       "description": "traceability_report.json 必须引用 evidence_index.json 中的证据记录，不得在报告中编造没有来源的内联证据。",
       "severity": "must",
-      "from": "evidence_index.json",
+      "from": "evidences/test_results.json,evidences/coverage_reports.json",
       "to": "traceability_report.json",
       "allowed": true,
       "rationale": "将证据索引和追踪报告分离，可以提升审计性和后续复用能力。",
@@ -815,7 +817,8 @@
       "description": "MVP 必须将 evidence_index.json 作为独立文件输出，而不是只内嵌在 traceability_report.json 中。",
       "severity": "must",
       "data_objects": [
-        "evidence_index.json"
+        "evidences/test_results.json",
+        "evidences/coverage_reports.json"
       ],
       "rationale": "Evidence Index 后续可被 inspection report、Dashboard、Review 工作流和历史对比复用。",
       "verification_method": "manual"
@@ -827,7 +830,8 @@
       "severity": "must",
       "data_objects": [
         "dashboard.html",
-        "evidence_index.json",
+        "evidences/test_results.json",
+        "evidences/coverage_reports.json",
         "traceability_report.json"
       ],
       "rationale": "Dashboard 必须可移植、可归档，并且不依赖后端或本地文件读取权限。",
@@ -842,7 +846,7 @@
         "docs/prd.md",
         "docs/architecture_constraints.json",
         "docs/task_list.json",
-        ".vibetracing/claims/current.json",
+        ".vibetracing/claims/CLAIM-*.json",
         ".vibetracing/tool_reports"
       ],
       "rationale": "Raw Layer 是审计事实源，必须在一次运行中保持稳定。",
@@ -859,7 +863,7 @@
         "prd.md",
         "architecture_constraints.json",
         "task_list.json",
-        "claims/current.json"
+        "claims/CLAIM-*.json"
       ],
       "expected_behavior": "输出明确的 missing_input 错误，将相关状态标记为 missing 或 unclear，并在必需证据不可用时降低门禁结论。",
       "forbidden_behavior": "静默忽略缺失输入，或假设相关工作已经完成。",
@@ -873,8 +877,9 @@
       "applies_to": [
         "architecture_constraints.json",
         "task_list.json",
-        "claims/current.json",
-        "evidence_index.json",
+        "claims/CLAIM-*.json",
+        "evidences/test_results.json",
+        "evidences/coverage_reports.json",
         "traceability_report.json"
       ],
       "expected_behavior": "报告 Schema 校验错误，包含文件路径、字段路径和清晰的修复建议。",
@@ -1079,7 +1084,8 @@
       "description": "报告、日志和 Dashboard 应避免暴露密钥、Token、密码、私钥或不必要的敏感文件内容。",
       "severity": "must",
       "applies_to": [
-        "evidence_index.json",
+        "evidences/test_results.json",
+        "evidences/coverage_reports.json",
         "traceability_report.json",
         "dashboard.html",
         "logs"
@@ -1118,7 +1124,7 @@
       "description": "如果 Agent Claim 声称任务完成，但代码、测试、Review 或工具证据缺失或冲突，系统必须报告 evidence_gap 或 claim_evidence_mismatch。",
       "severity": "must",
       "applies_to": [
-        "claims/current.json",
+        "claims/CLAIM-*.json",
         "traceability_analyzer",
         "merge_gate_engine"
       ],
@@ -1334,7 +1340,7 @@
       "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。",
       "severity": "must",
       "check_type": "automated",
-      "pass_condition": "prd.md、architecture_constraints.json、task_list.json 和 claims/current.json 均存在且可读取。",
+      "pass_condition": "prd.md、architecture_constraints.json、task_list.json 和 claims/CLAIM-*.json 均存在且可读取。",
       "fail_condition": "任一必需输入文件缺失或不可读取。",
       "blocks_merge": true,
       "verification_method": "machine"
@@ -1345,7 +1351,7 @@
       "description": "机器可读输入必须是合法 JSON，并在分析前通过预期 Schema 校验。",
       "severity": "must",
       "check_type": "automated",
-      "pass_condition": "architecture_constraints.json、task_list.json 和 claims/current.json 均通过 Schema 校验。",
+      "pass_condition": "architecture_constraints.json、task_list.json 和 claims/CLAIM-*.json 均通过 Schema 校验。",
       "fail_condition": "任一必需 JSON 输入无效或与 Schema 不兼容。",
       "blocks_merge": true,
       "verification_method": "manual"

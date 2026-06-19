@@ -109,14 +109,11 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
 
         # Create claims directory structure
         claims_dir = project_root / ".vibetracing" / "claims"
-        claims_archive_dir = claims_dir / "archive"
-        for d in [claims_dir, claims_archive_dir]:
-            if not d.exists():
-                d.mkdir(parents=True, exist_ok=True)
-                print(f"Created directory: {d.relative_to(project_root)}")
+        if not claims_dir.exists():
+            claims_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Created directory: {claims_dir.relative_to(project_root)}")
 
         # 3. Write ALL template files except config.json first
-        # Note: claims are now stored as individual CLAIM-*.json files, not current.json
         other_files = {
             "docs/task_list.json": render_template(task_list_text),
             "docs/architecture_constraints.json": render_template(arch_text),

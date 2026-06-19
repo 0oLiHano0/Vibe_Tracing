@@ -23,7 +23,7 @@
 | Phase 3 | 编排层移动 + 证据构建重构 | ✅ 已完成 | commands/→cli/、EvidenceBuilder 重构、Claims 多文件、Schema 交接 |
 | Phase 4 | 门禁引擎 SQL 化 | ✅ 已完成 | evaluate 签名 11→6，静态方法删除，SQL 查询替代 |
 | Phase 5 | 幽灵代码检测 SQL 化 | ✅ 已完成 | git show 清零、SQL 查询替代、Gate 2.5 简化、三原则复核通过 |
-| Phase 6 | 流水线集成 | ❌ 未开始 | pipeline.py 未改，仍引用 current.json |
+| Phase 6 | 流水线集成 | 🔄 进行中 | pipeline.py 重构 + DB 集成 + 旧机制删除 |
 | Phase 7 | Dashboard 模板迁移 + 清理 | ❌ 未开始 | dashboard 未适配新 evidence 格式 |
 | Phase 8 | 历史债务清理（current.json 残留 + 向后兼容代码） | ✅ 已完成 | 53 文件修改，删除旧架构核心组件，957 测试通过 |
 
@@ -446,80 +446,87 @@ def load_tasks(conn, tasks):
 
 ### Phase 6：流水线集成 — ❌ 未开始
 
-**目标**：将前 5 个 Phase 的模块变更集成到流水线编排层。
+**目标**：将前 5 个 Phase 的模块变更集成到流水线编排层，删除旧机制（_archive_claims / _run_claim_tests / evidence_index.json），统一使用 DB + split evidence 格式。
 
 **前置条件**：Phase 1-5 全部完成。
+
+**设计决策**：
+- 删除 `_archive_claims`：claims 按提交生命周期管理，不再归档
+- 删除 `_run_claim_tests`：测试执行由 `tool_evidence_adapter.execute_all()` 统一处理
+- `evidence_index.json` → `test_results.json` + `coverage_reports.json`（EvidenceBuilder 已实现）
+- pipeline.py 中的内联 evidence 构建保留（claims metadata），test/coverage 数据由 EvidenceBuilder 写入 DB
+- `_auto_generate_claim_from_staged` 改为 sequential numbering（不覆盖已有编号）
 
 **涉及文件**：
 
 | 操作 | 文件 |
 |---|---|
 | 重构 | `cli/analyze/pipeline.py` |
-| 修改 | `cli/common.py` |
 | 修改 | `cli/analyze/tools.py` |
 | 修改 | `cli/analyze/analysis.py` |
 | 修改 | `cli/analyze/reports.py` |
 | 修改 | `cli/analyze/output.py` |
-| 修改 | `cli/main.py`（清理 re-export） |
-| 修改 | `domain/context.py` |
+| 修改 | `cli/__init__.py`（清理 re-export） |
 | 修改 | `cli/doctor.py` |
-| 修改 | `cli/init_cmd.py` |
+| 修改 | `cli/init.py` |
 | 修改 | `docs/architecture_constraints.json` |
-| 删除 | `.vibetracing/claims/current.json` |
-| 删除 | `.vibetracing/claims/archive/` |
-| 更新 | `tests/test_cli_analyze.py` |
-| 更新 | `tests/test_integration_v3.py` |
-| 删除测试 | `test_integration_v3.py` 中的 `TestRunClaimTests` + `TestArchiveClaims` |
-| 删除测试 | `test_timing_instrumentation.py` 中的 `TestRunClaimTestsTiming` |
-| 删除测试 | `test_instrumentation_logging.py` 中的 `TestClaimTestCacheStats` |
+| 删除 | `.vibetracing/claims/archive/` 目录（如存在） |
+| 更新 | 测试文件（删除已删函数的测试类） |
 
-#### 执行步骤
+#### 原子任务
 
-- [ ] `cli/common.py`：`_load_context` 中 claims 加载已由 Phase 3 step 8 完成（raw_input_loader 输出 content → claim_loader.load(content=...)），Phase 6 不需重复操作
-- [ ] `cli/analyze/tools.py`：删除 `_archive_claims` 函数
-- [ ] `cli/analyze/analysis.py`：删除 `_run_claim_tests` 函数
-- [ ] `cli/analyze/pipeline.py`：
-  - [ ] 新增 `init_in_memory_db()` 调用
-  - [ ] 新增 `db.load_tasks()` / `db.load_claims()` / `db.load_staged_files()` / `db.load_initial_cache()` 调用
-  - [ ] `EvidenceBuilder` 接收 `conn`
-  - [ ] `MergeGateEngine` 接收 `conn`
-  - [ ] 删除 `_archive_claims` 调用
-  - [ ] 删除 `_run_claim_tests` 调用
-  - [ ] 删除 `evidence_index["test_results"]` 跳过判断逻辑（pipeline.py:349），统一由 `execute_all()` 处理
-  - [ ] `_auto_generate_claim_from_staged()` 改为写入 `CLAIM-{prefix}-{seq}.json`，编号逻辑：glob `.vibetracing/claims/CLAIM-{prefix}-*.json` → 提取所有编号 → 取 max+1 → 零填充为 3 位
-  - [ ] `conn.close()` 在 finally 块中
-- [ ] `cli/analyze/reports.py`：适配 evidence 拆分格式
-- [ ] `cli/analyze/output.py`：Dashboard 内嵌数据改为三份 JSON
-- [ ] `cli/main.py`：清理 `_archive_claims` / `_run_claim_tests` 的 re-export
-- [ ] `cli/doctor.py`：
-  - [ ] 删除硬编码 `current.json` 路径（第 40 行），改为 `ClaimLoader().load(claims_path)` 加载多文件
-  - [ ] 删除 Check 1 `evidence_refs_integrity`（claim 的 `evidence_refs` 字段已在 Phase 2 删除，该检查已无意义）
-  - [ ] Check 2 `file_refs_integrity` 逻辑不变（检查 code_refs/test_refs 磁盘存在性，与数据来源解耦）
-  - [ ] 新增 Check：逐个 claim 的 `related_task` 是否存在于 task_list 中（复用 `db.check_dangling_claims(conn)` 或等效 SQL）
-- [ ] `cli/init_cmd.py`：
-  - [ ] 不再创建 `current.json` 和 `archive/` 目录
-  - [ ] 创建 `.vibetracing/claims/` 目录 + `.gitkeep`
-  - [ ] `config.template.json` 的 `paths.agent_claims` 默认值改为 `.vibetracing/claims`（目录路径）
-  - [ ] 不创建初始 `CLAIM-*.json` 模板文件（Claim 由 Agent 在开发过程中按需创建）
+**Task 1：删除旧机制（_archive_claims + _run_claim_tests）**
+
+- [ ] `cli/analyze/tools.py`：删除 `_archive_claims` 函数（lines 265-325）
+- [ ] `cli/analyze/analysis.py`：删除 `_run_claim_tests` 函数（lines 159-313）
+- [ ] `cli/__init__.py`：删除 `_archive_claims` 和 `_run_claim_tests` 的 re-export（lines 51, 55）
+
+**Task 2：pipeline.py 重构 + DB 集成**
+
+- [ ] 删除 `_archive_claims` import 和 2 处调用（lines 310, 508）
+- [ ] 删除 `_run_claim_tests` import 和 2 处调用（lines 123, 448-449）
+- [ ] `run_analyze` 入口创建 `conn = init_in_memory_db()`，finally 中 `conn.close()`
+- [ ] 新增 `db.load_tasks(conn, ctx.task_result.get("tasks", []))` 调用
+- [ ] 新增 `db.load_claims(conn, [asdict(c) for c in ctx.claims_list])` 调用
+- [ ] 新增 `db.load_initial_cache(conn, output_dir / "evidences")` 调用
+- [ ] 删除 `evidence_index.json` 写入逻辑（lines 427-431），改为 `EvidenceBuilder(project_root, conn).build(ctx)`
+- [ ] 删除 `_run_claim_tests` 的 test_results 跳过判断（lines 443-451）
+- [ ] `_auto_generate_claim_from_staged` 改为 sequential numbering：glob `CLAIM-{prefix}-*.json` → 提取编号 → max+1 → 3 位零填充
+- [ ] 更新函数签名：`_run_analysis_phase` 和 `_evaluate_and_output` 的 `evidence_index` 参数改为 `evidence_meta: dict`（仅含 run_id, project_id, scan_time）
+
+**Task 3：reports.py + output.py 适配 split evidence 格式**
+
+- [ ] `reports.py`：`_build_report_document` 的 `evidence_index` 参数改为 `evidence_meta: dict` + `test_results: list` + `coverage_reports: list`
+- [ ] `reports.py`：`_render_dashboard` 的 `evidence_index` 参数改为 `evidence_meta: dict`
+- [ ] `output.py`：`_render_output` 和 `_print_agent_actions` 的 `evidence_index` 参数改为 `evidence_meta: dict`
+- [ ] pipeline.py 中所有调用点适配新签名
+
+**Task 4：doctor.py + init.py + constraints 清理**
+
+- [ ] `cli/doctor.py`：删除 Check 1 `evidence_refs_integrity`（lines 229-254，claim 的 `evidence_refs` 字段已在 Phase 2 删除）
+- [ ] `cli/doctor.py`：新增 Check：claim 的 `related_task` 是否存在于 task_list 中
+- [ ] `cli/init.py`：删除 `archive/` 目录创建（line 112-116），仅创建 `claims/` 目录
 - [ ] `docs/architecture_constraints.json`：
-  - [ ] `module_boundaries` 中所有 `owned_files` 更新为嵌套包路径
-  - [ ] `claims/current.json` 引用改为 `claims/CLAIM-*.json`
-  - [ ] `evidence_index.json` 引用改为 `evidences/test_results.json` + `evidences/coverage_reports.json`
-  - [ ] `governance_boundary` 中的 `included_patterns` 更新
-  - [ ] **修改后必须重新执行 `vt finalize`**，更新 `architecture_constraints_hash` 基线，否则 Gate 1 哈希校验会阻断 `vt analyze`
-- [ ] 删除 `.vibetracing/claims/current.json` 和 `archive/` 目录
-- [ ] 清理被删除函数的测试类
-- [ ] 运行 `pytest` 全量测试
+  - `claims/current.json` → `claims/CLAIM-*.json`
+  - `evidence_index.json` → `evidences/test_results.json` + `evidences/coverage_reports.json`
+  - `owned_files` 更新为嵌套包路径（`evidence_index_builder.py` → `evidence_builder.py`）
+  - **修改后必须执行 `vt finalize`** 更新哈希基线
+
+**Task 5：测试清理 + 全量验证**
+
+- [ ] 删除 `TestRunClaimTests` + `TestArchiveClaims` 测试类
+- [ ] 删除 `TestRunClaimTestsTiming` 测试类
+- [ ] 删除 `TestClaimTestCacheStats` 测试类
+- [ ] 更新 pipeline 相关测试（适配新签名）
+- [ ] `pytest` 全量通过
 
 #### 验收标准
 
 - [ ] `pytest` 全量通过
-- [ ] `vt analyze --pre-commit` 端到端可运行
-- [ ] `vt analyze` 完整运行，生成 `output/evidences/` 目录
-- [ ] `vt doctor` 正常运行，不报 `current.json` 或 `evidence_index.json` 缺失
-- [ ] `vt init` 创建 `CLAIM-*.json` 模板而非 `current.json`
-- [ ] 无 `current.json`、`_archive_claims`、`_run_claim_tests` 的任何引用残留
-- [ ] `architecture_constraints.json` 中无旧路径引用
+- [ ] `grep -rn "_archive_claims\|_run_claim_tests" src/` 无结果
+- [ ] `grep -rn "evidence_index\.json" src/` 无结果（architecture_constraints.json 除外）
+- [ ] `grep -rn "current\.json" src/` 无结果（注释可保留）
+- [ ] `vt analyze` 生成 `output/evidences/test_results.json` + `coverage_reports.json`
 - [ ] Gate 决策正确（blocked/pass）
 
 ---

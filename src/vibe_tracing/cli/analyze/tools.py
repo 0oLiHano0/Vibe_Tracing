@@ -2,10 +2,8 @@
 Tool execution and staged-file checks.
 """
 
-import json
 import subprocess
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Set
 
@@ -260,66 +258,3 @@ def _check_staged_extensions(project_root: Path, constraints: Optional[dict], co
             "请更新 architecture_constraints.json 的 language_tool_matrix 并通过 vt finalize 锁定。",
             file=sys.stderr,
         )
-
-
-def _archive_claims(project_root: Path) -> None:
-    """Archive CLAIM-*.json files to commit-{hash}.json and remove them.
-
-    Called after a successful pre-commit gate evaluation so that claims
-    are preserved alongside the commit they belong to.
-    """
-    import glob as glob_mod
-
-    claims_dir = project_root / ".vibetracing" / "claims"
-    archive_dir = claims_dir / "archive"
-
-    # Collect all CLAIM-*.json files
-    claim_files = sorted(glob_mod.glob(str(claims_dir / "CLAIM-*.json")))
-    if not claim_files:
-        return
-
-    data = []
-    for cf in claim_files:
-        try:
-            with open(cf, "r", encoding="utf-8") as f:
-                claim = json.load(f)
-            if isinstance(claim, dict):
-                data.append(claim)
-        except (json.JSONDecodeError, OSError):
-            continue
-    if not data:
-        return
-
-    # Resolve archive filename: prefer short git commit hash, fallback to timestamp
-    archive_name = None
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=str(project_root),
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            archive_name = f"commit-{result.stdout.strip()}"
-    except (OSError, subprocess.TimeoutExpired):
-        pass
-
-    if archive_name is None:
-        archive_name = f"commit-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-
-    archive_path = archive_dir / f"{archive_name}.json"
-
-    # Ensure archive directory exists
-    archive_dir.mkdir(parents=True, exist_ok=True)
-
-    # Write archived claims
-    with archive_path.open("w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-        f.write("\n")
-
-    # Remove individual CLAIM-*.json files (archived)
-    for cf in claim_files:
-        Path(cf).unlink(missing_ok=True)
-
-    print(f"Claims archived to {archive_name}.json")

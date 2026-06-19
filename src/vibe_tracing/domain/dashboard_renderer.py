@@ -39,7 +39,7 @@ class DashboardRenderer:
         Renders the HTML dashboard file.
 
         Args:
-            evidence_index: The evidence index JSON data.
+            evidence_index: The evidence metadata (run_id, project_id, evidences).
             traceability_report: The traceability report JSON data.
             output_path: Target path to save the dashboard.html.
             prd_requirements: List of requirement dicts containing titles, priorities, and ACs.

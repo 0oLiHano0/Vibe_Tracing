@@ -48,11 +48,9 @@ from vibe_tracing.cli.analyze.gates import (
 from vibe_tracing.cli.analyze.tools import (
     _execute_tools,
     _check_staged_extensions,
-    _archive_claims,
 )
 from vibe_tracing.cli.analyze.analysis import (
     _run_analyzers,
-    _run_claim_tests,
     _load_human_decisions,
     _result_hash,
 )

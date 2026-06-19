@@ -335,32 +335,7 @@ class TestArchitectureComplianceCheckerLogging:
 # Task 5: Cache statistics — _run_claim_tests
 # --------------------------------------------------------------------------
 
-class TestClaimTestsCacheLogging:
-    """Tests for cache stat logging in _run_claim_tests."""
 
-    def test_run_claim_tests_logs_cache_stats(self, tmp_path):
-        """_run_claim_tests must log cache statistics."""
-        logger = _init_logger(tmp_path)
-        from vibe_tracing.cli.analyze.analysis import _run_claim_tests
-
-        # Create a mock claim with no test_refs
-        mock_claim = MagicMock()
-        mock_claim.test_refs = []
-
-        evidence_index = {}
-        result = _run_claim_tests(tmp_path, [mock_claim], evidence_index)
-
-        events = _read_log_events(logger)
-        cache_events = _find_event(events, "cache_stat")
-        assert len(cache_events) == 1
-        assert cache_events[0]["cache_hits"] == 0
-        assert cache_events[0]["cache_misses"] == 0
-        assert cache_events[0]["total"] == 0
-
-
-# --------------------------------------------------------------------------
-# Per-item decision trace logging (MergeGateEngine)
-# --------------------------------------------------------------------------
 
 class TestMergeGatePerItemLogging:
     """Tests for per-item DEBUG logging in MergeGateEngine gap/risk/AC evaluation."""

@@ -173,18 +173,18 @@ class TestDoctorLoadLogging:
 class TestDoctorCheckLogging:
     """Test logging for each diagnostic check."""
 
-    def test_evidence_refs_check_logged(self, tmp_path):
-        """evidence_refs_integrity check should be logged with result."""
+    def test_dangling_claims_check_logged(self, tmp_path):
+        """dangling_claims check should be logged with result."""
         (tmp_path / "docs").mkdir()
         (tmp_path / "output").mkdir()
 
         run_doctor(tmp_path)
 
         check_events = _log_by_event(tmp_path, "doctor_check")
-        ev_check = [e for e in check_events if e.get("check") == "evidence_refs_integrity"]
-        assert len(ev_check) == 1
-        assert ev_check[0]["result"] == "pass"
-        assert "duration_ms" in ev_check[0]
+        dc_check = [e for e in check_events if e.get("check") == "dangling_claims"]
+        assert len(dc_check) == 1
+        assert dc_check[0]["result"] == "pass"
+        assert "duration_ms" in dc_check[0]
 
     def test_file_refs_check_logged(self, tmp_path):
         """file_refs_integrity check should be logged with result."""
@@ -293,7 +293,7 @@ class TestDoctorEndLogging:
         assert len(end_events) == 1
         summary = end_events[0]["check_summary"]
         assert summary["file_refs_integrity"] == "fail"
-        assert summary["evidence_refs_integrity"] == "pass"
+        assert summary["dangling_claims"] == "pass"
 
     def test_duration_ms_is_non_negative(self, tmp_path):
         """All logged durations should be non-negative."""
@@ -343,7 +343,7 @@ class TestDoctorLoggingDoesNotAffectOutput:
         report = json.loads(captured.out)
         check_names = [c["name"] for c in report["checks"]]
         expected = [
-            "evidence_refs_integrity",
+            "dangling_claims",
             "file_refs_integrity",
             "requirement_mapping",
             "ac_mapping",

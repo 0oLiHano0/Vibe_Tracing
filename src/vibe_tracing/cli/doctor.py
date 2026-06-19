@@ -14,7 +14,7 @@ def run_doctor(project_root: Path) -> int:
     """Run governance data health checks and output a JSON report.
 
     Checks:
-      1. evidence_refs_integrity -- each claim's evidence_refs exist in evidence index or on disk
+      1. dangling_claims -- each claim's related_task exists in task_list.json
       2. file_refs_integrity -- each claim's code_refs and test_refs exist on disk
       3. requirement_mapping -- each task's related_requirements exist in the PRD
       4. ac_mapping -- each task's related_acceptance_criteria exist in the PRD
@@ -213,43 +213,32 @@ def run_doctor(project_root: Path) -> int:
                            path=str(coverage_reports_path),
                            duration_ms=int((time.perf_counter() - _t) * 1000))
 
-    # Collect all evidence_ids from test results and coverage reports
-    evidence_ids_in_index: Set[str] = set()
-    for nodeid, tr_data in test_results_data.items():
-        if isinstance(tr_data, dict):
-            eid = tr_data.get("evidence_id", nodeid)
-            if eid:
-                evidence_ids_in_index.add(eid)
-    for source_path, cr_data in coverage_reports_data.items():
-        if isinstance(cr_data, dict):
-            eid = cr_data.get("evidence_id", source_path)
-            if eid:
-                evidence_ids_in_index.add(eid)
-
-    # ---- Check 1: evidence_refs_integrity ----
+    # ---- Check 1: dangling_claims ----
     _t = time.perf_counter()
-    issues_1: List[Dict[str, Any]] = []
+    issues_dc: List[Dict[str, Any]] = []
+    # Load task IDs from task_list.json
+    task_ids = set()
+    task_list_path_check = project_root / "docs" / "task_list.json"
+    if task_list_path_check.is_file():
+        try:
+            task_data = json.loads(task_list_path_check.read_text(encoding="utf-8"))
+            task_ids = {t.get("task_id") for t in task_data.get("tasks", []) if t.get("task_id")}
+        except (json.JSONDecodeError, OSError):
+            pass
     for claim in claims_data:
-        claim_id = claim.get("claim_id", "")
-        for ref in claim.get("evidence_refs", []):
-            # Check if the ref is in the evidence index
-            if ref in evidence_ids_in_index:
-                continue
-            # Check if a file with that name exists on disk
-            ref_path = project_root / ref
-            if ref_path.exists():
-                continue
-            issues_1.append({
-                "claim_id": claim_id,
-                "evidence_ref": ref,
-                "message": f"Evidence ref '{ref}' not found in evidence index or on disk",
+        related_task = claim.get("related_task", "")
+        if related_task and related_task not in task_ids:
+            issues_dc.append({
+                "claim_id": claim.get("claim_id", ""),
+                "related_task": related_task,
+                "message": f"Claim references task '{related_task}' not found in task_list.json",
             })
-    checks.append({"name": "evidence_refs_integrity", "issues": issues_1})
+    checks.append({"name": "dangling_claims", "issues": issues_dc})
     if vt_logger:
-        vt_logger.info("doctor_check", "Evidence refs integrity check",
-                       check="evidence_refs_integrity",
-                       result="pass" if not issues_1 else "fail",
-                       issues_count=len(issues_1),
+        vt_logger.info("doctor_check", "Dangling claims check",
+                       check="dangling_claims",
+                       result="pass" if not issues_dc else "fail",
+                       issues_count=len(issues_dc),
                        claims_checked=len(claims_data),
                        duration_ms=int((time.perf_counter() - _t) * 1000))
 

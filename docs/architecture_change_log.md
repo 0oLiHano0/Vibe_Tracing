@@ -2,6 +2,19 @@
 
 本项目的所有架构约束变更均在此记录，供项目经理（PM）进行日常审计与追溯。
 
+## [2026-06-19] Phase 6-8 重构：claims 多文件 + evidence 拆分 + SQL 化
+
+### 架构约束全面重构
+* **变更规则**：Phase 6 流水线集成 + Phase 7 Dashboard 适配 + Phase 8 历史债务清理，涉及全部规则类型的路径引用更新。
+* **变更原因**：
+  1. Claims 存储从 `claims/current.json`（单文件）改为 `claims/CLAIM-*.json`（一任务一文件）
+  2. Evidence 存储从 `evidence_index.json`（单一文件）拆分为 `evidences/test_results.json` + `evidences/coverage_reports.json`
+  3. 所有模块路径从顶层包迁移至四层目录结构（`cli/`、`domain/`、`analyzers/`、`infra/`）
+  4. `storage_rules` 新增 `allowed_dependencies` 和 `forbidden_dependencies` 字段定义
+* **影响范围**：
+  - `docs/architecture_constraints.json`：全部规则的路径引用、存储规则 schema、模块边界路径更新
+  - `src/vibe_tracing/infra/validation/schemas/architecture_constraints.schema.json`：同步更新 schema 定义
+
 ## [2026-06-09] language_tool_matrix 新增非代码文件类型声明
 
 ### language_tool_matrix 新增 json/markdown/html/toml

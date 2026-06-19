@@ -88,17 +88,18 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
     exit_code_analyze = run_analyze(tmp_path, output_dir)
     assert exit_code_analyze in (0, 2)
  
-    # Read output evidence_index.json and traceability_report.json
-    evidence_index_path = output_dir / "evidence_index.json"
+    # Read output evidences/test_results.json and traceability_report.json
+    test_results_path = output_dir / "evidences" / "test_results.json"
     traceability_report_path = output_dir / "traceability_report.json"
- 
-    assert evidence_index_path.is_file()
+
+    assert test_results_path.is_file()
     assert traceability_report_path.is_file()
- 
-    with evidence_index_path.open("r", encoding="utf-8") as f:
+
+    with test_results_path.open("r", encoding="utf-8") as f:
         ei_data = json.load(f)
-    assert ei_data["project_id"] == "PROJECT-CapL"
- 
+    # test_results.json is a list of test result records
+    assert isinstance(ei_data, list)
+
     with traceability_report_path.open("r", encoding="utf-8") as f:
         tr_data = json.load(f)
     assert tr_data["project_id"] == "PROJECT-CapL"

@@ -335,16 +335,15 @@ class TestHappyPath:
 
         assert exit_code == 0, "gate should not be blocked"
 
-        # Verify evidence_index.json was generated
-        evidence_path = output_dir / "evidence_index.json"
-        assert evidence_path.exists(), "evidence_index.json must be created"
-        evidence_index = json.loads(evidence_path.read_text(encoding="utf-8"))
-        evidences = evidence_index.get("evidences", [])
-        assert len(evidences) > 0
+        # Verify test_results.json was generated
+        evidences_dir = output_dir / "evidences"
+        test_results_path = evidences_dir / "test_results.json"
+        assert test_results_path.exists(), "test_results.json must be created"
+        test_results = json.loads(test_results_path.read_text(encoding="utf-8"))
+        assert len(test_results) > 0
 
-        # Verify tool evidence entries exist with source_type "test"
-        test_evidence = [e for e in evidences if e.get("source_type") == "test"]
-        assert len(test_evidence) > 0, "must have at least one test evidence entry"
+        # Verify tool evidence entries exist
+        assert len(test_results) > 0, "must have at least one test result entry"
 
         # Verify traceability_report.json was generated
         report_path = output_dir / "traceability_report.json"
@@ -488,18 +487,17 @@ class TestToolExecutionFailure:
         ):
             exit_code = run_analyze(tmp_path, output_dir)
 
-        # Verify evidence_index.json was generated
-        evidence_path = output_dir / "evidence_index.json"
-        assert evidence_path.exists()
-        evidence_index = json.loads(evidence_path.read_text(encoding="utf-8"))
-        evidences = evidence_index.get("evidences", [])
+        # Verify test_results.json was generated
+        evidences_dir = output_dir / "evidences"
+        test_results_path = evidences_dir / "test_results.json"
+        assert test_results_path.exists()
+        test_results = json.loads(test_results_path.read_text(encoding="utf-8"))
 
         # Verify tool evidence has status "violated"
-        test_evidence = [e for e in evidences if e.get("source_type") == "test"]
-        assert len(test_evidence) > 0, "must have test evidence entries"
+        assert len(test_results) > 0, "must have test result entries"
         assert any(
-            e.get("status") == "violated" for e in test_evidence
-        ), "at least one test evidence must be 'violated'"
+            r.get("outcome") == "violated" for r in test_results
+        ), "at least one test result must be 'violated'"
 
         # Verify gate is blocked
         report_path = output_dir / "traceability_report.json"

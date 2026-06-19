@@ -31,11 +31,11 @@ def test_e2e_good_project(tmp_path):
     assert exit_code == 2
 
     # Verify output files exist
-    evidence_index_path = output_dir / "evidence_index.json"
+    test_results_path = output_dir / "evidences" / "test_results.json"
     traceability_report_path = output_dir / "traceability_report.json"
     dashboard_path = output_dir / "dashboard.html"
 
-    assert evidence_index_path.exists()
+    assert test_results_path.exists()
     assert traceability_report_path.exists()
     assert dashboard_path.exists()
 

@@ -26,7 +26,7 @@ def test_vt_can_analyze_itself():
 
     # Output files must exist
     output_dir = PROJECT_ROOT / "output"
-    assert (output_dir / "evidence_index.json").exists()
+    assert (output_dir / "evidences" / "test_results.json").exists()
     assert (output_dir / "traceability_report.json").exists()
     assert (output_dir / "dashboard.html").exists()
 

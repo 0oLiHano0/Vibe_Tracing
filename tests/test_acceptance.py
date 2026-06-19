@@ -327,12 +327,13 @@ class TestFullAnalyzePipeline:
             f"Pipeline should complete without errors, got exit code {exit_code}"
         )
 
-        # Verify evidence_index.json is non-empty
-        evidence_path = output_dir / "evidence_index.json"
-        assert evidence_path.exists(), "evidence_index.json must be generated"
-        evidence_index = json.loads(evidence_path.read_text(encoding="utf-8"))
-        assert len(evidence_index.get("evidences", [])) > 0, (
-            "evidence_index.json must contain at least one evidence entry"
+        # Verify evidence files are non-empty
+        evidences_dir = output_dir / "evidences"
+        test_results_path = evidences_dir / "test_results.json"
+        assert test_results_path.exists(), "test_results.json must be generated"
+        test_results = json.loads(test_results_path.read_text(encoding="utf-8"))
+        assert len(test_results) > 0, (
+            "test_results.json must contain at least one entry"
         )
 
         # Verify traceability_report.json is non-empty
@@ -434,16 +435,15 @@ class TestGatePassWithValidClaims:
             f"Gate decision must be valid, got: {gate_decision}"
         )
 
-        # Verify evidence index contains test evidence from tool report
-        evidence_path = output_dir / "evidence_index.json"
-        assert evidence_path.exists(), "evidence_index.json must be generated"
-        evidence_index = json.loads(evidence_path.read_text(encoding="utf-8"))
-        evidences = evidence_index.get("evidences", [])
+        # Verify evidence files contain test evidence from tool report
+        evidences_dir = output_dir / "evidences"
+        test_results_path = evidences_dir / "test_results.json"
+        assert test_results_path.exists(), "test_results.json must be generated"
+        test_results = json.loads(test_results_path.read_text(encoding="utf-8"))
 
-        # Check for test-type evidence (from tool reports)
-        test_evidence = [e for e in evidences if e.get("source_type") == "test"]
-        assert len(test_evidence) > 0, (
-            "evidence_index must contain at least one test evidence entry"
+        # Check for test entries (from tool reports)
+        assert len(test_results) > 0, (
+            "test_results.json must contain at least one test entry"
         )
 
 

@@ -251,12 +251,13 @@ def test_cli_analyze_pass(tmp_path, capsys):
     assert "Analysis complete. Gate decision: PASS" in captured.out
 
     # Check generated files
-    evidence_index_path = tmp_path / "output" / "evidence_index.json"
+    test_results_path = tmp_path / "output" / "evidences" / "test_results.json"
+    coverage_reports_path = tmp_path / "output" / "evidences" / "coverage_reports.json"
     traceability_report_path = (
         tmp_path / "output" / "traceability_report.json"
     )
 
-    assert evidence_index_path.exists()
+    assert test_results_path.exists()
     assert traceability_report_path.exists()
 
     # Validate schema compliance
@@ -404,7 +405,7 @@ def test_cli_analyze_custom_output_dir(tmp_path):
     )
     assert exit_code == 0
 
-    assert (custom_out / "evidence_index.json").exists()
+    assert (custom_out / "evidences" / "test_results.json").exists()
     assert (custom_out / "traceability_report.json").exists()
 
 
@@ -644,9 +645,9 @@ def test_gates_only_skips_analysis(tmp_path, capsys):
     # Full analysis output should NOT appear
     assert "Analysis complete. Gate decision:" not in captured.out
 
-    # No output files should be generated (evidence_index, traceability_report, etc.)
+    # No output files should be generated (evidences, traceability_report, etc.)
     output_dir = tmp_path / "output"
-    assert not (output_dir / "evidence_index.json").exists()
+    assert not (output_dir / "evidences" / "test_results.json").exists()
     assert not (output_dir / "traceability_report.json").exists()
 
 
@@ -1221,15 +1222,17 @@ def test_run_doctor_all_passing(tmp_path):
     from vibe_tracing.cli import run_doctor
 
     _setup_doctor_project(tmp_path)
-    # Create evidence index with matching evidence
-    evidence_index = {
-        "run_id": "test-run",
-        "evidences": [
-            {"evidence_id": "EVIDENCE-001", "source_type": "claim", "source_path": "src/main.py"}
-        ],
-    }
-    (tmp_path / "output" / "evidence_index.json").write_text(
-        json.dumps(evidence_index), encoding="utf-8"
+    # Create split evidence files with matching evidence
+    evidences_dir = tmp_path / "output" / "evidences"
+    evidences_dir.mkdir(parents=True, exist_ok=True)
+    test_results = [
+        {"nodeid": "tests/test_main.py::test_main", "outcome": "passed", "exit_code": 0, "command": "pytest", "carried_over": False}
+    ]
+    (evidences_dir / "test_results.json").write_text(
+        json.dumps(test_results), encoding="utf-8"
+    )
+    (evidences_dir / "coverage_reports.json").write_text(
+        json.dumps([]), encoding="utf-8"
     )
 
     exit_code = run_doctor(tmp_path)

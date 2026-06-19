@@ -174,11 +174,29 @@ def _render_dashboard(
                     "acceptance_criteria": ac_list,
                 }
             )
+        # Load split evidence data
+        evidences_dir = project_root / "output" / "evidences"
+        test_results_data = []
+        coverage_reports_data = []
+        tr_path = evidences_dir / "test_results.json"
+        cr_path = evidences_dir / "coverage_reports.json"
+        if tr_path.is_file():
+            try:
+                test_results_data = json.loads(tr_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+        if cr_path.is_file():
+            try:
+                coverage_reports_data = json.loads(cr_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
         renderer.render(
             evidence_index=evidence_meta,
             traceability_report=report_doc,
             output_path=dashboard_path,
             prd_requirements=prd_reqs_serialized,
+            test_results=test_results_data,
+            coverage_reports=coverage_reports_data,
         )
     except Exception as exc:
         print(f"Error rendering dashboard: {exc}", file=sys.stderr)

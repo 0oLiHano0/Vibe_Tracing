@@ -34,6 +34,8 @@ class DashboardRenderer:
         traceability_report: Dict[str, Any],
         output_path: Path,
         prd_requirements: Optional[List[Dict[str, Any]]] = None,
+        test_results: Optional[List[Dict[str, Any]]] = None,
+        coverage_reports: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
         """
         Renders the HTML dashboard file.
@@ -88,6 +90,8 @@ class DashboardRenderer:
         trace_report_json = json.dumps(traceability_report, ensure_ascii=False)
         prop_data_json = json.dumps(prop_res, ensure_ascii=False)
         hints_json = json.dumps(level2_hints, ensure_ascii=False)
+        test_results_json = json.dumps(test_results or [], ensure_ascii=False)
+        coverage_reports_json = json.dumps(coverage_reports or [], ensure_ascii=False)
 
         # Load template from package resources
         try:
@@ -99,6 +103,8 @@ class DashboardRenderer:
         html_content = (
             template_content.replace("{prd_reqs_json}", prd_reqs_json)
             .replace("{evidence_idx_json}", evidence_idx_json)
+            .replace("{test_results_json}", test_results_json)
+            .replace("{coverage_reports_json}", coverage_reports_json)
             .replace("{trace_report_json}", trace_report_json)
             .replace("{prop_data_json}", prop_data_json)
             .replace("{hints_json}", hints_json)

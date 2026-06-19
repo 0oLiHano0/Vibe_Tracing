@@ -116,6 +116,8 @@ def test_dashboard_renderer_success(tmp_path: Path):
     assert '<script id="evidence-idx-json" type="application/json">' in html_content
     assert '<script id="trace-report-json" type="application/json">' in html_content
     assert '<script id="hints-json" type="application/json">' in html_content
+    assert '<script id="test-results-json" type="application/json">' in html_content
+    assert '<script id="coverage-reports-json" type="application/json">' in html_content
 
     # Check for embedded data content
     assert "RUN-TEST-001" in html_content

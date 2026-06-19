@@ -1514,6 +1514,8 @@
     <!-- DATA EMBEDDED SCRIPTS -->
     <script id="prd-reqs-json" type="application/json">{prd_reqs_json}</script>
     <script id="evidence-idx-json" type="application/json">{evidence_idx_json}</script>
+    <script id="test-results-json" type="application/json">{test_results_json}</script>
+    <script id="coverage-reports-json" type="application/json">{coverage_reports_json}</script>
     <script id="trace-report-json" type="application/json">{trace_report_json}</script>
     <script id="boot-data-json" type="application/json">{}</script>
     <script id="prop-data-json" type="application/json">{prop_data_json}</script>
@@ -1533,6 +1535,11 @@
         try {
             evidenceIndex = JSON.parse(document.getElementById('evidence-idx-json').textContent);
         } catch(e) { console.error("Error parsing evidence index", e); }
+
+        let testResults = [];
+        let coverageReports = [];
+        try { testResults = JSON.parse(document.getElementById('test-results-json').textContent) || []; } catch(e) {}
+        try { coverageReports = JSON.parse(document.getElementById('coverage-reports-json').textContent) || []; } catch(e) {}
 
         try {
             report = JSON.parse(document.getElementById('trace-report-json').textContent);
@@ -2765,24 +2772,30 @@
         function renderCoverageHeatmap(evidenceIndex) {
             const container = document.getElementById('coverage-heatmap');
             const percentEl = document.getElementById('coverage-percent');
-            if (!container || !evidenceIndex) return;
+            if (!container) return;
 
-            // Collect coverage evidence
-            const coverageFiles = [];
-            for (const ev of evidenceIndex.evidences || []) {
-                if (ev.details && ev.details.tool_category === 'coverage') {
-                    const pct = ev.details.percent_covered || 0;
-                    coverageFiles.push({
-                        path: ev.source_path,
-                        percent: pct,
-                        pass: pct >= 80,
-                        num_statements: ev.details.num_statements || 0,
-                    });
-                }
+            // Use coverageReports (split format) instead of evidenceIndex.evidences
+            const coverageData = coverageReports || [];
+            if (coverageData.length === 0) {
+                percentEl.textContent = '--';
+                percentEl.className = 'coverage-percent';
+                container.innerHTML = '<div class="empty-state">暂无覆盖率数据 / No coverage data available</div>';
+                return;
+            }
+
+            // Group by source_path, compute per-file coverage
+            const fileCoverage = {};
+            for (const cr of coverageData) {
+                const path = cr.source_path || cr.file_path || '';
+                const pct = cr.percent_covered || 0;
+                const stmts = cr.num_statements || 0;
+                fileCoverage[path] = { percent: pct, num_statements: stmts, pass: pct >= 80 };
             }
 
             // Sort by coverage ascending (worst first)
-            coverageFiles.sort((a, b) => a.percent - b.percent);
+            const coverageFiles = Object.entries(fileCoverage)
+                .map(([path, data]) => ({ path, ...data }))
+                .sort((a, b) => a.percent - b.percent);
 
             // Calculate aggregate
             let totalStmts = 0, totalCovered = 0;
@@ -2791,13 +2804,6 @@
                 totalCovered += (f.percent / 100) * (f.num_statements || 0);
             }
             const aggregate = totalStmts > 0 ? (totalCovered / totalStmts * 100) : 0;
-
-            if (coverageFiles.length === 0) {
-                percentEl.textContent = '--';
-                percentEl.className = 'coverage-percent';
-                container.innerHTML = '<div class="empty-state">暂无覆盖率数据 / No coverage data available</div>';
-                return;
-            }
 
             percentEl.textContent = aggregate.toFixed(1) + '%';
             percentEl.className = 'coverage-percent ' + (aggregate >= 80 ? 'pass' : 'fail');
@@ -2869,12 +2875,26 @@
                 });
 
                 // Build test results map: source_path -> status
-                // Also check evidence_index test_results if present
                 const testResultsMap = {};
+
+                // Use split testResults array (primary source)
+                if (Array.isArray(testResults) && testResults.length > 0) {
+                    testResults.forEach(tr => {
+                        const testPath = tr.source_path || tr.file_path || '';
+                        const testStatus = tr.status || (tr.passed ? 'passed' : (tr.failed ? 'failed' : 'unknown'));
+                        if (testPath && covers.some(c => tr.covers && tr.covers.includes(c))) {
+                            testResultsMap[testPath] = testStatus;
+                        }
+                    });
+                }
+
+                // Fallback: use test-type evidences from evidenceIndex
                 relatedTests.forEach(te => {
                     const testPath = te.source_path;
                     const testStatus = te.status || 'unknown';
-                    testResultsMap[testPath] = testStatus;
+                    if (!testResultsMap[testPath]) {
+                        testResultsMap[testPath] = testStatus;
+                    }
                 });
 
                 // Also check evidence_index.test_results (from EVO-042)

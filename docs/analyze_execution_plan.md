@@ -24,7 +24,7 @@
 | Phase 4 | 门禁引擎 SQL 化 | ✅ 已完成 | evaluate 签名 11→6，静态方法删除，SQL 查询替代 |
 | Phase 5 | 幽灵代码检测 SQL 化 | ✅ 已完成 | git show 清零、SQL 查询替代、Gate 2.5 简化、三原则复核通过 |
 | Phase 6 | 流水线集成 | ✅ 已完成 | DB 统一 + 旧机制删除 + evidence 格式迁移 |
-| Phase 7 | Dashboard 模板迁移 + 清理 | ❌ 未开始 | dashboard 未适配新 evidence 格式 |
+| Phase 7 | Dashboard 模板迁移 + 清理 | 🔄 进行中 | renderer 注入 + 模板 JS 迁移 |
 | Phase 8 | 历史债务清理（current.json 残留 + 向后兼容代码） | ✅ 已完成 | 53 文件修改，删除旧架构核心组件，957 测试通过 |
 
 ### 已完成的额外工作
@@ -533,44 +533,57 @@ def load_tasks(conn, tasks):
 
 ### Phase 7：Dashboard 模板迁移 + 清理 — ❌ 未开始
 
-**目标**：适配 Dashboard 模板到新 evidence 格式，清理所有遗留文件。
+**目标**：适配 Dashboard 模板到新 evidence 格式（split JSON），清理所有遗留文件。
 
 **前置条件**：Phase 6 完成。
+
+**设计决策**：
+- `evidence_meta`（pipeline 层）注入 `run_id`/`project_id`/`scan_time`/`evidences`
+- `test_results_json` + `coverage_reports_json`（EvidenceBuilder 输出）注入模板
+- 模板 JS 从 `coverageReports[]` 读取覆盖率数据，不再从 `evidenceIndex.evidences` 过滤
+- Evidence Tab 保持单 Tab 结构（Test Results + Coverage 作为子区域），不拆分为两个独立 Tab
 
 **涉及文件**：
 
 | 操作 | 文件 |
 |---|---|
-| 修改 | `templates/dashboard.template.html` |
-| 修改 | `domain/dashboard_renderer.py` |
-| 删除 | `output/evidence_index.json`（如仍存在） |
-| 新建 | `tests/test_dashboard_template.py`（验证模板渲染不报错） |
+| 重构 | `domain/dashboard_renderer.py` |
+| 重构 | `templates/dashboard.template.html`（JS 部分） |
+| 更新 | `tests/test_dashboard_renderer.py` |
+| 更新 | `tests/test_dashboard_decisions.py` |
 
-#### 执行步骤
+#### 原子任务
 
-- [ ] 模板变量变更：
-  - [ ] 删除 `evidence_idx_json` 注入变量
-  - [ ] 新增 `test_results_json` + `coverage_reports_json` 注入变量
-  - [ ] `evidenceIndex.evidences[]` 引用改为 `testResults[]` + `coverageReports[]`
-- [ ] JavaScript 函数迁移：
-  - [ ] `jumpToEvidence(evidence_id)` → `jumpToTest(nodeid)` + `jumpToCoverage(source_path)`
-  - [ ] `reqCoverageMap` 构建逻辑改为从两个数组分别构建
-  - [ ] `renderCoverageHeatmap()` 改为读取 `coverageReports[]`
-  - [ ] Claim-Evidence 关联渲染改为通过 `nodeid`/`source_path` 匹配
-  - [ ] Evidence Tab 改为分别渲染 Test Results 和 Coverage 两个子 Tab
-  - [ ] 搜索功能改为搜索扁平字段
-- [ ] `domain/dashboard_renderer.py`：注入新的模板变量
-- [ ] 删除残留的 `output/evidence_index.json`
-- [ ] 运行 `vt analyze`，在浏览器中打开 `output/dashboard.html` 验证所有 Tab
+**Task 1：dashboard_renderer.py 注入新变量**
+
+- [ ] `render()` 方法新增 `test_results` 和 `coverage_reports` 参数
+- [ ] 新增 `test_results_json` 和 `coverage_reports_json` 序列化
+- [ ] 模板替换链新增 `{test_results_json}` 和 `{coverage_reports_json}`
+- [ ] 保留 `{evidence_idx_json}` 替换（evidence_meta 仍然注入）
+- [ ] 更新 `reports.py` 中的 `renderer.render()` 调用，传入 `test_results` 和 `coverage_reports`
+
+**Task 2：模板 JS 迁移（coverage 数据源）**
+
+- [ ] 新增 `<script id="test-results-json">` 和 `<script id="coverage-reports-json">` 嵌入点
+- [ ] JS 解析 `testResults` 和 `coverageReports` 数组
+- [ ] `renderCoverageHeatmap()` 改为读取 `coverageReports[]`（按 `source_path` 分组，取 `percent_covered`）
+- [ ] `renderClaimsVerification()` 改为通过 `code_path` 匹配 `coverageReports`
+- [ ] `itemEvidenceMap` 构建逻辑改为从 `coverageReports` 匹配 `code_path`
+- [ ] 保留 `evidenceIndex.evidences` 用于 Evidence Tab 表格渲染
+
+**Task 3：测试更新 + 清理**
+
+- [ ] `test_dashboard_renderer.py`：更新 fixture 数据，注入 `test_results` 和 `coverage_reports`
+- [ ] `test_dashboard_decisions.py`：修复 `test_decision_api_url_configured`（5000→5001 端口）
+- [ ] 删除 `output/evidence_index.json` 残留引用
+- [ ] `pytest tests/test_dashboard_renderer.py tests/test_dashboard_decisions.py -v` 通过
 
 #### 验收标准
 
-- [ ] `pytest` 全量通过
+- [ ] `pytest tests/test_dashboard_renderer.py tests/test_dashboard_decisions.py` 通过
 - [ ] Dashboard 在浏览器中正常渲染所有 Tab
-- [ ] Evidence Tab 显示 Test Results 和 Coverage 两个子区域
-- [ ] 点击 AC/Claim 能跳转到对应的测试结果
-- [ ] 搜索功能正常工作
-- [ ] 无 `evidence_id`、`evidenceIndex`、`e.details` 的引用残留
+- [ ] Coverage Heatmap 显示正确的覆盖率数据
+- [ ] 无 `evidenceIndex.evidences` 用于 coverage 逻辑的引用残留
 
 ---
 

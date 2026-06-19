@@ -159,7 +159,7 @@ class TestDecisionCardDataFlow:
 
     def test_decision_api_url_configured(self, rendered_dashboard: str):
         """submitDecision posts to the decision server API endpoint."""
-        assert "localhost:5000/api/decisions" in rendered_dashboard
+        assert "localhost:5001/api/decisions" in rendered_dashboard
 
 
 # ------------------------------------------------------------------

@@ -221,7 +221,8 @@ def run_doctor(project_root: Path) -> int:
     if task_list_path_check.is_file():
         try:
             task_data = json.loads(task_list_path_check.read_text(encoding="utf-8"))
-            task_ids = {t.get("task_id") for t in task_data.get("tasks", []) if t.get("task_id")}
+            if isinstance(task_data, dict):
+                task_ids = {t.get("task_id") for t in task_data.get("tasks", []) if t.get("task_id")}
         except (json.JSONDecodeError, OSError):
             pass
     for claim in claims_data:

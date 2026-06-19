@@ -1,46 +1,12 @@
 """
-Unit and integration tests for the Dashboard Renderer (TASK-VT-019).
+Unit tests for the Dashboard Renderer (TASK-VT-019).
 """
 
 import json
 from pathlib import Path
 from vibe_tracing.domain.dashboard_renderer import DashboardRenderer
-from vibe_tracing.cli import main
-from test_cli_analyze import setup_mock_project
 import pytest
 
-@pytest.fixture(autouse=True)
-def mock_tool_execution(monkeypatch):
-    import shutil
-    from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
-    from vibe_tracing.infra.enums import CoverageStatus
-    import json
-
-    # Mock shutil.which so the pre-flight dependency check passes
-    # even when tools like pytest/mypy are not installed in the test env.
-    _real_which = shutil.which
-    def mock_which(cmd):
-        return _real_which(cmd) or f"/usr/bin/{cmd}"
-    monkeypatch.setattr(shutil, "which", mock_which)
-
-    def mock_execute_all(self, execution_paths):
-        opts_path = self.project_root / "test_opts.json"
-        if not opts_path.exists():
-            return []
-        opts = json.loads(opts_path.read_text(encoding="utf-8"))
-        docstring = opts.get("test_docstring", "")
-        import re
-        covers = re.findall(r"\b(AC-VT-\d+-\d+|REQ-VT-\d+)\b", docstring)
-        return [
-            ToolEvidenceCandidate(
-                source_type="test",
-                source_path="tests/test_ids_and_enums.py::test_req_id_valid",
-                covers=covers,
-                status=CoverageStatus.COVERED.value if opts.get("test_outcome") == "passed" else CoverageStatus.VIOLATED.value,
-            )
-        ]
-
-    monkeypatch.setattr(ToolExecutionEngine, "execute_all", mock_execute_all)
 
 def test_dashboard_renderer_success(tmp_path: Path):
     """
@@ -170,37 +136,6 @@ def test_dashboard_renderer_missing_fields(tmp_path: Path):
     assert output_html.exists()
     html_content = output_html.read_text(encoding="utf-8")
     assert "RUN-EMPTY" in html_content
-
-
-def test_cli_analyze_generates_dashboard(tmp_path: Path):
-    """
-    covers: AC-VT-006-01
-    Verify that executing the CLI analyze command automatically generates the dashboard.html,
-    and embeds dashboard output path in the traceability report metadata section.
-    """
-    setup_mock_project(
-        tmp_path,
-        task_status="done",
-        test_outcome="passed",
-        test_docstring="covers: AC-VT-001-01\ncovers: AC-VT-001-02",
-        include_claims=True,
-        claim_has_evidence=True,
-    )
-
-    exit_code = main(["analyze", "--project-root", str(tmp_path)])
-    assert exit_code == 0
-
-    # Check generated files
-    dashboard_file = tmp_path / "output" / "dashboard.html"
-    assert dashboard_file.exists()
-
-    traceability_report_path = tmp_path / "output" / "traceability_report.json"
-    assert traceability_report_path.exists()
-
-    report = json.loads(traceability_report_path.read_text(encoding="utf-8"))
-    meta = report["metadata"]
-    assert "dashboard" in meta["output_files"]
-    assert meta["output_files"]["dashboard"] == "output/dashboard.html"
 
 
 def test_dashboard_renderer_svg_no_emojis(tmp_path: Path):

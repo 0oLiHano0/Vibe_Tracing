@@ -202,15 +202,41 @@ class TestEvidenceBuilderBuild:
         assert "coverage_reports_file" in result
         assert Path(result["evidences_dir"]).is_dir()
 
-    def test_build_handles_tool_evidence_without_source_type(self, tmp_path, conn):
-        """build() should skip tool evidence items without source_type attribute."""
-        from unittest.mock import MagicMock
+    def test_build_processes_test_and_coverage_evidence(self, tmp_path, conn):
+        """build() correctly upserts test and coverage evidence into split JSON."""
+        from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
 
-        bad_ev = MagicMock(spec=[])  # no attributes at all
+        test_ev = ToolEvidenceCandidate(
+            source_type="test",
+            source_path="tests/test_foo.py::test_bar",
+            covers=["AC-VT-001-01"],
+            status="passed",
+            tool_category="test",
+            exit_code=0,
+        )
+        cov_ev = ToolEvidenceCandidate(
+            source_type="tool",
+            source_path="src/vibe_tracing/module.py",
+            covers=["AC-VT-001-02"],
+            status="compliant",
+            tool_category="coverage",
+            details={"percent_covered": 85.0, "num_statements": 42},
+        )
+
         builder = EvidenceBuilder(tmp_path, conn)
-        ctx = _make_ctx(tool_evidence=[bad_ev])
+        ctx = _make_ctx(tool_evidence=[test_ev, cov_ev])
         result = builder.build(ctx)
 
-        # Should complete without error, empty output
+        assert isinstance(result, dict)
+        assert "test_results_file" in result
+        assert "coverage_reports_file" in result
+
         test_data = json.loads(Path(result["test_results_file"]).read_text())
-        assert test_data == []
+        assert len(test_data) == 1
+        assert test_data[0]["nodeid"] == "tests/test_foo.py::test_bar"
+        assert test_data[0]["outcome"] == "passed"
+
+        cov_data = json.loads(Path(result["coverage_reports_file"]).read_text())
+        assert len(cov_data) == 1
+        assert cov_data[0]["source_path"] == "src/vibe_tracing/module.py"
+        assert cov_data[0]["percent_covered"] == 85.0

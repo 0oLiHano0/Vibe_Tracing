@@ -354,6 +354,20 @@
           "consistency_requirement": {
             "type": "string"
           },
+          "allowed_dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "允许的依赖模块列表"
+          },
+          "forbidden_dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "禁止的依赖模块列表"
+          },
           "rationale": {
             "type": "string"
           },

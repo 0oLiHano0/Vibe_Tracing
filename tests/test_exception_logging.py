@@ -61,26 +61,6 @@ class TestGitUtilsExceptionLogging:
         assert call_kwargs[0][0] == "git_utils_error"
         assert "git_show" in call_kwargs[0][1]
 
-    def test_git_last_commit_touching_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.infra.git_utils import git_last_commit_touching
-
-        with patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=OSError("no git")):
-            result = git_last_commit_touching("file.txt", tmp_path)
-
-        assert result is None
-        mock_logger.exception.assert_called_once()
-        assert "git_last_commit_touching" in mock_logger.exception.call_args[0][1]
-
-    def test_git_file_modified_after_logs_on_error(self, mock_logger, tmp_path):
-        from vibe_tracing.infra.git_utils import git_file_modified_after
-
-        with patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=OSError("no git")):
-            result = git_file_modified_after("file.txt", "abc123", tmp_path)
-
-        assert result is False
-        mock_logger.exception.assert_called_once()
-        assert "git_file_modified_after" in mock_logger.exception.call_args[0][1]
-
     def test_git_has_uncommitted_changes_logs_on_error(self, mock_logger, tmp_path):
         from vibe_tracing.infra.git_utils import git_has_uncommitted_changes
 

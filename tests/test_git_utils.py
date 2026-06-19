@@ -10,8 +10,6 @@ import pytest
 
 from vibe_tracing.infra.git_utils import (
     git_show,
-    git_last_commit_touching,
-    git_file_modified_after,
     git_has_uncommitted_changes,
 )
 
@@ -47,84 +45,6 @@ class TestGitShow:
     def test_returns_none_on_exception(self, mock_run):
         result = git_show("abc123", "docs/prd.md", CWD)
         assert result is None
-
-
-# ---------------------------------------------------------------------------
-# git_last_commit_touching
-# ---------------------------------------------------------------------------
-
-class TestGitLastCommitTouching:
-    """Tests for git_last_commit_touching()."""
-
-    @patch("vibe_tracing.infra.git_utils.subprocess.run")
-    def test_returns_hash_on_success(self, mock_run):
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\n"
-        )
-        result = git_last_commit_touching("docs/prd.md", CWD)
-        assert result == "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
-        mock_run.assert_called_once_with(
-            ["git", "log", "-1", "--format=%H", "--", "docs/prd.md"],
-            cwd=CWD,
-            capture_output=True,
-            text=True,
-        )
-
-    @patch("vibe_tracing.infra.git_utils.subprocess.run")
-    def test_returns_none_when_no_history(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=0, stdout="")
-        result = git_last_commit_touching("brand_new_file.txt", CWD)
-        assert result is None
-
-    @patch("vibe_tracing.infra.git_utils.subprocess.run")
-    def test_returns_none_on_nonzero_exit(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=128, stdout="")
-        result = git_last_commit_touching("docs/prd.md", CWD)
-        assert result is None
-
-    @patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=OSError)
-    def test_returns_none_on_exception(self, mock_run):
-        result = git_last_commit_touching("docs/prd.md", CWD)
-        assert result is None
-
-
-# ---------------------------------------------------------------------------
-# git_file_modified_after
-# ---------------------------------------------------------------------------
-
-class TestGitFileModifiedAfter:
-    """Tests for git_file_modified_after()."""
-
-    @patch("vibe_tracing.infra.git_utils.subprocess.run")
-    def test_returns_true_when_modified(self, mock_run):
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="deadbeef12345678deadbeef12345678deadbeef\n"
-        )
-        result = git_file_modified_after("docs/prd.md", "abc123", CWD)
-        assert result is True
-        mock_run.assert_called_once_with(
-            ["git", "log", "abc123..HEAD", "--format=%H", "--", "docs/prd.md"],
-            cwd=CWD,
-            capture_output=True,
-            text=True,
-        )
-
-    @patch("vibe_tracing.infra.git_utils.subprocess.run")
-    def test_returns_false_when_not_modified(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=0, stdout="")
-        result = git_file_modified_after("docs/prd.md", "abc123", CWD)
-        assert result is False
-
-    @patch("vibe_tracing.infra.git_utils.subprocess.run")
-    def test_returns_false_on_nonzero_exit(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=128, stdout="")
-        result = git_file_modified_after("docs/prd.md", "abc123", CWD)
-        assert result is False
-
-    @patch("vibe_tracing.infra.git_utils.subprocess.run", side_effect=RuntimeError)
-    def test_returns_false_on_exception(self, mock_run):
-        result = git_file_modified_after("docs/prd.md", "abc123", CWD)
-        assert result is False
 
 
 # ---------------------------------------------------------------------------

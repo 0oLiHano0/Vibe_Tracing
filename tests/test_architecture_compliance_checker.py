@@ -390,6 +390,7 @@ def test_check_uses_constraints_data(temp_workspace, base_constraints_data):
 def test_accepted_rules_collected(temp_workspace):
     """Accepted manual rules appear in accepted_rules, not silently skipped."""
     tmp_path, constraints_data = temp_workspace
+    now = datetime.now(timezone.utc).isoformat()
     constraints_data["architecture_principles"] = [
         {
             "principle_id": "PRINCIPLE-VT-TEST-01",
@@ -397,13 +398,24 @@ def test_accepted_rules_collected(temp_workspace):
             "severity": "must",
             "description": "A rule that has been manually accepted.",
             "verification_method": "manual",
-            "accepted_by": "agent-001",
-            "accepted_at": datetime.now(timezone.utc).isoformat(),
         }
     ]
 
+    human_decisions = {
+        "version": "1.0",
+        "decisions": [
+            {
+                "category": "accepted_rule",
+                "targetId": "PRINCIPLE-VT-TEST-01",
+                "action": "accept",
+                "decidedBy": "agent-001",
+                "timestamp": now,
+            }
+        ],
+    }
+
     checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    results = checker.check(evidences=[], constraints_data=constraints_data)
+    results = checker.check(evidences=[], constraints_data=constraints_data, human_decisions=human_decisions)
 
     # Rule should be in accepted_rules
     assert "accepted_rules" in results
@@ -436,13 +448,24 @@ def test_stale_acceptance_detected(temp_workspace):
             "severity": "must",
             "description": "An old accepted rule.",
             "verification_method": "manual",
-            "accepted_by": "agent-001",
-            "accepted_at": old_date,
         }
     ]
 
+    human_decisions = {
+        "version": "1.0",
+        "decisions": [
+            {
+                "category": "accepted_rule",
+                "targetId": "PRINCIPLE-VT-STALE-01",
+                "action": "accept",
+                "decidedBy": "agent-001",
+                "timestamp": old_date,
+            }
+        ],
+    }
+
     checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    results = checker.check(evidences=[], constraints_data=constraints_data)
+    results = checker.check(evidences=[], constraints_data=constraints_data, human_decisions=human_decisions)
 
     assert len(results["accepted_rules"]) == 1
     assert results["accepted_rules"][0]["rule_id"] == "PRINCIPLE-VT-STALE-01"

@@ -15,6 +15,12 @@
   - `docs/architecture_constraints.json`：全部规则的路径引用、存储规则 schema、模块边界路径更新
   - `src/vibe_tracing/infra/validation/schemas/architecture_constraints.schema.json`：同步更新 schema 定义
 
+### evidence_index.json 引用全面清除（2026-06-19 复核补充）
+* **变更规则**：清除 constraints 中残留的 15 处 `evidence_index.json` 和 2 处 `evidence_index_builder` 引用，统一为拆分后的文件名和模块名。
+* **变更原因**：Phase 6-8 重构时 constraints 的 `owned_data` 和 `owned_files` 已更新，但描述文本（description、title、responsibility）中的旧引用未同步清理。本次复核发现并补全。
+* **影响范围**：
+  - `docs/architecture_constraints.json`：14 条规则的 description/title/responsibility 字段更新（PRINCIPLE-VT-011, PRINCIPLE-VT-014, MOD-VT-005, MOD-VT-008, FLOW-VT-001~004, STORE-VT-001~003, ERR-VT-003, LOG-VT-014, GATE-VT-010）
+
 ## [2026-06-09] language_tool_matrix 新增非代码文件类型声明
 
 ### language_tool_matrix 新增 json/markdown/html/toml

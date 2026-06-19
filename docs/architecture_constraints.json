@@ -159,7 +159,7 @@
     {
       "principle_id": "PRINCIPLE-VT-011",
       "title": "Dashboard 只负责渲染",
-      "description": "Dashboard 只能渲染 evidence_index.json 和 traceability_report.json 中已经存在的内容。不得重新解释事实、编造结论或重新计算治理状态。",
+      "description": "Dashboard 只能渲染 evidences/test_results.json、evidences/coverage_reports.json 和 traceability_report.json 中已经存在的内容。不得重新解释事实、编造结论或重新计算治理状态。",
       "severity": "must",
       "verification_method": "manual"
     },
@@ -180,7 +180,7 @@
     {
       "principle_id": "PRINCIPLE-VT-014",
       "title": "机器契约必须通过 Schema 校验",
-      "description": "architecture_constraints.json、task_list.json、claims/CLAIM-*.json、evidence_index.json、traceability_report.json 等机器可读文件必须通过明确的 Schema 校验。",
+      "description": "architecture_constraints.json、task_list.json、claims/CLAIM-*.json、evidences/test_results.json、evidences/coverage_reports.json、traceability_report.json 等机器可读文件必须通过明确的 Schema 校验。",
       "severity": "must",
       "verification_method": "manual"
     },
@@ -317,8 +317,8 @@
     },
     {
       "module_id": "MOD-VT-005",
-      "name": "evidence_index_builder",
-      "responsibility": "基于原始输入、任务记录、Agent Claim、测试摘要、工具输出和代码路径引用，生成 evidence_index.json。",
+      "name": "evidence_builder",
+      "responsibility": "基于原始输入、任务记录、Agent Claim、测试摘要、工具输出和代码路径引用，通过 SQLite UPSERT 生成 evidences/test_results.json 和 evidences/coverage_reports.json。",
       "allowed_to_call": [
         "MOD-VT-002",
         "MOD-VT-003"
@@ -404,7 +404,7 @@
     {
       "module_id": "MOD-VT-008",
       "name": "dashboard_renderer",
-      "responsibility": "根据 evidence_index.json 和 traceability_report.json 渲染单体 dashboard.html，不得重新计算事实或结论。",
+      "responsibility": "根据 evidences/test_results.json、evidences/coverage_reports.json 和 traceability_report.json 渲染单体 dashboard.html，不得重新计算事实或结论。",
       "allowed_to_call": [],
       "forbidden_to_call": [
         "MOD-VT-006",
@@ -677,11 +677,11 @@
   "data_flow_rules": [
     {
       "rule_id": "FLOW-VT-001",
-      "title": "Raw 输入流入 Evidence Index",
-      "description": "原始 PRD、架构约束、任务列表、Agent Claim、工具报告和代码引用可以被规范化为 evidence_index.json。",
+      "title": "Raw 输入流入 Evidence Builder",
+      "description": "原始 PRD、架构约束、任务列表、Agent Claim、工具报告和代码引用可以被规范化为 evidences/test_results.json 和 evidences/coverage_reports.json。",
       "severity": "must",
       "from": "raw_layer",
-      "to": "evidence_index_builder",
+      "to": "evidence_builder",
       "allowed": true,
       "rationale": "在进行追踪分析之前，必须先从原始材料和工具输出中构建证据索引。",
       "related_requirements": [
@@ -692,8 +692,8 @@
     },
     {
       "rule_id": "FLOW-VT-002",
-      "title": "Evidence Index 流入 Traceability Report",
-      "description": "traceability_report.json 必须引用 evidence_index.json 中的证据记录，不得在报告中编造没有来源的内联证据。",
+      "title": "Evidence 流入 Traceability Report",
+      "description": "traceability_report.json 必须引用 evidences/test_results.json 和 evidences/coverage_reports.json 中的证据记录，不得在报告中编造没有来源的内联证据。",
       "severity": "must",
       "from": "evidences/test_results.json,evidences/coverage_reports.json",
       "to": "traceability_report.json",
@@ -709,7 +709,7 @@
     {
       "rule_id": "FLOW-VT-003",
       "title": "Traceability Report 流入 Dashboard",
-      "description": "dashboard.html 必须以内嵌数据的方式渲染 traceability_report.json 和 evidence_index.json，不得在浏览时请求外部报告文件。",
+      "description": "dashboard.html 必须以内嵌数据的方式渲染 traceability_report.json、evidences/test_results.json 和 evidences/coverage_reports.json，不得在浏览时请求外部报告文件。",
       "severity": "must",
       "from": "traceability_report.json",
       "to": "dashboard.html",
@@ -723,7 +723,7 @@
     {
       "rule_id": "FLOW-VT-004",
       "title": "Dashboard 不得反向修改报告",
-      "description": "Dashboard 渲染过程不得修改 evidence_index.json、traceability_report.json、gate_decision 或原始材料。",
+      "description": "Dashboard 渲染过程不得修改 evidences/test_results.json、evidences/coverage_reports.json、traceability_report.json、gate_decision 或原始材料。",
       "severity": "must",
       "from": "dashboard.html",
       "to": "traceability_report.json",
@@ -792,7 +792,7 @@
         "architecture_constraints",
         "task_list",
         "agent_claims",
-        "evidence_index",
+        "evidences",
         "traceability_report",
         "dashboard"
       ],
@@ -813,8 +813,8 @@
     },
     {
       "rule_id": "STORE-VT-002",
-      "title": "Evidence Index 必须独立输出",
-      "description": "MVP 必须将 evidence_index.json 作为独立文件输出，而不是只内嵌在 traceability_report.json 中。",
+      "title": "Evidence 必须独立输出",
+      "description": "MVP 必须将 evidences/test_results.json 和 evidences/coverage_reports.json 作为独立文件输出，而不是只内嵌在 traceability_report.json 中。",
       "severity": "must",
       "data_objects": [
         "evidences/test_results.json",
@@ -826,7 +826,7 @@
     {
       "rule_id": "STORE-VT-003",
       "title": "Dashboard 必须内嵌报告数据",
-      "description": "虽然 evidence_index.json 和 traceability_report.json 是独立输出文件，但 dashboard.html 必须内嵌所需报告数据，确保 HTML 文件可独立打开。",
+      "description": "虽然 evidences/test_results.json、evidences/coverage_reports.json 和 traceability_report.json 是独立输出文件，但 dashboard.html 必须内嵌所需报告数据，确保 HTML 文件可独立打开。",
       "severity": "must",
       "data_objects": [
         "dashboard.html",
@@ -892,7 +892,7 @@
       "description": "如果证据存在但无法可靠关联到需求、任务、Claim 或验收标准，系统必须将该关系标记为 unclear 或 low_confidence。",
       "severity": "must",
       "applies_to": [
-        "evidence_index_builder",
+        "evidence_builder",
         "traceability_analyzer",
         "merge_gate_engine"
       ],
@@ -1034,7 +1034,7 @@
     {
       "rule_id": "LOG-VT-014",
       "title": "日志不得修改现有报告 schema 或输出格式",
-      "description": "日志系统的引入不得改变 evidence_index.json、traceability_report.json、dashboard.html 的 schema、字段或生成逻辑。日志是独立的输出产物，与报告无数据依赖。",
+      "description": "日志系统的引入不得改变 evidences/test_results.json、evidences/coverage_reports.json、traceability_report.json、dashboard.html 的 schema、字段或生成逻辑。日志是独立的输出产物，与报告无数据依赖。",
       "severity": "must",
       "forbidden_fields": [
         "log_fields_in_report_json",
@@ -1436,7 +1436,7 @@
     {
       "gate_id": "GATE-VT-010",
       "title": "Traceability Report 不得包含无证据的正向状态",
-      "description": "任何 done、covered、compliant 或 allowed 状态都必须引用 evidence_index.json 中存在的 evidence ID。",
+      "description": "任何 done、covered、compliant 或 allowed 状态都必须引用 evidences/test_results.json 或 evidences/coverage_reports.json 中存在的证据记录。",
       "severity": "must",
       "check_type": "automated",
       "pass_condition": "所有正向状态均引用存在的 evidence ID。",

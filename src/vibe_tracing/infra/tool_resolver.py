@@ -5,11 +5,9 @@ Consolidates scattered shutil.which / sys.executable fallback logic
 from cli.py and tool_evidence_adapter.py into a single module.
 """
 
-import importlib
 import shutil
 import subprocess
 import sys
-from typing import Optional
 
 
 class ToolResolver:

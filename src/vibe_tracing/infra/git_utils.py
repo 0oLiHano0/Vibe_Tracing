@@ -40,57 +40,6 @@ def git_show(commit: str, path: str, cwd: Path) -> Optional[str]:
         return None
 
 
-def git_last_commit_touching(path: str, cwd: Path) -> Optional[str]:
-    """Find the last commit hash that modified a file.
-
-    Args:
-        path: Relative path to the file inside the repository.
-        cwd:  Project root to run git in.
-
-    Returns:
-        The full commit hash as a string, or ``None`` if the file has
-        no history or the command fails.
-    """
-    try:
-        result = subprocess.run(
-            ["git", "log", "-1", "--format=%H", "--", path],
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-        return None
-    except Exception as e:
-        OperationalLogger.get().exception("git_utils_error", "Git operation failed: git_last_commit_touching", exc=e)
-        return None
-
-
-def git_file_modified_after(path: str, after_commit: str, cwd: Path) -> bool:
-    """Check if a file was modified after a specific commit.
-
-    Args:
-        path:        Relative path to the file inside the repository.
-        after_commit: Commit hash or ref to compare against.
-        cwd:         Project root to run git in.
-
-    Returns:
-        ``True`` if any commits touched the file after *after_commit*,
-        ``False`` otherwise.
-    """
-    try:
-        result = subprocess.run(
-            ["git", "log", f"{after_commit}..HEAD", "--format=%H", "--", path],
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-        )
-        return result.returncode == 0 and bool(result.stdout.strip())
-    except Exception as e:
-        OperationalLogger.get().exception("git_utils_error", "Git operation failed: git_file_modified_after", exc=e)
-        return False
-
-
 def git_has_uncommitted_changes(path: str, cwd: Path) -> bool:
     """Check if a file has uncommitted changes.
 

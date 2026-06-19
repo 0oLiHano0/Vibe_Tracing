@@ -106,7 +106,6 @@ def _auto_generate_claim_from_staged(
         code_refs=code_refs,
         test_refs=test_refs,
         notes=claim["notes"],
-        is_valid=False,
     )
     ctx.claims_list.append(claim_obj)
 
@@ -270,7 +269,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
     try:
         # Initialize operational logger
         from vibe_tracing.infra.operational_logger import OperationalLogger
-        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_staged_files, load_initial_cache
+        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims
         _run_start_t = time.perf_counter()
 
         _t_ctx = time.perf_counter()

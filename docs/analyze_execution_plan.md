@@ -24,7 +24,7 @@
 | Phase 4 | 门禁引擎 SQL 化 | ✅ 已完成 | evaluate 签名 11→6，静态方法删除，SQL 查询替代 |
 | Phase 5 | 幽灵代码检测 SQL 化 | ✅ 已完成 | git show 清零、SQL 查询替代、Gate 2.5 简化、三原则复核通过 |
 | Phase 6 | 流水线集成 | ✅ 已完成 | DB 统一 + 旧机制删除 + evidence 格式迁移 |
-| Phase 7 | Dashboard 模板迁移 + 清理 | 🔄 进行中 | renderer 注入 + 模板 JS 迁移 |
+| Phase 7 | Dashboard 模板迁移 + 清理 | ✅ 已完成 | split evidence 格式适配 + 测试修复 |
 | Phase 8 | 历史债务清理（current.json 残留 + 向后兼容代码） | ✅ 已完成 | 53 文件修改，删除旧架构核心组件，957 测试通过 |
 
 ### 已完成的额外工作
@@ -632,6 +632,48 @@ def load_tasks(conn, tasks):
 - [ ] `grep -rn "current\.json" src/ tests/` 无功能性引用（仅注释/日志消息可保留）
 - [ ] `evidence_index_builder.py` 已删除
 - [ ] `pytest tests/ -v` 全量通过
+
+---
+
+### Phase 8b：三原则审计债务清理 — ❌ 未开始
+
+**目标**：清理三原则全量复核中发现的 11 项债务。
+
+**前置条件**：Phase 1-7 完成。
+
+#### 原子任务
+
+**Task 1：修复 Bug + 删除 hasattr 向后兼容守卫**
+
+- [ ] `pipeline.py:109`：删除 `is_valid=False`（Claim dataclass 无此字段，运行时 TypeError）
+- [ ] `tools.py:111`：删除 `task.evidence_refs` hasattr 检查（字段已删除，直接用空列表）
+- [ ] `claim_evidence_analyzer.py:89,114,115`：删除 claim 双类型守卫（统一用 dataclass 属性访问）
+- [ ] `checks.py:323`：删除 `manifest.inputs_used` hasattr 检查（字段必存在）
+- [ ] `evidence_builder.py:38,45`：删除 `ev.source_path`/`ev.source_type` hasattr 检查（ToolEvidenceCandidate 必有这些字段）
+- [ ] `tools.py:164`：删除 `c.status` hasattr 检查（字段必存在）
+
+**Task 2：清理未使用 import + 死代码**
+
+- [ ] `common.py`：删除 `import json`、`from dataclasses import asdict`、`from typing import Any, Dict, List`
+- [ ] `doctor.py`：删除 `import sys`
+- [ ] `output.py`：删除 `import sys`
+- [ ] `actions.py`：删除 `from typing import List`
+- [ ] `helpers.py`：删除 `from typing import List, Optional, Set`
+- [ ] `pipeline.py`：删除 `load_staged_files, load_initial_cache` import（未调用）
+- [ ] `tool_resolver.py`：删除 `import importlib`、`from typing import Optional`
+- [ ] `validation/checks.py`：删除 `from typing import Dict, Set`
+- [ ] `claim_evidence_analyzer.py`：删除 `_parse_timestamp`、`_check_invalidation`、`_check_invalidation_from_evidence_index` 死方法
+- [ ] `git_utils.py`：删除 `git_last_commit_touching`、`git_file_modified_after` 死函数
+
+**Task 3：清理遗留引用 + 孤儿模块**
+
+- [ ] `architecture_compliance_checker.py:155`：docstring 中 `evidence_index.json` → `evidences/test_results.json`
+- [ ] `decision_server.py`：评估是否删除（Flask 孤儿模块，从未被导入）
+
+**Task 4：测试验证**
+
+- [ ] `pytest` 全量通过
+- [ ] `grep -rn "hasattr" src/vibe_tracing/ --include="*.py"` 检查残留
 
 ---
 

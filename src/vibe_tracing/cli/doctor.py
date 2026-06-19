@@ -3,7 +3,6 @@ Doctor command -- scan governance data health and report issues.
 """
 
 import json
-import sys
 import time
 import uuid
 from pathlib import Path

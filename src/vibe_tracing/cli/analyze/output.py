@@ -2,7 +2,6 @@
 Output rendering: gate summary, agent actions, and reflection prompts.
 """
 
-import sys
 from typing import List, Optional, Set
 
 from vibe_tracing.domain.context import UnifiedContext

@@ -7,7 +7,7 @@ JSON Schema、ID 格式、重复 ID、路径安全、human_decisions 结构。
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, List, Optional
 
 from vibe_tracing.infra.operational_logger import OperationalLogger
 from vibe_tracing.infra.validation.schema_validator import SchemaValidator
@@ -320,7 +320,7 @@ def validate_inputs(
     vt_logger = OperationalLogger.get()
     vt_logger.info("validation_start", "Pre-import format validation started",
         project_prefix=project_prefix,
-        inputs_count=len(manifest.inputs_used) if hasattr(manifest, 'inputs_used') else 0,
+        inputs_count=len(manifest.inputs_used),
     )
     issues = []
     issues.extend(_check_schemas(manifest, schemas_dir))

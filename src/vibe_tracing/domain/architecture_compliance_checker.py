@@ -152,7 +152,8 @@ class ArchitectureComplianceChecker:
         Check all must architectural constraints and module boundaries.
 
         Args:
-            evidences: List of evidence entries from evidence_index.json.
+            evidences: List of evidence entries from evidences/test_results.json
+                and evidences/coverage_reports.json.
             constraints_data: Pre-loaded constraints dict (required).
             human_decisions: Optional human decision log for accepted rules.
 

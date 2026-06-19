@@ -108,11 +108,7 @@ def _execute_tools(
 
     if task_res:
         for task in task_res.tasks:
-            for ref in task.evidence_refs if hasattr(task, 'evidence_refs') else []:
-                path_only = ref.split("#")[0]
-                if path_only and path_only not in seen_paths:
-                    source_paths.append(path_only)
-                    seen_paths.add(path_only)
+            pass  # Task model has no evidence_refs; source paths come from claims
 
     if not test_paths and not source_paths:
         return []
@@ -161,7 +157,7 @@ def _execute_tools(
 
     executed_count = len(tool_evidence_candidates)
     blocked_count = sum(1 for c in tool_evidence_candidates if c.error_code is not None)
-    skipped_count = sum(1 for c in tool_evidence_candidates if hasattr(c, 'status') and c.status == "skipped")
+    skipped_count = sum(1 for c in tool_evidence_candidates if c.status == "skipped")
     if skipped_count > 0:
         print(f"  ({skipped_count} files skipped -- no tests collected or usage error)", file=sys.stderr)
 

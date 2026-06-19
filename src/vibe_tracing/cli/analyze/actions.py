@@ -2,7 +2,7 @@
 Agent action collectors and urgency scoring.
 """
 
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, Optional, Set
 
 URGENCY_STAGED = 85
 URGENCY_IN_EVIDENCE = 60

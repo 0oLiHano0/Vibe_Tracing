@@ -3,7 +3,7 @@ AC/requirement description helpers and hint resolution for action formatting.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict
 
 from vibe_tracing.infra.hint_loader import load_hints, resolve_hint
 

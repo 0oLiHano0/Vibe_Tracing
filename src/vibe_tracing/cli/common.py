@@ -3,12 +3,10 @@ Shared utilities used across command modules.
 """
 
 import hashlib
-import json
 import subprocess
 import sys
-from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Optional, Set, Tuple
 
 from vibe_tracing.domain.raw_input_loader import RawInputLoader
 from vibe_tracing.domain.prd_parser import PrdParser

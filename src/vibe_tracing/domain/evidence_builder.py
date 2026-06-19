@@ -35,15 +35,12 @@ class EvidenceBuilder:
         # 2. Collect files touched in this run (for purging stale cache)
         target_files = set()
         for ev in (ctx.tool_evidence or []):
-            if hasattr(ev, 'source_path'):
-                target_files.add(ev.source_path)
+            target_files.add(ev.source_path)
         if target_files:
             purge_stale_cache(self.conn, list(target_files))
 
         # 3. Upsert tool execution results into the database
         for ev in (ctx.tool_evidence or []):
-            if not hasattr(ev, 'source_type'):
-                continue
             if ev.source_type == "test":
                 upsert_test_result(
                     self.conn,

@@ -10,7 +10,7 @@ import sqlite3
 import pytest
 from pathlib import Path
 from vibe_tracing.domain.evidence_builder import EvidenceBuilder
-from vibe_tracing.infra.db import init_in_memory_db, export_test_results, export_coverage_reports
+from vibe_tracing.infra.db import init_in_memory_db, _export_test_results, _export_coverage_reports
 
 
 @pytest.fixture
@@ -78,7 +78,7 @@ class TestEvidenceBuilderBuild:
         result = builder.build(ctx)
 
         # Verify DB contents
-        rows = export_test_results(conn)
+        rows = _export_test_results(conn)
         assert len(rows) == 1
         assert rows[0]["nodeid"] == "tests/test_example.py::test_foo"
         assert rows[0]["outcome"] == "passed"
@@ -109,7 +109,7 @@ class TestEvidenceBuilderBuild:
         result = builder.build(ctx)
 
         # Verify DB contents
-        rows = export_coverage_reports(conn)
+        rows = _export_coverage_reports(conn)
         assert len(rows) == 1
         assert rows[0]["source_path"] == "src/vibe_tracing/core/ids.py"
         assert rows[0]["percent_covered"] == 85.5
@@ -146,7 +146,7 @@ class TestEvidenceBuilderBuild:
         builder.build(ctx)
 
         # Both old (cached) and new test results should be in the DB
-        rows = export_test_results(conn)
+        rows = _export_test_results(conn)
         nodeids = {r["nodeid"] for r in rows}
         assert "tests/test_cached.py::test_old" in nodeids
         assert "tests/test_new.py::test_fresh" in nodeids
@@ -167,7 +167,7 @@ class TestEvidenceBuilderBuild:
         load_initial_cache(conn, evidences_dir)
 
         # Verify cache was loaded as carried_over
-        rows = export_test_results(conn)
+        rows = _export_test_results(conn)
         assert len(rows) == 1
         assert rows[0]["carried_over"] == 1
 
@@ -185,7 +185,7 @@ class TestEvidenceBuilderBuild:
         builder.build(ctx)
 
         # The old carried_over entry should be purged, replaced by the fresh one
-        rows = export_test_results(conn)
+        rows = _export_test_results(conn)
         target_rows = [r for r in rows if r["nodeid"] == "tests/test_target.py::test_a"]
         assert len(target_rows) == 1
         assert target_rows[0]["carried_over"] == 0  # fresh, not carried over
@@ -240,3 +240,48 @@ class TestEvidenceBuilderBuild:
         assert len(cov_data) == 1
         assert cov_data[0]["source_path"] == "src/vibe_tracing/module.py"
         assert cov_data[0]["percent_covered"] == 85.0
+
+    def test_build_extracts_file_paths_from_nodeids_for_purge(self, tmp_path, conn):
+        """build() should extract bare file paths from pytest nodeids for purging.
+
+        This catches the bug where source_path like "tests/test_target.py::test_old"
+        was passed directly to purge_stale_cache, causing LIKE '...::test_old::%'
+        to match nothing instead of purging all carried_over entries in the file.
+        """
+        from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
+
+        evidences_dir = tmp_path / "output" / "evidences"
+        evidences_dir.mkdir(parents=True, exist_ok=True)
+
+        # Set up cache with a carried-over test in the same file
+        cached_test = [{"nodeid": "tests/test_target.py::test_old", "outcome": "passed", "exit_code": 0}]
+        (evidences_dir / "test_results.json").write_text(json.dumps(cached_test))
+
+        # Simulate loading the cache (carried_over=1)
+        from vibe_tracing.infra.db import load_initial_cache
+        load_initial_cache(conn, evidences_dir)
+
+        rows = _export_test_results(conn)
+        assert len(rows) == 1
+        assert rows[0]["carried_over"] == 1
+
+        # Now run build() with a DIFFERENT test in the same file
+        new_test_ev = ToolEvidenceCandidate(
+            source_type="test",
+            source_path="tests/test_target.py::test_new",  # different test, same file
+            covers=[],
+            status="passed",
+            tool_category="test",
+            exit_code=0,
+        )
+        builder = EvidenceBuilder(tmp_path, conn)
+        ctx = _make_ctx(tool_evidence=[new_test_ev])
+        builder.build(ctx)
+
+        # The old carried_over entry should be purged; only the new one remains
+        rows = _export_test_results(conn)
+        nodeids = {r["nodeid"] for r in rows}
+        assert "tests/test_target.py::test_old" not in nodeids, (
+            "carried_over entry from same file should have been purged"
+        )
+        assert "tests/test_target.py::test_new" in nodeids

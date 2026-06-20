@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 import uuid
+
 from pathlib import Path
 
 from vibe_tracing.infra.operational_logger import OperationalLogger
@@ -115,9 +116,14 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
 
 def run_finalize(project_root: Path) -> int:
     """Finalize project configuration by reading language and tools from architecture constraints."""
-    # Initialize operational logger (safe: never blocks finalize if init fails)
-    run_id = f"RUN-{uuid.uuid4()}"
-    vt_logger = OperationalLogger.init(run_id, project_root)
+    # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
+    # 若日志初始化失败，finalize 仍须继续运行（LOG-VT-011 约束）
+    try:
+        vt_logger = OperationalLogger.get_or_init(
+            run_id=f"RUN-{uuid.uuid4()}", project_root=project_root,
+        )
+    except Exception:
+        vt_logger = OperationalLogger.get()  # 返回空日志器，不阻断命令
     vt_logger.info("run_start", "vt finalize started")
     _run_start_t = time.perf_counter()
 

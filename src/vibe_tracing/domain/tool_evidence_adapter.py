@@ -75,6 +75,7 @@ class ToolExecutionEngine:
         validation_tools: List[str],
         project_root: Path,
         timeout: int = DEFAULT_TIMEOUT,
+        coverage_baseline_path: Optional[str] = None,
     ) -> None:
         """
         Args:
@@ -83,12 +84,14 @@ class ToolExecutionEngine:
             validation_tools: List of tool categories to run (e.g., ["test", "lint"]).
             project_root: Absolute path to project workspace root.
             timeout: Subprocess timeout in seconds.
+            coverage_baseline_path: Optional path to a coverage.json baseline file.
         """
         self.language_tool_matrix = language_tool_matrix
         self.language = language
         self.validation_tools = list(validation_tools)
         self.project_root = project_root
         self.timeout = timeout
+        self.coverage_baseline_path = coverage_baseline_path
 
         # Build the active tool config map: {category -> tool_config_dict}
         lang_matrix = self.language_tool_matrix.get(self.language, {})
@@ -598,6 +601,78 @@ class ToolExecutionEngine:
             )
         ]
 
+    def _parse_coverage_json_output(
+        self, stdout: str, stderr: str, exit_code: int, command: str, path: str
+    ) -> List[ToolEvidenceCandidate]:
+        """Parse coverage JSON output into evidence candidates.
+
+        Expects the ``coverage.json`` format produced by ``coverage json``::
+
+            {"files": {"/abs/path/to/file.py": {"summary": {"percent_covered": X, "num_statements": Y}}}}
+
+        Files whose ``percent_covered`` is ``None`` are skipped.
+        """
+        try:
+            data = json.loads(stdout)
+        except (json.JSONDecodeError, TypeError):
+            return [
+                ToolEvidenceCandidate(
+                    source_type="tool",
+                    source_path=path,
+                    covers=[],
+                    status=CoverageStatus.BLOCKED.value,
+                    command=command,
+                    exit_code=exit_code,
+                    stderr=stderr or "Failed to parse coverage JSON output",
+                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
+                )
+            ]
+
+        files = data.get("files") if isinstance(data, dict) else None
+        if not isinstance(files, dict):
+            return [
+                ToolEvidenceCandidate(
+                    source_type="tool",
+                    source_path=path,
+                    covers=[],
+                    status=CoverageStatus.BLOCKED.value,
+                    command=command,
+                    exit_code=exit_code,
+                    stderr=stderr or "Coverage JSON missing 'files' key",
+                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
+                )
+            ]
+
+        candidates: List[ToolEvidenceCandidate] = []
+        for file_path, file_data in files.items():
+            if not isinstance(file_data, dict):
+                continue
+            summary = file_data.get("summary", file_data)
+            if not isinstance(summary, dict):
+                continue
+            percent = summary.get("percent_covered")
+            num_stmts = summary.get("num_statements", 0)
+            if percent is None:
+                continue
+            percent_f = float(percent)
+            status = CoverageStatus.COMPLIANT.value  # Individual file parse result
+            candidates.append(
+                ToolEvidenceCandidate(
+                    source_type="tool",
+                    source_path=file_path,
+                    covers=[],
+                    status=status,
+                    command=command,
+                    exit_code=exit_code,
+                    details={
+                        "percent_covered": percent_f,
+                        "num_statements": int(num_stmts),
+                    },
+                )
+            )
+
+        return candidates
+
     # ------------------------------------------------------------------
     # Public execution API
     # ------------------------------------------------------------------
@@ -775,6 +850,8 @@ class ToolExecutionEngine:
             candidates = self._parse_mypy_output(stdout, stderr, exit_code, command, path)
         elif output_format == "bandit_json":
             candidates = self._parse_bandit_output(stdout, stderr, exit_code, command, path)
+        elif output_format == "coverage_json":
+            candidates = self._parse_coverage_json_output(stdout, stderr, exit_code, command, path)
         else:
             hint = resolve_hint(_tool_hints.get("unsupported_output_format", {}), "level1")
             msg = _safe_format(hint, output_format=output_format) if hint else f"Unsupported output format: {output_format}"
@@ -978,7 +1055,9 @@ class ToolExecutionEngine:
                 all_candidates.extend(candidates)
 
         # Append per-source-file coverage evidence from the baseline.
-        all_candidates.extend(self._measure_source_coverage())
+        all_candidates.extend(self._measure_source_coverage(
+            baseline_path=self.coverage_baseline_path,
+        ))
 
         return all_candidates
 

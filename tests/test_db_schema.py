@@ -6,8 +6,8 @@ from src.vibe_tracing.infra.db import (
     upsert_test_result,
     upsert_coverage_report,
     purge_stale_cache,
-    export_test_results,
-    export_coverage_reports,
+    _export_test_results,
+    _export_coverage_reports,
 )
 
 
@@ -160,12 +160,102 @@ class TestPurgeStaleCache:
 
         conn.close()
 
+    def test_purge_removes_all_carried_over_from_same_file(self):
+        """Purging a file path should remove ALL carried_over tests in that file."""
+        conn = init_in_memory_db()
+
+        # Insert 3 tests from the same file, all carried_over=1
+        for nodeid in [
+            "tests/test_z.py::test_a",
+            "tests/test_z.py::test_b",
+            "tests/test_z.py::test_c",
+        ]:
+            conn.execute(
+                "INSERT OR REPLACE INTO test_results "
+                "(nodeid, outcome, exit_code, command, carried_over) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (nodeid, "passed", 0, "", 1),
+            )
+        conn.commit()
+
+        purge_stale_cache(conn, ["tests/test_z.py"])
+
+        remaining = conn.execute("SELECT nodeid FROM test_results").fetchall()
+        assert len(remaining) == 0, (
+            f"All 3 carried_over tests should be purged, got {remaining}"
+        )
+        conn.close()
+
+    def test_purge_preserves_new_results_from_same_file(self):
+        """Purging should only remove carried_over=1, keeping fresh results."""
+        conn = init_in_memory_db()
+
+        conn.execute(
+            "INSERT OR REPLACE INTO test_results "
+            "(nodeid, outcome, exit_code, command, carried_over) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("tests/test_y.py::test_old", "failed", 1, "", 1),
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO test_results "
+            "(nodeid, outcome, exit_code, command, carried_over) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("tests/test_y.py::test_new", "passed", 0, "", 0),
+        )
+        conn.commit()
+
+        purge_stale_cache(conn, ["tests/test_y.py"])
+
+        remaining = conn.execute(
+            "SELECT nodeid, carried_over FROM test_results ORDER BY nodeid"
+        ).fetchall()
+        nodeids = [r[0] for r in remaining]
+        assert "tests/test_y.py::test_old" not in nodeids, (
+            "carried_over=1 test should be purged"
+        )
+        assert "tests/test_y.py::test_new" in nodeids, (
+            "carried_over=0 test should survive"
+        )
+        conn.close()
+
+    def test_purge_does_not_affect_different_file(self):
+        """Purging file A should not touch entries from file B."""
+        conn = init_in_memory_db()
+
+        conn.execute(
+            "INSERT OR REPLACE INTO test_results "
+            "(nodeid, outcome, exit_code, command, carried_over) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("tests/test_a.py::test_x", "passed", 0, "", 1),
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO test_results "
+            "(nodeid, outcome, exit_code, command, carried_over) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("tests/test_b.py::test_y", "passed", 0, "", 1),
+        )
+        conn.commit()
+
+        purge_stale_cache(conn, ["tests/test_a.py"])
+
+        remaining = conn.execute(
+            "SELECT nodeid FROM test_results ORDER BY nodeid"
+        ).fetchall()
+        nodeids = [r[0] for r in remaining]
+        assert "tests/test_a.py::test_x" not in nodeids, (
+            "carried_over=1 for purged file should be removed"
+        )
+        assert "tests/test_b.py::test_y" in nodeids, (
+            "carried_over=1 for different file should survive"
+        )
+        conn.close()
+
 
 # ── Export ─────────────────────────────────────────────────────────────────────
 
 
 class TestExport:
-    def test_export_test_results_flat(self):
+    def test__export_test_results_flat(self):
         conn = init_in_memory_db()
 
         conn.execute(
@@ -182,7 +272,7 @@ class TestExport:
         )
         conn.commit()
 
-        exported = export_test_results(conn)
+        exported = _export_test_results(conn)
         assert isinstance(exported, list)
         assert len(exported) == 2
 
@@ -202,7 +292,7 @@ class TestExport:
 
         conn.close()
 
-    def test_export_coverage_reports_flat(self):
+    def test__export_coverage_reports_flat(self):
         conn = init_in_memory_db()
 
         conn.execute(
@@ -219,7 +309,7 @@ class TestExport:
         )
         conn.commit()
 
-        exported = export_coverage_reports(conn)
+        exported = _export_coverage_reports(conn)
         assert isinstance(exported, list)
         assert len(exported) == 2
 

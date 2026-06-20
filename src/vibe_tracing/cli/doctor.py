@@ -5,6 +5,7 @@ Doctor command -- scan governance data health and report issues.
 import json
 import time
 import uuid
+
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
@@ -19,14 +20,13 @@ def run_doctor(project_root: Path) -> int:
       4. ac_mapping -- each task's related_acceptance_criteria exist in the PRD
       5. machine_rule_coverage -- architecture rules with verification_method=="machine" have no obvious checker
     """
-    # ---- Initialize operational logger (safe: doctor must still work if this fails) ----
+    # ---- 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化 ----
+    # 若日志初始化失败，doctor 仍须继续运行（LOG-VT-011 约束）
     vt_logger = None
     try:
         from vibe_tracing.infra.operational_logger import OperationalLogger
-        vt_logger = OperationalLogger.init(
-            run_id=f"DOCTOR-{uuid.uuid4()}",
-            project_root=project_root,
-            level="DEBUG",
+        vt_logger = OperationalLogger.get_or_init(
+            run_id=f"DOCTOR-{uuid.uuid4()}", project_root=project_root,
         )
         vt_logger.info("doctor_start", "Doctor diagnostic scan started")
     except Exception:

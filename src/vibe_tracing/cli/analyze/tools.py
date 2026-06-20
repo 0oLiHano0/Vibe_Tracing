@@ -68,11 +68,13 @@ def _execute_tools(
         print("Skipping tool execution. Install tools to enable full evidence collection.", file=sys.stderr)
         return []
 
+    coverage_baseline_path = str(project_root / "coverage.json")
     engine = ToolExecutionEngine(
         language_tool_matrix=ltm,
         language=config_language,
         validation_tools=config_validation_tools,
         project_root=project_root,
+        coverage_baseline_path=coverage_baseline_path,
     )
 
     # Collect paths to execute tools against (code files only), separated

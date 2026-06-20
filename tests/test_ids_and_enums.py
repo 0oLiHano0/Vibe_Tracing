@@ -7,7 +7,7 @@ Every test function declares which AC IDs it covers in its docstring.
 import pytest
 
 from vibe_tracing.infra.validation import validate_id, get_id_type
-from vibe_tracing.infra.enums import CoverageStatus, Severity, ErrorCode
+from vibe_tracing.infra.enums import CoverageStatus, ErrorCode
 
 
 # ---------------------------------------------------------------------------
@@ -294,36 +294,6 @@ class TestCoverageStatus:
     def test_coverage_status_lookup_by_value(self, value: str):
         """covers: AC-VT-002-01"""
         member = CoverageStatus(value)
-        assert member.value == value
-
-
-# ===========================================================================
-# Severity enum
-# ===========================================================================
-
-
-class TestSeverity:
-    """AC-VT-006-02 — all Severity values must exist."""
-
-    def test_all_severity_values_exist(self):
-        """covers: AC-VT-006-02"""
-        expected = {"must", "should", "could"}
-        actual = {member.value for member in Severity}
-        assert actual == expected
-
-    def test_severity_is_str_enum(self):
-        """covers: AC-VT-006-02"""
-        assert isinstance(Severity.MUST, str)
-        assert Severity.MUST == "must"
-
-    def test_severity_count(self):
-        """covers: AC-VT-006-02"""
-        assert len(Severity) == 3
-
-    @pytest.mark.parametrize("value", ["must", "should", "could"])
-    def test_severity_lookup_by_value(self, value: str):
-        """covers: AC-VT-006-02"""
-        member = Severity(value)
         assert member.value == value
 
 

@@ -1,5 +1,22 @@
 """
-Main analyze pipeline orchestration.
+VT 分析流水线编排模块
+
+为什么需要这个模块：
+  vt analyze 是 VT 的核心命令，需要按严格顺序串联多个模块完成分析。
+  本模块是唯一的编排入口，决定"什么时候调用谁"。
+
+核心设计：
+  流水线分 9 个阶段，每个阶段有明确的输入→输出：
+  1. 加载输入 → 2. 门禁检查 → 3. 创建数据库
+  → 4. 执行工具 → 5. 灌入数据 → 6. 构建证据 → 7. 运行分析器
+  → 8. 门禁判定 + 输出 → 9. 返回退出码
+
+依赖关系：
+  被 cli/main.py 通过 _dispatch() 调用。
+  调用以下模块：common（上下文加载）、gates（门禁）、tools（工具执行）、
+  analysis（分析器）、reports（报告）、output（渲染）、
+  domain/evidence_builder（证据构建）、domain/merge_gate_engine（门禁判定）、
+  infra/db（数据库）
 """
 
 import json
@@ -7,7 +24,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
-from typing import Optional, Set, Tuple
+from typing import Optional, Set
 
 from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
 from vibe_tracing.domain.evidence_builder import EvidenceBuilder
@@ -28,95 +45,6 @@ from vibe_tracing.cli.analyze.reports import _build_report_document
 from vibe_tracing.cli.analyze.output import _render_output
 
 
-def _classify_staged_files(staged_files: Set[str], project_root: Path) -> Tuple[list, list]:
-    """Classify staged .py files into source code and test file lists.
-
-    Source code: files under ``src/`` with ``.py`` extension.
-    Test files:  files under ``tests/`` with ``.py`` extension.
-
-    Returns ``(code_refs, test_refs)`` — each is a list of relative path strings.
-    """
-    code_refs = []
-    test_refs = []
-    for f in sorted(staged_files):
-        if not f.endswith(".py"):
-            continue
-        if f.startswith("src/") or f.startswith("src\\"):
-            code_refs.append(f)
-        elif f.startswith("tests/") or f.startswith("tests\\"):
-            test_refs.append(f)
-    return code_refs, test_refs
-
-
-def _auto_generate_claim_from_staged(
-    ctx: UnifiedContext,
-    project_root: Path,
-) -> Optional[UnifiedContext]:
-    """Auto-generate a claim from git staged files when current claims are empty.
-
-    Only called in pre-commit mode.  Writes the generated claim to
-    ``claims/CLAIM-{prefix}-001.json`` and updates ``ctx.claims_list`` in memory.
-
-    Returns the updated context, or None if no auto-generation was needed.
-    """
-    claims_dir = project_root / ".vibetracing" / "claims"
-
-    staged_files = _get_staged_files(project_root)
-    if not staged_files:
-        return None
-
-    code_refs, test_refs = _classify_staged_files(staged_files, project_root)
-    if not code_refs and not test_refs:
-        return None
-
-    config_prefix = ctx.config_prefix
-
-    # Sequential numbering: find next available number
-    import glob as glob_mod
-    existing = sorted(glob_mod.glob(str(claims_dir / f"CLAIM-{config_prefix}-*.json")))
-    max_seq = 0
-    for f in existing:
-        name = Path(f).stem  # e.g., "CLAIM-VT-001"
-        parts = name.split("-")
-        if len(parts) >= 3:
-            try:
-                seq = int(parts[-1])
-                max_seq = max(max_seq, seq)
-            except ValueError:
-                pass
-    claim_id = f"CLAIM-{config_prefix}-{max_seq + 1:03d}"
-    claim = {
-        "claim_id": claim_id,
-        "related_task": "",
-        "code_refs": code_refs,
-        "test_refs": test_refs,
-        "notes": "Auto-generated from staged files",
-    }
-
-    claims_dir.mkdir(parents=True, exist_ok=True)
-    claim_path = claims_dir / f"{claim_id}.json"
-    with claim_path.open("w", encoding="utf-8") as f:
-        json.dump(claim, f, indent=2, ensure_ascii=False)
-        f.write("\n")
-
-    from vibe_tracing.domain.claim_loader import Claim
-    claim_obj = Claim(
-        claim_id=claim["claim_id"],
-        related_task=claim["related_task"],
-        code_refs=code_refs,
-        test_refs=test_refs,
-        notes=claim["notes"],
-    )
-    ctx.claims_list.append(claim_obj)
-
-    print(
-        f"Auto-generated claim from staged files: "
-        f"{len(code_refs)} code_refs, {len(test_refs)} test_refs",
-        file=sys.stderr,
-    )
-    return ctx
-
-
 def _run_analysis_phase(
     ctx: UnifiedContext,
     merged_gaps: list,
@@ -125,19 +53,34 @@ def _run_analysis_phase(
     project_root: Path,
     staged_files: Optional[Set[str]] = None,
 ):
-    """Run claim tests, compute active issues, and build staged_items.
+    """过滤 stale 项并构建 staged_items（用于门禁判定的债务感知）。
 
-    Returns (active_gaps, active_risks, evidence_meta,
-             staged_items, directly_staged_items).
+    输入：
+        ctx:            统一上下文
+        merged_gaps:    分析器输出的全部 gaps（含 stale）
+        final_risks:    分析器输出的全部 risks（含 stale）
+        evidence_meta:  证据元数据
+        project_root:   项目根目录
+        staged_files:   暂存区文件集合
+    前置条件：
+        分析器已完成（_run_analyzers 已执行）
+    处理逻辑：
+        1. 过滤掉 stale 标记的 gaps 和 risks（仅保留在完整报告中）
+        2. 根据 staged 文件确定受影响的 claims/tasks/acs/reqs
+        3. 从 staged 的 CLAIM-*.json 文件中提取 directly_staged_claims
+    输出：
+        返回 (active_gaps, active_risks, evidence_meta, staged_items, directly_staged_items)
     """
     claims_list = ctx.claims_list
 
-    # Filter out stale gaps / risks for gate evaluation.  Stale items are
-    # still included in the full report for visibility.
+    # 过滤 stale 项：stale 项仍保留在完整报告中，但不参与门禁判定
     active_gaps = [g for g in merged_gaps if not g.get("stale")]
     active_risks = [r for r in final_risks if not r.get("stale")]
 
-    # Build staged_items for debt awareness (EVO-TASK-025 / EVO-TASK-012).
+    # TODO: 过度设计待优化 —— staged_items 构建逻辑（Claim→Task 关联查询）可用 SQL JOIN 替代
+    # 原因：Python 循环匹配 Claim 和 staged 文件是典型的关联查询场景，SQL 更简洁可靠。
+    # 见 docs/over_engineering_backlog.md #3
+    # 构建 staged_items（用于门禁的债务感知判定）
     staged_items: Optional[Set[str]] = None
     directly_staged_items: Optional[Set[str]] = None
     if staged_files:
@@ -155,7 +98,7 @@ def _run_analysis_phase(
         staged_items.update(affected_acs)
         staged_items.update(affected_reqs)
 
-        # 新架构：基于 staged 文件路径判断哪些 claim 被修改
+        # 从 staged 的 CLAIM-*.json 文件中提取被直接修改的 claim
         # 一任务一文件模式下，staged 的 CLAIM-*.json 文件即为被修改的 claim
         directly_staged_claims = set()
         for f in staged_files:
@@ -179,7 +122,27 @@ def _run_gate_evaluation(
     conn,
     human_decisions: Optional[dict] = None,
 ) -> dict:
-    """Run MergeGateEngine and return gate result dict."""
+    """调用 MergeGateEngine 执行门禁判定。
+
+    输入：
+        project_root:          项目根目录
+        active_gaps:           活跃的 gaps（已过滤 stale）
+        active_risks:          活跃的 risks（已过滤 stale）
+        compliance_res:        架构合规检查结果
+        ctx:                   统一上下文
+        staged_items:          受暂存文件影响的 items
+        directly_staged_items: 直接被 staged 的 claim
+        conn:                  数据库连接
+        human_decisions:       人类决策记录
+    前置条件：
+        _run_analysis_phase 已执行
+    处理逻辑：
+        1. 创建 MergeGateEngine 实例
+        2. 调用 evaluate() 执行门禁判定
+        3. 输出应用的人类决策数量
+    输出：
+        返回门禁结果字典（含 gate_decision、gaps、risks 等）
+    """
     if human_decisions is None:
         human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
     gate_engine = MergeGateEngine(project_root, conn)
@@ -212,28 +175,54 @@ def _evaluate_and_output(
     human_decisions: Optional[dict] = None,
     conn=None,
 ) -> int:
-    """Run MergeGateEngine, output all reports, and return exit code."""
+    """执行门禁判定并生成所有输出（报告、Dashboard、终端摘要）。
+
+    输入：
+        ctx:              统一上下文
+        merged_gaps:      全部 gaps（含 stale）
+        final_risks:      全部 risks（含 stale）
+        compliance_res:   架构合规检查结果
+        output_dir:       输出目录
+        evidence_meta:    证据元数据
+        claim_res:        Claim 分析结果
+        req_res:          需求分析结果
+        project_root:     项目根目录
+        is_draft:         是否草稿模式
+        staged_files:     暂存区文件集合
+        is_pre_commit:    是否预提交模式
+        human_decisions:  人类决策记录
+        conn:             数据库连接
+    前置条件：
+        分析器和证据构建已完成
+    处理逻辑：
+        1. _run_analysis_phase：过滤 stale 项，构建 staged_items
+        2. _run_gate_evaluation：调用 MergeGateEngine 门禁判定
+        3. _build_report_document：生成追溯报告
+        4. _render_output：渲染 Dashboard + 终端输出
+    输出：
+        返回退出码（0=通过, 2=blocked）
+    """
     if not ctx.manifest:
         return 1
 
-    # Phase 1: Analysis (claim tests, active issues, staged items)
+    # 阶段 1：分析（过滤 stale 项，构建 staged_items）
     active_gaps, active_risks, evidence_meta, staged_items, directly_staged_items = \
         _run_analysis_phase(ctx, merged_gaps, final_risks, evidence_meta, project_root, staged_files)
 
-    # Phase 2: Gate evaluation
+    # 阶段 2：门禁判定
     gate_res = _run_gate_evaluation(
         project_root, active_gaps, active_risks, compliance_res,
         ctx, staged_items, directly_staged_items, conn,
         human_decisions=human_decisions,
     )
 
-    # Phase 3: Build report document
+    # 阶段 3：生成追溯报告
     report_doc = _build_report_document(
         ctx, gate_res, evidence_meta, merged_gaps, final_risks,
         compliance_res, req_res, output_dir, project_root,
     )
 
-    # Phase 4: Render output (dashboard, summary, agent actions, reflection)
+    # 阶段 4：渲染输出（Dashboard + 终端摘要 + Agent 行动建议 + 反思提示）
     _render_output(
         ctx, gate_res, report_doc, evidence_meta,
         active_gaps, active_risks, merged_gaps, final_risks, compliance_res,
@@ -241,37 +230,43 @@ def _evaluate_and_output(
         is_pre_commit=is_pre_commit, staged_files=staged_files,
     )
 
-    # Compute exit code
+    # 计算退出码
     exit_code = 2 if gate_res["gate_decision"] == "blocked" else 0
 
     return exit_code
 
 
 def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_commit: bool = False, gates_only: bool = False) -> int:
-    """
-    Execute the full Vibe Tracing analysis pipeline.
+    """执行完整的 VT 分析流水线。
 
-    Args:
-        project_root: The workspace root path.
-        output_dir: The target output directory. If None, resolved from
-            config.json paths.output_dir (default: "output").
-        is_pre_commit: Whether running in pre-commit hook mode.
-        gates_only: If True, run only integrity gates (1, 2, 2.5) and skip
-            tool execution and full analysis (fast mode for pre-commit).
-
-    Returns:
-        Exit code:
-            0: Gate decision is 'pass' or 'fail' (conditional).
-            1: Execution error, invalid inputs, schema errors.
-            2: Gate decision is 'blocked'.
+    输入：
+        project_root: 项目根目录（由 cli/main.py 传入）
+        output_dir:   输出目录（可选，默认从 config.json 读取）
+        is_pre_commit: 是否为 Git pre-commit hook 模式
+        gates_only:   是否仅运行门禁（快速模式，跳过工具执行和分析）
+    前置条件：
+        项目已完成 vt finalize（config.json 存在且有效）
+    处理逻辑（9 个阶段）：
+        1. _load_context：加载 PRD、Tasks、Claims、Config
+        2. _run_integrity_gates：门禁 1/2/2.5（哈希、幽灵代码、AC 新鲜度）
+        3. init_in_memory_db：创建内存数据库
+        4. _execute_tools：执行 pytest/ruff/bandit/coverage
+        5. load_tasks + load_claims：将数据灌入数据库
+        6. EvidenceBuilder.build：合并新旧证据，导出拆分 JSON
+        7. _run_analyzers：运行 3 个分析器（REQ→Task、AC→Test、Claim→Evidence）
+        8. _evaluate_and_output：门禁判定 + 报告生成 + Dashboard 渲染
+        9. return exit_code
+    输出：
+        退出码：0=通过, 1=执行错误, 2=门禁 blocked
     """
     conn = None
     try:
-        # Initialize operational logger
+        # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
         from vibe_tracing.infra.operational_logger import OperationalLogger
         from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims
         _run_start_t = time.perf_counter()
 
+        # ── 阶段 1：加载输入 ──────────────────────────────────────────────
         _t_ctx = time.perf_counter()
         ctx, raw_loader = _load_context(project_root)
         prd_res = ctx.prd
@@ -279,11 +274,13 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
         config_prefix = ctx.config_prefix
 
         log_level = ctx.config.get("logging", {}).get("level", "DEBUG")
-        vt_logger = OperationalLogger.init(
-            run_id=f"RUN-{uuid.uuid4()}",
-            project_root=project_root,
-            level=log_level,
-        )
+        try:
+            vt_logger = OperationalLogger.get_or_init(
+                run_id=f"ANALYZE-{uuid.uuid4()}", project_root=project_root,
+                level=log_level,
+            )
+        except Exception:
+            vt_logger = OperationalLogger.get()
         vt_logger.info("run_start", "Analysis pipeline started",
                        is_pre_commit=is_pre_commit, gates_only=gates_only)
         vt_logger.info("phase_end", "Load context completed",
@@ -294,11 +291,12 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                        claims_count=len(ctx.claims_list),
                        )
 
-        # Resolve output_dir from config if not explicitly provided
+        # 解析输出目录（未指定时从 config 读取）
         if output_dir is None:
             _out_rel = ctx.config.get("paths", {}).get("output_dir", "output")
             output_dir = (project_root / _out_rel).resolve()
 
+        # ── 阶段 2：门禁检查（Gate 1/2/2.5）─────────────────────────────
         _t_gates = time.perf_counter()
         exit_code = _run_integrity_gates(
             ctx, project_root, is_pre_commit, config_prefix,
@@ -312,17 +310,15 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
         if exit_code is not None:
             return exit_code
 
-        # Auto-generate claim from staged files when claims are empty (pre-commit only)
-        if is_pre_commit and not ctx.claims_list:
-            _auto_generate_claim_from_staged(ctx, project_root)
-
+        # gates_only 模式：门禁通过后直接返回，跳过后续阶段
         if gates_only:
             print("Gates-only mode: integrity gates passed. Skipping analysis.")
             return 0
 
-        # Create in-memory DB connection for pipeline-wide use
+        # ── 阶段 4：创建内存数据库 ────────────────────────────────────────
         conn = init_in_memory_db()
 
+        # ── 阶段 5：执行验证工具 ──────────────────────────────────────────
         _t_tools = time.perf_counter()
         tool_evidence = _execute_tools(ctx, project_root, is_draft)
         ctx.tool_evidence = tool_evidence
@@ -332,20 +328,24 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                        tools_executed=len(tool_evidence),
                        )
 
-        # Load data into DB for SQL-based checks
+        # ── 阶段 6：将数据灌入数据库 ──────────────────────────────────────
         if ctx.task_result and ctx.task_result.tasks:
             load_tasks(conn, [t.__dict__ for t in ctx.task_result.tasks])
         if ctx.claims_list:
             load_claims(conn, [c.__dict__ for c in ctx.claims_list])
 
-        # Build evidence via EvidenceBuilder (DB + split JSON)
+        # ── 阶段 7：构建证据（EvidenceBuilder）────────────────────────────
         _t_build = time.perf_counter()
 
-        # Build evidence metadata (task/claim/code evidence dicts for analyzers)
+        # TODO: 过度设计待优化 —— evidence_dicts 构建逻辑（~100 行）应迁移到 domain 层
+        # 原因：状态映射、数据翻译、顺序编号均为业务逻辑，不属于调度层。
+        # 优化方向：分析器直接查询数据库，消除 evidence_dicts 中间层。
+        # 见 docs/over_engineering_backlog.md #1-5
+        # 构建 evidence_dicts（供分析器和报告使用的证据元数据）
         try:
             evidence_dicts = []
 
-            # Add task evidence entries
+            # Task 证据条目
             from vibe_tracing.infra.enums import CoverageStatus
             task_covers_map = {}
             if ctx.task_result and ctx.task_result.tasks:
@@ -374,7 +374,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                         },
                     })
 
-            # Add claim evidence entries
+            # Claim 证据条目
             for claim in (ctx.claims_list or []):
                 covers = task_covers_map.get(claim.related_task, [])
                 evidence_dicts.append({
@@ -390,7 +390,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                     },
                 })
 
-            # Add code evidence entries from claims
+            # Code 证据条目（从 Claim 的 code_refs 提取）
             for claim in (ctx.claims_list or []):
                 covers = task_covers_map.get(claim.related_task, [])
                 for code_ref in (claim.code_refs or []):
@@ -405,7 +405,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                         },
                     })
 
-            # Add tool evidence entries
+            # 工具执行证据条目
             for tc in (ctx.tool_evidence or []):
                 d = {
                     "source_type": tc.source_type,
@@ -426,15 +426,18 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                     d["error_code"] = tc.error_code
                 evidence_dicts.append(d)
 
-            # Assign sequential evidence IDs
+            # TODO: 过度设计待优化 —— 顺序编号无意义，应用 source_path/nodeid 替代
+            # 原因：增删测试会导致编号漂移，产生 Git 冲突。source_path 是天然唯一标识。
+            # 见 docs/over_engineering_backlog.md #5
+            # 分配顺序证据 ID
             for idx, ev in enumerate(evidence_dicts):
                 ev["evidence_id"] = f"EVIDENCE-VT-{idx + 1:03d}"
 
-            # Build evidence via EvidenceBuilder (writes test_results.json + coverage_reports.json)
+            # EvidenceBuilder：合并历史缓存 + 本次结果，导出拆分 JSON
             evidence_builder = EvidenceBuilder(project_root, conn)
             evidence_builder.build(ctx)
 
-            # Evidence metadata for analyzers/reports (no test_results/coverage_baseline fields)
+            # 证据元数据（供分析器和报告使用）
             evidence_meta = {
                 "run_id": f"RUN-{uuid.uuid4()}",
                 "project_id": f"PROJECT-{config_prefix}",
@@ -456,6 +459,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
         human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
 
+        # ── 阶段 8：运行分析器 ──────────────────────────────────────────
         _t_analyzers = time.perf_counter()
         merged_gaps, final_risks, compliance_res, claim_res, req_res = _run_analyzers(
             ctx, evidence_list, project_root,
@@ -470,6 +474,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                        has_compliance=compliance_res is not None,
                        )
 
+        # ── 阶段 9：门禁判定 + 输出 ──────────────────────────────────────
         _t_eval = time.perf_counter()
         exit_code = _evaluate_and_output(
             ctx, merged_gaps, final_risks, compliance_res,
@@ -485,9 +490,8 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                        duration_ms=int((time.perf_counter() - _t_eval) * 1000),
                        gate_decision=gate_decision,
                        )
-        if exit_code == 0 and is_pre_commit:
-            pass  # Claims archival removed — claims are now managed by the commit lifecycle
 
+        # ── 阶段 10：返回退出码 ──────────────────────────────────────────
         total_duration_ms = int((time.perf_counter() - _run_start_t) * 1000)
         vt_logger.info("run_end", "Analysis pipeline completed",
                        total_duration_ms=total_duration_ms,

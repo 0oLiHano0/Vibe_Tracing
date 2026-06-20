@@ -24,7 +24,7 @@ dev = [
 ]
 
 [project.scripts]
-vibe-tracing = "vibe_tracing.cli:main"
+vibe-tracing = "vibe_tracing.cli.main:main"
 
 [tool.hatch.version]
 path = "src/vibe_tracing/__init__.py"

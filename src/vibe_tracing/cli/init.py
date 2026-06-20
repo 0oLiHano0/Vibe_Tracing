@@ -6,6 +6,7 @@ import json
 import sys
 import time
 import uuid
+
 from pathlib import Path
 import importlib.resources as pkg_resources
 from typing import Optional
@@ -14,13 +15,13 @@ from typing import Optional
 def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[str] = None) -> int:
     """Initialize a Vibe Tracing project by creating directories and template files."""
     try:
-        # Initialize operational logger (safe: if it fails, init continues)
+        # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
+        # 若日志初始化失败，init 仍须继续运行（LOG-VT-011 约束）
         vt_logger = None
         try:
             from vibe_tracing.infra.operational_logger import OperationalLogger
-            vt_logger = OperationalLogger.init(
-                run_id=f"INIT-{uuid.uuid4()}",
-                project_root=project_root,
+            vt_logger = OperationalLogger.get_or_init(
+                run_id=f"INIT-{uuid.uuid4()}", project_root=project_root,
             )
             vt_logger.info("run_start", "Init command started",
                            project_root=str(project_root), name=name, prefix=prefix)

@@ -138,6 +138,30 @@ class OperationalLogger:
         return cls._instance  # type: ignore[return-value]
 
     @classmethod
+    def get_or_init(
+        cls,
+        run_id: str,
+        project_root: Path,
+        level: str = "DEBUG",
+    ) -> "OperationalLogger":
+        """Get existing logger, or initialize a new one if none exists.
+
+        This is the recommended entry point for subcommands.  When called
+        through ``main()``, the logger is already initialized and this
+        method simply returns the existing instance.  When a subcommand is
+        called directly (e.g. in tests), this method initializes the logger
+        so that log entries are not silently discarded.
+        """
+        if cls._instance is None or isinstance(cls._instance, type(None)):
+            # Check if the instance is a _NullLogger (from failed init)
+            try:
+                cls._instance._log_path  # type: ignore[union-attr]
+            except AttributeError:
+                # It's a _NullLogger or truly None — re-initialize
+                return cls.init(run_id, project_root, level)
+        return cls._instance  # type: ignore[return-value]
+
+    @classmethod
     def reset(cls) -> None:
         """Reset the singleton (for testing)."""
         cls._instance = None

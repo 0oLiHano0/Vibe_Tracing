@@ -35,7 +35,10 @@ class EvidenceBuilder:
         # 2. Collect files touched in this run (for purging stale cache)
         target_files = set()
         for ev in (ctx.tool_evidence or []):
-            target_files.add(ev.source_path)
+            # Extract bare file path from pytest nodeid (e.g., "tests/test_x.py::test_foo" -> "tests/test_x.py")
+            file_path = ev.source_path.split("::")[0]
+            if file_path:
+                target_files.add(file_path)
         if target_files:
             purge_stale_cache(self.conn, list(target_files))
 

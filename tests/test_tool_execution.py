@@ -1631,3 +1631,174 @@ class TestAutoGenerateOutputPath:
         cmd = call_args[0][0]
         # output_path should have been auto-generated
         assert ".vibetracing/tmp/vt_lint_" in cmd
+
+
+# ---------------------------------------------------------------------------
+# Test: Coverage baseline integration
+# ---------------------------------------------------------------------------
+
+class TestCoverageBaselineIntegration:
+    """Verify coverage baseline is connected to execute_all via coverage_baseline_path."""
+
+    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    def test_execute_all_connects_coverage_baseline(
+        self, mock_run: MagicMock, project_root: Path, python_matrix: dict
+    ) -> None:
+        """covers: execute_all passes baseline_path to _measure_source_coverage."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+
+        baseline = {
+            "files": {
+                "src/foo.py": {"percent_covered": 90.0, "num_statements": 40},
+            }
+        }
+        baseline_path = project_root / "coverage.json"
+        baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+        engine = ToolExecutionEngine(
+            language_tool_matrix=python_matrix,
+            language="python",
+            validation_tools=["lint"],
+            project_root=project_root,
+            coverage_baseline_path=str(baseline_path),
+        )
+
+        candidates = engine.execute_all(["src/foo.py"])
+        # Should have lint evidence from subprocess + coverage evidence from baseline
+        coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
+        assert len(coverage_candidates) == 1
+        assert coverage_candidates[0].source_path == "src/foo.py"
+        assert coverage_candidates[0].details["percent_covered"] == 90.0
+
+    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    def test_execute_all_no_baseline_returns_empty_coverage(
+        self, mock_run: MagicMock, project_root: Path, python_matrix: dict
+    ) -> None:
+        """covers: execute_all with no coverage_baseline_path returns no coverage evidence."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+
+        engine = ToolExecutionEngine(
+            language_tool_matrix=python_matrix,
+            language="python",
+            validation_tools=["lint"],
+            project_root=project_root,
+        )
+
+        candidates = engine.execute_all(["src/foo.py"])
+        coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
+        assert len(coverage_candidates) == 0
+
+    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    def test_execute_all_missing_baseline_file_returns_empty(
+        self, mock_run: MagicMock, project_root: Path, python_matrix: dict
+    ) -> None:
+        """covers: execute_all with non-existent baseline file returns no coverage evidence."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+
+        engine = ToolExecutionEngine(
+            language_tool_matrix=python_matrix,
+            language="python",
+            validation_tools=["lint"],
+            project_root=project_root,
+            coverage_baseline_path=str(project_root / "nonexistent.json"),
+        )
+
+        candidates = engine.execute_all(["src/foo.py"])
+        coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
+        assert len(coverage_candidates) == 0
+
+
+# ---------------------------------------------------------------------------
+# Test: _parse_coverage_json_output
+# ---------------------------------------------------------------------------
+
+class TestParseCoverageJsonOutput:
+    """Verify _parse_coverage_json_output handles various coverage.json formats."""
+
+    def test_valid_coverage_json(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_coverage_json_output valid input"""
+        coverage_data = {
+            "files": {
+                "src/foo.py": {
+                    "summary": {"percent_covered": 85.5, "num_statements": 42},
+                },
+                "src/bar.py": {
+                    "summary": {"percent_covered": 50.0, "num_statements": 20},
+                },
+            }
+        }
+        candidates = engine._parse_coverage_json_output(
+            stdout=json.dumps(coverage_data), stderr="", exit_code=0,
+            command="coverage json", path="src/",
+        )
+        assert len(candidates) == 2
+        paths = {c.source_path for c in candidates}
+        assert "src/foo.py" in paths
+        assert "src/bar.py" in paths
+        foo_c = next(c for c in candidates if c.source_path == "src/foo.py")
+        assert foo_c.details["percent_covered"] == 85.5
+        assert foo_c.details["num_statements"] == 42
+
+    def test_malformed_json_returns_blocked(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_coverage_json_output JSONDecodeError"""
+        candidates = engine._parse_coverage_json_output(
+            stdout="not json", stderr="", exit_code=0,
+            command="coverage json", path="src/",
+        )
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.BLOCKED.value
+        assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
+
+    def test_missing_files_key_returns_blocked(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_coverage_json_output missing files key"""
+        candidates = engine._parse_coverage_json_output(
+            stdout=json.dumps({"meta": {}}), stderr="", exit_code=0,
+            command="coverage json", path="src/",
+        )
+        assert len(candidates) == 1
+        assert candidates[0].status == CoverageStatus.BLOCKED.value
+
+    def test_flat_file_data_format(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_coverage_json_output flat format (percent_covered at top level)"""
+        coverage_data = {
+            "files": {
+                "src/simple.py": {
+                    "percent_covered": 95.0,
+                    "num_statements": 10,
+                },
+            }
+        }
+        candidates = engine._parse_coverage_json_output(
+            stdout=json.dumps(coverage_data), stderr="", exit_code=0,
+            command="coverage json", path="src/",
+        )
+        assert len(candidates) == 1
+        assert candidates[0].details["percent_covered"] == 95.0
+
+    def test_percent_none_skipped(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_coverage_json_output file with no percent_covered"""
+        coverage_data = {
+            "files": {
+                "src/empty.py": {"num_statements": 0},
+            }
+        }
+        candidates = engine._parse_coverage_json_output(
+            stdout=json.dumps(coverage_data), stderr="", exit_code=0,
+            command="coverage json", path="src/",
+        )
+        assert len(candidates) == 0
+
+    def test_non_dict_file_data_skipped(self, engine: ToolExecutionEngine) -> None:
+        """covers: _parse_coverage_json_output file_data not a dict"""
+        coverage_data = {
+            "files": {
+                "src/bad.py": "not_a_dict",
+                "src/good.py": {"summary": {"percent_covered": 70.0, "num_statements": 5}},
+            }
+        }
+        candidates = engine._parse_coverage_json_output(
+            stdout=json.dumps(coverage_data), stderr="", exit_code=0,
+            command="coverage json", path="src/",
+        )
+        assert len(candidates) == 1
+        assert candidates[0].source_path == "src/good.py"

@@ -1,22 +1,24 @@
 """
-CLI Entrypoint for Vibe Tracing.
+VT CLI 包初始化
 
-Provides the ``main()`` function with argparse-based sub-command routing.
-All command implementations live in ``vibe_tracing.cli.*`` modules.
+本包包含 Vibe Tracing 的所有 CLI 命令实现。
+调度逻辑（argparse + 命令路由）位于 cli/main.py。
 
-This module re-exports public symbols for convenient access.
+子命令分布：
+  - cli/main.py     → main()         CLI 入口与调度
+  - cli/init.py     → run_init()     项目初始化
+  - cli/finalize.py → run_finalize() 锁定设计基线
+  - cli/accept.py   → run_accept()   人类接受手动规则
+  - cli/doctor.py   → run_doctor()   治理数据健康扫描
+  - cli/analyze/    → run_analyze()  核心分析流水线
 """
 
-import argparse
 import subprocess  # re-exported so test mocks on vibe_tracing.cli.subprocess work
-import sys
-from pathlib import Path
-
-from vibe_tracing import __version__
 
 # ---------------------------------------------------------------------------
 # Re-export command entry points
 # ---------------------------------------------------------------------------
+from vibe_tracing.cli.main import main
 from vibe_tracing.cli.init import run_init
 from vibe_tracing.cli.finalize import run_finalize
 from vibe_tracing.cli.analyze import run_analyze
@@ -92,122 +94,3 @@ from vibe_tracing.cli.analyze.pipeline import (
     _run_gate_evaluation,
     _evaluate_and_output,
 )
-
-
-def main(argv=None):
-    """CLI main execution function."""
-    if argv is None:
-        argv = sys.argv[1:]
-
-    parser = argparse.ArgumentParser(
-        description="Vibe Tracing (VT) - Consistency validation framework for agent coding"
-    )
-    parser.add_argument(
-        "--version", action="version", version=f"vibe-tracing {__version__}"
-    )
-
-    subparsers = parser.add_subparsers(dest="command", help="sub-command help")
-
-    analyze_parser = subparsers.add_parser(
-        "analyze", help="Analyze project consistency and compliance"
-    )
-    analyze_parser.add_argument(
-        "--project-root",
-        default=".",
-        help="Path to the project workspace root (default: current working directory)",
-    )
-    analyze_parser.add_argument(
-        "--out", help="Path to the output directory (default: <project-root>/output)"
-    )
-    analyze_parser.add_argument(
-        "--pre-commit", action="store_true", help="Run in Git pre-commit hook mode (enables ghost code reconciliation)"
-    )
-    analyze_parser.add_argument(
-        "--gates-only", action="store_true",
-        help="Run only integrity gates (1, 2, 2.5), skip tool execution and analysis (fast mode for pre-commit)"
-    )
-
-    init_parser = subparsers.add_parser(
-        "init", help="Initialize a new Vibe Tracing project with template files"
-    )
-    init_parser.add_argument(
-        "--project-root",
-        default=".",
-        help="Path to the project workspace root (default: current working directory)",
-    )
-    init_parser.add_argument(
-        "--name",
-        help="Human-readable name of the project",
-    )
-    init_parser.add_argument(
-        "--prefix",
-        help="Project prefix abbreviation (e.g. CapL, VT)",
-    )
-
-    finalize_parser = subparsers.add_parser(
-        "finalize", help="Finalize project config from architecture constraints"
-    )
-    finalize_parser.add_argument(
-        "--project-root",
-        default=".",
-        help="Path to the project workspace root (default: current working directory)",
-    )
-
-    accept_parser = subparsers.add_parser(
-        "accept", help="Accept a manual architecture constraint rule"
-    )
-    accept_parser.add_argument(
-        "rule_id",
-        help="The rule ID to accept (e.g. PRINCIPLE-VT-001)",
-    )
-    accept_parser.add_argument(
-        "--project-root",
-        default=".",
-        help="Path to the project workspace root (default: current working directory)",
-    )
-    accept_parser.add_argument(
-        "--by",
-        default="human",
-        help="Accepter identifier (default: 'human')",
-    )
-
-    doctor_parser = subparsers.add_parser(
-        "doctor", help="Scan governance data health and report issues"
-    )
-    doctor_parser.add_argument(
-        "--project-root",
-        default=".",
-        help="Path to the project workspace root (default: current working directory)",
-    )
-
-    args = parser.parse_args(argv)
-
-    if args.command == "analyze":
-        project_root = Path(args.project_root).resolve()
-        if args.out:
-            output_dir = Path(args.out)
-            if not output_dir.is_absolute():
-                output_dir = (project_root / output_dir).resolve()
-        else:
-            output_dir = None  # Resolved inside run_analyze from config
-
-        return run_analyze(project_root, output_dir, is_pre_commit=args.pre_commit, gates_only=args.gates_only)
-    elif args.command == "init":
-        project_root = Path(args.project_root).resolve()
-        return run_init(project_root, name=args.name, prefix=args.prefix)
-    elif args.command == "finalize":
-        project_root = Path(args.project_root).resolve()
-        return run_finalize(project_root)
-    elif args.command == "accept":
-        project_root = Path(args.project_root).resolve()
-        return run_accept(project_root, args.rule_id, accepted_by=args.by)
-    elif args.command == "doctor":
-        project_root = Path(args.project_root).resolve()
-        return run_doctor(project_root)
-    else:
-        parser.print_help()
-        return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

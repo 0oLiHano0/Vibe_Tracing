@@ -2,6 +2,24 @@
 
 本项目的所有架构约束变更均在此记录，供项目经理（PM）进行日常审计与追溯。
 
+## [2026-06-21] 管道重构后文档状态对齐
+
+### 管道和约束文档的逐个模块对齐更新
+* **变更规则**：更新 PRD 与架构约束，对齐重构后的最终状态，删除旧分析器。具体变更包括：
+  - `SEC-VT-001`：安全规则的 `applies_to` 列表更正为 `risk_advisor`；
+  - `MOD-VT-001`：`allowed_to_call` 列表添加 `MOD-VT-010`，`owned_files` 修正为物理 CLI 入口文件；
+  - `MOD-VT-005`：责任描述重写为新的 merge/apply/persist 合并生命周期，`owned_files` 包含 `evidence_merge_result.py`；
+  - `MOD-VT-006`：责任描述重写为 SQL 联表查询后 Gaps/Staleness 报告编译角色，`owned_files` 包含 `staleness_tracker.py`；
+  - `MOD-VT-010`：模块更名为 `risk_advisor`，并对齐物理类 `RiskAdvisor` 职责及 `risk_advisor.py` 物理文件；
+  - `MOD-VT-013`：责任描述对齐 finalize 处的双哈希与映射基线校验职责，`owned_files` 包含 `cli/finalize.py`；
+  - `FLOW-VT-005`：数据流规则中 LLM 解释校验调整为 `Advisor 解释不得覆盖事实字段`，来源标记为 `risk_advisor`。
+* **变更原因**：
+  1. analyze 命令的流水线重构使得旧的分析器类（`RequirementTaskAnalyzer`等）被直接的内存 SQL 查询取代，原有边界发生调整。
+  2. analyze 阶段不再校验基线哈希或 PRD 漂移（该职责被唯一收口至 finalize 命令），需要对齐约束描述。
+  3. `llm_semantic_inspector` 模块被物理实现的 `RiskAdvisor` 纯静态分析类替代，不依赖外部 LLM，需要对齐物理边界。
+* **影响范围**：
+  - `docs/architecture_constraints.json`：MOD-VT-001, MOD-VT-005, MOD-VT-006, MOD-VT-010, MOD-VT-013, SEC-VT-001, FLOW-VT-005
+
 ## [2026-06-19] Phase 6-8 重构：claims 多文件 + evidence 拆分 + SQL 化
 
 ### 架构约束全面重构

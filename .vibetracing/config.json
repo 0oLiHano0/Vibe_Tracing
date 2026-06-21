@@ -16,10 +16,10 @@
     "type_check",
     "security"
   ],
-  "architecture_constraints_hash": "11682bbd85bf365f3f13ab10aa90e5894abf612eb2b4774603373098fb06cfaa",
-  "finalize_git_commit": "7f63111f75afef1d731de1637f2a8b8a23528cc7",
+  "architecture_constraints_hash": "b20cf2c32aed49e200c6f48410226058b6321f9d2840b2b4aa486b82b7af662d",
+  "finalize_git_commit": "1304bfb1d48a06d14d8087887b592b3960da19d4",
   "finalize_constraints_path": "docs/architecture_constraints.json",
-  "prd_hash": "739bfab866343bfae88e0bddeec12337db353083932d3cb04f296c361be1f84e",
+  "prd_hash": "62fa575db7ddf77aaed20ac0ae85b4cfb71646e1a30314394cb56f081b16c165",
   "logging": {
     "level": "DEBUG"
   }

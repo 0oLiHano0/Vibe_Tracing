@@ -3932,12 +3932,12 @@
     {
       "task_id": "TASK-VT-072",
       "phase_id": "PHASE-VT-010",
-      "title": "门禁校验前置与剥离：重构 gates.py 的校验边界",
+      "title": "Gate 1/1b/1c 删除 + Gate 2 前置化：清理 gates.py 的 analyze 职责边界",
       "priority": "must",
       "status": "todo",
       "owner_role": "AI Coding Agent",
-      "objective": "将哈希与设计校验彻底从 analyze 剥离，并将幽灵代码检测提升为前置校验，实现 pre-commit hook 快速通道。",
-      "atomic_scope": "修改 `cli/analyze/gates.py`，删除 `_gate1_constraints_hash()`、`_gate1b_prd_drift()`、`_gate1c_mapping()` 等已合并入 finalize 的校验函数；重构 `_run_integrity_gates()` 为 `_check_claim_coverage()`，并在 `is_pre_commit` 模式下作为 `run_analyze` 的 Stage 2 前置运行；支持在 `gates_only` 模式下校验通过后立即返回 0，并在控制台正确输出前置校验已过的友情提示信息。",
+      "objective": "删除属于 finalize 职责的 Gate 1/1b/1c 校验代码，仅保留 Gate 2（幽灵代码检测）作为 analyze 前置条件，实现 pre-commit hook 快速通道。",
+      "atomic_scope": "修改 `cli/analyze/gates.py`，删除 `_gate1_constraints_hash()`、`_gate1b_prd_drift()`、`_gate1c_mapping()` 等已合并入 finalize 的校验函数（这些校验在 finalize 阶段已执行，analyze 阶段不再重复）；重构 `_run_integrity_gates()` 为 `_check_claim_coverage()`，仅保留 Gate 2 幽灵代码检测，并在 `is_pre_commit` 模式下作为 `run_analyze` 的 Stage 2 前置运行；支持在 `gates_only` 模式下校验通过后立即返回 0，并在控制台正确输出前置校验已过的友情提示信息。",
       "out_of_scope": [
         "不改变 finalize.py 内部的哈希生成逻辑与基线提交策略"
       ],
@@ -4116,7 +4116,7 @@
       "task_id": "TASK-VT-075",
       "phase_id": "PHASE-VT-010",
       "title": "Domain 包结构重组：按职责分包并定义公共接口",
-      "priority": "should",
+      "priority": "must",
       "status": "todo",
       "owner_role": "AI Coding Agent",
       "objective": "将 domain/ 下 19 个平铺文件按职责重组为 evidence、gate、compliance、risk、loader、report、governance 7 个子包，每个包通过 __init__.py 暴露公共接口，提升可读性和封装性。",
@@ -4180,7 +4180,7 @@
       "task_id": "TASK-VT-076",
       "phase_id": "PHASE-VT-010",
       "title": "Infra 包结构重组与导入修复",
-      "priority": "should",
+      "priority": "must",
       "status": "todo",
       "owner_role": "AI Coding Agent",
       "objective": "在 db.py 拆分已提前完成后，将 infra/ 下剩余散乱文件重组为 logging、git、config、tools 子包，并修复全量 import 链路引用。",

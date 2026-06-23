@@ -126,8 +126,16 @@ run_analyze(project_root, ...)
 │
 ├── 阶段 9：门禁判定
 │   调用：gate_res = MergeGateEngine(project_root).evaluate(
-│             gaps, risks, ghost_files, ac_gaps, dangling_claims,
-│             claim_evidence_gaps, cov_violations, tool_outputs, staged_items)
+│             gaps, risks,
+│             compliance_res=compliance_res,
+│             staged_items=staged_items,
+│             directly_staged_items=directly_staged_items,
+│             human_decisions=human_decisions,
+│             ghost_files=ghost_files,
+│             ac_gaps=ac_gaps,
+│             dangling_claims=dangling_claims,
+│             claim_evidence_gaps=claim_evidence_gaps,
+│             cov_violations=cov_violations)
 │         _print_gate_summary(gate_res, staged_items)
 │
 ├── 阶段 10：Agent 行动建议（仅 Gate blocked）
@@ -300,15 +308,28 @@ class MergeGateEngine:
         self,
         gaps: List[dict],
         risks: List[dict],
-        ghost_files: List[str],
-        ac_gaps: List[dict],
-        dangling_claims: List[dict],
-        claim_evidence_gaps: List[dict],
-        cov_violations: List[dict],
-        tool_outputs: List[ToolEvidenceCandidate],
-        staged_items: Optional[Set[str]],
-    ) -> Tuple[str, List[str], List[dict]]:
-        """纯规则判定，不访问数据库。"""
+        compliance_res: Optional[Dict[str, Any]] = None,
+        staged_items: Optional[Set[str]] = None,
+        directly_staged_items: Optional[Set[str]] = None,
+        human_decisions: Optional[Any] = None,
+        ghost_files: Optional[List[str]] = None,
+        ac_gaps: Optional[List[dict]] = None,
+        dangling_claims: Optional[List[dict]] = None,
+        claim_evidence_gaps: Optional[List[dict]] = None,
+        cov_violations: Optional[List[dict]] = None,
+    ) -> Dict[str, Any]:
+        """纯规则判定，不访问数据库。
+
+        返回字典包含：gate_decision, reasons, blocked_items, human_decisions_applied
+
+        设计变更说明（vs 原设计）：
+        - 去掉 tool_outputs：工具结果已通过 ghost_files/cov_violations 阶段传入
+        - 增加 compliance_res：架构合规检查结果直接传入，不需要 gap 转换
+        - 增加 directly_staged_items：区分直接提交 vs 间接影响的 items
+        - 增加 human_decisions：人类决策直接传入判定层
+        - 返回类型改为 Dict（vs 原设计的 Tuple[str, List[str], List[dict]])：
+          字典可扩展新字段，岁己可读性更好
+        """
 ```
 
 ### 5.3 ArchitectureComplianceChecker
@@ -441,7 +462,17 @@ TASK_STATUS_TO_COVERAGE = {
 | `gates.py._gate1_constraints_hash()` | 属于 finalize | 删除 |
 | `gates.py._gate1b_prd_drift()` | 属于 finalize | 删除 |
 | `gates.py._gate1c_mapping()` | 属于 finalize | 删除 |
-| `gates.py._run_integrity_gates()` | Gate 1/1b/1c 已删除 | 重构为 `_check_claim_coverage()` |
+| `gates.py._run_integrity_gates()` | Gate 1/1b/1c 已删除 | 重命名为 `_check_claim_coverage()`；保留别名向后兼容 |
+
+### 保留决策：_db_result_to_gaps
+
+`pipeline.py` 中的 `_db_result_to_gaps()` 不属于删除范围。分析：
+
+| 项 | 说明 |
+|-----|------|
+| 职责领域 | DB 查询原始行 → gate 和 report 层所需的 gap dict 格式，**是 pipeline 调度层的模式转换**（adapter） |
+| 为什么保留 | db.check_* 返回的是存簹的 SQL 行（status 字符串）；MergeGateEngine.evaluate() 接受的是 `{item_id, item_type, reason}` 结构。这个转换是两层将来各自演化的设计隔离点。 |
+| 拓展发展 | 待未来 db.check_* 返回类型成熟后，可考虑将此函数下沉至 `infra/db/queries.py` 或独立为 domain 转换层 |
 
 ---
 
@@ -449,7 +480,8 @@ TASK_STATUS_TO_COVERAGE = {
 
 | 模块 | 变更类型 | 变更内容 |
 |------|---------|---------|
-| `cli/analyze/pipeline.py` | 重构 | 删除 evidence_dicts，接管 DB 调度，合并 analysis.py |
+| `cli/analyze/pipeline.py` | 重构 | 删除 evidence_dicts；接管 DB 调度；合并 analysis.py；新增 _db_result_to_gaps adapter |
+| `cli/analyze/gates.py` | 重构 | `_run_integrity_gates` 重命名为 `_check_claim_coverage`；删除 Gate 1/1b/1c |
 | `cli/analyze/analysis.py` | 删除 | 逻辑拆分到 pipeline + staleness_tracker |
 | `domain/context.py` | 微调 | 删除 tool_evidence 字段 |
 | `domain/evidence_builder.py` | 重构 | build → merge + apply + persist |

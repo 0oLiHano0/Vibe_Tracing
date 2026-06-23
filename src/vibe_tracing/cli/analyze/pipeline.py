@@ -5,18 +5,23 @@ VT 分析流水线编排模块
   vt analyze 是 VT 的核心命令，需要按严格顺序串联多个模块完成分析。
   本模块是唯一的编排入口，决定"什么时候调用谁"。
 
-核心设计：
-  流水线分 9 个阶段，每个阶段有明确的输入→输出：
-  1. 加载输入 → 2. 门禁检查 → 3. 创建数据库
-  → 4. 执行工具 → 5. 灌入数据 → 6. 构建证据 → 7. 运行分析器
-  → 8. 门禁判定 + 输出 → 9. 返回退出码
+核心设计（与 refactoring_design.md §3 对齐）：
+  1. 加载输入 (_load_context)
+  2. Claim 覆盖前置检查 (_check_claim_coverage)
+  3. 创建数据库 (init_in_memory_db)
+  4. 执行工具 (_execute_tools)
+  5. 灰入基础数据 (load_prd + load_tasks + load_claims)
+  6. 构建证据 (EvidenceBuilder.merge/apply/persist)
+  7. 运行分析 (db.check_*)
+  8. 提取 gaps + 生成 risks + staleness 标记
+  9. 门禁判定 + 输出
+  10. 返回退出码
 
 依赖关系：
   被 cli/main.py 通过 _dispatch() 调用。
   调用以下模块：common（上下文加载）、gates（门禁）、tools（工具执行）、
-  analysis（分析器）、reports（报告）、output（渲染）、
-  domain/evidence_builder（证据构建）、domain/merge_gate_engine（门禁判定）、
-  infra/db（数据库）
+  reports（报告）、output（渲染）、domain/evidence（证据构建）、
+  domain/gate（门禁判定）、infra/db（数据库）
 """
 
 import json
@@ -36,7 +41,7 @@ from vibe_tracing.cli.common import (
     _get_staged_files,
     _determine_affected_items,
 )
-from vibe_tracing.cli.analyze.gates import _run_integrity_gates
+from vibe_tracing.cli.analyze.gates import _check_claim_coverage
 from vibe_tracing.cli.analyze.tools import _execute_tools
 from vibe_tracing.cli.analyze.reports import _build_report_document
 from vibe_tracing.cli.analyze.output import _render_output
@@ -47,15 +52,20 @@ def _db_result_to_gaps(
     ac_coverage: list,
     claim_evidence: list,
 ) -> list:
-    """Convert db.check_* results to gap format for MergeGateEngine.
+    """将数据库查询结果转换为 MergeGateEngine 所需的缺口格式。
 
-    Args:
-        req_coverage: Result from db.check_requirement_coverage()
-        ac_coverage: Result from db.check_ac_coverage()
-        claim_evidence: Result from db.check_claim_evidence()
-
-    Returns:
-        List of gap dicts with item_id, item_type, reason.
+    输入：
+        req_coverage:   需求覆盖查询结果（由 infra/db/queries.check_requirement_coverage() 返回）
+        ac_coverage:    AC 覆盖查询结果（由 infra/db/queries.check_ac_coverage() 返回）
+        claim_evidence: Claim 证据查询结果（由 infra/db/queries.check_claim_evidence() 返回）
+    前置条件：
+        三个参数均为数据库查询的原始结果，格式为 list[dict]
+    处理逻辑：
+        1. 遍历 req_coverage，根据 coverage_status 转换为需求缺口
+        2. 遍历 ac_coverage，根据 coverage_status 转换为 AC 缺口
+        3. 遍历 claim_evidence，根据 verification_status 转换为 Claim 缺口
+    输出：
+        返回缺口列表，每个缺口包含 item_id、item_type、reason 三个字段
     """
     gaps = []
 
@@ -175,10 +185,29 @@ def _run_db_analysis(
     staged_files: Optional[Set[str]] = None,
     human_decisions: Optional[dict] = None,
 ) -> tuple:
-    """Run analysis using db.check_* functions directly.
+    """使用数据库查询直接执行分析。
 
-    Replaces the old _run_analyzers that used Python-based analyzers.
-    Returns (merged_gaps, final_risks, compliance_res, analysis_details).
+    输入：
+        conn:            内存数据库连接（由 infra/db.init_in_memory_db() 创建）
+        ctx:             统一上下文（由 cli/common._load_context() 加载）
+        project_root:    项目根目录
+        staged_files:    暂存区文件集合（可选，由 _get_staged_files() 获取）
+        human_decisions: 人类决策记录（可选，来自 ctx.human_decisions）
+    前置条件：
+        conn 已通过 init_in_memory_db() 创建并已通过 load_tasks/load_claims 灌入数据
+    处理逻辑：
+        1. 执行 6 个 db.check_* 查询：需求覆盖、AC 覆盖、Claim 证据、幽灵代码、悬空 Claim、覆盖率违规
+        2. 将查询结果转换为缺口格式（调用 _db_result_to_gaps）
+        3. 执行架构合规检查（如果存在 architecture_constraints.json）
+        4. 生成风险建议（RiskAdvisor）
+        5. 合并合规检查产生的额外缺口和风险
+        6. 执行陈旧项标记（mark_staleness）
+    输出：
+        返回元组 (merged_gaps, final_risks, compliance_res, analysis_details)
+        - merged_gaps: 全部缺口列表（含 stale 标记）
+        - final_risks: 全部风险列表（含 stale 标记）
+        - compliance_res: 架构合规检查结果（可能为 None）
+        - analysis_details: 分析详情字典（供 MergeGateEngine 使用）
     """
     from vibe_tracing.infra.db.queries import (
         check_requirement_coverage,
@@ -481,10 +510,10 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
         项目已完成 vt finalize（config.json 存在且有效）
     处理逻辑（9 个阶段）：
         1. _load_context：加载 PRD、Tasks、Claims、Config
-        2. _run_integrity_gates：门禁 1/2/2.5（哈希、幽灵代码、AC 新鲜度）
+        2. _check_claim_coverage：Claim 覆盖前置检查
         3. init_in_memory_db：创建内存数据库
         4. _execute_tools：执行 pytest/ruff/bandit/coverage
-        5. load_tasks + load_claims：将数据灌入数据库
+        5. load_prd + load_tasks + load_claims：将数据灌入数据库
         6. EvidenceBuilder.build：合并新旧证据，导出拆分 JSON
         7. _run_analyzers：运行 3 个分析器（REQ→Task、AC→Test、Claim→Evidence）
         8. _evaluate_and_output：门禁判定 + 报告生成 + Dashboard 渲染
@@ -496,7 +525,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
     try:
         # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
         from vibe_tracing.infra.logging.logger import OperationalLogger
-        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims
+        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_prd
         _run_start_t = time.perf_counter()
 
         # ── 阶段 1：加载输入 ──────────────────────────────────────────────
@@ -529,9 +558,9 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             _out_rel = ctx.config.get("paths", {}).get("output_dir", "output")
             output_dir = (project_root / _out_rel).resolve()
 
-        # ── 阶段 2：门禁检查（Gate 1/2/2.5）─────────────────────────────
+        # ── 阶段 2：Claim 覆盖前置检查（Gate 2）────────────────────────
         _t_gates = time.perf_counter()
-        exit_code = _run_integrity_gates(
+        exit_code = _check_claim_coverage(
             ctx, project_root, is_pre_commit, config_prefix,
         )
         vt_logger.info("phase_end", "Integrity gates completed",
@@ -551,10 +580,10 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             print("  ℹ Rule 3-8 (AC coverage, test results, compliance): Requires full analysis")
             return 0
 
-        # ── 阶段 4：创建内存数据库 ────────────────────────────────────────
+        # ── 阶段 3：创建内存数据库 ──────────────────────────────────
         conn = init_in_memory_db()
 
-        # ── 阶段 5：执行验证工具 ──────────────────────────────────────────
+        # ── 阶段 4：执行验证工具 ──────────────────────────────────
         _t_tools = time.perf_counter()
         tool_evidence = _execute_tools(ctx, project_root, is_draft)
         # tool_evidence is a pipeline-local variable, NOT stored in ctx
@@ -564,7 +593,10 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                        tools_executed=len(tool_evidence),
                        )
 
-        # ── 阶段 6：将数据灌入数据库 ──────────────────────────────────────
+        # ── 阶段 5：灌入基础数据（load_prd 必须先于 load_tasks/load_claims）──
+        # load_prd 将 requirements + acceptance_criteria 写入 DB，
+        # 是 check_requirement_coverage 和 check_ac_coverage 新模式的前置依赖。
+        load_prd(conn, ctx.prd)
         if ctx.task_result and ctx.task_result.tasks:
             load_tasks(conn, [t.__dict__ for t in ctx.task_result.tasks])
         if ctx.claims_list:

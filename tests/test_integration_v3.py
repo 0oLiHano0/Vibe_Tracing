@@ -10,13 +10,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine
+from vibe_tracing.infra.tools.executor import ToolExecutionEngine
 
 
 class TestExecuteAllLanguageFilter:
     """Integration test for execute_all filtering by file extension."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_filters_by_language(
         self, mock_run: MagicMock, tmp_path: Path
     ) -> None:
@@ -60,7 +60,7 @@ class TestExecuteAllLanguageFilter:
         source_paths = [c.source_path for c in candidates]
         assert "docs/readme.md" not in source_paths
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_skips_all_non_matching(
         self, mock_run: MagicMock, tmp_path: Path
     ) -> None:

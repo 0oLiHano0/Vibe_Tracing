@@ -931,7 +931,7 @@ def test_file_sha256_missing():
 
 def test_load_governance_boundary_with_data():
     """Test load_boundary with constraints_data provided."""
-    from vibe_tracing.infra.governance import load_boundary
+    from vibe_tracing.infra.config.boundary import load_boundary
 
     constraints_data = {
         "governance_boundary": {
@@ -945,7 +945,7 @@ def test_load_governance_boundary_with_data():
 
 def test_load_governance_boundary_no_data():
     """Test load_boundary with no constraints."""
-    from vibe_tracing.infra.governance import load_boundary
+    from vibe_tracing.infra.config.boundary import load_boundary
 
     result = load_boundary(Path("/nonexistent"))
     assert result == {"included_patterns": [], "excluded_patterns": []}
@@ -953,7 +953,7 @@ def test_load_governance_boundary_no_data():
 
 def test_is_in_governance_boundary():
     """Test is_in_scope checks file exclusions."""
-    from vibe_tracing.infra.governance import is_in_scope
+    from vibe_tracing.infra.config.boundary import is_in_scope
 
     boundary = {"excluded_patterns": ["vendor/**", "*.min.js"]}
 
@@ -964,7 +964,7 @@ def test_is_in_governance_boundary():
 
 def test_is_in_governance_boundary_empty():
     """Test is_in_scope with empty boundary."""
-    from vibe_tracing.infra.governance import is_in_scope
+    from vibe_tracing.infra.config.boundary import is_in_scope
 
     boundary = {}
     assert is_in_scope("any/file.py", boundary) is True
@@ -972,7 +972,7 @@ def test_is_in_governance_boundary_empty():
 
 def test_partition_by_governance_boundary():
     """Test partition_by_scope separates files."""
-    from vibe_tracing.infra.governance import partition_by_scope
+    from vibe_tracing.infra.config.boundary import partition_by_scope
 
     constraints_data = {
         "governance_boundary": {

@@ -4400,6 +4400,257 @@
         "保持文档风格一致",
         "确保包结构图准确反映实际目录"
       ]
+    },
+    {
+      "task_id": "TASK-VT-080",
+      "phase_id": "PHASE-VT-011",
+      "title": "governance.py 移至 config/boundary.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 infra/governance.py 移至 infra/config/boundary.py，因为边界判断是配置驱动的功能，未来需要支持忽略历史债务等配置选项。",
+      "atomic_scope": "重命名 infra/governance.py 为 infra/config/boundary.py；更新 infra/__init__.py 和 infra/config/__init__.py 的导出；修复所有 import 语句；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 boundary 模块内部逻辑",
+        "不修改其他 config 模块"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "infra/config/boundary.py（从 infra/governance.py 重命名）",
+        "更新后的 infra/__init__.py",
+        "更新后的 infra/config/__init__.py",
+        "修复后的 import 语句"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-080-01",
+          "description": "infra/governance.py 不存在，infra/config/boundary.py 存在"
+        },
+        {
+          "dod_id": "DOD-VT-080-02",
+          "description": "infra/config/__init__.py 导出 load_boundary、is_in_scope、partition_by_scope"
+        },
+        {
+          "dod_id": "DOD-VT-080-03",
+          "description": "所有 import 语句从 vibe_tracing.infra.governance 改为 vibe_tracing.infra.config.boundary"
+        },
+        {
+          "dod_id": "DOD-VT-080-04",
+          "description": "全量测试通过，无 ImportError"
+        }
+      ],
+      "ai_coding_guidance": [
+        "移动文件后立即更新 __init__.py 导出",
+        "使用 sed 批量替换 import 路径",
+        "运行 pytest 验证无回归"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-081",
+      "phase_id": "PHASE-VT-011",
+      "title": "拆分 ToolEvidenceCandidate 到 infra/tools/candidate.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 ToolEvidenceCandidate 数据类从 domain/tool_evidence_adapter.py 拆分到 infra/tools/candidate.py。",
+      "atomic_scope": "创建 infra/tools/candidate.py，包含 ToolEvidenceCandidate 数据类；更新 domain/tool_evidence_adapter.py 的导入；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 ToolExecutionEngine"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "infra/tools/candidate.py",
+        "更新后的 domain/tool_evidence_adapter.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-081-01",
+          "description": "infra/tools/candidate.py 包含 ToolEvidenceCandidate 数据类"
+        },
+        {
+          "dod_id": "DOD-VT-081-02",
+          "description": "domain/tool_evidence_adapter.py 从 infra/tools/candidate.py 导入 ToolEvidenceCandidate"
+        },
+        {
+          "dod_id": "DOD-VT-081-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持数据类定义不变",
+        "更新导入后立即运行测试"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-082",
+      "phase_id": "PHASE-VT-011",
+      "title": "拆分输出解析器到 infra/tools/parsers.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 5 个 _parse_* 函数从 domain/tool_evidence_adapter.py 拆分到 infra/tools/parsers.py。",
+      "atomic_scope": "创建 infra/tools/parsers.py，包含 _parse_pytest_output、_parse_pytest_json、_parse_ruff_output、_parse_mypy_output、_parse_bandit_output、_parse_coverage_json_output；更新 domain/tool_evidence_adapter.py 的导入；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改解析函数内部逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-081"
+      ],
+      "expected_deliverables": [
+        "infra/tools/parsers.py",
+        "更新后的 domain/tool_evidence_adapter.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-082-01",
+          "description": "infra/tools/parsers.py 包含所有解析函数"
+        },
+        {
+          "dod_id": "DOD-VT-082-02",
+          "description": "domain/tool_evidence_adapter.py 从 infra/tools/parsers.py 导入解析函数"
+        },
+        {
+          "dod_id": "DOD-VT-082-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "解析函数是纯函数，不修改内部逻辑",
+        "更新导入后立即运行测试"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-083",
+      "phase_id": "PHASE-VT-011",
+      "title": "迁移 ToolExecutionEngine 到 infra/tools/executor.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将精简后的 ToolExecutionEngine 从 domain/tool_evidence_adapter.py 迁移到 infra/tools/executor.py，并删除原文件。",
+      "atomic_scope": "创建 infra/tools/executor.py，包含精简后的 ToolExecutionEngine；更新 infra/tools/__init__.py 导出；删除 domain/tool_evidence_adapter.py；修复所有 import 语句；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 ToolExecutionEngine 内部逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-082"
+      ],
+      "expected_deliverables": [
+        "infra/tools/executor.py",
+        "更新后的 infra/tools/__init__.py",
+        "删除 domain/tool_evidence_adapter.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-083-01",
+          "description": "infra/tools/executor.py 包含精简后的 ToolExecutionEngine"
+        },
+        {
+          "dod_id": "DOD-VT-083-02",
+          "description": "domain/tool_evidence_adapter.py 不存在"
+        },
+        {
+          "dod_id": "DOD-VT-083-03",
+          "description": "所有 import 语句更新"
+        },
+        {
+          "dod_id": "DOD-VT-083-04",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "先创建新文件，再删除旧文件",
+        "使用 sed 批量替换 import 路径",
+        "运行 pytest 验证无回归"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-084",
+      "phase_id": "PHASE-VT-011",
+      "title": "更新设计文档反映 infra/tools 包结构",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新 refactoring_design.md，反映 infra/tools 包的最终结构。",
+      "atomic_scope": "更新设计文档中的包结构图；确保文档与代码一致。",
+      "out_of_scope": [
+        "不修改代码逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-083"
+      ],
+      "expected_deliverables": [
+        "更新后的 refactoring_design.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-084-01",
+          "description": "refactoring_design.md 中的包结构图反映 infra/tools/ 的最终结构"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持文档风格一致",
+        "确保包结构图准确反映实际目录"
+      ]
     }
   ]
 }

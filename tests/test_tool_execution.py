@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode
-from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate, ToolExecutionEngine
+from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate, ToolExecutionEngine
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +225,7 @@ class TestShellInjectionPrevention:
 class TestTimeoutHandling:
     """Verify that subprocess timeout produces structured error evidence."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_timeout_returns_blocked_evidence(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -251,7 +251,7 @@ class TestTimeoutHandling:
         assert c.details.get("error_type") == "timeout"
         assert c.details.get("timeout_seconds") == 120
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_custom_timeout(
         self, mock_run: MagicMock, project_root: Path, python_matrix: dict
     ) -> None:
@@ -278,7 +278,7 @@ class TestTimeoutHandling:
 class TestMissingTool:
     """Verify proper error when tool binary is not found."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_file_not_found_returns_blocked(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -352,7 +352,7 @@ class TestPathValidation:
 class TestPytestOutputParsing:
     """Verify pytest JSON output is correctly parsed."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_passing_tests(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, tmp_path: Path
     ) -> None:
@@ -387,7 +387,7 @@ class TestPytestOutputParsing:
         assert c.covers == ["AC-VT-001-01"]
         assert c.source_type == "test"
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_failing_tests(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, tmp_path: Path
     ) -> None:
@@ -418,7 +418,7 @@ class TestPytestOutputParsing:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.VIOLATED.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_exit5_no_tests_collected_returns_skipped(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -433,7 +433,7 @@ class TestPytestOutputParsing:
         assert candidates[0].error_code == ErrorCode.TOOL_NO_TESTS_COLLECTED.value
         assert candidates[0].details["skip_reason"] == "no tests collected"
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_exit2_usage_error_returns_skipped(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -456,7 +456,7 @@ class TestPytestOutputParsing:
 class TestRuffOutputParsing:
     """Verify ruff JSON output is correctly parsed."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_ruff_clean(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: AC-VT-001-02"""
         mock_run.return_value = MagicMock(
@@ -467,7 +467,7 @@ class TestRuffOutputParsing:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COMPLIANT.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_ruff_violations(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -608,7 +608,7 @@ class TestSourceCoverageMeasurement:
 class TestBanditOutputParsing:
     """Verify bandit JSON output is correctly parsed."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_bandit_clean(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: AC-VT-001-02"""
         mock_run.return_value = MagicMock(
@@ -619,7 +619,7 @@ class TestBanditOutputParsing:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COMPLIANT.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_bandit_findings(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -646,7 +646,7 @@ class TestBanditOutputParsing:
 class TestMypyOutputParsing:
     """Verify mypy output is correctly parsed."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_mypy_clean(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: AC-VT-001-02"""
         mock_run.return_value = MagicMock(
@@ -657,7 +657,7 @@ class TestMypyOutputParsing:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COMPLIANT.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_mypy_errors(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: AC-VT-001-02"""
         mock_run.return_value = MagicMock(
@@ -671,7 +671,7 @@ class TestMypyOutputParsing:
         assert candidates[0].status == CoverageStatus.VIOLATED.value
         assert candidates[0].details["errors_count"] == 2
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_mypy_exit2_usage_error_returns_skipped(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -694,7 +694,7 @@ class TestMypyOutputParsing:
 class TestExecuteAll:
     """Verify execute_all runs all whitelisted tools for all paths."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_runs_all_tools(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -713,7 +713,7 @@ class TestExecuteAll:
         # Should have run at least once
         mock_run.assert_called()
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_skips_non_python_for_lint(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -730,7 +730,7 @@ class TestExecuteAll:
         assert len(candidates) == 0
         mock_run.assert_not_called()
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_skips_non_python_for_test(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -747,7 +747,7 @@ class TestExecuteAll:
         assert len(candidates) == 0
         mock_run.assert_not_called()
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_skips_non_python_for_all_categories(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -761,7 +761,7 @@ class TestExecuteAll:
         assert len(candidates) == 0
         mock_run.assert_not_called()
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_runs_python_files_for_all_categories(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -778,7 +778,7 @@ class TestExecuteAll:
         # type_check, security return 1 each; test returns 0 from empty parse)
         assert len(candidates) >= 3
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_mixed_paths_filters_correctly(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -890,7 +890,7 @@ class TestValidatePathErrors:
 
     def test_invalid_path_returns_false(self, engine: ToolExecutionEngine) -> None:
         """covers: _validate_path ValueError/OSError branch (lines 166-167)"""
-        with patch("vibe_tracing.domain.tool_evidence_adapter.Path.resolve", side_effect=ValueError("bad path")):
+        with patch("vibe_tracing.infra.tools.executor.Path.resolve", side_effect=ValueError("bad path")):
             ok, err = engine._validate_path("some/path")
             assert ok is False
             assert "Invalid path" in err
@@ -909,7 +909,7 @@ class TestValidatePathErrors:
 class TestRunSubprocessErrors:
     """Verify _run_subprocess handles various OS-level exceptions."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_permission_error(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: _run_subprocess PermissionError branch (lines 263-266)"""
         mock_run.side_effect = PermissionError("Permission denied")
@@ -918,7 +918,7 @@ class TestRunSubprocessErrors:
         assert error == "permission"
         assert "权限" in stderr or "Permission denied" in stderr
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_os_error(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: _run_subprocess OSError branch (lines 267-270)"""
         mock_run.side_effect = OSError("OS boom")
@@ -927,7 +927,7 @@ class TestRunSubprocessErrors:
         assert error == "os_error"
         assert "OS error" in stderr or "操作系统" in stderr
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_permission_error_execute_tool(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: execute_tool generic exec_error branch (lines 770-783)"""
         mock_run.side_effect = PermissionError("no access")
@@ -938,7 +938,7 @@ class TestRunSubprocessErrors:
         assert c.error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
         assert c.details.get("error_type") == "permission"
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_os_error_execute_tool(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: execute_tool generic exec_error branch (lines 770-783)"""
         mock_run.side_effect = OSError("os boom")
@@ -956,7 +956,7 @@ class TestRunSubprocessErrors:
 class TestPytestEdgeCases:
     """Verify pytest parser handles non-standard exit codes and fallback paths."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_exit3_returns_blocked(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: pytest exit code not in (0,1,2,5) → blocked (line 316)"""
         mock_run.return_value = MagicMock(returncode=3, stdout="", stderr="internal error")
@@ -965,7 +965,7 @@ class TestPytestEdgeCases:
         assert candidates[0].status == CoverageStatus.BLOCKED.value
         assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_json_report_file_with_relative_path(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
@@ -985,7 +985,7 @@ class TestPytestEdgeCases:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COVERED.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_json_report_file_parse_error_falls_back(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
@@ -1005,7 +1005,7 @@ class TestPytestEdgeCases:
         # Falls through to last resort (exit_code 0 = covered)
         assert candidates[0].status == CoverageStatus.COVERED.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_stdout_json_fallback(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: pytest stdout JSON fallback (lines 345-349)"""
         report_data = {"tests": [{"nodeid": "tests/test_foo.py::test_baz", "outcome": "passed"}]}
@@ -1020,7 +1020,7 @@ class TestPytestEdgeCases:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COVERED.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_last_resort_exit0(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: pytest last resort fallback exit_code=0 (lines 352-366)"""
         mock_run.return_value = MagicMock(returncode=0, stdout="no json here", stderr="")
@@ -1035,7 +1035,7 @@ class TestPytestEdgeCases:
         assert candidates[0].status == CoverageStatus.COVERED.value
         assert candidates[0].details["outcome"] == "passed"
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_pytest_last_resort_exit1(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: pytest last resort fallback exit_code=1 (lines 352-366)"""
         mock_run.return_value = MagicMock(returncode=1, stdout="no json here", stderr="")
@@ -1108,7 +1108,7 @@ class TestPytestJsonParsingEdgeCases:
 class TestRuffEdgeCases:
     """Verify ruff parser handles edge cases."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_ruff_exit3_returns_blocked(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: ruff exit code not in (0,1) → blocked (line 426)"""
         mock_run.return_value = MagicMock(returncode=3, stdout="", stderr="ruff crashed")
@@ -1117,7 +1117,7 @@ class TestRuffEdgeCases:
         assert candidates[0].status == CoverageStatus.BLOCKED.value
         assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_ruff_dict_output_with_violations_key(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: ruff dict output parsing (lines 444-450)"""
         data = {"violations": [{"code": "F401", "message": "unused import"}]}
@@ -1127,7 +1127,7 @@ class TestRuffEdgeCases:
         assert candidates[0].status == CoverageStatus.VIOLATED.value
         assert candidates[0].details["violations_count"] == 1
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_ruff_dict_output_with_results_key(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: ruff dict output with 'results' key (line 446)"""
         data = {"results": []}
@@ -1136,7 +1136,7 @@ class TestRuffEdgeCases:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COMPLIANT.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_ruff_dict_output_with_issues_key(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: ruff dict output with 'issues' key (line 446)"""
         data = {"issues": [{"code": "E501"}]}
@@ -1145,7 +1145,7 @@ class TestRuffEdgeCases:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.VIOLATED.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_ruff_invalid_json_returns_compliant(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: ruff JSONDecodeError branch (line 449-450)"""
         mock_run.return_value = MagicMock(returncode=0, stdout="not json", stderr="")
@@ -1161,7 +1161,7 @@ class TestRuffEdgeCases:
 class TestMypyEdgeCases:
     """Verify mypy parser handles edge cases."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_mypy_exit3_returns_blocked(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: mypy exit code not in (0,1,2) → blocked (line 498)"""
         mock_run.return_value = MagicMock(returncode=3, stdout="", stderr="mypy crashed")
@@ -1170,7 +1170,7 @@ class TestMypyEdgeCases:
         assert candidates[0].status == CoverageStatus.BLOCKED.value
         assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_mypy_json_report_file(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
@@ -1191,7 +1191,7 @@ class TestMypyEdgeCases:
         assert candidates[0].status == CoverageStatus.VIOLATED.value
         assert candidates[0].details["errors_count"] == 3
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_mypy_json_report_bad_json_falls_back(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
@@ -1222,7 +1222,7 @@ class TestMypyEdgeCases:
 class TestBanditEdgeCases:
     """Verify bandit parser handles edge cases."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_bandit_exit3_returns_blocked(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: bandit exit code not in (0,1) → blocked (line 556)"""
         mock_run.return_value = MagicMock(returncode=3, stdout="", stderr="bandit crashed")
@@ -1231,7 +1231,7 @@ class TestBanditEdgeCases:
         assert candidates[0].status == CoverageStatus.BLOCKED.value
         assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_bandit_output_file(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
@@ -1252,7 +1252,7 @@ class TestBanditEdgeCases:
         assert candidates[0].status == CoverageStatus.VIOLATED.value
         assert candidates[0].details["results_count"] == 1
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_bandit_output_file_bad_json_falls_back(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
@@ -1273,7 +1273,7 @@ class TestBanditEdgeCases:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COMPLIANT.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_bandit_output_file_results_not_list(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
@@ -1293,7 +1293,7 @@ class TestBanditEdgeCases:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COMPLIANT.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_bandit_stdout_list_fallback(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: bandit stdout list fallback (lines 596-599)"""
         mock_run.return_value = MagicMock(
@@ -1306,7 +1306,7 @@ class TestBanditEdgeCases:
         assert candidates[0].status == CoverageStatus.VIOLATED.value
         assert candidates[0].details["results_count"] == 1
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_bandit_stdout_bad_json(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: bandit stdout JSONDecodeError branch (line 598-599)"""
         mock_run.return_value = MagicMock(returncode=0, stdout="not json", stderr="")
@@ -1314,7 +1314,7 @@ class TestBanditEdgeCases:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.COMPLIANT.value
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_bandit_output_file_no_output_path_match(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
@@ -1363,7 +1363,7 @@ class TestExecuteToolBuildCommandError:
 class TestUnsupportedOutputFormat:
     """Verify execute_tool handles unsupported output_format."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_unsupported_format_returns_blocked(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -1429,7 +1429,7 @@ class TestMeasureSourceCoverageEdgeCases:
 class TestExecuteAllTypedPaths:
     """Verify execute_all with dict-style typed paths."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_dict_paths_test_type(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: execute_all dict paths branch (lines 913-924)"""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
@@ -1437,7 +1437,7 @@ class TestExecuteAllTypedPaths:
         candidates = engine.execute_all({"test": ["tests/test_foo.py"]})
         assert mock_run.call_count == 1
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_dict_paths_source_type(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: execute_all dict paths source type (lines 913-924)"""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
@@ -1445,14 +1445,14 @@ class TestExecuteAllTypedPaths:
         candidates = engine.execute_all({"source": ["src/module.py"]})
         assert mock_run.call_count == 1
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_dict_paths_unknown_type_skipped(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
         """covers: execute_all dict paths unknown type (line 919-920)"""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
         candidates = engine.execute_all({"unknown_type": ["src/module.py"]})
         assert mock_run.call_count == 0
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_dict_paths_category_not_in_config_skipped(
         self, mock_run: MagicMock, engine: ToolExecutionEngine
     ) -> None:
@@ -1612,7 +1612,7 @@ class TestGetToolConfig:
 class TestAutoGenerateOutputPath:
     """Verify execute_tool auto-generates output_path when template needs it."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_auto_generates_output_path(
         self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
     ) -> None:
@@ -1640,7 +1640,7 @@ class TestAutoGenerateOutputPath:
 class TestCoverageBaselineIntegration:
     """Verify coverage baseline is connected to execute_all via coverage_baseline_path."""
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_connects_coverage_baseline(
         self, mock_run: MagicMock, project_root: Path, python_matrix: dict
     ) -> None:
@@ -1670,7 +1670,7 @@ class TestCoverageBaselineIntegration:
         assert coverage_candidates[0].source_path == "src/foo.py"
         assert coverage_candidates[0].details["percent_covered"] == 90.0
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_no_baseline_returns_empty_coverage(
         self, mock_run: MagicMock, project_root: Path, python_matrix: dict
     ) -> None:
@@ -1688,7 +1688,7 @@ class TestCoverageBaselineIntegration:
         coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
         assert len(coverage_candidates) == 0
 
-    @patch("vibe_tracing.domain.tool_evidence_adapter.subprocess.run")
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
     def test_execute_all_missing_baseline_file_returns_empty(
         self, mock_run: MagicMock, project_root: Path, python_matrix: dict
     ) -> None:

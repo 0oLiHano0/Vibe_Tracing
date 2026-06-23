@@ -234,8 +234,15 @@ infra/
 │
 ├── logging/                             # OperationalLogger
 ├── git/                                 # git_utils
-├── config/                              # enums, hints
-└── tools/                               # ToolResolver
+├── config/                              # 配置相关
+│   ├── enums.py                         # CoverageStatus, ErrorCode
+│   ├── hint_loader.py                   # load_hints, resolve_hint
+│   └── boundary.py                      # load_boundary, is_in_scope, partition_by_scope
+└── tools/                               # 工具执行
+    ├── resolver.py                      # ToolResolver（工具可用性检测）
+    ├── candidate.py                     # ToolEvidenceCandidate（数据模型）
+    ├── parsers.py                       # 输出解析器（纯函数，未来重构目标）
+    └── executor.py                      # ToolExecutionEngine（工具执行引擎）
 ```
 
 ### 4.3 依赖方向

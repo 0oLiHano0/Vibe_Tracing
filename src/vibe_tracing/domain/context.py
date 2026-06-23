@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from vibe_tracing.infra.loader.prd_parser import PrdParseResult
     from vibe_tracing.infra.loader.raw_input import RawInputManifest
     from vibe_tracing.infra.loader.task_loader import TaskListLoadResult
-    from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
+    from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate
 
 
 @dataclass

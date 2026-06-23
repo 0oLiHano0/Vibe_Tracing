@@ -45,7 +45,7 @@ def _execute_tools(
     if not (config_language and ltm):
         return []
 
-    from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
+    from vibe_tracing.infra.tools.executor import ToolExecutionEngine, ToolEvidenceCandidate
     from vibe_tracing.infra.tools.resolver import ToolResolver
 
     # Pre-flight dependency check

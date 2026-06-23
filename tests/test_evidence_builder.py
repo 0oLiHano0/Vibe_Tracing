@@ -48,7 +48,7 @@ class TestEvidenceBuilderMerge:
 
     def test_merge_test_results(self, tmp_path):
         """merge() correctly processes test-type tool evidence."""
-        from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
+        from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate
 
         test_ev = ToolEvidenceCandidate(
             source_type="test",
@@ -72,7 +72,7 @@ class TestEvidenceBuilderMerge:
 
     def test_merge_coverage_reports(self, tmp_path):
         """merge() correctly processes coverage-type tool evidence."""
-        from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
+        from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate
 
         cov_ev = ToolEvidenceCandidate(
             source_type="tool",
@@ -93,7 +93,7 @@ class TestEvidenceBuilderMerge:
 
     def test_merge_skips_unknown_source_type(self, tmp_path):
         """merge() skips evidence with unknown source_type."""
-        from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
+        from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate
 
         unknown_ev = ToolEvidenceCandidate(
             source_type="unknown_type",
@@ -110,7 +110,7 @@ class TestEvidenceBuilderMerge:
 
     def test_merge_deduplicates_purge_files(self, tmp_path):
         """merge() deduplicates files_to_purge."""
-        from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
+        from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate
 
         ev1 = ToolEvidenceCandidate(
             source_type="test",
@@ -238,7 +238,7 @@ class TestEvidenceBuilderFullPipeline:
 
     def test_full_pipeline_test_and_coverage(self, tmp_path, conn):
         """Full pipeline: merge -> apply -> persist for test and coverage evidence."""
-        from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
+        from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate
 
         test_ev = ToolEvidenceCandidate(
             source_type="test",
@@ -280,7 +280,7 @@ class TestEvidenceBuilderFullPipeline:
 
     def test_full_pipeline_purges_stale_cache(self, tmp_path, conn):
         """Full pipeline: stale cache entries are purged after apply."""
-        from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
+        from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate
         from vibe_tracing.infra.db import load_initial_cache
 
         evidences_dir = tmp_path / "output" / "evidences"

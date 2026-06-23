@@ -9,6 +9,7 @@ from typing import List, Optional, Set
 
 from vibe_tracing.domain.context import UnifiedContext
 from vibe_tracing.cli.common import _GateBlocked
+from vibe_tracing.infra.git.utils import get_staged_files
 
 
 def _execute_tools(
@@ -219,16 +220,8 @@ def _check_staged_extensions(project_root: Path, constraints: Optional[dict], co
         return
 
     try:
-        result = subprocess.run(
-            ["git", "diff", "--cached", "--name-only"],
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if result.returncode != 0:
-            return
-        staged_files = [f for f in result.stdout.splitlines() if f.strip()]
+        staged_files_set = get_staged_files(project_root)
+        staged_files = list(staged_files_set)
     except Exception:
         return
 

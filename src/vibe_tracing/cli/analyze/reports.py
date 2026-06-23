@@ -140,6 +140,7 @@ def _render_dashboard(
 ) -> None:
     """Render the dashboard HTML file."""
     from vibe_tracing.infra.report.dashboard import DashboardRenderer
+    from vibe_tracing.domain.governance.change_proposal import ArchitectureChangeProposalEngine
 
     manifest = ctx.manifest
     prd_res = ctx.prd
@@ -151,6 +152,25 @@ def _render_dashboard(
                 if _r.file_key == "architecture_constraints" and _r.sha256_hash:
                     _dash_constraints_hash = _r.sha256_hash
                     break
+
+        # Get proposal status (cli layer calls domain layer)
+        prop_engine = ArchitectureChangeProposalEngine(
+            project_root, config_data=ctx.config,
+        )
+        try:
+            prop_res = prop_engine.check_governance(
+                constraints_hash=_dash_constraints_hash,
+            )
+        except Exception as exc:
+            prop_res = {
+                "is_valid": False,
+                "errors": [f"评估架构约束变更建议时发生异常: {exc}"],
+                "warnings": [],
+                "risks": [],
+                "gaps": [],
+                "proposals": [],
+            }
+
         renderer = DashboardRenderer(
             project_root,
             constraints_hash=_dash_constraints_hash,
@@ -204,6 +224,7 @@ def _render_dashboard(
             prd_requirements=prd_reqs_serialized,
             test_results=test_results_data,
             coverage_reports=coverage_reports_data,
+            prop_res=prop_res,
         )
     except Exception as exc:
         print(f"Error rendering dashboard: {exc}", file=sys.stderr)

@@ -338,7 +338,7 @@ class TestMalformedFilesystemClaims:
 class TestGitNotInstalled:
     """L6: FileNotFoundError from subprocess.run must be caught gracefully."""
 
-    @patch("vibe_tracing.domain.governance.ghost_code.subprocess.run", side_effect=FileNotFoundError)
+    @patch("vibe_tracing.infra.git.utils.subprocess.run", side_effect=FileNotFoundError)
     def test_git_not_installed_graceful(self, mock_run, project, conn):
         """When git is not on PATH, reconcile() returns gracefully without crashing."""
         reconciler = GhostCodeReconciler(project, conn)

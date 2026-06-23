@@ -193,7 +193,7 @@ domain/
 │
 ├── gate/                                # 门禁判定引擎（纯规则）
 │   ├── engine.py                        # MergeGateEngine（纯规则判定，不持有 conn）
-│   └── staleness.py                     # mark_staleness 纯函数
+│   └── staleness.py                     # mark_staleness, determine_affected_items 纯函数
 │
 ├── compliance/                          # 合规检查（纯规则）
 │   ├── checker.py                       # ArchitectureComplianceChecker
@@ -233,11 +233,15 @@ infra/
 │   └── reflection.py                    # render_reflection_prompts
 │
 ├── logging/                             # OperationalLogger
-├── git/                                 # git_utils
+├── git/                                 # git_show, git_has_uncommitted_changes, get_staged_files
 ├── config/                              # 配置相关
 │   ├── enums.py                         # CoverageStatus, ErrorCode
 │   ├── hint_loader.py                   # load_hints, resolve_hint
-│   └── boundary.py                      # load_boundary, is_in_scope, partition_by_scope
+│   └── boundary.py                      # load_boundary, is_in_scope, partition_by_scope, load_human_decisions
+├── governance/                          # 治理数据加载（I/O）
+│   └── loader.py                        # read_claims_from_filesystem, read_task_list, read_prd_ac_ids, read_constraints_file, read_constraints_json
+├── compliance/                          # 合规数据加载（I/O）
+│   └── loader.py                        # get_python_imports, find_python_files, find_dashboard_files, read_dashboard_content, check_file_exists
 └── tools/                               # 工具执行
     ├── resolver.py                      # ToolResolver（工具可用性检测）
     ├── candidate.py                     # ToolEvidenceCandidate（数据模型）
@@ -255,11 +259,16 @@ CLI → Domain → Infra
 ```
 evidence/        → 无域内依赖
 gate/            → 无域内依赖
-compliance/      → 无域内依赖
+compliance/      → infra/compliance/（通过参数注入）
 risk/            → 无域内依赖
-governance/      → infra/loader/（通过 context 间接依赖）
+governance/      → infra/governance/, infra/git/（通过参数注入）
 context          → infra/loader/, gate/, compliance/, risk/
 ```
+
+架构修复说明：
+- domain 层不再直接进行文件 I/O，所有 I/O 操作通过 infra 层函数完成
+- infra 层不再依赖 domain 层（已消除反向依赖）
+- dashboard.py 的提案引擎调用已移至 cli 层
 
 ---
 

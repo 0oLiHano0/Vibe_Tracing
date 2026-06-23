@@ -5,13 +5,19 @@ Checks machine-verifiable MUST-level constraints and module boundaries.
 Unverifiable constraints are returned as unclear, per FORBID-VT-007.
 """
 
-import ast
 from datetime import datetime, timezone
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from vibe_tracing.infra import validation as ids
+from vibe_tracing.infra.compliance.loader import (
+    get_python_imports,
+    find_python_files,
+    find_dashboard_files,
+    read_dashboard_content,
+    check_file_exists,
+)
 from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
 from vibe_tracing.infra.logging.logger import OperationalLogger
 
@@ -52,20 +58,7 @@ class ArchitectureComplianceChecker:
 
     def _get_python_imports(self, file_path: Path) -> List[Tuple[str, int]]:
         """Statically extract import statement module names and their line numbers from a python file."""
-        imports = []
-        try:
-            content = file_path.read_text(encoding="utf-8")
-            tree = ast.parse(content, filename=str(file_path))
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Import):
-                    for name in node.names:
-                        imports.append((name.name, node.lineno))
-                elif isinstance(node, ast.ImportFrom):
-                    if node.module:
-                        imports.append((node.module, node.lineno))
-        except Exception:
-            pass
-        return imports
+        return get_python_imports(file_path)
 
     def _get_module_for_path(
         self, file_path: Path, src_dir: Path
@@ -167,9 +160,7 @@ class ArchitectureComplianceChecker:
         src_dir = self.project_root / "src"
 
         # List all Python files
-        py_files: List[Path] = []
-        if src_dir.exists():
-            py_files = list(src_dir.rglob("*.py"))
+        py_files: List[Path] = find_python_files(src_dir)
 
         # Map files to modules and parse imports
         file_imports: Dict[Path, List[Tuple[str, int]]] = {}
@@ -391,7 +382,7 @@ class ArchitectureComplianceChecker:
         # ----------------------------------------------------
         # 3. Check DEP-VT-002 (Dashboard must not depend on CDN/external resources)
         # ----------------------------------------------------
-        dashboard_files = list(self.project_root.rglob("dashboard.html"))
+        dashboard_files = find_dashboard_files(self.project_root)
         if not dashboard_files:
             # If dashboard.html doesn't exist, we must return unclear per FORBID-VT-007
             status_list.append(
@@ -413,7 +404,9 @@ class ArchitectureComplianceChecker:
             dash_file = dashboard_files[0]
             dash_violations = []
             try:
-                content = dash_file.read_text(encoding="utf-8")
+                content = read_dashboard_content(dash_file)
+                if content is None:
+                    raise OSError("Could not read dashboard file")
                 # Simple check for http/https script/stylesheet links
                 # e.g., src="https://cdn.com/..."
                 external_urls = []
@@ -558,7 +551,7 @@ class ArchitectureComplianceChecker:
         }
         missing_files = []
         for name, path in required_paths.items():
-            if not path.exists():
+            if not check_file_exists(path):
                 try:
                     rel_p = str(path.relative_to(self.project_root))
                 except ValueError:

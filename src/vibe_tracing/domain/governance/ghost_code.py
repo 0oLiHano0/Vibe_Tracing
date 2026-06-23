@@ -1,11 +1,15 @@
-import json
-import re
 import sqlite3
-import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set
 
 from vibe_tracing.infra.config.boundary import load_boundary, is_in_scope
+from vibe_tracing.infra.git.utils import get_staged_files
+from vibe_tracing.infra.governance.loader import (
+    read_claims_from_filesystem,
+    read_task_list,
+    read_prd_ac_ids,
+    check_prd_exists,
+)
 from vibe_tracing.infra.logging.logger import OperationalLogger
 
 class GhostCodeReconciler:
@@ -48,43 +52,10 @@ class GhostCodeReconciler:
 
     def _read_claims_from_filesystem(self) -> List[dict]:
         """Read all CLAIM-*.json files from the claims directory on disk."""
-        all_claims = []
-        if not self.claims_dir.is_dir():
-            return all_claims
-        for claim_file in sorted(self.claims_dir.glob("CLAIM-*.json")):
-            try:
-                data = json.loads(claim_file.read_text(encoding="utf-8"))
-                items = data if isinstance(data, list) else [data]
-                for item in items:
-                    # Skip template records
-                    if item.get("claim_id", "").endswith("-9999"):
-                        continue
-                    # Skip claims missing required fields (load_claims needs claim_id + related_task)
-                    if not item.get("claim_id") or not item.get("related_task"):
-                        continue
-                    all_claims.append(item)
-            except (json.JSONDecodeError, OSError) as exc:
-                OperationalLogger.get().debug(
-                    "claim_file_load_failed",
-                    f"Could not load claim file {claim_file}",
-                    exc=exc,
-                )
-        return all_claims
+        return read_claims_from_filesystem(self.claims_dir)
 
     def _get_staged_files(self) -> Set[str]:
-        try:
-            result = subprocess.run(
-                ["git", "diff", "--cached", "--name-only"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            return {line.strip() for line in result.stdout.splitlines() if line.strip()}
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            OperationalLogger.get().warning("git_subprocess_failed", "Git operation failed: _get_staged_files", exc=e)
-            print("Warning: git 未安装或不在 PATH 中，跳过检查。")
-            return set()
+        return get_staged_files(self.project_root)
 
     def reconcile(self) -> Tuple[bool, str]:
         staged_files = self._get_staged_files()
@@ -141,14 +112,7 @@ class GhostCodeReconciler:
 
     def _get_staged_tasks(self) -> Optional[dict]:
         """Read task_list.json from the filesystem."""
-        task_list_path = self.project_root / "docs" / "task_list.json"
-        try:
-            return json.loads(task_list_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            OperationalLogger.get().warning(
-                "task_list_load_failed", "Could not load task_list.json", exc=exc
-            )
-            return None
+        return read_task_list(self.project_root)
 
     # ------------------------------------------------------------------
     # Gate 2.5 -- Reverse coverage check
@@ -233,8 +197,7 @@ class GhostCodeReconciler:
             return []
 
         # Check if PRD exists on disk
-        prd_path = self.project_root / "docs" / "prd.md"
-        prd_exists = prd_path.is_file()
+        prd_exists = check_prd_exists(self.project_root)
 
         # Get AC IDs from PRD
         staged_ac_ids: Set[str] = set()
@@ -271,13 +234,4 @@ class GhostCodeReconciler:
 
     def _get_staged_prd_ac_ids(self) -> Set[str]:
         """Parse PRD content from filesystem and extract all AC IDs."""
-        prd_path = self.project_root / "docs" / "prd.md"
-        try:
-            content = prd_path.read_text(encoding="utf-8")
-            ac_pattern = re.compile(r"AC-[A-Z]+-\d+-\d+")
-            return set(ac_pattern.findall(content))
-        except OSError as exc:
-            OperationalLogger.get().warning(
-                "prd_ac_parse_failed", "Could not read PRD for AC extraction", exc=exc
-            )
-            return set()
+        return read_prd_ac_ids(self.project_root)

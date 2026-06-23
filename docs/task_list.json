@@ -4700,6 +4700,486 @@
         "将 self._get_test_docstring、self._extract_covers_from_docstring 作为回调函数传递",
         "保持解析逻辑不变，只改变调用方式"
       ]
+    },
+    {
+      "task_id": "TASK-VT-086",
+      "phase_id": "PHASE-VT-011",
+      "title": "移动 _get_staged_files 到 infra/git/utils.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 _get_staged_files 函数从 cli/common.py 移到 infra/git/utils.py，因为 git 操作属于基础设施层职责。",
+      "atomic_scope": "将 _get_staged_files 函数移到 infra/git/utils.py；更新 infra/git/__init__.py 导出；修复所有 import 语句；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改函数内部逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "更新后的 infra/git/utils.py",
+        "更新后的 infra/git/__init__.py",
+        "更新后的 cli/common.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-086-01",
+          "description": "_get_staged_files 函数在 infra/git/utils.py 中"
+        },
+        {
+          "dod_id": "DOD-VT-086-02",
+          "description": "cli/common.py 不再包含 _get_staged_files"
+        },
+        {
+          "dod_id": "DOD-VT-086-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持函数签名不变",
+        "更新导入后立即运行测试"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-087",
+      "phase_id": "PHASE-VT-011",
+      "title": "移动 _determine_affected_items 到 domain/gate/staleness.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 _determine_affected_items 函数从 cli/common.py 移到 domain/gate/staleness.py，因为业务逻辑属于领域层职责。",
+      "atomic_scope": "将 _determine_affected_items 函数移到 domain/gate/staleness.py；更新 domain/gate/__init__.py 导出；修复所有 import 语句；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改函数内部逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-086"
+      ],
+      "expected_deliverables": [
+        "更新后的 domain/gate/staleness.py",
+        "更新后的 domain/gate/__init__.py",
+        "更新后的 cli/common.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-087-01",
+          "description": "_determine_affected_items 函数在 domain/gate/staleness.py 中"
+        },
+        {
+          "dod_id": "DOD-VT-087-02",
+          "description": "cli/common.py 不再包含 _determine_affected_items"
+        },
+        {
+          "dod_id": "DOD-VT-087-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持函数签名不变",
+        "更新导入后立即运行测试"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-088",
+      "phase_id": "PHASE-VT-011",
+      "title": "移动 _load_human_decisions 到 infra/config/boundary.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 _load_human_decisions 函数从 cli/common.py 移到 infra/config/boundary.py，因为配置加载属于基础设施层职责。",
+      "atomic_scope": "将 _load_human_decisions 函数移到 infra/config/boundary.py；更新 infra/config/__init__.py 导出；修复所有 import 语句；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改函数内部逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-087"
+      ],
+      "expected_deliverables": [
+        "更新后的 infra/config/boundary.py",
+        "更新后的 infra/config/__init__.py",
+        "更新后的 cli/common.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-088-01",
+          "description": "_load_human_decisions 函数在 infra/config/boundary.py 中"
+        },
+        {
+          "dod_id": "DOD-VT-088-02",
+          "description": "cli/common.py 不再包含 _load_human_decisions"
+        },
+        {
+          "dod_id": "DOD-VT-088-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持函数签名不变",
+        "更新导入后立即运行测试"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-089",
+      "phase_id": "PHASE-VT-011",
+      "title": "更新设计文档反映 cli 包结构调整",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新 refactoring_design.md，反映 cli/common.py 的精简和函数迁移。",
+      "atomic_scope": "更新设计文档中的包结构图；确保文档与代码一致。",
+      "out_of_scope": [
+        "不修改代码逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-088"
+      ],
+      "expected_deliverables": [
+        "更新后的 refactoring_design.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-089-01",
+          "description": "refactoring_design.md 中的包结构图反映 cli/common.py 的精简"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持文档风格一致",
+        "确保包结构图准确反映实际目录"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-090",
+      "phase_id": "PHASE-VT-011",
+      "title": "修复 infra->domain 反向依赖：dashboard.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "消除 infra/report/dashboard.py 对 domain/governance/change_proposal.py 的反向依赖，将提案引擎调用移到 cli 层。",
+      "atomic_scope": "修改 DashboardRenderer.render() 接口，新增 prop_res 参数；将 ArchitectureChangeProposalEngine 调用移到 cli/analyze/reports.py 的 _render_dashboard 中；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 DashboardRenderer 内部渲染逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "更新后的 infra/report/dashboard.py",
+        "更新后的 cli/analyze/reports.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-090-01",
+          "description": "infra/report/dashboard.py 不再导入 domain 层模块"
+        },
+        {
+          "dod_id": "DOD-VT-090-02",
+          "description": "DashboardRenderer.render() 接受 prop_res 参数"
+        },
+        {
+          "dod_id": "DOD-VT-090-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "将 prop_res 作为参数传入 render()",
+        "在 cli 层调用 ArchitectureChangeProposalEngine"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-091",
+      "phase_id": "PHASE-VT-011",
+      "title": "提取 ghost_code.py 的 I/O 操作到 infra 层",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 domain/governance/ghost_code.py 中的 git I/O、文件系统读取、数据库操作提取到 infra 层，domain 层只保留纯逻辑判定。",
+      "atomic_scope": "分析 ghost_code.py 的 I/O 操作；将 git subprocess 调用替换为 infra/git/utils.py 的函数；将文件读取操作提取为 infra 层的 loader；将 DB 操作通过参数注入；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改业务判定逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-090"
+      ],
+      "expected_deliverables": [
+        "重构后的 domain/governance/ghost_code.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-091-01",
+          "description": "ghost_code.py 不直接调用 subprocess.run"
+        },
+        {
+          "dod_id": "DOD-VT-091-02",
+          "description": "ghost_code.py 不直接读取文件（read_text/read_bytes）"
+        },
+        {
+          "dod_id": "DOD-VT-091-03",
+          "description": "I/O 操作通过参数注入或调用 infra 层函数"
+        },
+        {
+          "dod_id": "DOD-VT-091-04",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "将 I/O 操作提取为独立函数",
+        "通过参数注入依赖",
+        "保持业务逻辑不变"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-092",
+      "phase_id": "PHASE-VT-011",
+      "title": "提取 change_proposal.py 的 I/O 操作到 infra 层",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 domain/governance/change_proposal.py 中的文件读取操作提取到 infra 层。",
+      "atomic_scope": "将 check_governance() 中的 read_bytes/read_text/json.load 操作提取为 infra 层的 loader；将哈希计算移到 infra 层；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 diff 计算逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-091"
+      ],
+      "expected_deliverables": [
+        "重构后的 domain/governance/change_proposal.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-092-01",
+          "description": "change_proposal.py 不直接读取文件"
+        },
+        {
+          "dod_id": "DOD-VT-092-02",
+          "description": "文件读取通过参数注入或 infra 层函数"
+        },
+        {
+          "dod_id": "DOD-VT-092-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "将文件读取提取为 infra 层的 loader",
+        "通过参数注入文件内容"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-093",
+      "phase_id": "PHASE-VT-011",
+      "title": "提取 checker.py 的文件系统扫描到 infra 层",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 domain/compliance/checker.py 中的文件系统扫描操作提取到 infra 层。",
+      "atomic_scope": "将 _get_python_imports() 的文件读取提取为 infra 层的工具函数；将 check() 中的文件系统扫描提取为 infra 层的 loader；将文件内容作为参数传入 domain；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改合规判定逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-009"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-092"
+      ],
+      "expected_deliverables": [
+        "重构后的 domain/compliance/checker.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-093-01",
+          "description": "checker.py 不直接读取文件（read_text）"
+        },
+        {
+          "dod_id": "DOD-VT-093-02",
+          "description": "文件系统扫描通过 infra 层函数"
+        },
+        {
+          "dod_id": "DOD-VT-093-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "将文件读取提取为 infra 层的工具函数",
+        "将文件内容作为参数传入"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-094",
+      "phase_id": "PHASE-VT-011",
+      "title": "复用 infra/git/utils.py 避免重复 I/O",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 cli/analyze/tools.py 中的 git subprocess 调用替换为 infra/git/utils.py 的 get_staged_files 函数。",
+      "atomic_scope": "修改 _check_staged_extensions 函数，调用 get_staged_files 替代直接 subprocess.run；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改扩展名检查逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "更新后的 cli/analyze/tools.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-094-01",
+          "description": "_check_staged_extensions 调用 get_staged_files"
+        },
+        {
+          "dod_id": "DOD-VT-094-02",
+          "description": "不再有重复的 git subprocess 调用"
+        },
+        {
+          "dod_id": "DOD-VT-094-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "复用已有的 infra/git/utils.py 函数",
+        "保持扩展名检查逻辑不变"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-095",
+      "phase_id": "PHASE-VT-011",
+      "title": "更新设计文档反映架构修复",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新 refactoring_design.md，反映架构修复后的依赖关系和包职责。",
+      "atomic_scope": "更新设计文档中的依赖方向说明；更新包结构图；确保文档与代码一致。",
+      "out_of_scope": [
+        "不修改代码逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-094"
+      ],
+      "expected_deliverables": [
+        "更新后的 refactoring_design.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-095-01",
+          "description": "refactoring_design.md 中的依赖方向说明反映修复后的架构"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持文档风格一致",
+        "确保依赖方向说明准确"
+      ]
     }
   ]
 }

@@ -40,13 +40,13 @@ Manages loading, drift detection, and documentation auditing for architecture co
 #
 # ============================================================================
 
-import hashlib
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from vibe_tracing.infra import validation as ids
 from vibe_tracing.infra.git.utils import git_show
+from vibe_tracing.infra.governance.loader import read_constraints_file, read_constraints_json
 from vibe_tracing.infra.loader.raw_input import RawInputLoader
 
 
@@ -225,9 +225,9 @@ class ArchitectureChangeProposalEngine:
         if constraints_hash:
             current_hash = constraints_hash
         else:
-            current_hash = hashlib.sha256(
-                self.constraints_path.read_bytes()
-            ).hexdigest()
+            _, current_hash = read_constraints_file(self.constraints_path)
+            if current_hash is None:
+                return _empty_result()
         if current_hash == stored_hash:
             # No drift — fast path.
             return _empty_result()
@@ -274,9 +274,9 @@ class ArchitectureChangeProposalEngine:
             return _empty_result()
 
         base_data = json.loads(base_content)
-        curr_data = json.loads(
-            self.constraints_path.read_text(encoding="utf-8")
-        )
+        curr_data = read_constraints_json(self.constraints_path)
+        if curr_data is None:
+            return _empty_result()
 
         # Step 5: Diff baseline vs current.
         diffs = self._find_differences(base_data, curr_data)

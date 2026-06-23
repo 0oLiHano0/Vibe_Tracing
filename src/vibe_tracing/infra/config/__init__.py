@@ -2,7 +2,7 @@
 
 from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode
 from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
-from vibe_tracing.infra.config.boundary import load_boundary, is_in_scope, partition_by_scope
+from vibe_tracing.infra.config.boundary import load_boundary, is_in_scope, partition_by_scope, load_human_decisions
 
 __all__ = [
     "CoverageStatus",
@@ -12,4 +12,5 @@ __all__ = [
     "load_boundary",
     "is_in_scope",
     "partition_by_scope",
+    "load_human_decisions",
 ]

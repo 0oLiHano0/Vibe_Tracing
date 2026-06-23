@@ -26,7 +26,6 @@ class DashboardRenderer:
         self.project_root = project_root
         self.constraints_hash = constraints_hash
         self.config_data = config_data
-        self._proposal_engine = None
 
     def render(
         self,
@@ -36,6 +35,7 @@ class DashboardRenderer:
         prd_requirements: Optional[List[Dict[str, Any]]] = None,
         test_results: Optional[List[Dict[str, Any]]] = None,
         coverage_reports: Optional[List[Dict[str, Any]]] = None,
+        prop_res: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Renders the HTML dashboard file.
@@ -45,26 +45,18 @@ class DashboardRenderer:
             traceability_report: The traceability report JSON data.
             output_path: Target path to save the dashboard.html.
             prd_requirements: List of requirement dicts containing titles, priorities, and ACs.
+            test_results: List of test result dicts.
+            coverage_reports: List of coverage report dicts.
+            prop_res: Proposal engine result dict (from cli layer).
         """
         # Ensure the directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Load proposal status (lazy-initialized cache)
-        if self._proposal_engine is None:
-            from vibe_tracing.domain.governance.change_proposal import (
-                ArchitectureChangeProposalEngine,
-            )
-            self._proposal_engine = ArchitectureChangeProposalEngine(
-                self.project_root, config_data=self.config_data,
-            )
-        try:
-            prop_res = self._proposal_engine.check_governance(
-                constraints_hash=self.constraints_hash,
-            )
-        except Exception as exc:
+        # Use provided prop_res or empty default
+        if prop_res is None:
             prop_res = {
-                "is_valid": False,
-                "errors": [f"评估架构约束变更建议时发生异常: {exc}"],
+                "is_valid": True,
+                "errors": [],
                 "warnings": [],
                 "risks": [],
                 "gaps": [],

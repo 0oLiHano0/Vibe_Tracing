@@ -8,7 +8,7 @@ history tracking.
 
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Set
 
 from vibe_tracing.infra.logging.logger import OperationalLogger
 
@@ -78,3 +78,29 @@ def git_has_uncommitted_changes(path: str, cwd: Path) -> bool:
     except Exception as e:
         OperationalLogger.get().exception("git_utils_error", "Git operation failed: git_has_uncommitted_changes", exc=e)
         return False
+
+
+def get_staged_files(project_root: Path) -> Set[str]:
+    """Get the set of staged file paths from ``git diff --cached``.
+
+    Returns an empty set if git is unavailable or no files are staged.
+
+    Args:
+        project_root: Project root to run git in.
+
+    Returns:
+        Set of staged file paths.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return {f for f in result.stdout.splitlines() if f.strip()}
+    except Exception:
+        pass
+    return set()

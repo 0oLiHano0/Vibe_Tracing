@@ -160,66 +160,17 @@ def _rel_path_str(p: Path, project_root: Path) -> str:
     return str(p)
 
 
-def _get_staged_files(project_root: Path) -> Set[str]:
-    """Get the set of staged file paths from ``git diff --cached``.
+# _get_staged_files has been moved to infra/git/utils.py
+# Import for backward compatibility
+from vibe_tracing.infra.git.utils import get_staged_files as _get_staged_files
 
-    Returns an empty set if git is unavailable or no files are staged.
-    """
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--cached", "--name-only"],
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return {f for f in result.stdout.splitlines() if f.strip()}
-    except Exception:
-        pass
-    return set()
+# _determine_affected_items has been moved to domain/gate/staleness.py
+# Import for backward compatibility
+from vibe_tracing.domain.gate.staleness import determine_affected_items as _determine_affected_items
 
-
-def _determine_affected_items(
-    staged_files: Set[str],
-    claims_list: list,
-    ctx: UnifiedContext,
-) -> Tuple[Set[str], Set[str], Set[str]]:
-    """Determine which claims, requirements, and ACs are affected by staged changes.
-
-    A claim is *affected* if any of its ``code_refs`` or ``test_refs`` paths
-    appear in *staged_files*.  A requirement / AC is affected when it is
-    covered by a task that has at least one affected claim.
-
-    Returns ``(affected_claim_ids, affected_req_ids, affected_ac_ids)``.
-    """
-    affected_claims: Set[str] = set()
-    affected_reqs: Set[str] = set()
-    affected_acs: Set[str] = set()
-
-    for claim in claims_list:
-        claim_id = claim.claim_id
-        for ref in (claim.code_refs or []) + (claim.test_refs or []):
-            path = ref.split("#")[0]
-            if path in staged_files:
-                affected_claims.add(claim_id)
-                break
-
-    # Map affected claims -> tasks -> requirements / ACs
-    if affected_claims and ctx.task_result and ctx.task_result.tasks:
-        affected_task_ids = {
-            claim.related_task
-            for claim in claims_list
-            if claim.claim_id in affected_claims
-        }
-        for task in ctx.task_result.tasks:
-            if task.task_id in affected_task_ids:
-                for req_id in (task.related_requirements or []):
-                    affected_reqs.add(req_id)
-                for ac_id in (task.related_acceptance_criteria or []):
-                    affected_acs.add(ac_id)
-
-    return affected_claims, affected_reqs, affected_acs
+# _load_human_decisions has been moved to infra/config/boundary.py
+# Import for backward compatibility
+from vibe_tracing.infra.config.boundary import load_human_decisions as _load_human_decisions
 
 
 def _file_sha256(path: Path) -> Optional[str]:
@@ -232,25 +183,5 @@ def _file_sha256(path: Path) -> Optional[str]:
         return h.hexdigest()
     except (OSError, IOError):
         return None
-
-
-def _load_human_decisions(project_root: Optional[Path] = None) -> dict:
-    """Read human decision log."""
-    import json
-    if project_root is None:
-        project_root = Path(".")
-    decisions_path = project_root / ".vibetracing" / "human_decisions.json"
-    if not decisions_path.exists():
-        return {"version": "1.0", "decisions": []}
-    try:
-        return json.loads(decisions_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        from vibe_tracing.infra.logging.logger import OperationalLogger
-        OperationalLogger.get().warning(
-            "human_decisions_load_failed",
-            "Could not load human decisions file",
-            path=str(decisions_path),
-        )
-        return {"version": "1.0", "decisions": []}
 
 

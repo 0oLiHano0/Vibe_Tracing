@@ -8,6 +8,57 @@ them for full visibility.
 from typing import Dict, List, Optional, Set, Tuple
 
 
+def determine_affected_items(
+    staged_files: Set[str],
+    claims_list: list,
+    task_result: Optional[object] = None,
+) -> Tuple[Set[str], Set[str], Set[str]]:
+    """Determine which claims, requirements, and ACs are affected by staged changes.
+
+    A claim is *affected* if any of its ``code_refs`` or ``test_refs`` paths
+    appear in *staged_files*.  A requirement / AC is affected when it is
+    covered by a task that has at least one affected claim.
+
+    Args:
+        staged_files: Set of staged file paths.
+        claims_list: List of Claim objects.
+        task_result: Optional TaskListLoadResult object with tasks attribute.
+
+    Returns:
+        ``(affected_claim_ids, affected_req_ids, affected_ac_ids)``.
+    """
+    affected_claims: Set[str] = set()
+    affected_reqs: Set[str] = set()
+    affected_acs: Set[str] = set()
+
+    for claim in claims_list:
+        claim_id = getattr(claim, "claim_id", None)
+        if not claim_id:
+            continue
+        for ref in (getattr(claim, "code_refs", []) or []) + (getattr(claim, "test_refs", []) or []):
+            path = ref.split("#")[0]
+            if path in staged_files:
+                affected_claims.add(claim_id)
+                break
+
+    # Map affected claims -> tasks -> requirements / ACs
+    if affected_claims and task_result and hasattr(task_result, "tasks") and task_result.tasks:
+        affected_task_ids = {
+            getattr(claim, "related_task", None)
+            for claim in claims_list
+            if getattr(claim, "claim_id", None) in affected_claims and getattr(claim, "related_task", None)
+        }
+        for task in task_result.tasks:
+            task_id = getattr(task, "task_id", None)
+            if task_id in affected_task_ids:
+                for req_id in (getattr(task, "related_requirements", []) or []):
+                    affected_reqs.add(req_id)
+                for ac_id in (getattr(task, "related_acceptance_criteria", []) or []):
+                    affected_acs.add(ac_id)
+
+    return affected_claims, affected_reqs, affected_acs
+
+
 def mark_staleness(
     merged_gaps: List[Dict],
     risks: List[Dict],

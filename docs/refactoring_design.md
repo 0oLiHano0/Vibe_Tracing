@@ -488,22 +488,40 @@ Step 9: 运行全量测试验证
 
 ## 10. 测试影响
 
-| 操作 | 文件 | 测试数 |
-|------|------|--------|
-| 删除 | test_requirement_task_analyzer.py | 5 |
-| 删除 | test_ac_test_analyzer.py | 6 |
-| 删除 | test_claim_evidence_analyzer.py | 16 |
-| 修复 | test_instrumentation_logging.py | 33 |
-| 修复 | test_ac_vt_009_coverage.py | 28 |
-| 修复 | test_exception_logging.py | 16 |
-| 修改 | test_evidence_builder.py | 9 |
-| 修改 | test_merge_gate_engine.py | 63 |
-| 修改 | test_db_schema.py | 11 |
-| 新增 | test_db_query_functions.py | ~15 |
-| 新增 | test_pipeline.py | ~10 |
-| 新增 | test_staleness_tracker.py | ~5 |
+### 测试策略
 
-**净变化**：删除 27 → 新增 ~30 → 总量持平。
+- **不新建测试 DB helper**：各测试自行构造 `conn` + 插入数据，不做共享 fixture 抽象。
+- **不保留 fixtures 项目**：已删除 `tests/fixtures/` 和 `test_e2e_samples.py`，反面用例通过直接构造 DB 数据覆盖。
+- **废弃测试直接删除**：不保留 `skip`/`xfail` 标记。
+
+### 已删除（前置清理）
+
+| 文件 | 测试数 | 原因 |
+|------|--------|------|
+| test_requirement_task_analyzer.py | 5 | analyzer 被删除 |
+| test_ac_test_analyzer.py | 6 | analyzer 被删除 |
+| test_claim_evidence_analyzer.py | 16 | analyzer 被删除 |
+| test_instrumentation_logging.py | 33 | import 3 个被删 analyzer |
+| test_ac_vt_009_coverage.py | 28 | import claim_evidence_analyzer |
+| test_exception_logging.py | 16 | import analysis.py |
+| test_analyze_refactor_integration.py | ~15 | 测试旧 pipeline 结构 |
+| test_quality_gates.py | ~20 | 测试旧 Gate 1/1b/1c + 旧 evaluate() |
+| test_e2e_samples.py | 4 | fixtures 已删除 |
+
+### 待修改（重构过程中）
+
+| 文件 | 测试数 | 变更 |
+|------|--------|------|
+| test_evidence_builder.py | 9 | build → merge + apply + persist |
+| test_merge_gate_engine.py | 63 | 新增 Rule 3/4，解耦 conn |
+| test_db_schema.py | 11 | 新增 requirements + acceptance_criteria 表 |
+
+### 待新增（重构过程中）
+
+| 文件 | 测试数 |
+|------|--------|
+| test_pipeline.py | ~10 |
+| test_staleness_tracker.py | ~5 |
 
 ---
 

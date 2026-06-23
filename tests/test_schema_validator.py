@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from vibe_tracing.infra.enums import ErrorCode
+from vibe_tracing.infra.config.enums import ErrorCode
 from vibe_tracing.infra.validation.schema_validator import SchemaValidator, _build_hint
 
 SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"

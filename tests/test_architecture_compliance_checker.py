@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from vibe_tracing.domain.architecture_compliance_checker import (
+from vibe_tracing.domain.compliance.checker import (
     ArchitectureComplianceChecker,
     _is_stale_acceptance,
 )

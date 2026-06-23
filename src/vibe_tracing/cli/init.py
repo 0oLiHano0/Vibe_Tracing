@@ -19,7 +19,7 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
         # 若日志初始化失败，init 仍须继续运行（LOG-VT-011 约束）
         vt_logger = None
         try:
-            from vibe_tracing.infra.operational_logger import OperationalLogger
+            from vibe_tracing.infra.logging.logger import OperationalLogger
             vt_logger = OperationalLogger.get_or_init(
                 run_id=f"INIT-{uuid.uuid4()}", project_root=project_root,
             )

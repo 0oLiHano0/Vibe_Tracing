@@ -19,10 +19,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from vibe_tracing.infra.enums import CoverageStatus, ErrorCode
-from vibe_tracing.infra.hint_loader import load_hints, resolve_hint
-from vibe_tracing.infra.operational_logger import OperationalLogger
-from vibe_tracing.infra.tool_resolver import ToolResolver
+from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode
+from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
+from vibe_tracing.infra.logging.logger import OperationalLogger
+from vibe_tracing.infra.tools.resolver import ToolResolver
 
 
 def _safe_format(template: str, **kwargs: Any) -> str:
@@ -220,7 +220,7 @@ class ToolExecutionEngine:
             )
             duration_ms = int((time.perf_counter() - _t) * 1000)
             try:
-                from vibe_tracing.infra.operational_logger import OperationalLogger
+                from vibe_tracing.infra.logging.logger import OperationalLogger
                 vt_logger = OperationalLogger.get()
                 vt_logger.info("subprocess_exec", "Tool subprocess completed",
                                command=cmd_name,

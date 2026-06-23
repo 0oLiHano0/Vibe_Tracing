@@ -19,7 +19,8 @@ class TraceabilityReportBuilder:
         self.project_root = project_root
         self.schemas_dir = project_root / "schemas"
         if not self.schemas_dir.is_dir():
-            self.schemas_dir = Path(__file__).parent.parent / "infra" / "validation" / "schemas"
+            # Go up 3 levels: report/ -> domain/ -> vibe_tracing/ -> then into infra/
+            self.schemas_dir = Path(__file__).parent.parent.parent / "infra" / "validation" / "schemas"
         self.schema_validator = SchemaValidator(self.schemas_dir)
 
     def build(

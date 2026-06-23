@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set
 
 from vibe_tracing.infra.governance import load_boundary, is_in_scope
-from vibe_tracing.infra.operational_logger import OperationalLogger
+from vibe_tracing.infra.logging.logger import OperationalLogger
 
 class GhostCodeReconciler:
     """

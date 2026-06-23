@@ -4,10 +4,10 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
-    from vibe_tracing.domain.claim_loader import Claim
-    from vibe_tracing.domain.prd_parser import PrdParseResult
-    from vibe_tracing.domain.raw_input_loader import RawInputManifest
-    from vibe_tracing.domain.task_loader import TaskListLoadResult
+    from vibe_tracing.domain.loader.claim_loader import Claim
+    from vibe_tracing.domain.loader.prd_parser import PrdParseResult
+    from vibe_tracing.domain.loader.raw_input import RawInputManifest
+    from vibe_tracing.domain.loader.task_loader import TaskListLoadResult
     from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate
 
 
@@ -17,6 +17,9 @@ class UnifiedContext:
 
     Holds the result of one-pass loading so downstream components
     never re-read or re-parse files from disk.
+
+    Note: tool_evidence is NOT stored here. It's a pipeline-local variable
+    returned by _execute_tools() and passed directly to EvidenceBuilder.merge().
     """
 
     config: Dict[str, Any]
@@ -24,7 +27,6 @@ class UnifiedContext:
     constraints: Optional[Dict[str, Any]] = None
     task_result: Optional["TaskListLoadResult"] = None
     claims_list: List["Claim"] = field(default_factory=list)
-    tool_evidence: List["ToolEvidenceCandidate"] = field(default_factory=list)
     manifest: Optional["RawInputManifest"] = None
     human_decisions: Optional[dict] = None
     config_prefix: str = "VT"

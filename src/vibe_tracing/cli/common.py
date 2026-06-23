@@ -8,10 +8,10 @@ import sys
 from pathlib import Path
 from typing import Optional, Set, Tuple
 
-from vibe_tracing.domain.raw_input_loader import RawInputLoader
-from vibe_tracing.domain.prd_parser import PrdParser
-from vibe_tracing.domain.task_loader import TaskLoader
-from vibe_tracing.domain.claim_loader import ClaimLoader
+from vibe_tracing.domain.loader.raw_input import RawInputLoader
+from vibe_tracing.domain.loader.prd_parser import PrdParser
+from vibe_tracing.domain.loader.task_loader import TaskLoader
+from vibe_tracing.domain.loader.claim_loader import ClaimLoader
 from vibe_tracing.domain.context import UnifiedContext
 
 
@@ -232,5 +232,25 @@ def _file_sha256(path: Path) -> Optional[str]:
         return h.hexdigest()
     except (OSError, IOError):
         return None
+
+
+def _load_human_decisions(project_root: Optional[Path] = None) -> dict:
+    """Read human decision log."""
+    import json
+    if project_root is None:
+        project_root = Path(".")
+    decisions_path = project_root / ".vibetracing" / "human_decisions.json"
+    if not decisions_path.exists():
+        return {"version": "1.0", "decisions": []}
+    try:
+        return json.loads(decisions_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        from vibe_tracing.infra.logging.logger import OperationalLogger
+        OperationalLogger.get().warning(
+            "human_decisions_load_failed",
+            "Could not load human decisions file",
+            path=str(decisions_path),
+        )
+        return {"version": "1.0", "decisions": []}
 
 

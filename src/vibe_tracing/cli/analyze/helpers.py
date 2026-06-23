@@ -5,7 +5,7 @@ AC/requirement description helpers and hint resolution for action formatting.
 from pathlib import Path
 from typing import Any, Dict
 
-from vibe_tracing.infra.hint_loader import load_hints, resolve_hint
+from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
 
 # Module-level cache for action hints (loaded via centralized hint_loader)
 _action_hints: Dict[str, Any] = load_hints("action")

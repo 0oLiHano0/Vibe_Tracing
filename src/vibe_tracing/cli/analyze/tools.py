@@ -46,7 +46,7 @@ def _execute_tools(
         return []
 
     from vibe_tracing.domain.tool_evidence_adapter import ToolExecutionEngine, ToolEvidenceCandidate
-    from vibe_tracing.infra.tool_resolver import ToolResolver
+    from vibe_tracing.infra.tools.resolver import ToolResolver
 
     # Pre-flight dependency check
     required_binaries = set()

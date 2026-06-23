@@ -1062,7 +1062,7 @@ class TestFinalizeLogging:
         main(["finalize", "--project-root", str(tmp_path)])
 
         # Reset logger singleton for second run
-        from vibe_tracing.infra.operational_logger import OperationalLogger
+        from vibe_tracing.infra.logging.logger import OperationalLogger
         OperationalLogger.reset()
 
         # Second finalize
@@ -1087,7 +1087,7 @@ class TestFinalizeLogging:
         data = json.loads(constraints_path.read_text(encoding="utf-8"))
         constraints_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
 
-        from vibe_tracing.infra.operational_logger import OperationalLogger
+        from vibe_tracing.infra.logging.logger import OperationalLogger
         OperationalLogger.reset()
 
         exit_code = main(["finalize", "--project-root", str(tmp_path)])
@@ -1217,7 +1217,7 @@ class TestFinalizeLogging:
         _init_git_repo(tmp_path)
 
         # Force null logger by making log dir creation fail
-        from vibe_tracing.infra.operational_logger import OperationalLogger
+        from vibe_tracing.infra.logging.logger import OperationalLogger
 
         original_init = OperationalLogger.__init__
 

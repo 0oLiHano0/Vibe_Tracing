@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from vibe_tracing.infra import validation as ids
-from vibe_tracing.infra.hint_loader import load_hints, resolve_hint
+from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
 
 _risk_hints = load_hints("risk")
 

@@ -10,9 +10,10 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-from vibe_tracing.infra.operational_logger import OperationalLogger
+from vibe_tracing.infra.logging.logger import OperationalLogger
 
-_HINTS_PATH = Path(__file__).parent.parent / "templates" / "field_hints.json"
+# Go up 3 levels: config/ -> infra/ -> vibe_tracing/ -> then into templates/
+_HINTS_PATH = Path(__file__).parent.parent.parent / "templates" / "field_hints.json"
 
 _cache: Dict[str, Dict[str, Any]] = {}
 

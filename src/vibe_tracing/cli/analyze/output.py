@@ -89,7 +89,7 @@ def _print_reflection_prompts(
     project_root,
 ) -> None:
     """Print reflection prompts based on analysis results."""
-    from vibe_tracing.domain.reflection_prompts import render_reflection_prompts
+    from vibe_tracing.domain.report.reflection import render_reflection_prompts
     from vibe_tracing.infra.governance import load_boundary, partition_by_scope
 
     claims_list = ctx.claims_list

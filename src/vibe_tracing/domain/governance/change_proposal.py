@@ -46,8 +46,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from vibe_tracing.infra import validation as ids
-from vibe_tracing.infra.git_utils import git_show
-from vibe_tracing.domain.raw_input_loader import RawInputLoader
+from vibe_tracing.infra.git.utils import git_show
+from vibe_tracing.domain.loader.raw_input import RawInputLoader
 
 
 class ArchitectureChangeProposalEngine:

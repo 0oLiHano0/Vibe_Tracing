@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vibe_tracing.infra.enums import CoverageStatus, ErrorCode
+from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode
 from vibe_tracing.domain.tool_evidence_adapter import ToolEvidenceCandidate, ToolExecutionEngine
 
 
@@ -828,24 +828,24 @@ class TestResolveHint:
 
     def test_string_hint_returns_string(self) -> None:
         """covers: resolve_hint string branch"""
-        from vibe_tracing.infra.hint_loader import resolve_hint
+        from vibe_tracing.infra.config.hint_loader import resolve_hint
         assert resolve_hint("some hint") == "some hint"
 
     def test_dict_hint_returns_level1(self) -> None:
         """covers: resolve_hint dict branch"""
-        from vibe_tracing.infra.hint_loader import resolve_hint
+        from vibe_tracing.infra.config.hint_loader import resolve_hint
         hint = {"level1": "L1 text", "level2": "L2 text", "level3": "L3 text"}
         assert resolve_hint(hint, "level1") == "L1 text"
 
     def test_dict_hint_falls_back_to_level1(self) -> None:
         """covers: resolve_hint dict branch with level1 fallback"""
-        from vibe_tracing.infra.hint_loader import resolve_hint
+        from vibe_tracing.infra.config.hint_loader import resolve_hint
         hint = {"level3": "L3 only"}
         assert resolve_hint(hint, "level1") == ""
 
     def test_other_type_returns_empty(self) -> None:
         """covers: resolve_hint non-string/non-dict branch"""
-        from vibe_tracing.infra.hint_loader import resolve_hint
+        from vibe_tracing.infra.config.hint_loader import resolve_hint
         assert resolve_hint(123) == ""
         assert resolve_hint(None) == ""
         assert resolve_hint(["list"]) == ""
@@ -860,19 +860,19 @@ class TestLoadHints:
 
     def test_missing_file_returns_empty_dict(self) -> None:
         """covers: load_hints FileNotFoundError branch"""
-        import vibe_tracing.infra.hint_loader as hl
-        from vibe_tracing.infra.hint_loader import load_hints
+        import vibe_tracing.infra.config.hint_loader as hl
+        from vibe_tracing.infra.config.hint_loader import load_hints
         # Clear cache to ensure the test hits the file read path
         hl._cache.clear()
-        with patch("vibe_tracing.infra.hint_loader._HINTS_PATH", Path("/nonexistent/path.json")):
+        with patch("vibe_tracing.infra.config.hint_loader._HINTS_PATH", Path("/nonexistent/path.json")):
             result = load_hints("tool")
             assert result == {}
         hl._cache.clear()
 
     def test_corrupt_json_returns_empty_dict(self) -> None:
         """covers: load_hints JSONDecodeError branch"""
-        import vibe_tracing.infra.hint_loader as hl
-        from vibe_tracing.infra.hint_loader import load_hints, _HINTS_PATH
+        import vibe_tracing.infra.config.hint_loader as hl
+        from vibe_tracing.infra.config.hint_loader import load_hints, _HINTS_PATH
         # Clear cache to ensure the test hits the file read path
         hl._cache.clear()
         with patch.object(type(_HINTS_PATH), "read_text", side_effect=json.JSONDecodeError("", "", 0)):

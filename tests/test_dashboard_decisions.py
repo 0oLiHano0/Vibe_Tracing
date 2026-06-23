@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from vibe_tracing.domain.dashboard_renderer import DashboardRenderer
+from vibe_tracing.domain.report.dashboard import DashboardRenderer
 
 
 @pytest.fixture()

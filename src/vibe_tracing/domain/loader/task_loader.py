@@ -10,8 +10,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from vibe_tracing.infra.hint_loader import load_hints, resolve_hint
-from vibe_tracing.domain.prd_parser import PrdParseResult, get_parent_req_id
+from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
+from vibe_tracing.domain.loader.prd_parser import PrdParseResult, get_parent_req_id
 
 
 _task_field_hints = load_hints("input")

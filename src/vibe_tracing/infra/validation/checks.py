@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, List, Optional
 
-from vibe_tracing.infra.operational_logger import OperationalLogger
+from vibe_tracing.infra.logging.logger import OperationalLogger
 from vibe_tracing.infra.validation.schema_validator import SchemaValidator
 
 

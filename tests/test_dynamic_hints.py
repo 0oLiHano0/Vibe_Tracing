@@ -6,8 +6,8 @@ import json
 import pytest
 from pathlib import Path
 from vibe_tracing.infra.validation.schema_validator import SchemaValidator
-from vibe_tracing.domain.task_loader import TaskLoader
-from vibe_tracing.domain.claim_loader import ClaimLoader
+from vibe_tracing.domain.loader.task_loader import TaskLoader
+from vibe_tracing.domain.loader.claim_loader import ClaimLoader
 
 SCHEMAS_DIR = Path(__file__).parent.parent / "src" / "vibe_tracing" / "infra" / "validation" / "schemas"
 
@@ -155,7 +155,7 @@ def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(data, f)
 
-    from vibe_tracing.domain.task_loader import TaskLoader
+    from vibe_tracing.domain.loader.task_loader import TaskLoader
     task_loader = TaskLoader()
     task_res = task_loader.load_and_validate(None, content=task_list_data)
 

@@ -35,26 +35,19 @@ from vibe_tracing.cli.common import (
     _get_staged_files,
     _determine_affected_items,
     _file_sha256,
+    _load_human_decisions,
 )
 from vibe_tracing.cli.finalize import (
     _validate_constraints_change,
     _print_post_finalize_guidance,
 )
 from vibe_tracing.cli.analyze.gates import (
-    _gate1_constraints_hash,
-    _gate1b_prd_drift,
-    _gate1c_mapping,
     _gate2_code_claim_alignment,
     _run_integrity_gates,
 )
 from vibe_tracing.cli.analyze.tools import (
     _execute_tools,
     _check_staged_extensions,
-)
-from vibe_tracing.cli.analyze.analysis import (
-    _run_analyzers,
-    _load_human_decisions,
-    _result_hash,
 )
 from vibe_tracing.cli.analyze.helpers import (
     _action_hints,

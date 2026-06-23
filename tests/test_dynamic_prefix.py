@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 from vibe_tracing.cli import run_init, run_analyze
-from vibe_tracing.domain.prd_parser import PrdParser
-from vibe_tracing.domain.task_loader import TaskLoader
+from vibe_tracing.domain.loader.prd_parser import PrdParser
+from vibe_tracing.domain.loader.task_loader import TaskLoader
 from vibe_tracing.infra.validation.schema_validator import SchemaValidator
 from vibe_tracing.infra import validation as ids
 

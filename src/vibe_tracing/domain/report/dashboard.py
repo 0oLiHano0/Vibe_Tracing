@@ -51,7 +51,7 @@ class DashboardRenderer:
 
         # Load proposal status (lazy-initialized cache)
         if self._proposal_engine is None:
-            from vibe_tracing.domain.architecture_change_proposal import (
+            from vibe_tracing.domain.governance.change_proposal import (
                 ArchitectureChangeProposalEngine,
             )
             self._proposal_engine = ArchitectureChangeProposalEngine(
@@ -72,7 +72,7 @@ class DashboardRenderer:
             }
 
         # Load hints and extract level2 values
-        hints_path = Path(__file__).parent.parent / "templates" / "field_hints.json"
+        hints_path = Path(__file__).parent.parent.parent / "templates" / "field_hints.json"
         hints_data = json.loads(hints_path.read_text(encoding="utf-8"))
         level2_hints = {}
         for namespace, entries in hints_data.items():

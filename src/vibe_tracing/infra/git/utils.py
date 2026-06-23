@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-from vibe_tracing.infra.operational_logger import OperationalLogger
+from vibe_tracing.infra.logging.logger import OperationalLogger
 
 
 def git_show(commit: str, path: str, cwd: Path) -> Optional[str]:

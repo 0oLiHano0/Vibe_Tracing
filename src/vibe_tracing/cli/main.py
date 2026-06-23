@@ -31,7 +31,7 @@ import uuid
 from pathlib import Path
 
 from vibe_tracing import __version__
-from vibe_tracing.infra.operational_logger import OperationalLogger
+from vibe_tracing.infra.logging.logger import OperationalLogger
 
 # 导入各子命令的处理函数
 from vibe_tracing.cli.init import run_init

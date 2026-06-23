@@ -1,7 +1,7 @@
 """VT 枚举与映射常量测试模块"""
 
 import pytest
-from vibe_tracing.infra.enums import CoverageStatus, ErrorCode, TASK_STATUS_TO_COVERAGE
+from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode, TASK_STATUS_TO_COVERAGE
 
 
 class TestCoverageStatus:
@@ -107,7 +107,7 @@ class TestEnumsIntegration:
 
     def test_import_all_from_enums(self):
         """验证可以从 enums 模块导入所有公开符号"""
-        from vibe_tracing.infra.enums import (
+        from vibe_tracing.infra.config.enums import (
             CoverageStatus,
             ErrorCode,
             TASK_STATUS_TO_COVERAGE

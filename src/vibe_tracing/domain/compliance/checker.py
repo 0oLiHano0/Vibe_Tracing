@@ -12,8 +12,8 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from vibe_tracing.infra import validation as ids
-from vibe_tracing.infra.hint_loader import load_hints, resolve_hint
-from vibe_tracing.infra.operational_logger import OperationalLogger
+from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
+from vibe_tracing.infra.logging.logger import OperationalLogger
 
 _compliance_hints = load_hints("compliance")
 
@@ -694,7 +694,7 @@ class ArchitectureComplianceChecker:
         proposal_risks = []
         proposal_gaps = []
         if has_gate_14:
-            from vibe_tracing.domain.architecture_change_proposal import (
+            from vibe_tracing.domain.governance.change_proposal import (
                 ArchitectureChangeProposalEngine,
             )
 

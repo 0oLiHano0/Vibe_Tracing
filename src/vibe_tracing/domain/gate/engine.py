@@ -5,14 +5,16 @@ Evaluates quality gate conditions to produce a machine gate decision:
 - 'blocked': if there are critical/MUST-level issues.
 - 'fail' (conditional): if there are non-blocking issues or unclear constraints.
 - 'pass': if there are no issues.
+
+Refactored (TASK-VT-073): No longer holds conn. Receives analysis results
+as parameters from the pipeline.
 """
 
-import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from vibe_tracing.infra.hint_loader import load_hints, resolve_hint
-from vibe_tracing.infra.operational_logger import OperationalLogger
+from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
+from vibe_tracing.infra.logging.logger import OperationalLogger
 
 _gate_hints = load_hints("gate_decision")
 
@@ -20,32 +22,37 @@ _gate_hints = load_hints("gate_decision")
 class MergeGateEngine:
     """Deterministic rules engine to evaluate merge gate criteria."""
 
-    def __init__(self, project_root: Path, conn: "sqlite3.Connection") -> None:
-        """Initialize the engine with project root and database connection."""
+    def __init__(self, project_root: Path) -> None:
+        """Initialize the engine with project root.
+
+        Note: No conn parameter. Analysis results are passed to evaluate().
+        """
         self.project_root = project_root
-        self.conn = conn
         self.coverage_threshold = 80
+        self._ghost_code_exclusions: List[str] = []
+        self._load_exclusions()
+
+    def _load_exclusions(self) -> None:
+        """Load ghost code exclusions from config.json."""
+        import json
+        config_path = self.project_root / ".vibetracing" / "config.json"
+        if config_path.exists():
+            try:
+                config = json.loads(config_path.read_text(encoding="utf-8"))
+                self._ghost_code_exclusions = config.get("ghost_code_exclusions", [])
+            except (json.JSONDecodeError, OSError):
+                pass
 
     @staticmethod
     def _is_current(
         related_ids: Optional[Set[str]],
         staged_items: Optional[Set[str]],
     ) -> bool:
-        """Check if an item is related to current staged changes.
-
-        Returns ``True`` when:
-        - *staged_items* is ``None`` (full-analysis mode: all items considered current).
-        - *related_ids* overlaps with *staged_items*.
-
-        Returns ``False`` when:
-        - *staged_items* is provided but *related_ids* is empty/None
-          (cannot prove relation to staged changes).
-        - *related_ids* does not overlap with *staged_items*.
-        """
+        """Check if an item is related to current staged changes."""
         if staged_items is None:
-            return True  # full-analysis mode
+            return True
         if not related_ids:
-            return False  # no provable relation → pre-existing
+            return False
         return bool(related_ids & staged_items)
 
     @staticmethod
@@ -54,14 +61,7 @@ class MergeGateEngine:
         related_ids: Optional[Set[str]] = None,
         staged_items: Optional[Set[str]] = None,
     ) -> str:
-        """Prefix *msg* with a source tag based on staged_items.
-
-        If *staged_items* is ``None``, the message is returned unchanged
-        (full-analysis mode).  Otherwise:
-        - If any of *related_ids* is in *staged_items* → ``[当前]``
-        - If none of *related_ids* is in *staged_items* → ``[预存]``
-        - If *related_ids* is empty/None → ``[预存]`` (cannot prove relation)
-        """
+        """Prefix *msg* with a source tag based on staged_items."""
         if staged_items is None:
             return msg
         if related_ids and related_ids & staged_items:
@@ -70,23 +70,28 @@ class MergeGateEngine:
 
     def _check_claim_existence(
         self,
-        staged_items: Set[str],
+        ghost_files: List[str],
+        staged_items: Optional[Set[str]],
         gaps: List[Dict[str, Any]],
         reasons: List[str],
         blocked_items: List[str],
     ) -> bool:
-        """Section 0.5: Claim existence check via SQL.
+        """Rule 2: Ghost code detection.
 
         Returns ``True`` if the gate should be set to ``blocked``.
         Mutates *gaps*, *reasons*, and *blocked_items* in-place.
         """
-        from vibe_tracing.infra.db import check_ghost_code
+        # Apply exclusions
+        filtered_files = [
+            f for f in ghost_files
+            if not any(excl in f for excl in self._ghost_code_exclusions)
+        ]
 
-        ghost_files = check_ghost_code(self.conn)
         OperationalLogger.get().debug("gate_claim_existence", "Claim existence check",
-            ghost_count=len(ghost_files))
-        if ghost_files:
-            for f in sorted(ghost_files):
+            ghost_count=len(filtered_files),
+            excluded_count=len(ghost_files) - len(filtered_files))
+        if filtered_files:
+            for f in sorted(filtered_files):
                 hint = resolve_hint(
                     _gate_hints.get("missing_claim", {}), "level1"
                 )
@@ -107,26 +112,98 @@ class MergeGateEngine:
             return True
         return False
 
-    def _check_ac_coverage(
+    def _check_dangling_claims(
         self,
+        dangling_claims: List[Dict[str, Any]],
         staged_items: Optional[Set[str]],
         gaps: List[Dict[str, Any]],
         reasons: List[str],
         blocked_items: List[str],
     ) -> bool:
-        """Section 0.6: AC coverage check via SQL.
+        """Rule 3: Dangling claims detection.
+
+        Claims referencing non-existent tasks are blocked.
+        Returns ``True`` if the gate should be set to ``blocked``.
+        """
+        OperationalLogger.get().debug("gate_dangling_claims", "Dangling claims check",
+            dangling_count=len(dangling_claims))
+        for dc in dangling_claims:
+            claim_id = dc.get("claim_id", "")
+            related_task = dc.get("related_task", "")
+            hint = resolve_hint(_gate_hints.get("dangling_claim", {}), "level1")
+            msg = (
+                hint.format(claim_id=claim_id, related_task=related_task)
+                if hint
+                else f"Claim {claim_id} 引用不存在的任务 {related_task}。"
+            )
+            gap_entry = {
+                "item_id": claim_id,
+                "item_type": "dangling_claim",
+                "target_id": claim_id,
+                "reason": msg,
+            }
+            gaps.append(gap_entry)
+            reasons.append(self._tag_reason(msg, {claim_id}, staged_items))
+            blocked_items.append(msg)
+        return bool(dangling_claims)
+
+    def _check_claim_evidence_gaps(
+        self,
+        claim_evidence_gaps: List[Dict[str, Any]],
+        staged_items: Optional[Set[str]],
+        gaps: List[Dict[str, Any]],
+        reasons: List[str],
+        blocked_items: List[str],
+    ) -> bool:
+        """Rule 4: Claim evidence gaps detection.
+
+        Claims with failed or missing tests are blocked.
+        Returns ``True`` if the gate should be set to ``blocked``.
+        """
+        has_blocked = False
+        for ceg in claim_evidence_gaps:
+            claim_id = ceg.get("claim_id", "")
+            verification_status = ceg.get("verification_status", "")
+            hint = resolve_hint(_gate_hints.get("claim_evidence_gap", {}), "level1")
+            msg = (
+                hint.format(claim_id=claim_id, status=verification_status)
+                if hint
+                else f"Claim {claim_id} 证据验证失败: {verification_status}"
+            )
+            gap_entry = {
+                "item_id": claim_id,
+                "item_type": "claim_evidence_gap",
+                "target_id": claim_id,
+                "reason": msg,
+            }
+            gaps.append(gap_entry)
+            reasons.append(self._tag_reason(msg, {claim_id}, staged_items))
+
+            # Only block for test failures, not for missing tests (warning)
+            if verification_status in ("test_failed",):
+                blocked_items.append(msg)
+                has_blocked = True
+
+        return has_blocked
+
+    def _check_ac_coverage(
+        self,
+        ac_gaps: List[Dict[str, Any]],
+        staged_items: Optional[Set[str]],
+        gaps: List[Dict[str, Any]],
+        reasons: List[str],
+        blocked_items: List[str],
+    ) -> bool:
+        """Rule 5: AC coverage check.
 
         Returns ``True`` if the gate should be set to ``blocked``.
         Mutates *gaps*, *reasons*, and *blocked_items* in-place.
         """
-        from vibe_tracing.infra.db import check_ac_coverage
-
-        ac_gaps = check_ac_coverage(self.conn)
         OperationalLogger.get().debug("gate_ac_coverage", "AC coverage check",
             uncovered=len(ac_gaps))
         for gap in ac_gaps:
-            ac_id = gap["ac_id"]
-            task_id = gap["task_id"]
+            ac_id = gap.get("ac_id", gap.get("item_id", ""))
+            task_id = gap.get("task_id", "")
             reason = gap.get("reason", gap.get("coverage_status", "no_test_coverage"))
             hint = resolve_hint(
                 _gate_hints.get("ac_not_covered", {}), "level1"
@@ -157,11 +234,7 @@ class MergeGateEngine:
         reasons: List[str],
         blocked_items: List[str],
     ) -> bool:
-        """Section 1.1: Must AC gaps processing.
-
-        Returns ``True`` if the gate should be set to ``blocked``.
-        Mutates *reasons* and *blocked_items* in-place.
-        """
+        """Section 1.1: Must AC gaps processing."""
         has_blocked = False
         for gap in gaps:
             item_type = gap.get("item_type")
@@ -194,7 +267,6 @@ class MergeGateEngine:
                     item_type=item_type,
                     is_stale=is_stale,
                     is_human_resolved=human_resolved,
-                    human_decision_type="mark_complete" if human_resolved else "",
                     final_status=final_status,
                     reason=reason[:200])
         return has_blocked
@@ -207,11 +279,7 @@ class MergeGateEngine:
         reasons: List[str],
         blocked_items: List[str],
     ) -> bool:
-        """Section 1.2: Must risks processing.
-
-        Returns ``True`` if the gate should be set to ``blocked``.
-        Mutates *reasons* and *blocked_items* in-place.
-        """
+        """Section 1.2: Must risks processing."""
         has_blocked = False
         for risk in risks:
             severity = risk.get("severity")
@@ -252,16 +320,6 @@ class MergeGateEngine:
                             msg_missing = hint_missing.format(risk_id=risk_id) if hint_missing else f"高风险项 ({risk_id}) 缺失处理建议或业务影响描述"
                             blocked_items.append(msg_missing)
                             reasons.append(self._tag_reason(msg_missing, risk_related or None, risk_staged))
-
-                risk_final_status = "accepted" if human_accepted else ("blocked" if self._is_current(risk_related or None, risk_staged) else "passed")
-                OperationalLogger.get().debug("gate_risk_eval", "Risk item evaluated",
-                    risk_id=risk_id,
-                    severity=severity,
-                    is_stale=risk.get("stale", False),
-                    is_human_resolved=human_accepted,
-                    human_decision_type="accept_risk" if human_accepted else "",
-                    final_status=risk_final_status,
-                    business_impact=business_impact[:200])
         return has_blocked
 
     def _process_should_gaps(
@@ -271,11 +329,7 @@ class MergeGateEngine:
         staged_items: Optional[Set[str]],
         reasons: List[str],
     ) -> tuple:
-        """Section 2.2: Should-level gaps processing.
-
-        Returns ``(any_fail_detected, current_fail_detected)``.
-        Mutates *reasons* in-place.
-        """
+        """Section 2.2: Should-level gaps processing."""
         any_fail = False
         current_fail = False
         for gap in gaps:
@@ -305,11 +359,7 @@ class MergeGateEngine:
         risk_staged: Optional[Set[str]],
         reasons: List[str],
     ) -> tuple:
-        """Section 2.3: Should/Could severity risks processing.
-
-        Returns ``(any_fail_detected, current_fail_detected)``.
-        Mutates *reasons* in-place.
-        """
+        """Section 2.3: Should/Could severity risks processing."""
         any_fail = False
         current_fail = False
         for risk in risks:
@@ -353,32 +403,21 @@ class MergeGateEngine:
         human_decisions_applied: int,
         staged_items: Optional[Set[str]],
         reasons: List[str],
+        cov_violations: List[Dict[str, Any]],
         accepted_rule_target_ids: Optional[Set[str]] = None,
         rejected_rule_target_ids: Optional[Set[str]] = None,
     ) -> Dict[str, Any]:
-        """Sections 2.5 + 3: Final gate decision computation.
-
-        Handles coverage violations, fail upgrade, and pass message.
-        Returns the final result dict.
-        """
-        # Only upgrade to "fail" if not already "blocked" and at least one
-        # fail item is related to current changes.
+        """Sections 2.5 + 3: Final gate decision computation."""
         if current_fail_detected and gate_decision == "pass":
             gate_decision = "fail"
 
-        # 2.5 Check coverage violations (always [当前] — fresh measurement)
-        from vibe_tracing.infra.db import check_coverage_violations
-        cv_raw = check_coverage_violations(self.conn)
-        coverage_violations = [
-            {"file": r["source_path"], "percent": r["percent_covered"]}
-            for r in cv_raw
-        ]
-        if coverage_violations:
+        # 2.5 Check coverage violations
+        if cov_violations:
             threshold = getattr(self, 'coverage_threshold', 80)
-            for cv in coverage_violations:
+            for cv in cov_violations:
                 tag = "[当前] " if staged_items is not None else ""
                 reasons.append(
-                    f"{tag}Coverage below {threshold}%: {cv['file']} ({cv['percent']}%)"
+                    f"{tag}Coverage below {threshold}%: {cv.get('source_path', cv.get('file', ''))} ({cv.get('percent_covered', cv.get('percent', 0))}%)"
                 )
             if gate_decision not in ("blocked",):
                 gate_decision = "blocked"
@@ -408,40 +447,32 @@ class MergeGateEngine:
         staged_items: Optional[Set[str]] = None,
         directly_staged_items: Optional[Set[str]] = None,
         human_decisions: Optional[Any] = None,
+        ghost_files: Optional[List[str]] = None,
+        ac_gaps: Optional[List[Dict[str, Any]]] = None,
+        dangling_claims: Optional[List[Dict[str, Any]]] = None,
+        claim_evidence_gaps: Optional[List[Dict[str, Any]]] = None,
+        cov_violations: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
-        Evaluate merge gate criteria based on gaps, risks, and compliance checker results.
+        Evaluate merge gate criteria.
 
         Args:
             gaps: Identified gaps from analyzers.
             risks: Enriched risks from RiskAdvisor.
             compliance_res: Result from ArchitectureComplianceChecker.
-            staged_items: Set of claim/task/AC/requirement IDs affected by the
-                current commit (superset including indirectly affected items).
-                Used for gap evaluation and architecture violation tagging.
-            directly_staged_items: Set of claim/task/AC/requirement IDs whose
-                definitions were **directly** modified in this commit.  When
-                provided, risk evaluation uses this set instead of
-                *staged_items* so that old claims merely referencing modified
-                files are tagged ``[预存]`` and do not block the gate.
-            human_decisions: Optional list of human decisions.  Each element is a
-                dict with keys ``decision_id``, ``category``, ``targetId``,
-                ``action``, ``reason``, ``decidedBy``, ``timestamp``.
-                Also accepts a wrapper dict ``{"decisions": [...]}``.
-                Supported actions: ``accept_risk`` (downgrades matching risk
-                severity to ``"accepted"``), ``mark_complete`` (marks matching
-                gap as ``"human_resolved"``).
+            staged_items: Set of claim/task/AC/requirement IDs affected by current commit.
+            directly_staged_items: Set of directly modified claim/task/AC/requirement IDs.
+            human_decisions: Optional human decisions.
+            ghost_files: List of ghost files (not covered by any claim).
+            ac_gaps: List of AC coverage gaps.
+            dangling_claims: List of claims referencing non-existent tasks.
+            claim_evidence_gaps: List of claim evidence verification failures.
+            cov_violations: List of coverage violations.
 
         Returns:
-            A dict containing:
-                "gate_decision": "pass", "fail", or "blocked"
-                "reasons": list of strings explaining the decision
-                "blocked_items": list of blocking item descriptions
-                "human_decisions_applied": int, number of human decisions applied
+            A dict containing gate_decision, reasons, blocked_items, human_decisions_applied.
         """
-        # ----------------------------------------------------
-        # 0. Normalize human_decisions and build lookup sets
-        # ----------------------------------------------------
+        # Normalize human_decisions
         decisions_list: List[Dict[str, Any]] = []
         if human_decisions is not None:
             if isinstance(human_decisions, dict) and "decisions" in human_decisions:
@@ -470,34 +501,46 @@ class MergeGateEngine:
 
         human_decisions_applied = len(accepted_risk_target_ids) + len(resolved_gap_target_ids) + len(accepted_rule_target_ids) + len(rejected_rule_target_ids)
 
-        OperationalLogger.get().debug("gate_human_decisions", "Human decisions lookup built",
-            total_decisions=len(decisions_list),
-            decision_ids=[d.get("decision_id", d.get("targetId", "")) for d in decisions_list],
-            accepted_risks=len(accepted_risk_target_ids),
-            accepted_risk_ids=sorted(accepted_risk_target_ids),
-            resolved_gaps=len(resolved_gap_target_ids),
-            resolved_gap_ids=sorted(resolved_gap_target_ids),
-            accepted_rules=len(accepted_rule_target_ids),
-            rejected_rules=len(rejected_rule_target_ids))
-
         risk_staged = directly_staged_items if directly_staged_items is not None else staged_items
         gate_decision = "pass"
         reasons: List[str] = []
         blocked_items: List[str] = []
 
         # ----------------------------------------------------
-        # Section 0.5 + 0.6
+        # Rule 2: Ghost code detection
         # ----------------------------------------------------
-        if staged_items is not None:
+        if ghost_files is not None and staged_items is not None:
             if self._check_claim_existence(
-                staged_items, gaps, reasons, blocked_items
+                ghost_files, staged_items, gaps, reasons, blocked_items
             ):
                 gate_decision = "blocked"
 
-        if self._check_ac_coverage(
-            staged_items, gaps, reasons, blocked_items,
-        ):
-            gate_decision = "blocked"
+        # ----------------------------------------------------
+        # Rule 3: Dangling claims
+        # ----------------------------------------------------
+        if dangling_claims is not None:
+            if self._check_dangling_claims(
+                dangling_claims, staged_items, gaps, reasons, blocked_items
+            ):
+                gate_decision = "blocked"
+
+        # ----------------------------------------------------
+        # Rule 4: Claim evidence gaps
+        # ----------------------------------------------------
+        if claim_evidence_gaps is not None:
+            if self._check_claim_evidence_gaps(
+                claim_evidence_gaps, staged_items, gaps, reasons, blocked_items
+            ):
+                gate_decision = "blocked"
+
+        # ----------------------------------------------------
+        # Rule 5: AC coverage
+        # ----------------------------------------------------
+        if ac_gaps is not None:
+            if self._check_ac_coverage(
+                ac_gaps, staged_items, gaps, reasons, blocked_items,
+            ):
+                gate_decision = "blocked"
 
         # ----------------------------------------------------
         # Section 1: Evaluate 'blocked' conditions (MUST/critical)
@@ -512,7 +555,7 @@ class MergeGateEngine:
         ):
             gate_decision = "blocked"
 
-        # 1.3 Check Must architecture violations (inline)
+        # 1.3 Check Must architecture violations
         if compliance_res:
             violations = compliance_res.get("architecture_violations", [])
             for v in violations:
@@ -559,16 +602,11 @@ class MergeGateEngine:
 
         # ----------------------------------------------------
         # Section 2: Evaluate 'fail' conditions (SHOULD issues)
-        # NOTE: Fail reasons are ALWAYS recorded regardless of gate_decision,
-        # so users see all issues in a single run. Only upgrade the decision
-        # to "fail" when gate_decision is still "pass" AND at least one
-        # fail item is related to current staged changes (or in full-analysis
-        # mode).
         # ----------------------------------------------------
         any_fail_detected = False
         current_fail_detected = False
 
-        # 2.1 Check unclear architecture constraints (inline)
+        # 2.1 Check unclear architecture constraints
         if compliance_res:
             unclear_constraints = compliance_res.get("unclear_constraints", [])
             for uc in unclear_constraints:
@@ -581,9 +619,7 @@ class MergeGateEngine:
                 if staged_items is None:
                     current_fail_detected = True
 
-            status_list = compliance_res.get(
-                "architecture_compliance_status", []
-            )
+            status_list = compliance_res.get("architecture_compliance_status", [])
             for status_item in status_list:
                 rule_id = status_item.get("rule_id", "")
                 status = status_item.get("status")
@@ -612,18 +648,11 @@ class MergeGateEngine:
         # ----------------------------------------------------
         # Final decision
         # ----------------------------------------------------
-        OperationalLogger.get().debug("gate_intermediate", "Gate intermediate state",
-            gate_decision=gate_decision,
-            any_fail_detected=any_fail_detected,
-            current_fail_detected=current_fail_detected,
-            blocked_count=len(blocked_items),
-            reasons_count=len(reasons),
-            reasons_detail=[r[:200] for r in reasons[:10]],
-            blocked_ids=blocked_items[:10])
         return self._compute_gate_decision(
             gate_decision, blocked_items,
             current_fail_detected, any_fail_detected,
             human_decisions_applied, staged_items,
             reasons,
+            cov_violations or [],
             accepted_rule_target_ids, rejected_rule_target_ids,
         )

@@ -17,8 +17,9 @@ from typing import Any, Dict, List, Optional
 def _load_template(template_path: Optional[str] = None) -> Dict[str, Any]:
     """Load the full reflection template JSON."""
     if template_path is None:
+        # Go up 3 levels: report/ -> domain/ -> vibe_tracing/ -> then into templates/
         template_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "templates", "reflection_prompts.template.json"
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "templates", "reflection_prompts.template.json"
         )
     with open(template_path, "r", encoding="utf-8") as f:
         return json.load(f)

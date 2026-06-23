@@ -24,7 +24,7 @@ def run_doctor(project_root: Path) -> int:
     # 若日志初始化失败，doctor 仍须继续运行（LOG-VT-011 约束）
     vt_logger = None
     try:
-        from vibe_tracing.infra.operational_logger import OperationalLogger
+        from vibe_tracing.infra.logging.logger import OperationalLogger
         vt_logger = OperationalLogger.get_or_init(
             run_id=f"DOCTOR-{uuid.uuid4()}", project_root=project_root,
         )
@@ -107,7 +107,7 @@ def run_doctor(project_root: Path) -> int:
     _t = time.perf_counter()
     if prd_path.exists():
         try:
-            from vibe_tracing.domain.prd_parser import PrdParser
+            from vibe_tracing.domain.loader.prd_parser import PrdParser
             prd_parser = PrdParser()
             prd_res = prd_parser.parse_file(prd_path)
             for req in prd_res.requirements:

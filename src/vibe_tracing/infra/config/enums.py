@@ -12,7 +12,7 @@ VT 共用枚举定义模块
   - TASK_STATUS_TO_COVERAGE: 任务状态到覆盖状态的映射字典
 
 使用方式：
-  from vibe_tracing.infra.enums import CoverageStatus, ErrorCode, TASK_STATUS_TO_COVERAGE
+  from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode, TASK_STATUS_TO_COVERAGE
   if status == CoverageStatus.VIOLATED:
       ...
   coverage = TASK_STATUS_TO_COVERAGE.get(task_status, CoverageStatus.MISSING)

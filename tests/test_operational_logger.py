@@ -1,4 +1,4 @@
-"""Tests for vibe_tracing.infra.operational_logger."""
+"""Tests for vibe_tracing.infra.logging.logger."""
 
 import json
 import os
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from vibe_tracing.infra.operational_logger import OperationalLogger, _JsonLinesFormatter
+from vibe_tracing.infra.logging.logger import OperationalLogger, _JsonLinesFormatter
 
 
 @pytest.fixture(autouse=True)
@@ -217,7 +217,7 @@ class TestOperationalLogger:
         """If log directory creation fails, init() must return a null logger."""
         # Make the tmp_path read-only for directory creation
         monkeypatch.setattr(
-            "vibe_tracing.infra.operational_logger.Path.mkdir",
+            "vibe_tracing.infra.logging.logger.Path.mkdir",
             lambda *a, **kw: (_ for _ in ()).throw(PermissionError("no")),
         )
         logger = OperationalLogger.init("RUN-001", tmp_path)

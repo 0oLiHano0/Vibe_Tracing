@@ -20,7 +20,6 @@ class TestUnifiedContext:
         constraints = {"max_tasks": 10}
         task_result = {"tasks": []}
         claims = [{"id": "C001"}]
-        evidence = [{"tool": "pytest"}]
         manifest = {"inputs": ["prd.md"]}
 
         ctx = UnifiedContext(
@@ -29,7 +28,6 @@ class TestUnifiedContext:
             constraints=constraints,
             task_result=task_result,
             claims_list=claims,
-            tool_evidence=evidence,
             manifest=manifest,
             config_prefix="MY_APP",
         )
@@ -39,7 +37,6 @@ class TestUnifiedContext:
         assert ctx.constraints is constraints
         assert ctx.task_result is task_result
         assert ctx.claims_list is claims
-        assert ctx.tool_evidence is evidence
         assert ctx.manifest is manifest
         assert ctx.config_prefix == "MY_APP"
 
@@ -50,20 +47,13 @@ class TestUnifiedContext:
         assert ctx.constraints is None
         assert ctx.task_result is None
         assert ctx.claims_list == []
-        assert ctx.tool_evidence == []
         assert ctx.manifest is None
         assert ctx.config_prefix == "VT"
 
-    def test_tool_evidence_appendable(self):
-        """tool_evidence list can be mutated after construction."""
+    def test_no_tool_evidence_field(self):
+        """tool_evidence is NOT a field on UnifiedContext (pipeline-local variable)."""
         ctx = UnifiedContext(config={}, prd=_MockPrd())
-        assert ctx.tool_evidence == []
-
-        ctx.tool_evidence.append({"tool": "ruff", "status": "pass"})
-        ctx.tool_evidence.append({"tool": "pytest", "status": "pass"})
-
-        assert len(ctx.tool_evidence) == 2
-        assert ctx.tool_evidence[0]["tool"] == "ruff"
+        assert not hasattr(ctx, "tool_evidence")
 
     def test_config_prefix_default_is_vt(self):
         """config_prefix defaults to 'VT' when not specified."""

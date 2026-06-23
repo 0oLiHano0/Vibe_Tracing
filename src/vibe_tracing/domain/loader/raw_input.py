@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, List, Optional
 
-from vibe_tracing.infra.enums import ErrorCode
+from vibe_tracing.infra.config.enums import ErrorCode
 
 
 @dataclass

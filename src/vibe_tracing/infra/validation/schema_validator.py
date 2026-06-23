@@ -13,8 +13,8 @@ from typing import List, Optional, Union
 
 from jsonschema import SchemaError, ValidationError, validate
 
-from vibe_tracing.infra.enums import ErrorCode
-from vibe_tracing.infra.operational_logger import OperationalLogger
+from vibe_tracing.infra.config.enums import ErrorCode
+from vibe_tracing.infra.logging.logger import OperationalLogger
 
 
 @dataclass

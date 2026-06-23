@@ -7,7 +7,7 @@ import shutil
 import pytest
 from pathlib import Path
 
-from vibe_tracing.domain.traceability_report_builder import TraceabilityReportBuilder
+from vibe_tracing.domain.report.traceability import TraceabilityReportBuilder
 
 
 @pytest.fixture

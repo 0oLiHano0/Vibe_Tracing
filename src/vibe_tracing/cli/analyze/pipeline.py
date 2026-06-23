@@ -26,8 +26,8 @@ import uuid
 from pathlib import Path
 from typing import Optional, Set
 
-from vibe_tracing.domain.merge_gate_engine import MergeGateEngine
-from vibe_tracing.domain.evidence_builder import EvidenceBuilder
+from vibe_tracing.domain.gate.engine import MergeGateEngine
+from vibe_tracing.domain.evidence.builder import EvidenceBuilder
 from vibe_tracing.domain.context import UnifiedContext
 
 from vibe_tracing.cli.common import (
@@ -38,11 +38,232 @@ from vibe_tracing.cli.common import (
 )
 from vibe_tracing.cli.analyze.gates import _run_integrity_gates
 from vibe_tracing.cli.analyze.tools import _execute_tools
-from vibe_tracing.cli.analyze.analysis import (
-    _run_analyzers,
-)
 from vibe_tracing.cli.analyze.reports import _build_report_document
 from vibe_tracing.cli.analyze.output import _render_output
+
+
+def _db_result_to_gaps(
+    req_coverage: list,
+    ac_coverage: list,
+    claim_evidence: list,
+) -> list:
+    """Convert db.check_* results to gap format for MergeGateEngine.
+
+    Args:
+        req_coverage: Result from db.check_requirement_coverage()
+        ac_coverage: Result from db.check_ac_coverage()
+        claim_evidence: Result from db.check_claim_evidence()
+
+    Returns:
+        List of gap dicts with item_id, item_type, reason.
+    """
+    gaps = []
+
+    # Requirement coverage gaps
+    for row in req_coverage:
+        req_id = row["req_id"]
+        status = row["coverage_status"]
+        if status == "no_task_for_requirement":
+            gaps.append({
+                "item_id": req_id,
+                "item_type": "requirement",
+                "reason": f"Requirement {req_id} has no task coverage.",
+            })
+        elif status == "no_claim_for_task":
+            gaps.append({
+                "item_id": req_id,
+                "item_type": "requirement",
+                "reason": f"Requirement {req_id} tasks have no claims.",
+            })
+        elif status == "no_tests_declared":
+            gaps.append({
+                "item_id": req_id,
+                "item_type": "requirement",
+                "reason": f"Requirement {req_id} claims declare no tests.",
+            })
+        elif status == "test_not_run":
+            gaps.append({
+                "item_id": req_id,
+                "item_type": "requirement",
+                "reason": f"Requirement {req_id} has tests that were not run.",
+            })
+        elif status == "test_failed":
+            gaps.append({
+                "item_id": req_id,
+                "item_type": "requirement",
+                "reason": f"Requirement {req_id} has failed tests.",
+            })
+
+    # AC coverage gaps
+    for row in ac_coverage:
+        ac_id = row["ac_id"]
+        task_id = row.get("task_id", "unknown")
+        status = row["coverage_status"]
+        if status == "no_task_for_ac":
+            gaps.append({
+                "item_id": ac_id,
+                "item_type": "ac",
+                "reason": f"AC {ac_id} has no task coverage.",
+            })
+        elif status == "no_claim_for_task":
+            gaps.append({
+                "item_id": ac_id,
+                "item_type": "ac",
+                "reason": f"AC {ac_id} (task {task_id}) has no claims.",
+            })
+        elif status == "no_tests_declared":
+            gaps.append({
+                "item_id": ac_id,
+                "item_type": "ac",
+                "reason": f"AC {ac_id} (task {task_id}) declares no tests.",
+            })
+        elif status == "test_not_run":
+            gaps.append({
+                "item_id": ac_id,
+                "item_type": "ac",
+                "reason": f"AC {ac_id} (task {task_id}) has tests that were not run.",
+            })
+        elif status == "test_failed":
+            gaps.append({
+                "item_id": ac_id,
+                "item_type": "ac",
+                "reason": f"AC {ac_id} (task {task_id}) has failed tests.",
+            })
+
+    # Claim evidence gaps
+    for row in claim_evidence:
+        claim_id = row["claim_id"]
+        status = row["verification_status"]
+        if status == "task_missing":
+            gaps.append({
+                "item_id": claim_id,
+                "item_type": "claim",
+                "reason": f"Claim {claim_id} references missing task.",
+            })
+        elif status == "task_not_done":
+            gaps.append({
+                "item_id": claim_id,
+                "item_type": "claim",
+                "reason": f"Claim {claim_id} task is not done.",
+            })
+        elif status == "no_tests":
+            gaps.append({
+                "item_id": claim_id,
+                "item_type": "claim",
+                "reason": f"Claim {claim_id} declares no tests.",
+            })
+        elif status == "test_missing":
+            gaps.append({
+                "item_id": claim_id,
+                "item_type": "claim",
+                "reason": f"Claim {claim_id} has missing tests.",
+            })
+        elif status == "test_failed":
+            gaps.append({
+                "item_id": claim_id,
+                "item_type": "claim",
+                "reason": f"Claim {claim_id} has failed tests.",
+            })
+
+    return gaps
+
+
+def _run_db_analysis(
+    conn,
+    ctx: UnifiedContext,
+    project_root: Path,
+    staged_files: Optional[Set[str]] = None,
+    human_decisions: Optional[dict] = None,
+) -> tuple:
+    """Run analysis using db.check_* functions directly.
+
+    Replaces the old _run_analyzers that used Python-based analyzers.
+    Returns (merged_gaps, final_risks, compliance_res, analysis_details).
+    """
+    from vibe_tracing.infra.db.queries import (
+        check_requirement_coverage,
+        check_ac_coverage,
+        check_claim_evidence,
+        check_ghost_code,
+        check_dangling_claims,
+        check_coverage_violations,
+    )
+    from vibe_tracing.domain.compliance.checker import ArchitectureComplianceChecker
+    from vibe_tracing.domain.risk.advisor import RiskAdvisor
+    from vibe_tracing.domain.gate.staleness import mark_staleness
+
+    # Run db.check_* queries
+    req_coverage = check_requirement_coverage(conn)
+    ac_coverage = check_ac_coverage(conn)
+    claim_evidence = check_claim_evidence(conn)
+
+    # Additional queries for MergeGateEngine
+    ghost_files = check_ghost_code(conn)
+    dangling_claims_list = check_dangling_claims(conn)
+    cov_violations = check_coverage_violations(conn)
+
+    # Convert db results to gap format
+    merged_gaps = _db_result_to_gaps(req_coverage, ac_coverage, claim_evidence)
+
+    # Architecture compliance check
+    compliance_res = None
+    constraints_path = project_root / "docs" / "architecture_constraints.json"
+    if constraints_path.exists() and ctx.constraints is not None:
+        _constraints_hash = None
+        if ctx.manifest:
+            for _r in ctx.manifest.inputs_used:
+                if _r.file_key == "architecture_constraints" and _r.sha256_hash:
+                    _constraints_hash = _r.sha256_hash
+                    break
+        compliance_checker = ArchitectureComplianceChecker(
+            project_root,
+            constraints_path=constraints_path,
+            constraints_hash=_constraints_hash,
+            config_data=ctx.config,
+        )
+        compliance_res = compliance_checker.check(
+            [],  # evidence_list no longer needed for compliance check
+            constraints_data=ctx.constraints,
+            human_decisions=human_decisions,
+        )
+
+    # Risk Advisor
+    risk_advisor = RiskAdvisor(project_root)
+    final_risks = risk_advisor.generate_risks(
+        gaps=merged_gaps,
+        claims_analysis=[],
+        claim_risks=[],
+        compliance_result=compliance_res,
+    )
+
+    if compliance_res:
+        final_risks.extend(compliance_res.get("proposal_risks", []))
+        seen_gaps = {(g.get("item_id"), g.get("item_type")) for g in merged_gaps}
+        for gap in compliance_res.get("proposal_gaps", []):
+            key = (gap.get("item_id"), gap.get("item_type"))
+            if key not in seen_gaps:
+                seen_gaps.add(key)
+                merged_gaps.append(gap)
+
+    # Staleness tracking
+    task_list_data = None
+    if ctx.task_result and ctx.task_result.tasks:
+        task_list_data = [t.__dict__ for t in ctx.task_result.tasks]
+    merged_gaps, final_risks = mark_staleness(
+        merged_gaps, final_risks, staged_files,
+        ctx.claims_list, task_list_data,
+    )
+
+    # Analysis details for MergeGateEngine
+    analysis_details = {
+        "ghost_files": ghost_files,
+        "ac_gaps": ac_coverage,
+        "dangling_claims": dangling_claims_list,
+        "claim_evidence_gaps": claim_evidence,
+        "cov_violations": cov_violations,
+    }
+
+    return merged_gaps, final_risks, compliance_res, analysis_details
 
 
 def _run_analysis_phase(
@@ -119,8 +340,13 @@ def _run_gate_evaluation(
     ctx: UnifiedContext,
     staged_items: Optional[Set[str]],
     directly_staged_items: Optional[Set[str]],
-    conn,
+    conn=None,
     human_decisions: Optional[dict] = None,
+    ghost_files: Optional[list] = None,
+    ac_gaps: Optional[list] = None,
+    dangling_claims: Optional[list] = None,
+    claim_evidence_gaps: Optional[list] = None,
+    cov_violations: Optional[list] = None,
 ) -> dict:
     """调用 MergeGateEngine 执行门禁判定。
 
@@ -132,26 +358,30 @@ def _run_gate_evaluation(
         ctx:                   统一上下文
         staged_items:          受暂存文件影响的 items
         directly_staged_items: 直接被 staged 的 claim
-        conn:                  数据库连接
+        conn:                  数据库连接（保留用于兼容，不再传递给 MergeGateEngine）
         human_decisions:       人类决策记录
-    前置条件：
-        _run_analysis_phase 已执行
-    处理逻辑：
-        1. 创建 MergeGateEngine 实例
-        2. 调用 evaluate() 执行门禁判定
-        3. 输出应用的人类决策数量
+        ghost_files:           幽灵代码文件列表
+        ac_gaps:               AC 覆盖缺口列表
+        dangling_claims:       悬空 Claim 列表
+        claim_evidence_gaps:   Claim 证据缺口列表
+        cov_violations:        覆盖率违规列表
     输出：
         返回门禁结果字典（含 gate_decision、gaps、risks 等）
     """
     if human_decisions is None:
         human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
-    gate_engine = MergeGateEngine(project_root, conn)
+    gate_engine = MergeGateEngine(project_root)
     gate_res = gate_engine.evaluate(
         active_gaps, active_risks,
         compliance_res=compliance_res,
         staged_items=staged_items,
         directly_staged_items=directly_staged_items,
         human_decisions=human_decisions,
+        ghost_files=ghost_files,
+        ac_gaps=ac_gaps,
+        dangling_claims=dangling_claims,
+        claim_evidence_gaps=claim_evidence_gaps,
+        cov_violations=cov_violations,
     )
     hd_applied = gate_res.get("human_decisions_applied", 0)
     if hd_applied > 0:
@@ -174,6 +404,7 @@ def _evaluate_and_output(
     is_pre_commit: bool = False,
     human_decisions: Optional[dict] = None,
     conn=None,
+    analysis_details: Optional[dict] = None,
 ) -> int:
     """执行门禁判定并生成所有输出（报告、Dashboard、终端摘要）。
 
@@ -192,18 +423,15 @@ def _evaluate_and_output(
         is_pre_commit:    是否预提交模式
         human_decisions:  人类决策记录
         conn:             数据库连接
-    前置条件：
-        分析器和证据构建已完成
-    处理逻辑：
-        1. _run_analysis_phase：过滤 stale 项，构建 staged_items
-        2. _run_gate_evaluation：调用 MergeGateEngine 门禁判定
-        3. _build_report_document：生成追溯报告
-        4. _render_output：渲染 Dashboard + 终端输出
+        analysis_details: 分析详情（ghost_files, ac_gaps, dangling_claims 等）
     输出：
         返回退出码（0=通过, 2=blocked）
     """
     if not ctx.manifest:
         return 1
+
+    if analysis_details is None:
+        analysis_details = {}
 
     # 阶段 1：分析（过滤 stale 项，构建 staged_items）
     active_gaps, active_risks, evidence_meta, staged_items, directly_staged_items = \
@@ -214,6 +442,11 @@ def _evaluate_and_output(
         project_root, active_gaps, active_risks, compliance_res,
         ctx, staged_items, directly_staged_items, conn,
         human_decisions=human_decisions,
+        ghost_files=analysis_details.get("ghost_files"),
+        ac_gaps=analysis_details.get("ac_gaps"),
+        dangling_claims=analysis_details.get("dangling_claims"),
+        claim_evidence_gaps=analysis_details.get("claim_evidence_gaps"),
+        cov_violations=analysis_details.get("cov_violations"),
     )
 
     # 阶段 3：生成追溯报告
@@ -262,7 +495,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
     conn = None
     try:
         # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
-        from vibe_tracing.infra.operational_logger import OperationalLogger
+        from vibe_tracing.infra.logging.logger import OperationalLogger
         from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims
         _run_start_t = time.perf_counter()
 
@@ -321,7 +554,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
         # ── 阶段 5：执行验证工具 ──────────────────────────────────────────
         _t_tools = time.perf_counter()
         tool_evidence = _execute_tools(ctx, project_root, is_draft)
-        ctx.tool_evidence = tool_evidence
+        # tool_evidence is a pipeline-local variable, NOT stored in ctx
         vt_logger.info("phase_end", "Tool execution completed",
                        phase="execute_tools",
                        duration_ms=int((time.perf_counter() - _t_tools) * 1000),
@@ -346,7 +579,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             evidence_dicts = []
 
             # Task 证据条目
-            from vibe_tracing.infra.enums import CoverageStatus
+            from vibe_tracing.infra.config.enums import CoverageStatus
             task_covers_map = {}
             if ctx.task_result and ctx.task_result.tasks:
                 for task in ctx.task_result.tasks:
@@ -406,7 +639,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                     })
 
             # 工具执行证据条目
-            for tc in (ctx.tool_evidence or []):
+            for tc in (tool_evidence or []):
                 d = {
                     "source_type": tc.source_type,
                     "source_path": tc.source_path,
@@ -434,8 +667,10 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
                 ev["evidence_id"] = f"EVIDENCE-VT-{idx + 1:03d}"
 
             # EvidenceBuilder：合并历史缓存 + 本次结果，导出拆分 JSON
-            evidence_builder = EvidenceBuilder(project_root, conn)
-            evidence_builder.build(ctx)
+            evidence_builder = EvidenceBuilder(project_root)
+            merge_result = evidence_builder.merge(tool_evidence)
+            evidence_builder.apply(conn, merge_result)
+            evidence_builder.persist(output_dir / "evidences", merge_result)
 
             # 证据元数据（供分析器和报告使用）
             evidence_meta = {
@@ -459,14 +694,16 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
         human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
 
-        # ── 阶段 8：运行分析器 ──────────────────────────────────────────
+        # ── 阶段 8：运行分析（直接查 DB）────────────────────────────────
         _t_analyzers = time.perf_counter()
-        merged_gaps, final_risks, compliance_res, claim_res, req_res = _run_analyzers(
-            ctx, evidence_list, project_root,
+        merged_gaps, final_risks, compliance_res, analysis_details = _run_db_analysis(
+            conn, ctx, project_root,
             staged_files=staged_files,
             human_decisions=human_decisions,
         )
-        vt_logger.info("phase_end", "Analyzers completed",
+        claim_res = {}  # Legacy format, kept for report compatibility
+        req_res = {}    # Legacy format, kept for report compatibility
+        vt_logger.info("phase_end", "Analysis completed (db.check_*)",
                        phase="run_analyzers",
                        duration_ms=int((time.perf_counter() - _t_analyzers) * 1000),
                        gaps_count=len(merged_gaps),
@@ -483,6 +720,7 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
             is_pre_commit=is_pre_commit,
             human_decisions=human_decisions,
             conn=conn,
+            analysis_details=analysis_details,
         )
         gate_decision = "blocked" if exit_code == 2 else "pass"
         vt_logger.info("phase_end", "Evaluate and output completed",

@@ -11,7 +11,7 @@ import uuid
 
 from pathlib import Path
 
-from vibe_tracing.infra.operational_logger import OperationalLogger
+from vibe_tracing.infra.logging.logger import OperationalLogger
 
 
 def _logged_subprocess_run(args: list, **kwargs):
@@ -64,7 +64,7 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
     Returns:
         (passed: bool, message: str)
     """
-    from vibe_tracing.infra.git_utils import git_show, git_has_uncommitted_changes
+    from vibe_tracing.infra.git.utils import git_show, git_has_uncommitted_changes
     logger = OperationalLogger.get()
 
     finalize_commit = config_data.get("finalize_git_commit")
@@ -89,7 +89,7 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
     curr_data = json.loads(constraints_path.read_text(encoding="utf-8"))
 
     # Import _find_differences from architecture_change_proposal
-    from vibe_tracing.domain.architecture_change_proposal import ArchitectureChangeProposalEngine
+    from vibe_tracing.domain.governance.change_proposal import ArchitectureChangeProposalEngine
     engine = ArchitectureChangeProposalEngine(project_root)
     diffs = engine._find_differences(base_data, curr_data)
     logger.debug("constraints_diff_result", "Constraints diff computed", diffs_count=len(diffs))
@@ -179,7 +179,7 @@ def run_finalize(project_root: Path) -> int:
 
         # 5.5. PRD <-> Architecture mapping validation (left-shift)
         _t = time.perf_counter()
-        from vibe_tracing.domain.prd_arch_validator import validate_prd_architecture_mapping_from_path
+        from vibe_tracing.domain.compliance.prd_arch_validator import validate_prd_architecture_mapping_from_path
         mapping_pvr = validate_prd_architecture_mapping_from_path(project_root, constraints_data)
         vt_logger.info("phase_end", "PRD-Architecture mapping validation completed",
                        phase="prd_arch_mapping",

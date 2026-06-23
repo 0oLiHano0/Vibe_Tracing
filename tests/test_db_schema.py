@@ -30,6 +30,9 @@ class TestDDL:
             "task_acs",
             "tasks",
             "test_results",
+            "requirements",
+            "acceptance_criteria",
+            "task_requirements",
         }
         assert table_names == expected, f"Got {table_names}, expected {expected}"
         conn.close()

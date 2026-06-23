@@ -1,0 +1,208 @@
+"""
+VT 内存数据库查询与校验模块
+"""
+
+import sqlite3
+
+
+def check_coverage_violations(conn: sqlite3.Connection) -> list:
+    """检查覆盖率违规：返回所有 status='violated' 的覆盖率记录。"""
+    rows = conn.execute(
+        "SELECT source_path, percent_covered FROM coverage_reports "
+        "WHERE status = 'violated'"
+    ).fetchall()
+    return [{"source_path": r[0], "percent_covered": r[1]} for r in rows]
+
+
+def check_ghost_code(conn: sqlite3.Connection) -> list:
+    """检查幽灵代码：返回暂存区中未被任何 Claim 关联的文件。"""
+    rows = conn.execute("""
+        SELECT sf.file_path FROM staged_files sf
+        LEFT JOIN claim_code_refs ccr ON sf.file_path = ccr.code_path
+        LEFT JOIN claims c ON ccr.claim_id = c.claim_id
+        LEFT JOIN tasks t ON c.related_task = t.task_id
+        WHERE ccr.code_path IS NULL
+    """).fetchall()
+    return [r[0] for r in rows]
+
+
+def check_dangling_claims(conn: sqlite3.Connection) -> list:
+    """检查悬空声明：返回指向不存在 Task 的 Claim。"""
+    rows = conn.execute("""
+        SELECT c.claim_id, c.related_task FROM claims c
+        LEFT JOIN tasks t ON c.related_task = t.task_id
+        WHERE t.task_id IS NULL
+    """).fetchall()
+    return [{"claim_id": r[0], "related_task": r[1]} for r in rows]
+
+
+def check_test_dead_links(conn: sqlite3.Connection) -> list:
+    """检查测试死链：返回 Claim 引用但不存在或未通过的测试。"""
+    rows = conn.execute("""
+        SELECT ctr.claim_id, ctr.test_nodeid FROM claim_test_refs ctr
+        LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
+        WHERE tr.nodeid IS NULL OR tr.outcome != 'passed'
+    """).fetchall()
+    return [{"claim_id": r[0], "test_nodeid": r[1]} for r in rows]
+
+
+def check_active_task_coverage(conn: sqlite3.Connection) -> list:
+    """检查活跃任务的覆盖率：返回 in_progress 任务中未达标或缺失的代码文件。"""
+    rows = conn.execute("""
+        SELECT ccr.code_path, cr.percent_covered, cr.status
+        FROM claim_code_refs ccr
+        JOIN claims c ON ccr.claim_id = c.claim_id
+        JOIN tasks t ON c.related_task = t.task_id
+        LEFT JOIN coverage_reports cr ON ccr.code_path = cr.source_path
+        WHERE t.status = 'in_progress'
+          AND (cr.source_path IS NULL OR cr.status = 'violated')
+    """).fetchall()
+    return [
+        {"code_path": r[0], "percent_covered": r[1], "status": r[2]}
+        for r in rows
+    ]
+
+
+def check_ac_coverage(conn: sqlite3.Connection) -> list:
+    """检查 MUST 优先级任务/验收标准的覆盖情况。"""
+    # 检查 acceptance_criteria 表是否为空 (legacy 模式)
+    cursor = conn.execute("SELECT COUNT(*) FROM acceptance_criteria")
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        # legacy 模式: 从 task_acs 开始查询，且只针对 MUST 任务
+        rows = conn.execute("""
+            SELECT ta.task_id, ta.ac_id,
+              CASE
+                WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
+                WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
+                WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'
+                WHEN SUM(CASE WHEN tr.outcome != 'passed' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
+                ELSE 'covered'
+              END as coverage_status
+            FROM task_acs ta
+            JOIN tasks t ON ta.task_id = t.task_id
+            LEFT JOIN claims c ON t.task_id = c.related_task
+            LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
+            LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
+            WHERE t.priority = 'must'
+            GROUP BY ta.task_id, ta.ac_id
+            HAVING coverage_status != 'covered'
+        """).fetchall()
+    else:
+        # 新模式: 从 acceptance_criteria 开始 LEFT JOIN
+        rows = conn.execute("""
+            SELECT ta.task_id, ac.ac_id,
+              CASE
+                WHEN ta.task_id IS NULL THEN 'no_task_for_ac'
+                WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
+                WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
+                WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'
+                WHEN SUM(CASE WHEN tr.outcome != 'passed' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
+                ELSE 'covered'
+              END as coverage_status
+            FROM acceptance_criteria ac
+            LEFT JOIN requirements r ON ac.req_id = r.req_id
+            LEFT JOIN task_acs ta ON ac.ac_id = ta.ac_id
+            LEFT JOIN tasks t ON ta.task_id = t.task_id
+            LEFT JOIN claims c ON t.task_id = c.related_task
+            LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
+            LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
+            WHERE t.priority = 'must' OR (r.priority = 'must' AND ac.is_testing_required = 1)
+            GROUP BY ta.task_id, ac.ac_id
+            HAVING coverage_status != 'covered'
+        """).fetchall()
+
+    return [
+        {"task_id": r[0], "ac_id": r[1], "coverage_status": r[2]}
+        for r in rows
+    ]
+
+
+def check_requirement_coverage(conn: sqlite3.Connection) -> list:
+    """检查需求覆盖率。"""
+    rows = conn.execute("""
+        SELECT r.req_id,
+          CASE
+            WHEN trq.task_id IS NULL THEN 'no_task_for_requirement'
+            WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
+            WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
+            WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'
+            WHEN SUM(CASE WHEN tr.outcome != 'passed' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
+            ELSE 'covered'
+          END as coverage_status
+        FROM requirements r
+        LEFT JOIN task_requirements trq ON r.req_id = trq.req_id
+        LEFT JOIN tasks t ON trq.task_id = t.task_id
+        LEFT JOIN claims c ON t.task_id = c.related_task
+        LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
+        LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
+        GROUP BY r.req_id
+        HAVING coverage_status != 'covered'
+    """).fetchall()
+    return [{"req_id": r[0], "coverage_status": r[1]} for r in rows]
+
+
+def check_claim_evidence(conn: sqlite3.Connection) -> list:
+    """检查 Claim 证据覆盖状态。"""
+    rows = conn.execute("""
+        SELECT c.claim_id,
+          CASE
+            WHEN t.task_id IS NULL THEN 'task_missing'
+            WHEN t.status != 'done' THEN 'task_not_done'
+            WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests'
+            WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_missing'
+            WHEN SUM(CASE WHEN tr.outcome = 'passed' THEN 1 ELSE 0 END) < COUNT(ctr.test_nodeid) THEN 'test_failed'
+            ELSE 'verified'
+          END as verification_status
+        FROM claims c
+        LEFT JOIN tasks t ON c.related_task = t.task_id
+        LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
+        LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
+        GROUP BY c.claim_id
+        HAVING verification_status != 'verified'
+    """).fetchall()
+    return [{"claim_id": r[0], "verification_status": r[1]} for r in rows]
+
+
+def get_full_chain(conn: sqlite3.Connection) -> list:
+    """获取需求到测试/覆盖率的全链路追踪视图。"""
+    rows = conn.execute("""
+        SELECT 
+            r.req_id, r.title, r.priority, r.category,
+            ac.ac_id, ac.title, ac.is_testing_required,
+            t.task_id, t.priority, t.status,
+            c.claim_id,
+            ctr.test_nodeid, tr.outcome,
+            ccr.code_path, cov.percent_covered
+        FROM requirements r
+        LEFT JOIN acceptance_criteria ac ON r.req_id = ac.req_id
+        LEFT JOIN task_requirements trq ON r.req_id = trq.req_id
+        LEFT JOIN tasks t ON trq.task_id = t.task_id
+        LEFT JOIN claims c ON t.task_id = c.related_task
+        LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
+        LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
+        LEFT JOIN claim_code_refs ccr ON c.claim_id = ccr.claim_id
+        LEFT JOIN coverage_reports cov ON ccr.code_path = cov.source_path
+    """).fetchall()
+    
+    return [
+        {
+            "req_id": r[0],
+            "req_title": r[1],
+            "req_priority": r[2],
+            "req_category": r[3],
+            "ac_id": r[4],
+            "ac_title": r[5],
+            "is_testing_required": bool(r[6]) if r[6] is not None else None,
+            "task_id": r[7],
+            "task_priority": r[8],
+            "task_status": r[9],
+            "claim_id": r[10],
+            "test_nodeid": r[11],
+            "test_outcome": r[12],
+            "code_path": r[13],
+            "percent_covered": r[14]
+        }
+        for r in rows
+    ]

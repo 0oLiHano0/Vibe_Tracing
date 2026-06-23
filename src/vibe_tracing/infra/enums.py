@@ -1,17 +1,21 @@
 """
 VT 共用枚举定义模块
 
-本模块定义了 Vibe Tracing 全项目共用的枚举类型，用于约束字段取值范围，
+本模块定义了 Vibe Tracing 全项目共用的枚举类型和映射常量，用于约束字段取值范围，
 避免在代码各处使用魔法字符串（magic string）。
 
 枚举类型一览：
   - CoverageStatus: 覆盖率/合规状态（如 covered、missing、violated）
   - ErrorCode: 标准化错误码（如 missing_input、schema_violation）
 
+映射常量一览：
+  - TASK_STATUS_TO_COVERAGE: 任务状态到覆盖状态的映射字典
+
 使用方式：
-  from vibe_tracing.infra.enums import CoverageStatus, ErrorCode
+  from vibe_tracing.infra.enums import CoverageStatus, ErrorCode, TASK_STATUS_TO_COVERAGE
   if status == CoverageStatus.VIOLATED:
       ...
+  coverage = TASK_STATUS_TO_COVERAGE.get(task_status, CoverageStatus.MISSING)
 """
 
 from enum import Enum
@@ -77,3 +81,22 @@ class ErrorCode(str, Enum):
     SELF_ATTESTATION = "self_attestation"
     TOOL_NO_TESTS_COLLECTED = "tool_no_tests_collected"
     TOOL_USAGE_ERROR = "tool_usage_error"
+
+
+# ── 任务状态到覆盖状态的映射 ─────────────────────────────────────────────────
+# 用于将任务的 status 字段映射为 CoverageStatus 枚举值，
+# 在分析器中统一判断任务的覆盖贡献。
+#
+# 映射规则：
+#   - done        → COVERED     任务已完成，应有完整覆盖
+#   - in_progress → PARTIAL     任务进行中，覆盖部分完成
+#   - todo        → MISSING     任务待办，尚未开始覆盖
+#   - blocked     → BLOCKED     任务被阻塞，无法推进覆盖
+#   - cancelled   → SKIPPED     任务已取消，不参与覆盖计算
+TASK_STATUS_TO_COVERAGE: dict[str, CoverageStatus] = {
+    "done": CoverageStatus.COVERED,
+    "in_progress": CoverageStatus.PARTIAL,
+    "todo": CoverageStatus.MISSING,
+    "blocked": CoverageStatus.BLOCKED,
+    "cancelled": CoverageStatus.SKIPPED,
+}

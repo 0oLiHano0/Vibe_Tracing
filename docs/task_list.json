@@ -62,6 +62,11 @@
       "phase_id": "PHASE-VT-009",
       "name": "边界收敛与工具执行验证",
       "goal": "移除 Claude Code Bootstrap 模块，引入 VT 工具自主执行和项目配置定型机制。"
+    },
+    {
+      "phase_id": "PHASE-VT-010",
+      "name": "vt analyze 流水线重设计与重构",
+      "goal": "重构分析流水线，以内存 SQLite 作为核心状态底座，消除 evidence_dicts，并将 analysis 逻辑下沉为 SQL 查询，实现高内聚、低耦合的线性流水线调度。"
     }
   ],
   "tasks": [
@@ -3640,6 +3645,586 @@
         {
           "dod_id": "DOD-VT-066-08",
           "description": "全量测试通过"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-067",
+      "phase_id": "PHASE-VT-010",
+      "title": "数据操作层扩展与拆分：db 子模块拆分与 SQL 查询层扩展",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "为 Vibe Tracing 提供全新的内存 SQLite 数据表与子包设计，将原有 db.py 拆分为 schema/loaders/queries/exports 四个子模块并对齐全链路的 SQL 查询函数，去除 Python 内存嵌套对象分析逻辑。",
+      "atomic_scope": "拆分 `infra/db.py` 为 `infra/db/` 子包（包含 schema.py, loaders.py, queries.py, exports.py），并在 `__init__.py` 中统一导出提供向上兼容；在 `schema.py` 中新建 `requirements` 与 `acceptance_criteria` 表；在 `loaders.py` 中实现 `load_prd(conn, prd)` 并支持数据灌入；在 `queries.py` 中新建查询函数 `check_requirement_coverage(conn)`、`check_claim_evidence(conn)` 与全链路大 JOIN 函数 `get_full_chain(conn)`；并在 `queries.py` 中重构 `check_ac_coverage(conn)` 使其从 `acceptance_criteria` 出发起点查询。",
+      "out_of_scope": [
+        "不修改任何 analyze 命令行选项",
+        "不在此任务中编写 gates 或 pipeline 调度代码",
+        "不改变已有的 SQLite 表结构"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12",
+        "AC-VT-009-08"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009",
+        "PRINCIPLE-VT-012"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/db/ 子包结构（__init__.py, schema.py, loaders.py, queries.py, exports.py）",
+        "src/vibe_tracing/infra/db/schema.py 中的新表定义与 loaders.py 中的 load_prd 函数",
+        "src/vibe_tracing/infra/db/queries.py 中的 SQL 查询函数"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-067-01",
+          "description": "成功将 db.py 拆分为 infra/db/ 子包，通过 __init__.py 向上兼容且全量编译通过"
+        },
+        {
+          "dod_id": "DOD-VT-067-02",
+          "description": "db 子模块 schema.py 成功创建 requirements 和 acceptance_criteria 两张新表"
+        },
+        {
+          "dod_id": "DOD-VT-067-03",
+          "description": "check_requirement_coverage 返回每个 REQ 的任务覆盖数和覆盖状态"
+        },
+        {
+          "dod_id": "DOD-VT-067-04",
+          "description": "check_claim_evidence 正确返回 Claim 的关联测试通过率"
+        },
+        {
+          "dod_id": "DOD-VT-067-05",
+          "description": "check_ac_coverage 重构为从 PRD-AC 出发而不是 Task-AC 出发，在 queries.py 中实现"
+        },
+        {
+          "dod_id": "DOD-VT-067-06",
+          "description": "get_full_chain 大 JOIN 正确串联 PRD、AC、Task、Claim、Test 与 Coverage 完整事实"
+        },
+        {
+          "dod_id": "DOD-VT-067-07",
+          "description": "load_prd() 函数在 loaders.py 中实现，将 PRD 的 requirements 和 acceptance_criteria 灌入数据库"
+        },
+        {
+          "dod_id": "DOD-VT-067-08",
+          "description": "CoverageStatus 枚举和 TASK_STATUS_TO_COVERAGE 映射常量在 infra/config/enums.py 集中定义"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-068",
+      "phase_id": "PHASE-VT-010",
+      "title": "新增陈旧分析器与合并结果模型：StalenessTracker 与 EvidenceMergeResult",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "为增量模式下的 analyze 提供陈旧（stale）项判定模块，并创建证据合并时的承载对象模型。",
+      "atomic_scope": "新建 `domain/staleness_tracker.py` 实现纯函数 `mark_staleness(merged_gaps, risks, staged_files, claims_list, task_list_data)`；新建 `domain/evidence_merge_result.py` 实现 `EvidenceMergeResult` 数据承载类。",
+      "out_of_scope": [
+        "不修改 pipeline.py 现有的任何流程",
+        "StalenessTracker 中不修改传入的任何原始列表（必须是纯函数，返回新副本）"
+      ],
+      "related_requirements": [
+        "REQ-VT-002",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-006"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/staleness_tracker.py",
+        "src/vibe_tracing/domain/evidence_merge_result.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-068-01",
+          "description": "staleness_tracker.py 实现 mark_staleness 并确保不原地修改传入的对象，去除对 ctx 的依赖"
+        },
+        {
+          "dod_id": "DOD-VT-068-02",
+          "description": "当 staged_files 为 None 时，mark_staleness 不标记 any stale 项"
+        },
+        {
+          "dod_id": "DOD-VT-068-03",
+          "description": "evidence_merge_result.py 正确定义 EvidenceMergeResult 数据类"
+        },
+        {
+          "dod_id": "DOD-VT-068-04",
+          "description": "mark_staleness 返回 Tuple[list, list]（新 gaps + 新 risks），不修改原列表"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-069",
+      "phase_id": "PHASE-VT-010",
+      "title": "证据构建器重构：EvidenceBuilder 拆分合并与 IO 逻辑",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "剥离 EvidenceBuilder 的数据库调度逻辑，使其变为纯粹的内存合并计算与分步式数据应用及持久化操作。",
+      "atomic_scope": "重构 `domain/evidence_builder.py`。从 `__init__` 中移除 `conn` 依赖；重构 `build()` 为 `merge(tool_evidence) -> EvidenceMergeResult`；实现 `apply(conn, merge_result)` 负责将 upsert/purge 结果写入 DB；实现 `persist(output_dir)` 将数据写回磁盘，且不接收 `conn` 参数。",
+      "out_of_scope": [
+        "不改变最终输出 of test_results.json 和 coverage_reports.json 数据 Schema"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-002",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-11"
+      ],
+      "related_modules": [
+        "MOD-VT-005"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009",
+        "PRINCIPLE-VT-018"
+      ],
+      "depends_on": [
+        "TASK-VT-068"
+      ],
+      "expected_deliverables": [
+        "重构后的 src/vibe_tracing/domain/evidence_builder.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-069-01",
+          "description": "EvidenceBuilder.merge 成为不需要连接 DB 的纯内存合并方法"
+        },
+        {
+          "dod_id": "DOD-VT-069-02",
+          "description": "EvidenceBuilder.apply 正确分发 upsert 和 purge 数据库操作"
+        },
+        {
+          "dod_id": "DOD-VT-069-03",
+          "description": "EvidenceBuilder.persist 能够将 evidences 导出为符合 Schema 的 json，且仅接收 output_dir"
+        },
+        {
+          "dod_id": "DOD-VT-069-04",
+          "description": "EvidenceBuilder.__init__ 只接收 project_root，不接收 conn"
+        },
+        {
+          "dod_id": "DOD-VT-069-05",
+          "description": "apply() 内部处理 source_type 路由（test → upsert_test_result，coverage → upsert_coverage_report）"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-070",
+      "phase_id": "PHASE-VT-010",
+      "title": "流水线重构与 Analyzer 清理：整合调度核心并直接调用 SQL 查询",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除冗余的 3 个 Analyzer 处理类，整合 analysis.py 至 pipeline.py，直接利用 DB 层 SQL 实现核心分析。",
+      "atomic_scope": "删除 `analyzers/requirement_task_analyzer.py`、`analyzers/ac_test_analyzer.py` 和 `analyzers/claim_evidence_analyzer.py`；删除 `cli/analyze/analysis.py` 并将其调度与 gaps 合并辅助函数迁移至 `cli/analyze/pipeline.py`；在 `pipeline.py` 的 Stage 7 之后直接调用 `db.check_*` 查询结果。",
+      "out_of_scope": [
+        "不修改门禁引擎（MergeGateEngine）内部的具体判定条件",
+        "不删除报告生成与 Dashboard 渲染 of 独立模块"
+      ],
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-006"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-013"
+      ],
+      "depends_on": [
+        "TASK-VT-067",
+        "TASK-VT-069"
+      ],
+      "expected_deliverables": [
+        "删除的 3 个 analyzers 文件",
+        "合并并重构后的 src/vibe_tracing/cli/analyze/pipeline.py",
+        "已删除 of src/vibe_tracing/cli/analyze/analysis.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-070-01",
+          "description": "流水线不再引用、初始化或调用 any Analyzer 类"
+        },
+        {
+          "dod_id": "DOD-VT-070-02",
+          "description": "pipeline.py 的 run_analyze 正确执行 12 阶段调度并直接查 DB"
+        },
+        {
+          "dod_id": "DOD-VT-070-03",
+          "description": "不再在 pipeline 中拼装和向后传递 evidence_dicts 嵌套结构"
+        },
+        {
+          "dod_id": "DOD-VT-070-04",
+          "description": "实现辅助函数 extract_gaps、filter_active、merge_gaps、compute_staged_items"
+        },
+        {
+          "dod_id": "DOD-VT-070-05",
+          "description": "Logger 初始化（get_or_init + 异常守卫）和日志事件链（run_start/phase_end/run_end）"
+        },
+        {
+          "dod_id": "DOD-VT-070-06",
+          "description": "异常处理（try/finally + conn.rollback() + _GateBlocked + Exception 双通道输出）"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-071",
+      "phase_id": "PHASE-VT-010",
+      "title": "消除 UnifiedContext 半构造状态：解耦 tool_evidence",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "从 UnifiedContext 结构中彻底剥离 tool_evidence，使其作为流水线局部变量流转，规避对象的半初始化隐患。",
+      "atomic_scope": "修改 `domain/context.py` 中的 `UnifiedContext`，删除 `tool_evidence` 字段及其初始化参数；修改 `pipeline.py` 中 `_execute_tools()` 返回 `List[ToolEvidenceCandidate]`，并做为局部变量直接传递给 `EvidenceBuilder.merge()`。",
+      "out_of_scope": [
+        "不修改 UnifiedContext 中其他的输入源数据项（如 prd、task_result、claims_list 等）"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-014"
+      ],
+      "depends_on": [
+        "TASK-VT-070"
+      ],
+      "expected_deliverables": [
+        "修改后的 src/vibe_tracing/domain/context.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-071-01",
+          "description": "UnifiedContext 不再定义或初始化 tool_evidence 字段"
+        },
+        {
+          "dod_id": "DOD-VT-071-02",
+          "description": "pipeline 外部执行工具返回的 candidates 完全采用局部变量传递至 EvidenceBuilder"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-072",
+      "phase_id": "PHASE-VT-010",
+      "title": "门禁校验前置与剥离：重构 gates.py 的校验边界",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将哈希与设计校验彻底从 analyze 剥离，并将幽灵代码检测提升为前置校验，实现 pre-commit hook 快速通道。",
+      "atomic_scope": "修改 `cli/analyze/gates.py`，删除 `_gate1_constraints_hash()`、`_gate1b_prd_drift()`、`_gate1c_mapping()` 等已合并入 finalize 的校验函数；重构 `_run_integrity_gates()` 为 `_check_claim_coverage()`，并在 `is_pre_commit` 模式下作为 `run_analyze` 的 Stage 2 前置运行；支持在 `gates_only` 模式下校验通过后立即返回 0，并在控制台正确输出前置校验已过的友情提示信息。",
+      "out_of_scope": [
+        "不改变 finalize.py 内部的哈希生成逻辑与基线提交策略"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-14",
+        "AC-VT-009-15",
+        "AC-VT-009-17"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-001",
+        "PRINCIPLE-VT-002"
+      ],
+      "depends_on": [
+        "TASK-VT-070"
+      ],
+      "expected_deliverables": [
+        "重构后的 src/vibe_tracing/cli/analyze/gates.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-072-01",
+          "description": "gates.py 中不再有任何 constraints_hash/prd_hash 校验代码"
+        },
+        {
+          "dod_id": "DOD-VT-072-02",
+          "description": "_check_claim_coverage 在前置检查失败时正确阻断且不执行昂贵分析"
+        },
+        {
+          "dod_id": "DOD-VT-072-03",
+          "description": "gates_only 模式在前置覆盖率检查通过后立即快速返回 0 成功，且控制台打印 Rule 1/2 通过而 Rule 3-8 需跑完整分析的提示"
+        },
+        {
+          "dod_id": "DOD-VT-072-04",
+          "description": "GhostCodeReconciler 调用时传入 conn 参数"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-073",
+      "phase_id": "PHASE-VT-010",
+      "title": "门禁引擎扩展：MergeGateEngine 解耦重构与校验逻辑挂载",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 MergeGateEngine 从 SQLite 数据库中完全解耦为纯决策规则引擎，由 pipeline 外部查出 gaps / analysis 结果并通过参数传入，新增 Rule 3 与 Rule 4 的硬判定规则。",
+      "atomic_scope": "修改 `domain/merge_gate_engine.py`；从 `__init__` 中移除 `conn` 参数；重构 `evaluate` 接收外部传入的 `ghost_files`, `ac_gaps`, `dangling_claims`, `claim_evidence_gaps`, `cov_violations` 等分析结果列表；实现 Rule 3（dangling_claims 为空判定）与 Rule 4（claim_evidence_gaps 未通过测试则 block 判定）；从 `config.json` 的 `ghost_code_exclusions` 中动态加载排除规则。",
+      "out_of_scope": [
+        "不修改门禁引擎原有的 AC 覆盖校验和代码覆盖率达标判定算法"
+      ],
+      "related_requirements": [
+        "REQ-VT-008",
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-008-01",
+        "AC-VT-008-03",
+        "AC-VT-009-13"
+      ],
+      "related_modules": [
+        "MOD-VT-007"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-004",
+        "PRINCIPLE-VT-005"
+      ],
+      "depends_on": [
+        "TASK-VT-067",
+        "TASK-VT-070"
+      ],
+      "expected_deliverables": [
+        "重构后的 src/vibe_tracing/domain/merge_gate_engine.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-073-01",
+          "description": "MergeGateEngine 从 SQLite 连接解耦，不持有 conn 参数且内部无 SQL 访问"
+        },
+        {
+          "dod_id": "DOD-VT-073-02",
+          "description": "MergeGateEngine 正确挂载 dangling claims 的拦截逻辑，无效 task 关联则 block"
+        },
+        {
+          "dod_id": "DOD-VT-073-03",
+          "description": "MergeGateEngine 在 Claim 声明引用的测试没有通过时正确判定为 blocked"
+        },
+        {
+          "dod_id": "DOD-VT-073-04",
+          "description": "幽灵代码检查正确适配 config 里的 exclusions 动态列表而不再写死"
+        },
+        {
+          "dod_id": "DOD-VT-073-05",
+          "description": "Gate Rule 1-8 完整性验证（所有规则在 evaluate() 中正确执行）"
+        },
+        {
+          "dod_id": "DOD-VT-073-06",
+          "description": "判定结果分级正确（blocked 阻断 / warning 警告 / pass 通过）"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-074",
+      "phase_id": "PHASE-VT-010",
+      "title": "测试清理与更新：删除废弃测试并重构以适配全新 pipeline 接口",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Developer",
+      "objective": "全面清理已废弃 Analyzer 关联 of 陈旧测试文件，并修复/新增相应的数据库和 pipeline 分析测试，维持全量绿色通过。",
+      "atomic_scope": "删除 `tests/test_requirement_task_analyzer.py`、`tests/test_ac_test_analyzer.py`、`tests/test_claim_evidence_analyzer.py`；修改 `test_evidence_builder.py` 适配 merge/apply/persist 新接口；修改 `test_merge_gate_engine.py` 适配新 Rule 3 & 4 且不传入 conn；新建 `test_db_query_functions.py` 对 db 查询进行单元测试；新建 `test_staleness_tracker.py` 测试纯函数。",
+      "out_of_scope": [
+        "不修改与 analyze 无关的 finalize/accept 自动化测试用例"
+      ],
+      "related_requirements": [
+        "REQ-VT-009",
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12",
+        "AC-VT-009-17"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-073"
+      ],
+      "expected_deliverables": [
+        "删除 of 3 个测试文件",
+        "修改 of 3 个测试文件",
+        "新建 of 3 个测试文件"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-074-01",
+          "description": "废弃的 3 个 analyzer 测试文件被干净删除，不遗留导入错误"
+        },
+        {
+          "dod_id": "DOD-VT-074-02",
+          "description": "test_db_query_functions.py 100% 覆盖 db.py 查询的正常和异常分支"
+        },
+        {
+          "dod_id": "DOD-VT-074-03",
+          "description": "test_staleness_tracker.py 100% 覆盖 mark_staleness 的过滤逻辑"
+        },
+        {
+          "dod_id": "DOD-VT-074-04",
+          "description": "全量单元测试与自举校验 100% 绿色通过，且无任何 regression 衰退"
+        },
+        {
+          "dod_id": "DOD-VT-074-05",
+          "description": "修复 3 个内联 import 测试文件（test_instrumentation_logging, test_ac_vt_009_coverage, test_exception_logging）"
+        },
+        {
+          "dod_id": "DOD-VT-074-06",
+          "description": "修改 test_evidence_builder.py（build → merge + apply + persist）"
+        },
+        {
+          "dod_id": "DOD-VT-074-07",
+          "description": "修改 test_merge_gate_engine.py（新增 Rule 3/4 测试且不传入 conn）"
+        },
+        {
+          "dod_id": "DOD-VT-074-08",
+          "description": "新增 test_pipeline.py（run_analyze 单元测试：gates_only、pre-commit、错误路径）"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-075",
+      "phase_id": "PHASE-VT-010",
+      "title": "Domain 包结构重组：按职责分包并定义公共接口",
+      "priority": "should",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 domain/ 下 19 个平铺文件按职责重组为 evidence、gate、compliance、risk、loader、report、governance 7 个子包，每个包通过 __init__.py 暴露公共接口，提升可读性和封装性。",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-005",
+        "MOD-VT-006",
+        "MOD-VT-007",
+        "MOD-VT-009",
+        "MOD-VT-010"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-075-01",
+          "description": "创建 domain/evidence/ 包，包含 builder.py 和 merge_result.py，__init__.py 导出 EvidenceBuilder 和 EvidenceMergeResult"
+        },
+        {
+          "dod_id": "DOD-VT-075-02",
+          "description": "创建 domain/gate/ 包，包含 engine.py 和 staleness.py，__init__.py 导出 MergeGateEngine"
+        },
+        {
+          "dod_id": "DOD-VT-075-03",
+          "description": "创建 domain/compliance/ 包，包含 checker.py 和 prd_arch_validator.py，__init__.py 导出 ArchitectureComplianceChecker"
+        },
+        {
+          "dod_id": "DOD-VT-075-04",
+          "description": "创建 domain/risk/ 包，包含 advisor.py，__init__.py 导出 RiskAdvisor"
+        },
+        {
+          "dod_id": "DOD-VT-075-05",
+          "description": "创建 domain/loader/ 包，包含 raw_input.py、prd_parser.py、task_loader.py、claim_loader.py，__init__.py 导出所有 Loader 类"
+        },
+        {
+          "dod_id": "DOD-VT-075-06",
+          "description": "创建 domain/report/ 包，包含 traceability.py、dashboard.py、reflection.py，__init__.py 导出 TraceabilityReportBuilder、DashboardRenderer、render_reflection_prompts"
+        },
+        {
+          "dod_id": "DOD-VT-075-07",
+          "description": "创建 domain/governance/ 包，包含 ghost_code.py 和 change_proposal.py，__init__.py 导出 GhostCodeReconciler"
+        },
+        {
+          "dod_id": "DOD-VT-075-08",
+          "description": "更新所有 import 语句（从 vibe_tracing.domain.evidence_builder 改为 vibe_tracing.domain.evidence 等）"
+        },
+        {
+          "dod_id": "DOD-VT-075-09",
+          "description": "全量测试通过，无 ImportError 或路径错误"
+        }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-076",
+      "phase_id": "PHASE-VT-010",
+      "title": "Infra 包结构重组与导入修复",
+      "priority": "should",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 db.py 拆分已提前完成后，将 infra/ 下剩余散乱文件重组为 logging、git、config、tools 子包，并修复全量 import 链路引用。",
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-076-01",
+          "description": "创建 infra/logging/ 包，将 operational_logger.py 移入，__init__.py 导出 OperationalLogger"
+        },
+        {
+          "dod_id": "DOD-VT-076-02",
+          "description": "创建 infra/git/ 包，将 git_utils.py 移入，__init__.py 导出公共函数"
+        },
+        {
+          "dod_id": "DOD-VT-076-03",
+          "description": "创建 infra/config/ 包，将 enums.py 和 hint_loader.py 移入，__init__.py 导出 CoverageStatus, ErrorCode, load_hints, resolve_hint"
+        },
+        {
+          "dod_id": "DOD-VT-076-04",
+          "description": "在 infra/config/boundary.py 中整合 load_boundary 和 is_in_scope"
+        },
+        {
+          "dod_id": "DOD-VT-076-05",
+          "description": "创建 infra/tools/ 包，将 tool_resolver.py 移入，__init__.py 导出 resolve_tool_path"
+        },
+        {
+          "dod_id": "DOD-VT-076-06",
+          "description": "更新所有 import 语句（由旧路径映射到新的 infra 子模块包结构）"
+        },
+        {
+          "dod_id": "DOD-VT-076-07",
+          "description": "全量测试通过，无 ImportError 阻断"
         }
       ]
     }

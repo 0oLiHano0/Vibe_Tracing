@@ -10,14 +10,14 @@
 
 | # | 问题 | 模块 | 状态 |
 |---|------|------|------|
-| P1 | pipeline.py 混入 ~250 行业务逻辑（evidence_dicts、文件分类、关联查询） | pipeline.py | ❌ 未修复 |
-| P2 | evidence_builder 内部 5 步自治，pipeline 无法控制顺序 | evidence_builder.py | ❌ 未修复 |
-| P3 | merge_gate_engine 直接调 db.check_*，绕过 pipeline | merge_gate_engine.py | ❌ 未修复 |
-| P4 | ghost_code_reconciler 与 MergeGateEngine 重复调 check_ghost_code | 两者 | ❌ 未修复 |
-| P5 | context.py 的 tool_evidence 后绑定，对象"半构造" | context.py | ❌ 未修复 |
-| P6 | analysis.py 与 pipeline.py 职责重叠 | 两者 | ❌ 未修复 |
-| P7 | Gate 1/1b/1c 属于 finalize 职责却在 analyze 中执行 | gates.py | ❌ 未修复 |
-| P8 | analyzers 消费 Python dict 而非直接查 DB | analyzers/ | ❌ 未修复 |
+| P1 | pipeline.py 混入 ~250 行业务逻辑（evidence_dicts、文件分类、关联查询） | pipeline.py | ✅ 已修复 |
+| P2 | evidence_builder 内部 5 步自治，pipeline 无法控制顺序 | evidence_builder.py | ✅ 已修复 |
+| P3 | merge_gate_engine 直接调 db.check_*，绕过 pipeline | merge_gate_engine.py | ✅ 已修复 |
+| P4 | ghost_code_reconciler 与 MergeGateEngine 重复调 check_ghost_code | 两者 | ✅ 已修复 |
+| P5 | context.py 的 tool_evidence 后绑定，对象"半构造" | context.py | ✅ 已修复 |
+| P6 | analysis.py 与 pipeline.py 职责重叠 | 两者 | ✅ 已修复 |
+| P7 | Gate 1/1b/1c 属于 finalize 职责却在 analyze 中执行 | gates.py | ✅ 已修复 |
+| P8 | analyzers 消费 Python dict 而非直接查 DB | analyzers/ | ✅ 已修复 |
 
 ### 1.2 已修复项
 
@@ -189,10 +189,11 @@ run_analyze(project_root, ...)
 domain/
 ├── evidence/                            # 证据构建与工具执行
 │   ├── builder.py                       # EvidenceBuilder
-│   └── tool_adapter.py                  # ToolExecutionEngine
+│   └── merge_result.py                  # EvidenceMergeResult
 │
 ├── gate/                                # 门禁判定引擎
-│   └── engine.py                        # MergeGateEngine（纯规则判定，不持有 conn）
+│   ├── engine.py                        # MergeGateEngine（纯规则判定，不持有 conn）
+│   └── staleness.py                     # mark_staleness 纯函数
 │
 ├── compliance/                          # 合规检查
 │   ├── checker.py                       # ArchitectureComplianceChecker
@@ -216,9 +217,7 @@ domain/
 │   ├── ghost_code.py                    # GhostCodeReconciler
 │   └── change_proposal.py              # ArchitectureChangeProposalEngine
 │
-├── context.py                           # UnifiedContext（顶层，不含 tool_evidence）
-├── staleness_tracker.py                 # mark_staleness 纯函数（新建）
-└── evidence_merge_result.py             # EvidenceMergeResult dataclass（新建）
+└── context.py                           # UnifiedContext（顶层，不含 tool_evidence）
 ```
 
 ### 4.2 Infra 包
@@ -272,8 +271,8 @@ class EvidenceBuilder:
     def apply(self, conn: sqlite3.Connection, merge_result: EvidenceMergeResult) -> None:
         """purge + upsert 路由。"""
 
-    def persist(self, output_dir: Path) -> dict:
-        """导出 JSON。"""
+    def persist(self, output_dir: Path, merge_result: EvidenceMergeResult) -> Dict[str, str]:
+        """导出 JSON。从内存写入，不依赖 conn。"""
 ```
 
 ### 5.2 MergeGateEngine
@@ -328,6 +327,8 @@ class UnifiedContext:
 
 ### 5.5 mark_staleness
 
+位置：`domain/gate/staleness.py`（而非设计文档原定的 `domain/staleness_tracker.py`）
+
 ```python
 def mark_staleness(
     merged_gaps: list,
@@ -344,10 +345,11 @@ def mark_staleness(
 ```python
 @dataclass
 class EvidenceMergeResult:
-    to_upsert: List[ToolEvidenceCandidate]
-    to_purge: List[str]
-    target_files: List[str]
-    evidences_dir: Path
+    test_results_to_upsert: List[Dict[str, Any]]
+    coverage_reports_to_upsert: List[Dict[str, Any]]
+    files_to_purge: List[str]
+    skipped_evidence: List[Dict[str, Any]]
+    stats: Dict[str, int]  # test_count, coverage_count, skipped_count, purge_count
 ```
 
 ---

@@ -545,7 +545,10 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
         # gates_only 模式：门禁通过后直接返回，跳过后续阶段
         if gates_only:
-            print("Gates-only mode: integrity gates passed. Skipping analysis.")
+            print("Gates-only mode: integrity gates passed.")
+            print("  ✓ Rule 1 (Claim coverage): PASSED")
+            print("  ✓ Rule 2 (Ghost code detection): PASSED")
+            print("  ℹ Rule 3-8 (AC coverage, test results, compliance): Requires full analysis")
             return 0
 
         # ── 阶段 4：创建内存数据库 ────────────────────────────────────────
@@ -569,115 +572,23 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
 
         # ── 阶段 7：构建证据（EvidenceBuilder）────────────────────────────
         _t_build = time.perf_counter()
-
-        # TODO: 过度设计待优化 —— evidence_dicts 构建逻辑（~100 行）应迁移到 domain 层
-        # 原因：状态映射、数据翻译、顺序编号均为业务逻辑，不属于调度层。
-        # 优化方向：分析器直接查询数据库，消除 evidence_dicts 中间层。
-        # 见 docs/over_engineering_backlog.md #1-5
-        # 构建 evidence_dicts（供分析器和报告使用的证据元数据）
         try:
-            evidence_dicts = []
-
-            # Task 证据条目
-            from vibe_tracing.infra.config.enums import CoverageStatus
-            task_covers_map = {}
-            if ctx.task_result and ctx.task_result.tasks:
-                for task in ctx.task_result.tasks:
-                    covers = sorted(list(set(
-                        task.related_requirements + task.related_acceptance_criteria
-                    )))
-                    task_covers_map[task.task_id] = covers
-                    status_map = {
-                        "todo": CoverageStatus.MISSING.value,
-                        "in_progress": CoverageStatus.PARTIAL.value,
-                        "blocked": CoverageStatus.BLOCKED.value,
-                        "done": CoverageStatus.COVERED.value,
-                    }
-                    status = status_map.get(task.status, CoverageStatus.UNCLEAR.value)
-                    evidence_dicts.append({
-                        "source_type": "task",
-                        "source_path": "docs/task_list.json",
-                        "covers": covers,
-                        "status": status,
-                        "details": {
-                            "task_id": task.task_id,
-                            "title": task.title,
-                            "phase_id": task.phase_id,
-                            "priority": task.priority,
-                        },
-                    })
-
-            # Claim 证据条目
-            for claim in (ctx.claims_list or []):
-                covers = task_covers_map.get(claim.related_task, [])
-                evidence_dicts.append({
-                    "source_type": "claim",
-                    "source_path": ".vibetracing/claims/",
-                    "covers": covers,
-                    "status": CoverageStatus.UNCLEAR.value,
-                    "details": {
-                        "claim_id": claim.claim_id,
-                        "related_task": claim.related_task,
-                        "timestamp": claim.timestamp,
-                        "notes": getattr(claim, "notes", ""),
-                    },
-                })
-
-            # Code 证据条目（从 Claim 的 code_refs 提取）
-            for claim in (ctx.claims_list or []):
-                covers = task_covers_map.get(claim.related_task, [])
-                for code_ref in (claim.code_refs or []):
-                    evidence_dicts.append({
-                        "source_type": "code",
-                        "source_path": code_ref,
-                        "covers": covers,
-                        "status": CoverageStatus.COMPLIANT.value,
-                        "details": {
-                            "claim_id": claim.claim_id,
-                            "related_task": claim.related_task,
-                        },
-                    })
-
-            # 工具执行证据条目
-            for tc in (tool_evidence or []):
-                d = {
-                    "source_type": tc.source_type,
-                    "source_path": tc.source_path,
-                    "covers": tc.covers,
-                    "status": tc.status,
-                    "details": dict(tc.details) if tc.details else {},
-                }
-                if tc.tool_category:
-                    d["details"]["tool_category"] = tc.tool_category
-                if tc.command:
-                    d["details"]["command"] = tc.command
-                if tc.exit_code != 0 or tc.command:
-                    d["details"]["exit_code"] = tc.exit_code
-                if tc.stderr:
-                    d["details"]["stderr"] = tc.stderr
-                if tc.error_code:
-                    d["error_code"] = tc.error_code
-                evidence_dicts.append(d)
-
-            # TODO: 过度设计待优化 —— 顺序编号无意义，应用 source_path/nodeid 替代
-            # 原因：增删测试会导致编号漂移，产生 Git 冲突。source_path 是天然唯一标识。
-            # 见 docs/over_engineering_backlog.md #5
-            # 分配顺序证据 ID
-            for idx, ev in enumerate(evidence_dicts):
-                ev["evidence_id"] = f"EVIDENCE-VT-{idx + 1:03d}"
-
             # EvidenceBuilder：合并历史缓存 + 本次结果，导出拆分 JSON
             evidence_builder = EvidenceBuilder(project_root)
             merge_result = evidence_builder.merge(tool_evidence)
             evidence_builder.apply(conn, merge_result)
             evidence_builder.persist(output_dir / "evidences", merge_result)
 
-            # 证据元数据（供分析器和报告使用）
+            # 从数据库获取全链路数据作为证据元数据（替代 evidence_dicts 中间层）
+            from vibe_tracing.infra.db.queries import get_full_chain
+            full_chain = get_full_chain(conn)
+
+            # 证据元数据（供报告使用）
             evidence_meta = {
                 "run_id": f"RUN-{uuid.uuid4()}",
                 "project_id": f"PROJECT-{config_prefix}",
                 "scan_time": "",
-                "evidences": evidence_dicts,
+                "full_chain": full_chain,
             }
         except Exception as exc:
             print(f"Error building evidence: {exc}", file=sys.stderr)
@@ -685,10 +596,8 @@ def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_co
         vt_logger.info("phase_end", "Evidence built",
                        phase="build_evidence",
                        duration_ms=int((time.perf_counter() - _t_build) * 1000),
-                       evidences_count=len(evidence_meta.get("evidences", [])),
+                       full_chain_count=len(evidence_meta.get("full_chain", [])),
                        )
-
-        evidence_list = evidence_meta.get("evidences", [])
 
         staged_files = _get_staged_files(project_root)
 

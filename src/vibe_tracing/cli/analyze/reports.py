@@ -190,8 +190,15 @@ def _render_dashboard(
                 coverage_reports_data = json.loads(cr_path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 pass
+        # Build evidence index from full_chain data
+        evidence_index = {
+            "run_id": evidence_meta.get("run_id"),
+            "project_id": evidence_meta.get("project_id"),
+            "scan_time": evidence_meta.get("scan_time"),
+            "full_chain": evidence_meta.get("full_chain", []),
+        }
         renderer.render(
-            evidence_index=evidence_meta,
+            evidence_index=evidence_index,
             traceability_report=report_doc,
             output_path=dashboard_path,
             prd_requirements=prd_reqs_serialized,

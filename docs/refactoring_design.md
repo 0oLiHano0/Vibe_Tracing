@@ -241,8 +241,8 @@ infra/
 └── tools/                               # 工具执行
     ├── resolver.py                      # ToolResolver（工具可用性检测）
     ├── candidate.py                     # ToolEvidenceCandidate（数据模型）
-    ├── parsers.py                       # 输出解析器（纯函数，未来重构目标）
-    └── executor.py                      # ToolExecutionEngine（工具执行引擎）
+    ├── parsers.py                       # 输出解析器（6个纯函数：parse_pytest_output, parse_pytest_json, parse_ruff_output, parse_mypy_output, parse_bandit_output, parse_coverage_json_output）
+    └── executor.py                      # ToolExecutionEngine（工具执行引擎，调用 parsers.py）
 ```
 
 ### 4.3 依赖方向

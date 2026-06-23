@@ -19,6 +19,7 @@ import pytest
 
 from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode
 from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate, ToolExecutionEngine
+from vibe_tracing.infra.tools.parsers import parse_pytest_json, parse_coverage_json_output
 
 
 # ---------------------------------------------------------------------------
@@ -1061,13 +1062,13 @@ class TestPytestJsonParsingEdgeCases:
     def test_tests_data_not_a_list(self, engine: ToolExecutionEngine) -> None:
         """covers: _parse_pytest_json tests_data not list (line 378)"""
         data = {"tests": "not_a_list"}
-        result = engine._parse_pytest_json(data, "cmd", "path")
+        result = parse_pytest_json(data, "cmd", "path")
         assert result == []
 
     def test_test_entry_not_a_dict(self, engine: ToolExecutionEngine) -> None:
         """covers: _parse_pytest_json test not dict (line 382)"""
         data = {"tests": ["string", 123]}
-        result = engine._parse_pytest_json(data, "cmd", "path")
+        result = parse_pytest_json(data, "cmd", "path")
         assert len(result) == 0
 
     def test_metadata_docstring_fallback(self, engine: ToolExecutionEngine) -> None:
@@ -1079,7 +1080,7 @@ class TestPytestJsonParsingEdgeCases:
                 "metadata": {"docstring": "covers: AC-VT-999-01"},
             }]
         }
-        result = engine._parse_pytest_json(data, "cmd", "path")
+        result = parse_pytest_json(data, "cmd", "path", extract_covers=engine._extract_covers_from_docstring)
         assert len(result) == 1
         assert result[0].covers == ["AC-VT-999-01"]
 
@@ -1091,13 +1092,13 @@ class TestPytestJsonParsingEdgeCases:
                 "outcome": "skipped",
             }]
         }
-        result = engine._parse_pytest_json(data, "cmd", "path")
+        result = parse_pytest_json(data, "cmd", "path")
         assert len(result) == 1
         assert result[0].status == CoverageStatus.UNCLEAR.value
 
     def test_non_dict_data_returns_empty(self, engine: ToolExecutionEngine) -> None:
         """covers: _parse_pytest_json data not dict (line 373)"""
-        result = engine._parse_pytest_json("not_a_dict", "cmd", "path")
+        result = parse_pytest_json("not_a_dict", "cmd", "path")
         assert result == []
 
 
@@ -1727,7 +1728,7 @@ class TestParseCoverageJsonOutput:
                 },
             }
         }
-        candidates = engine._parse_coverage_json_output(
+        candidates = parse_coverage_json_output(
             stdout=json.dumps(coverage_data), stderr="", exit_code=0,
             command="coverage json", path="src/",
         )
@@ -1741,7 +1742,7 @@ class TestParseCoverageJsonOutput:
 
     def test_malformed_json_returns_blocked(self, engine: ToolExecutionEngine) -> None:
         """covers: _parse_coverage_json_output JSONDecodeError"""
-        candidates = engine._parse_coverage_json_output(
+        candidates = parse_coverage_json_output(
             stdout="not json", stderr="", exit_code=0,
             command="coverage json", path="src/",
         )
@@ -1751,7 +1752,7 @@ class TestParseCoverageJsonOutput:
 
     def test_missing_files_key_returns_blocked(self, engine: ToolExecutionEngine) -> None:
         """covers: _parse_coverage_json_output missing files key"""
-        candidates = engine._parse_coverage_json_output(
+        candidates = parse_coverage_json_output(
             stdout=json.dumps({"meta": {}}), stderr="", exit_code=0,
             command="coverage json", path="src/",
         )
@@ -1768,7 +1769,7 @@ class TestParseCoverageJsonOutput:
                 },
             }
         }
-        candidates = engine._parse_coverage_json_output(
+        candidates = parse_coverage_json_output(
             stdout=json.dumps(coverage_data), stderr="", exit_code=0,
             command="coverage json", path="src/",
         )
@@ -1782,7 +1783,7 @@ class TestParseCoverageJsonOutput:
                 "src/empty.py": {"num_statements": 0},
             }
         }
-        candidates = engine._parse_coverage_json_output(
+        candidates = parse_coverage_json_output(
             stdout=json.dumps(coverage_data), stderr="", exit_code=0,
             command="coverage json", path="src/",
         )
@@ -1796,7 +1797,7 @@ class TestParseCoverageJsonOutput:
                 "src/good.py": {"summary": {"percent_covered": 70.0, "num_statements": 5}},
             }
         }
-        candidates = engine._parse_coverage_json_output(
+        candidates = parse_coverage_json_output(
             stdout=json.dumps(coverage_data), stderr="", exit_code=0,
             command="coverage json", path="src/",
         )

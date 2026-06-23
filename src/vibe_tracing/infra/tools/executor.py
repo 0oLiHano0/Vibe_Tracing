@@ -24,6 +24,14 @@ from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
 from vibe_tracing.infra.logging.logger import OperationalLogger
 from vibe_tracing.infra.tools.resolver import ToolResolver
 from vibe_tracing.infra.tools.candidate import ToolEvidenceCandidate
+from vibe_tracing.infra.tools.parsers import (
+    parse_pytest_output,
+    parse_pytest_json,
+    parse_ruff_output,
+    parse_mypy_output,
+    parse_bandit_output,
+    parse_coverage_json_output,
+)
 
 
 def _safe_format(template: str, **kwargs: Any) -> str:
@@ -240,427 +248,13 @@ class ToolExecutionEngine:
             return -1, "", msg, "os_error"
 
     # ------------------------------------------------------------------
-    # Output parsers
+    # Public execution API
     # ------------------------------------------------------------------
 
     # Exit codes that indicate "tool cannot handle this file" rather than real
     # failures.  When one of these is returned we produce no evidence at all.
     PYTEST_SKIP_EXIT_CODES = {2, 5}  # 2 = usage error, 5 = no tests collected
     MYPY_SKIP_EXIT_CODES = {2}  # 2 = usage error
-
-    def _parse_pytest_output(
-        self, stdout: str, stderr: str, exit_code: int, command: str, path: str
-    ) -> List[ToolEvidenceCandidate]:
-        """Parse pytest --json-report output.
-
-        Exit code classification:
-        - 0: success
-        - 1: test failure (real, record as evidence)
-        - 2: usage error (skip, not a real failure)
-        - 5: no tests collected (skip, not a real failure)
-        """
-        # Return a "skipped" evidence candidate for exit codes that indicate
-        # "tool cannot handle this file" rather than real failures.
-        if exit_code in self.PYTEST_SKIP_EXIT_CODES:
-            reason = "no tests collected" if exit_code == 5 else "usage error"
-            error_code = (
-                ErrorCode.TOOL_NO_TESTS_COLLECTED.value if exit_code == 5
-                else ErrorCode.TOOL_USAGE_ERROR.value
-            )
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.SKIPPED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=f"pytest {reason} (exit code {exit_code})",
-                    error_code=error_code,
-                    details={"skip_reason": reason},
-                )
-            ]
-
-        # Check for execution failure (not test failure)
-        if exit_code not in (0, 1):
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=stderr or f"Pytest failed with exit code {exit_code}",
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                )
-            ]
-
-        # Try to parse the JSON report from the output file
-        # The --json-report-file flag writes to a file, so we need to read it
-        json_match = re.search(r"--json-report-file=(\S+)", command)
-        if json_match:
-            report_path = Path(json_match.group(1))
-            if not report_path.is_absolute():
-                report_path = self.project_root / report_path
-            if report_path.exists():
-                try:
-                    with report_path.open("r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    return self._parse_pytest_json(data, command, path)
-                except (json.JSONDecodeError, OSError):
-                    OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse pytest JSON report file", tool=command, path=str(report_path))
-
-        # Fallback: try parsing stdout as JSON
-        try:
-            data = json.loads(stdout)
-            return self._parse_pytest_json(data, command, path)
-        except (json.JSONDecodeError, TypeError):
-            OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse pytest stdout as JSON", tool=command, path=path)
-
-        # Last resort: return a single candidate based on exit code
-        # (exit_code is guaranteed to be 0 or 1 at this point due to early returns)
-        status = CoverageStatus.COVERED.value if exit_code == 0 else CoverageStatus.VIOLATED.value
-
-        return [
-            ToolEvidenceCandidate(
-                source_type="test",
-                source_path=path,
-                covers=[],
-                status=status,
-                command=command,
-                exit_code=exit_code,
-                stderr=stderr,
-                details={"outcome": "passed" if exit_code == 0 else "failed"},
-            )
-        ]
-
-    def _parse_pytest_json(
-        self, data: Any, command: str, path: str
-    ) -> List[ToolEvidenceCandidate]:
-        """Parse a pytest JSON report dict into candidates."""
-        candidates: List[ToolEvidenceCandidate] = []
-        if not isinstance(data, dict):
-            return candidates
-
-        tests_data = data.get("tests", [])
-        if not isinstance(tests_data, list):
-            return candidates
-
-        for test in tests_data:
-            if not isinstance(test, dict):
-                continue
-            nodeid = test.get("nodeid", "")
-            outcome = test.get("outcome", "")
-            docstring = test.get("docstring")
-
-            if (
-                docstring is None
-                and "metadata" in test
-                and isinstance(test["metadata"], dict)
-            ):
-                docstring = test["metadata"].get("docstring")
-
-            if docstring is None and nodeid:
-                docstring = self._get_test_docstring(nodeid)
-
-            covers = self._extract_covers_from_docstring(docstring)
-
-            if outcome == "passed":
-                status = CoverageStatus.COVERED.value
-            elif outcome in ("failed", "error"):
-                status = CoverageStatus.VIOLATED.value
-            else:
-                status = CoverageStatus.UNCLEAR.value
-
-            candidates.append(
-                ToolEvidenceCandidate(
-                    source_type="test",
-                    source_path=nodeid or path,
-                    covers=covers,
-                    status=status,
-                    command=command,
-                    exit_code=0,
-                    details={"nodeid": nodeid, "outcome": outcome},
-                )
-            )
-
-        return candidates
-
-    def _parse_ruff_output(
-        self, stdout: str, stderr: str, exit_code: int, command: str, path: str
-    ) -> List[ToolEvidenceCandidate]:
-        """Parse ruff check --output-format=json output."""
-        # Ruff exits with 0 (clean) or 1 (violations found); other codes = crash
-        if exit_code not in (0, 1):
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=stderr or f"Ruff failed with exit code {exit_code}",
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                )
-            ]
-
-        violations: List[Any] = []
-        try:
-            data = json.loads(stdout)
-            if isinstance(data, list):
-                violations = data
-            elif isinstance(data, dict):
-                for key in ("violations", "results", "issues"):
-                    if isinstance(data.get(key), list):
-                        violations = data[key]
-                        break
-        except (json.JSONDecodeError, TypeError):
-            OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse ruff output as JSON", tool=command, path=path)
-
-        status = (
-            CoverageStatus.COMPLIANT.value
-            if not violations
-            else CoverageStatus.VIOLATED.value
-        )
-
-        return [
-            ToolEvidenceCandidate(
-                source_type="tool",
-                source_path=path,
-                covers=[],
-                status=status,
-                command=command,
-                exit_code=exit_code,
-                details={"violations_count": len(violations)},
-            )
-        ]
-
-    def _parse_mypy_output(
-        self, stdout: str, stderr: str, exit_code: int, command: str, path: str
-    ) -> List[ToolEvidenceCandidate]:
-        """Parse mypy output.
-
-        Exit code classification:
-        - 0: success
-        - 1: type errors found (real, record as evidence)
-        - 2: usage error (skip, not a real failure)
-        """
-        # Return a "skipped" evidence candidate for exit codes that indicate
-        # "tool cannot handle this file" rather than real failures.
-        if exit_code in self.MYPY_SKIP_EXIT_CODES:
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.SKIPPED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=f"mypy usage error (exit code {exit_code})",
-                    error_code=ErrorCode.TOOL_USAGE_ERROR.value,
-                    details={"skip_reason": "usage error"},
-                )
-            ]
-
-        if exit_code not in (0, 1):
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=stderr or f"Mypy failed with exit code {exit_code}",
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                )
-            ]
-
-        errors_count = 0
-        # Try JSON report
-        json_match = re.search(r"--json-report\s+(\S+)", command)
-        if json_match:
-            report_path = Path(json_match.group(1))
-            if not report_path.is_absolute():
-                report_path = self.project_root / report_path
-            if report_path.exists():
-                try:
-                    with report_path.open("r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    if isinstance(data, dict):
-                        errors_count = data.get("summary", {}).get("error_count", 0)
-                except (json.JSONDecodeError, OSError):
-                    OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse mypy JSON report", tool=command, path=str(report_path))
-
-        # Fallback: count error lines in stdout
-        if errors_count == 0 and exit_code == 1:
-            for line in stdout.splitlines():
-                if ": error:" in line:
-                    errors_count += 1
-
-        status = (
-            CoverageStatus.COMPLIANT.value
-            if errors_count == 0
-            else CoverageStatus.VIOLATED.value
-        )
-
-        return [
-            ToolEvidenceCandidate(
-                source_type="tool",
-                source_path=path,
-                covers=[],
-                status=status,
-                command=command,
-                exit_code=exit_code,
-                details={"errors_count": errors_count},
-            )
-        ]
-
-    def _parse_bandit_output(
-        self, stdout: str, stderr: str, exit_code: int, command: str, path: str
-    ) -> List[ToolEvidenceCandidate]:
-        """Parse bandit -f json output."""
-        if exit_code not in (0, 1):
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=stderr or f"Bandit failed with exit code {exit_code}",
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                )
-            ]
-
-        results: List[Any] = []
-
-        # Try reading the output file
-        json_match = re.search(r"-o\s+(\S+)", command)
-        if json_match:
-            output_path = Path(json_match.group(1))
-            if not output_path.is_absolute():
-                output_path = self.project_root / output_path
-            if output_path.exists():
-                try:
-                    with output_path.open("r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    if isinstance(data, dict):
-                        results = data.get("results", [])
-                        if not isinstance(results, list):
-                            results = []
-                except (json.JSONDecodeError, OSError):
-                    OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse bandit output file", tool=command, path=str(output_path))
-
-        # Fallback: try parsing stdout
-        if not results:
-            try:
-                data = json.loads(stdout)
-                if isinstance(data, dict):
-                    results = data.get("results", [])
-                    if not isinstance(results, list):
-                        results = []
-                elif isinstance(data, list):
-                    results = data
-            except (json.JSONDecodeError, TypeError):
-                OperationalLogger.get().debug("tool_output_parse_failed", "Could not parse bandit stdout as JSON", tool=command, path=path)
-
-        status = (
-            CoverageStatus.COMPLIANT.value
-            if not results
-            else CoverageStatus.VIOLATED.value
-        )
-
-        return [
-            ToolEvidenceCandidate(
-                source_type="tool",
-                source_path=path,
-                covers=[],
-                status=status,
-                command=command,
-                exit_code=exit_code,
-                details={"results_count": len(results)},
-            )
-        ]
-
-    def _parse_coverage_json_output(
-        self, stdout: str, stderr: str, exit_code: int, command: str, path: str
-    ) -> List[ToolEvidenceCandidate]:
-        """Parse coverage JSON output into evidence candidates.
-
-        Expects the ``coverage.json`` format produced by ``coverage json``::
-
-            {"files": {"/abs/path/to/file.py": {"summary": {"percent_covered": X, "num_statements": Y}}}}
-
-        Files whose ``percent_covered`` is ``None`` are skipped.
-        """
-        try:
-            data = json.loads(stdout)
-        except (json.JSONDecodeError, TypeError):
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=stderr or "Failed to parse coverage JSON output",
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                )
-            ]
-
-        files = data.get("files") if isinstance(data, dict) else None
-        if not isinstance(files, dict):
-            return [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=stderr or "Coverage JSON missing 'files' key",
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                )
-            ]
-
-        candidates: List[ToolEvidenceCandidate] = []
-        for file_path, file_data in files.items():
-            if not isinstance(file_data, dict):
-                continue
-            summary = file_data.get("summary", file_data)
-            if not isinstance(summary, dict):
-                continue
-            percent = summary.get("percent_covered")
-            num_stmts = summary.get("num_statements", 0)
-            if percent is None:
-                continue
-            percent_f = float(percent)
-            status = CoverageStatus.COMPLIANT.value  # Individual file parse result
-            candidates.append(
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=file_path,
-                    covers=[],
-                    status=status,
-                    command=command,
-                    exit_code=exit_code,
-                    details={
-                        "percent_covered": percent_f,
-                        "num_statements": int(num_stmts),
-                    },
-                )
-            )
-
-        return candidates
-
-    # ------------------------------------------------------------------
-    # Public execution API
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _stamp_category(
@@ -828,15 +422,25 @@ class ToolExecutionEngine:
         output_format = tool_config.get("output_format", "")
 
         if output_format == "pytest_json":
-            candidates = self._parse_pytest_output(stdout, stderr, exit_code, command, path)
+            candidates = parse_pytest_output(
+                stdout, stderr, exit_code, command, path,
+                self.project_root, self.PYTEST_SKIP_EXIT_CODES,
+                self._get_test_docstring, self._extract_covers_from_docstring,
+            )
         elif output_format == "ruff_json":
-            candidates = self._parse_ruff_output(stdout, stderr, exit_code, command, path)
+            candidates = parse_ruff_output(stdout, stderr, exit_code, command, path)
         elif output_format == "mypy_json":
-            candidates = self._parse_mypy_output(stdout, stderr, exit_code, command, path)
+            candidates = parse_mypy_output(
+                stdout, stderr, exit_code, command, path,
+                self.project_root, self.MYPY_SKIP_EXIT_CODES,
+            )
         elif output_format == "bandit_json":
-            candidates = self._parse_bandit_output(stdout, stderr, exit_code, command, path)
+            candidates = parse_bandit_output(
+                stdout, stderr, exit_code, command, path,
+                self.project_root,
+            )
         elif output_format == "coverage_json":
-            candidates = self._parse_coverage_json_output(stdout, stderr, exit_code, command, path)
+            candidates = parse_coverage_json_output(stdout, stderr, exit_code, command, path)
         else:
             hint = resolve_hint(_tool_hints.get("unsupported_output_format", {}), "level1")
             msg = _safe_format(hint, output_format=output_format) if hint else f"Unsupported output format: {output_format}"

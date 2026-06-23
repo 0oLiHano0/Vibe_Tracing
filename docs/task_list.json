@@ -4651,6 +4651,55 @@
         "保持文档风格一致",
         "确保包结构图准确反映实际目录"
       ]
+    },
+    {
+      "task_id": "TASK-VT-085",
+      "phase_id": "PHASE-VT-011",
+      "title": "解析方法迁移：executor.py 调用 parsers.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 executor.py 中的解析方法替换为调用 parsers.py 中的纯函数，消除代码重复。",
+      "atomic_scope": "更新 parsers.py 中的函数签名以接受必要上下文；修改 executor.py 中的解析方法为调用 parsers.py；删除 executor.py 中的重复解析方法；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改解析逻辑本身"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "更新后的 infra/tools/parsers.py",
+        "更新后的 infra/tools/executor.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-085-01",
+          "description": "executor.py 中不再有 _parse_* 方法"
+        },
+        {
+          "dod_id": "DOD-VT-085-02",
+          "description": "executor.py 中的解析逻辑调用 parsers.py 中的函数"
+        },
+        {
+          "dod_id": "DOD-VT-085-03",
+          "description": "全量测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "将 self.project_root、skip_exit_codes 等作为参数传递",
+        "将 self._get_test_docstring、self._extract_covers_from_docstring 作为回调函数传递",
+        "保持解析逻辑不变，只改变调用方式"
+      ]
     }
   ]
 }

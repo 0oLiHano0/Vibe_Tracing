@@ -7,8 +7,8 @@ Each test function declares its AC/DoD coverage in its docstring.
 from pathlib import Path
 import pytest
 
-from vibe_tracing.domain.loader.claim_loader import ClaimLoader
-from vibe_tracing.domain.loader.task_loader import TaskListLoadResult, Task
+from vibe_tracing.infra.loader.claim_loader import ClaimLoader
+from vibe_tracing.infra.loader.task_loader import TaskListLoadResult, Task
 
 DOCS_DIR = Path(__file__).parent.parent / "docs"
 VIBETRACING_DIR = Path(__file__).parent.parent / ".vibetracing"
@@ -152,7 +152,7 @@ def test_validate_real_files_load(claim_loader):
     if not claims_path.exists() or not task_list_path.exists():
         pytest.skip("Real standard input files do not exist.")
 
-    from vibe_tracing.domain.loader.task_loader import TaskLoader
+    from vibe_tracing.infra.loader.task_loader import TaskLoader
 
     task_loader_inst = TaskLoader()
     task_res = task_loader_inst.load_and_validate(task_list_path)

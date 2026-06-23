@@ -67,6 +67,11 @@
       "phase_id": "PHASE-VT-010",
       "name": "vt analyze 流水线重设计与重构",
       "goal": "重构分析流水线，以内存 SQLite 作为核心状态底座，消除 evidence_dicts，并将 analysis 逻辑下沉为 SQL 查询，实现高内聚、低耦合的线性流水线调度。"
+    },
+    {
+      "phase_id": "PHASE-VT-011",
+      "name": "架构层次修正：I/O 模块下沉至 infra",
+      "goal": "将 loader 和 report 等 I/O 密集型模块从 domain 层移至 infra 层，确保 domain 层只包含纯业务逻辑。"
     }
   ],
   "tasks": [
@@ -4226,6 +4231,174 @@
           "dod_id": "DOD-VT-076-07",
           "description": "全量测试通过，无 ImportError 阻断"
         }
+      ]
+    },
+    {
+      "task_id": "TASK-VT-077",
+      "phase_id": "PHASE-VT-011",
+      "title": "loader 包从 domain 移至 infra",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 domain/loader/ 包移至 infra/loader/，因为 loader 涉及文件 I/O 和数据解析，属于基础设施层职责。",
+      "atomic_scope": "移动 domain/loader/ 目录到 infra/loader/；更新 domain/__init__.py 和 infra/__init__.py 的导出；修复所有 import 语句；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 loader 内部逻辑",
+        "不修改 report 包"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "infra/loader/ 包（raw_input.py, prd_parser.py, task_loader.py, claim_loader.py）",
+        "更新后的 domain/__init__.py",
+        "更新后的 infra/__init__.py",
+        "修复后的 import 语句"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-077-01",
+          "description": "domain/loader/ 目录不存在，infra/loader/ 目录存在且包含所有 loader 文件"
+        },
+        {
+          "dod_id": "DOD-VT-077-02",
+          "description": "domain/__init__.py 不再导出 loader 相关类"
+        },
+        {
+          "dod_id": "DOD-VT-077-03",
+          "description": "infra/__init__.py 正确导出 loader 相关类"
+        },
+        {
+          "dod_id": "DOD-VT-077-04",
+          "description": "所有 import 语句从 vibe_tracing.domain.loader 改为 vibe_tracing.infra.loader"
+        },
+        {
+          "dod_id": "DOD-VT-077-05",
+          "description": "全量测试通过，无 ImportError"
+        }
+      ],
+      "ai_coding_guidance": [
+        "移动文件后立即更新 __init__.py 导出",
+        "使用 sed 批量替换 import 路径",
+        "运行 pytest 验证无回归"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-078",
+      "phase_id": "PHASE-VT-011",
+      "title": "report 包从 domain 移至 infra",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 domain/report/ 包移至 infra/report/，因为 report 涉及文件写入和 HTML 渲染，属于基础设施层职责。",
+      "atomic_scope": "移动 domain/report/ 目录到 infra/report/；更新 domain/__init__.py 和 infra/__init__.py 的导出；修复所有 import 语句；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 report 内部逻辑",
+        "不修改 loader 包"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-077"
+      ],
+      "expected_deliverables": [
+        "infra/report/ 包（traceability.py, dashboard.py, reflection.py）",
+        "更新后的 domain/__init__.py",
+        "更新后的 infra/__init__.py",
+        "修复后的 import 语句"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-078-01",
+          "description": "domain/report/ 目录不存在，infra/report/ 目录存在且包含所有 report 文件"
+        },
+        {
+          "dod_id": "DOD-VT-078-02",
+          "description": "domain/__init__.py 不再导出 report 相关类"
+        },
+        {
+          "dod_id": "DOD-VT-078-03",
+          "description": "infra/__init__.py 正确导出 report 相关类"
+        },
+        {
+          "dod_id": "DOD-VT-078-04",
+          "description": "所有 import 语句从 vibe_tracing.domain.report 改为 vibe_tracing.infra.report"
+        },
+        {
+          "dod_id": "DOD-VT-078-05",
+          "description": "全量测试通过，无 ImportError"
+        }
+      ],
+      "ai_coding_guidance": [
+        "移动文件后立即更新 __init__.py 导出",
+        "使用 sed 批量替换 import 路径",
+        "运行 pytest 验证无回归"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-079",
+      "phase_id": "PHASE-VT-011",
+      "title": "更新设计文档与架构约束",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新 refactoring_design.md 和 architecture_constraints.json，反映 loader 和 report 移至 infra 的架构变更。",
+      "atomic_scope": "更新设计文档中的包结构图；更新架构约束中的模块边界定义；确保文档与代码一致。",
+      "out_of_scope": [
+        "不修改代码逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-078"
+      ],
+      "expected_deliverables": [
+        "更新后的 refactoring_design.md",
+        "更新后的 architecture_constraints.json"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-079-01",
+          "description": "refactoring_design.md 中的包结构图反映 loader 和 report 在 infra 层"
+        },
+        {
+          "dod_id": "DOD-VT-079-02",
+          "description": "architecture_constraints.json 中的模块边界定义与代码一致"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持文档风格一致",
+        "确保包结构图准确反映实际目录"
       ]
     }
   ]

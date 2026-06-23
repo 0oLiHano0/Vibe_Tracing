@@ -183,54 +183,55 @@ run_analyze(project_root, ...)
 
 ## 4. 目标包结构
 
-### 4.1 Domain 包
+### 4.1 Domain 包（纯业务逻辑，无 I/O）
 
 ```
 domain/
-├── evidence/                            # 证据构建与工具执行
+├── evidence/                            # 证据构建与合并（纯内存操作）
 │   ├── builder.py                       # EvidenceBuilder
 │   └── merge_result.py                  # EvidenceMergeResult
 │
-├── gate/                                # 门禁判定引擎
+├── gate/                                # 门禁判定引擎（纯规则）
 │   ├── engine.py                        # MergeGateEngine（纯规则判定，不持有 conn）
 │   └── staleness.py                     # mark_staleness 纯函数
 │
-├── compliance/                          # 合规检查
+├── compliance/                          # 合规检查（纯规则）
 │   ├── checker.py                       # ArchitectureComplianceChecker
 │   └── prd_arch_validator.py            # PRD↔Arch 映射校验
 │
-├── risk/                                # 风险评估
+├── risk/                                # 风险评估（纯规则）
 │   └── advisor.py                       # RiskAdvisor
 │
-├── loader/                              # 数据加载
-│   ├── raw_input.py                     # RawInputLoader
-│   ├── prd_parser.py                    # PrdParser, PrdParseResult
-│   ├── task_loader.py                   # TaskLoader, TaskListLoadResult
-│   └── claim_loader.py                  # ClaimLoader, ClaimListLoadResult
-│
-├── report/                              # 报告生成
-│   ├── traceability.py                  # TraceabilityReportBuilder
-│   ├── dashboard.py                     # DashboardRenderer
-│   └── reflection.py                    # render_reflection_prompts
-│
-├── governance/                          # 治理
+├── governance/                          # 治理规则（纯规则）
 │   ├── ghost_code.py                    # GhostCodeReconciler
 │   └── change_proposal.py              # ArchitectureChangeProposalEngine
 │
-└── context.py                           # UnifiedContext（顶层，不含 tool_evidence）
+└── context.py                           # UnifiedContext（数据模型）
 ```
 
-### 4.2 Infra 包
+### 4.2 Infra 包（基础设施，含 I/O）
 
 ```
 infra/
-├── db/                                  # 已完成拆分
+├── db/                                  # 数据库操作
 │   ├── schema.py                        # init_in_memory_db
 │   ├── loaders.py                       # load_tasks, load_claims, load_staged_files, load_initial_cache, load_prd
 │   ├── queries.py                       # check_*, get_full_chain
 │   └── exports.py                       # upsert_*, purge_stale_cache
 │
-├── validation/                          # 校验（不变）
+├── validation/                          # 校验（Schema 校验、输入检查）
+│
+├── loader/                              # 数据加载（文件 I/O）
+│   ├── raw_input.py                     # RawInputLoader
+│   ├── prd_parser.py                    # PrdParser, PrdParseResult
+│   ├── task_loader.py                   # TaskLoader, TaskListLoadResult
+│   └── claim_loader.py                  # ClaimLoader, ClaimListLoadResult
+│
+├── report/                              # 报告生成（文件写入、HTML 渲染）
+│   ├── traceability.py                  # TraceabilityReportBuilder
+│   ├── dashboard.py                     # DashboardRenderer
+│   └── reflection.py                    # render_reflection_prompts
+│
 ├── logging/                             # OperationalLogger
 ├── git/                                 # git_utils
 ├── config/                              # enums, hints
@@ -245,14 +246,12 @@ CLI → Domain → Infra
 
 域内依赖：
 ```
-loader/          → 无域内依赖
 evidence/        → 无域内依赖
 gate/            → 无域内依赖
 compliance/      → 无域内依赖
 risk/            → 无域内依赖
-report/          → 无域内依赖
-governance/      → loader/
-context          → loader/, gate/, compliance/, risk/, report/
+governance/      → infra/loader/（通过 context 间接依赖）
+context          → infra/loader/, gate/, compliance/, risk/
 ```
 
 ---

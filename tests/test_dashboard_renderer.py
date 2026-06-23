@@ -4,7 +4,7 @@ Unit tests for the Dashboard Renderer (TASK-VT-019).
 
 import json
 from pathlib import Path
-from vibe_tracing.domain.report.dashboard import DashboardRenderer
+from vibe_tracing.infra.report.dashboard import DashboardRenderer
 import pytest
 
 

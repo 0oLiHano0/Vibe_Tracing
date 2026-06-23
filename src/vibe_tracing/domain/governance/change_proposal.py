@@ -47,7 +47,7 @@ from typing import Any, Dict, List, Optional
 
 from vibe_tracing.infra import validation as ids
 from vibe_tracing.infra.git.utils import git_show
-from vibe_tracing.domain.loader.raw_input import RawInputLoader
+from vibe_tracing.infra.loader.raw_input import RawInputLoader
 
 
 class ArchitectureChangeProposalEngine:

@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from vibe_tracing.domain.loader.task_loader import TaskListLoadResult
+from vibe_tracing.infra.loader.task_loader import TaskListLoadResult
 
 
 @dataclass

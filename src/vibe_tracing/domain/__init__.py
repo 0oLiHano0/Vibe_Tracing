@@ -5,10 +5,10 @@ This package contains the core business logic organized by responsibility:
   - gate/: Gate evaluation engine and staleness tracking
   - compliance/: Architecture compliance checking
   - risk/: Risk advisory
-  - loader/: Data loading (PRD, tasks, claims)
-  - report/: Report generation (traceability, dashboard, reflection)
   - governance/: Governance (ghost code reconciliation)
   - context.py: UnifiedContext domain model
+
+Note: loader/ and report/ have been moved to infra/ as they involve I/O operations.
 """
 
 # Re-export from subpackages for backward compatibility
@@ -26,24 +26,6 @@ from vibe_tracing.domain.compliance import ArchitectureComplianceChecker, valida
 # Risk
 from vibe_tracing.domain.risk import RiskAdvisor
 
-# Loader
-from vibe_tracing.domain.loader import (
-    RawInputLoader,
-    PrdParser,
-    PrdParseResult,
-    TaskLoader,
-    TaskListLoadResult,
-    ClaimLoader,
-    ClaimListLoadResult,
-)
-
-# Report
-from vibe_tracing.domain.report import (
-    TraceabilityReportBuilder,
-    DashboardRenderer,
-    render_reflection_prompts,
-)
-
 # Governance
 from vibe_tracing.domain.governance import GhostCodeReconciler
 
@@ -56,15 +38,5 @@ __all__ = [
     "ArchitectureComplianceChecker",
     "validate_prd_architecture_mapping",
     "RiskAdvisor",
-    "RawInputLoader",
-    "PrdParser",
-    "PrdParseResult",
-    "TaskLoader",
-    "TaskListLoadResult",
-    "ClaimLoader",
-    "ClaimListLoadResult",
-    "TraceabilityReportBuilder",
-    "DashboardRenderer",
-    "render_reflection_prompts",
     "GhostCodeReconciler",
 ]

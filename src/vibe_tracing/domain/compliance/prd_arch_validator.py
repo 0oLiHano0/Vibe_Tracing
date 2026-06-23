@@ -125,7 +125,7 @@ def validate_prd_architecture_mapping_from_path(
         PathValidationResult with exit_code (0=pass, 1=fail),
         optional message for printing, and the underlying MappingResult.
     """
-    from vibe_tracing.domain.loader.prd_parser import PrdParser
+    from vibe_tracing.infra.loader.prd_parser import PrdParser
 
     prd_path = project_root / "docs" / "prd.md"
     if not prd_path.exists():

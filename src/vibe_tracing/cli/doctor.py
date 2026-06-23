@@ -107,7 +107,7 @@ def run_doctor(project_root: Path) -> int:
     _t = time.perf_counter()
     if prd_path.exists():
         try:
-            from vibe_tracing.domain.loader.prd_parser import PrdParser
+            from vibe_tracing.infra.loader.prd_parser import PrdParser
             prd_parser = PrdParser()
             prd_res = prd_parser.parse_file(prd_path)
             for req in prd_res.requirements:

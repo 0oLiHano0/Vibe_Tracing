@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 from vibe_tracing.infra.config.enums import ErrorCode
-from vibe_tracing.domain.loader.raw_input import RawInputManifest, RawInputLoader
+from vibe_tracing.infra.loader.raw_input import RawInputManifest, RawInputLoader
 
 # ---------------------------------------------------------------------------
 # Helpers

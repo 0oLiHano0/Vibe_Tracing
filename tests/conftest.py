@@ -14,7 +14,7 @@ def _patch_loader():
     by scanning .vibetracing/tool_reports/ (build() expects this attribute
     but RawInputManifest does not define it).
     """
-    from vibe_tracing.domain.loader.raw_input import RawInputLoader
+    from vibe_tracing.infra.loader.raw_input import RawInputLoader
 
     original_load = RawInputLoader.load
 

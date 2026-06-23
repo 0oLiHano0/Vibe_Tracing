@@ -23,7 +23,7 @@ def _build_report_document(
     project_root: Path,
 ) -> dict:
     """Assemble report document, build traceability report with metadata, and return it."""
-    from vibe_tracing.domain.report.traceability import TraceabilityReportBuilder
+    from vibe_tracing.infra.report.traceability import TraceabilityReportBuilder
 
     gate_decision = gate_res["gate_decision"]
 
@@ -139,7 +139,7 @@ def _render_dashboard(
     project_root: Path,
 ) -> None:
     """Render the dashboard HTML file."""
-    from vibe_tracing.domain.report.dashboard import DashboardRenderer
+    from vibe_tracing.infra.report.dashboard import DashboardRenderer
 
     manifest = ctx.manifest
     prd_res = ctx.prd

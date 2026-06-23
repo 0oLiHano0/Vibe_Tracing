@@ -8,10 +8,10 @@ import sys
 from pathlib import Path
 from typing import Optional, Set, Tuple
 
-from vibe_tracing.domain.loader.raw_input import RawInputLoader
-from vibe_tracing.domain.loader.prd_parser import PrdParser
-from vibe_tracing.domain.loader.task_loader import TaskLoader
-from vibe_tracing.domain.loader.claim_loader import ClaimLoader
+from vibe_tracing.infra.loader.raw_input import RawInputLoader
+from vibe_tracing.infra.loader.prd_parser import PrdParser
+from vibe_tracing.infra.loader.task_loader import TaskLoader
+from vibe_tracing.infra.loader.claim_loader import ClaimLoader
 from vibe_tracing.domain.context import UnifiedContext
 
 

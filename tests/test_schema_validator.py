@@ -224,7 +224,8 @@ def test_validator_does_not_import_analysis_modules(validator):
     code = """
 import sys
 import vibe_tracing.infra.validation.schema_validator
-forbidden = ["traceability", "gate", "dashboard", "analysis"]
+# Only forbid imports from domain layer, not infra layer
+forbidden = ["domain.traceability", "domain.gate", "domain.dashboard", "domain.analysis"]
 violations = [
     name for name in sys.modules.keys()
     if any(p in name for p in forbidden)

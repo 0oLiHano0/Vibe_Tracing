@@ -8,7 +8,17 @@ from pathlib import Path
 from typing import Optional
 
 from vibe_tracing.domain.context import UnifiedContext
-from vibe_tracing.cli.common import _GateBlocked, _rel_path_str
+from vibe_tracing.cli.analyze.exceptions import _GateBlocked
+
+
+def _rel_path_str(p: Path, project_root: Path) -> str:
+    """Return a relative path string if p is under project_root, else the full path."""
+    try:
+        if p.is_absolute() and (project_root in p.parents or p == project_root):
+            return str(p.relative_to(project_root))
+    except Exception:
+        pass
+    return str(p)
 
 
 def _build_report_document(

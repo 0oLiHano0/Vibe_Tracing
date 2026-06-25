@@ -324,3 +324,60 @@ def test_self_governance_rules_contract(tmp_path):
     assert len(res["warnings"]) > 0
     # Diff details should mention GATE-VT-099
     assert any("GATE-VT-099" in w for w in res["warnings"])
+
+
+def test_load_human_decisions_file_exists(tmp_path):
+    """
+    Verify that RawInputLoader loads human_decisions.json successfully
+    when it exists under .vibetracing/human_decisions.json.
+    """
+    import json
+    _make_required_files(tmp_path)
+
+    # Pre-populate human_decisions.json
+    decisions_dir = tmp_path / ".vibetracing"
+    decisions_dir.mkdir(parents=True, exist_ok=True)
+    decisions_data = {
+        "version": "1.0",
+        "decisions": [
+            {
+                "decision_id": 1,
+                "category": "accepted_rule",
+                "targetId": "RULE-VT-001",
+                "action": "accept",
+            }
+        ]
+    }
+    (decisions_dir / "human_decisions.json").write_text(
+        json.dumps(decisions_data), encoding="utf-8"
+    )
+
+    loader = RawInputLoader(tmp_path)
+    manifest = loader.load()
+    assert manifest.has_required_errors is False
+
+    records = {r.file_key: r for r in manifest.inputs_used}
+    assert "human_decisions" in records
+    record = records["human_decisions"]
+    assert record.status == "ok"
+    assert record.content == decisions_data
+
+
+def test_load_human_decisions_file_missing(tmp_path):
+    """
+    Verify that RawInputLoader marks human_decisions.json as 'missing'
+    when the file is absent, and this does not set has_required_errors.
+    """
+    _make_required_files(tmp_path)
+    # Ensure .vibetracing/human_decisions.json does NOT exist
+
+    loader = RawInputLoader(tmp_path)
+    manifest = loader.load()
+    assert manifest.has_required_errors is False
+
+    records = {r.file_key: r for r in manifest.inputs_used}
+    assert "human_decisions" in records
+    record = records["human_decisions"]
+    assert record.status == "missing"
+    assert record.content is None
+

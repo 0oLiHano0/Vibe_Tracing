@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 from vibe_tracing.domain.context import UnifiedContext
-from vibe_tracing.cli.common import _GateBlocked
+from vibe_tracing.cli.analyze.exceptions import _GateBlocked
 from vibe_tracing.infra.git.utils import get_staged_files
 
 

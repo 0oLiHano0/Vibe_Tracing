@@ -1,7 +1,7 @@
 """Tests for infra/db.py — DDL correctness, UPSERT, cache cleanup, export."""
 
 import sqlite3
-from src.vibe_tracing.infra.db import (
+from vibe_tracing.infra.db import (
     init_in_memory_db,
     upsert_test_result,
     upsert_coverage_report,

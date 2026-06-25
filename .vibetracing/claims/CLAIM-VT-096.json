@@ -1,0 +1,25 @@
+{
+  "claim_id": "CLAIM-VT-096",
+  "related_task": "TASK-VT-096",
+  "claimed_status": "completed",
+  "timestamp": "2026-06-23T12:00:00Z",
+  "code_refs": [
+    "src/vibe_tracing/domain/gate/engine.py",
+    "src/vibe_tracing/cli/analyze/pipeline.py",
+    "src/vibe_tracing/cli/main.py",
+    ".vibetracing/config.json"
+  ],
+  "test_refs": [
+    "tests/test_merge_gate_engine.py",
+    "tests/test_incremental_mode.py"
+  ],
+  "doc_refs": [
+    "docs/prd.md",
+    "docs/refactoring_design.md",
+    "docs/task_list.json"
+  ],
+  "evidence_refs": [
+    "AC-VT-008-04"
+  ],
+  "notes": "实现门禁增量模式与历史债务显示控制，支持命令行参数、环境变量和 config.json 配置。"
+}

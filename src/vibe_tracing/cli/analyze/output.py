@@ -25,7 +25,7 @@ def _print_gate_summary(gate_res: dict, staged_items: Optional[Set[str]]) -> Non
             print("\nCURRENT ISSUES (blocks commit):")
             for reason in current_reasons:
                 print(f"- {reason}")
-        if pre_existing_reasons:
+        if pre_existing_reasons and gate_res.get("show_historical_debt", True):
             print("\nPRE-EXISTING DEBT (does not block):")
             for reason in pre_existing_reasons:
                 print(f"- {reason}")

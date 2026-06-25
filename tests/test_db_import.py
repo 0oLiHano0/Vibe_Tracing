@@ -1,6 +1,6 @@
 """Tests for infra/db.py — Layer 1 format validation and Layer 2 relation validation."""
 
-from src.vibe_tracing.infra.db import (
+from vibe_tracing.infra.db import (
     init_in_memory_db,
     load_tasks,
     load_claims,

@@ -28,15 +28,12 @@ from vibe_tracing.cli.accept import run_accept
 # ---------------------------------------------------------------------------
 # Re-export internal helpers used by tests
 # ---------------------------------------------------------------------------
-from vibe_tracing.cli.common import (
-    _GateBlocked,
-    _load_context,
-    _rel_path_str,
-    _get_staged_files,
-    _determine_affected_items,
-    _file_sha256,
-    _load_human_decisions,
-)
+
+from vibe_tracing.cli.analyze.exceptions import _GateBlocked
+from vibe_tracing.cli.analyze.pipeline import _load_context
+from vibe_tracing.cli.analyze.reports import _rel_path_str
+from vibe_tracing.infra.git.utils import get_staged_files as _get_staged_files
+from vibe_tracing.domain.gate.staleness import determine_affected_items as _determine_affected_items
 from vibe_tracing.cli.finalize import (
     _validate_constraints_change,
     _print_post_finalize_guidance,

@@ -8,8 +8,11 @@ Evaluates quality gate conditions to produce a machine gate decision:
 
 Refactored (TASK-VT-073): No longer holds conn. Receives analysis results
 as parameters from the pipeline.
+
+Enhanced (TASK-VT-096): Supports incremental_only mode for AI Agent efficiency.
 """
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
@@ -22,8 +25,20 @@ _gate_hints = load_hints("gate_decision")
 class MergeGateEngine:
     """Deterministic rules engine to evaluate merge gate criteria."""
 
-    def __init__(self, project_root: Path) -> None:
+    def __init__(
+        self,
+        project_root: Path,
+        incremental_only: bool = False,
+        show_historical_debt: bool = True,
+    ) -> None:
         """Initialize the engine with project root.
+
+        Args:
+            project_root: Path to the project root directory.
+            incremental_only: If True, only check incremental issues related to current commit.
+                Historical debt will not block the gate.
+            show_historical_debt: If True, show historical debt in terminal output.
+                If False, only show a summary count.
 
         Note: No conn parameter. Analysis results are passed to evaluate().
         """
@@ -31,6 +46,25 @@ class MergeGateEngine:
         self.coverage_threshold = 80
         self._ghost_code_exclusions: List[str] = []
         self._load_exclusions()
+
+        # Load gate configuration from config.json
+        self._load_gate_config()
+
+        # Priority: parameter > environment variable > config.json > default
+        self.incremental_only = (
+            incremental_only
+            or os.environ.get("VT_INCREMENTAL_ONLY") == "1"
+            or self._config_incremental_only
+        )
+
+        self.show_historical_debt = (
+            show_historical_debt
+            and os.environ.get("VT_SHOW_HISTORICAL_DEBT") != "0"
+            and self._config_show_historical_debt
+        )
+
+        # Track historical debt count for summary
+        self._historical_debt_count = 0
 
     def _load_exclusions(self) -> None:
         """Load ghost code exclusions from config.json."""
@@ -40,6 +74,22 @@ class MergeGateEngine:
             try:
                 config = json.loads(config_path.read_text(encoding="utf-8"))
                 self._ghost_code_exclusions = config.get("ghost_code_exclusions", [])
+            except (json.JSONDecodeError, OSError):
+                pass
+
+    def _load_gate_config(self) -> None:
+        """Load gate configuration from config.json."""
+        import json
+        config_path = self.project_root / ".vibetracing" / "config.json"
+        self._config_incremental_only = False
+        self._config_show_historical_debt = True
+
+        if config_path.exists():
+            try:
+                config = json.loads(config_path.read_text(encoding="utf-8"))
+                gate_config = config.get("gate", {})
+                self._config_incremental_only = gate_config.get("incremental_only", False)
+                self._config_show_historical_debt = gate_config.get("show_historical_debt", True)
             except (json.JSONDecodeError, OSError):
                 pass
 
@@ -90,6 +140,7 @@ class MergeGateEngine:
         OperationalLogger.get().debug("gate_claim_existence", "Claim existence check",
             ghost_count=len(filtered_files),
             excluded_count=len(ghost_files) - len(filtered_files))
+        has_blocked = False
         if filtered_files:
             for f in sorted(filtered_files):
                 hint = resolve_hint(
@@ -108,9 +159,14 @@ class MergeGateEngine:
                 }
                 gaps.append(gap_entry)
                 reasons.append(self._tag_reason(msg, {f}, staged_items))
-                blocked_items.append(msg)
-            return True
-        return False
+
+                # Incremental mode: only block if current commit related
+                if not self.incremental_only or self._is_current({f}, staged_items):
+                    blocked_items.append(msg)
+                    has_blocked = True
+                else:
+                    self._historical_debt_count += 1
+        return has_blocked
 
     def _check_dangling_claims(
         self,
@@ -127,6 +183,7 @@ class MergeGateEngine:
         """
         OperationalLogger.get().debug("gate_dangling_claims", "Dangling claims check",
             dangling_count=len(dangling_claims))
+        has_blocked = False
         for dc in dangling_claims:
             claim_id = dc.get("claim_id", "")
             related_task = dc.get("related_task", "")
@@ -144,8 +201,14 @@ class MergeGateEngine:
             }
             gaps.append(gap_entry)
             reasons.append(self._tag_reason(msg, {claim_id}, staged_items))
-            blocked_items.append(msg)
-        return bool(dangling_claims)
+
+            # Incremental mode: only block if current commit related
+            if not self.incremental_only or self._is_current({claim_id}, staged_items):
+                blocked_items.append(msg)
+                has_blocked = True
+            else:
+                self._historical_debt_count += 1
+        return has_blocked
 
     def _check_claim_evidence_gaps(
         self,
@@ -181,8 +244,12 @@ class MergeGateEngine:
 
             # Only block for test failures, not for missing tests (warning)
             if verification_status in ("test_failed",):
-                blocked_items.append(msg)
-                has_blocked = True
+                # Incremental mode: only block if current commit related
+                if not self.incremental_only or self._is_current({claim_id}, staged_items):
+                    blocked_items.append(msg)
+                    has_blocked = True
+                else:
+                    self._historical_debt_count += 1
 
         return has_blocked
 
@@ -201,6 +268,7 @@ class MergeGateEngine:
         """
         OperationalLogger.get().debug("gate_ac_coverage", "AC coverage check",
             uncovered=len(ac_gaps))
+        has_blocked = False
         for gap in ac_gaps:
             ac_id = gap.get("ac_id", gap.get("item_id", ""))
             task_id = gap.get("task_id", "")
@@ -223,8 +291,14 @@ class MergeGateEngine:
             }
             gaps.append(gap_entry)
             reasons.append(self._tag_reason(msg, {ac_id}, staged_items))
-            blocked_items.append(msg)
-        return bool(ac_gaps)
+
+            # Incremental mode: only block if current commit related
+            if not self.incremental_only or self._is_current({ac_id}, staged_items):
+                blocked_items.append(msg)
+                has_blocked = True
+            else:
+                self._historical_debt_count += 1
+        return has_blocked
 
     def _process_must_gaps(
         self,
@@ -427,11 +501,23 @@ class MergeGateEngine:
             hint = resolve_hint(_gate_hints.get("all_gates_passed", {}), "level1")
             reasons.append(hint if hint else "所有质量门禁规则均已通过，无阻塞项或风险项。")
 
+        # Add historical debt summary in incremental mode
+        if self.incremental_only and self._historical_debt_count > 0:
+            if not self.show_historical_debt:
+                # Show summary and suggest how to view details
+                reasons.append(f"📊 {self._historical_debt_count} historical debts exist (use --show-debt to view details)")
+            else:
+                # Show summary only without prompt since details are already shown
+                reasons.append(f"📊 {self._historical_debt_count} historical debts exist")
+
         result: Dict[str, Any] = {
             "gate_decision": gate_decision,
             "reasons": reasons,
             "blocked_items": blocked_items,
             "human_decisions_applied": human_decisions_applied,
+            "incremental_mode": self.incremental_only,
+            "show_historical_debt": self.show_historical_debt,
+            "historical_debt_count": self._historical_debt_count,
         }
         if accepted_rule_target_ids:
             result["accepted_rule_target_ids"] = list(accepted_rule_target_ids)

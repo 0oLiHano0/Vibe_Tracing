@@ -792,20 +792,7 @@ def test_hint_context():
     assert unknown_ctx == ""
 
 
-# =========================================================================
-# Tests for _load_human_decisions and _apply_human_decisions
-# =========================================================================
 
-def test_load_human_decisions_missing_file(monkeypatch):
-    """Test _load_human_decisions returns empty when file missing."""
-    from vibe_tracing.cli import _load_human_decisions
-    import os
-
-    # Ensure the file doesn't exist
-    monkeypatch.setattr("pathlib.Path.exists", lambda self: False if self.name == "human_decisions.json" else type(self).exists(self))
-
-    result = _load_human_decisions()
-    assert result == {"version": "1.0", "decisions": []}
 
 
 def test_apply_human_decisions_accepted_rule_reconfirm(tmp_path):
@@ -895,35 +882,6 @@ def test_apply_human_decisions_no_decisions(tmp_path):
     engine = MergeGateEngine(tmp_path)
     gate_res = engine.evaluate(gaps=[], risks=[], human_decisions={"decisions": []})
     assert gate_res["human_decisions_applied"] == 0
-
-
-# =========================================================================
-# Tests for _file_sha256
-# =========================================================================
-
-def test_file_sha256(tmp_path):
-    """Test _file_sha256 computes hash of a file."""
-    from vibe_tracing.cli import _file_sha256
-
-    test_file = tmp_path / "test.txt"
-    test_file.write_text("hello world", encoding="utf-8")
-
-    h = _file_sha256(test_file)
-    assert h is not None
-    assert len(h) == 64  # SHA-256 hex length
-
-    # Consistent hash
-    h2 = _file_sha256(test_file)
-    assert h == h2
-
-
-def test_file_sha256_missing():
-    """Test _file_sha256 returns None for missing file."""
-    from vibe_tracing.cli import _file_sha256
-
-    h = _file_sha256(Path("/nonexistent/file.txt"))
-    assert h is None
-
 
 # =========================================================================
 # Tests for governance boundary functions

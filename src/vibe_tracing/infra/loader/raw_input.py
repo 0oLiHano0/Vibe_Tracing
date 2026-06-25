@@ -81,6 +81,7 @@ class RawInputLoader:
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
+            "human_decisions": ".vibetracing/human_decisions.json",
             "output_dir": "output",
         }
         fallback_rel = defaults.get(key)
@@ -105,7 +106,12 @@ class RawInputLoader:
             manifest.error_count += 1
 
         # 加载其他治理文件（在加载层始终为可选）
-        optional_keys = ["architecture_constraints", "task_list", "agent_claims"]
+        optional_keys = [
+            "architecture_constraints",
+            "task_list",
+            "agent_claims",
+            "human_decisions",
+        ]
         for file_key in optional_keys:
             resolved_path = self.get_path(file_key)
             record = self._load_file(file_key, resolved_path, is_required=False)

@@ -100,28 +100,3 @@ def partition_by_scope(
             out_of_scope.append(f)
     return {"in_scope": in_scope, "out_of_scope": out_of_scope}
 
-
-def load_human_decisions(project_root: Optional[Path] = None) -> dict:
-    """Read human decision log.
-
-    Args:
-        project_root: Project root directory. Defaults to current directory.
-
-    Returns:
-        Dict with "version" and "decisions" keys.
-    """
-    if project_root is None:
-        project_root = Path(".")
-    decisions_path = project_root / ".vibetracing" / "human_decisions.json"
-    if not decisions_path.exists():
-        return {"version": "1.0", "decisions": []}
-    try:
-        return json.loads(decisions_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        from vibe_tracing.infra.logging.logger import OperationalLogger
-        OperationalLogger.get().warning(
-            "human_decisions_load_failed",
-            "Could not load human decisions file",
-            path=str(decisions_path),
-        )
-        return {"version": "1.0", "decisions": []}

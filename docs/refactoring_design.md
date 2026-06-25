@@ -113,19 +113,16 @@ run_analyze(project_root, ...)
 │         evidence_meta = builder.persist(output_dir)
 │
 ├── 阶段 7：运行分析（db.py 唯一查询层）
-│   调用：req_coverage  = db.check_requirement_coverage(conn)
-│         ac_coverage   = db.check_ac_coverage(conn)
-│         claim_analysis = db.check_claim_evidence(conn)
-│         compliance_res = ArchitectureComplianceChecker().check(conn, constraints, human_decisions)
+│   调用：merged_gaps, final_risks, compliance_res, analysis_details = _run_db_analysis(
+│             conn, ctx, project_root, staged_files, human_decisions)
 │
-├── 阶段 8：提取 gaps + 生成 risks + staleness 标记
-│   调用：req_gaps/claim_gaps/ac_gaps = extract_gaps(...)
-│         merged_gaps = merge_gaps(...)
-│         risks = RiskAdvisor(project_root).generate_risks(...)
-│         merged_gaps, risks = mark_staleness(merged_gaps, risks, staged_files, claims_list, task_list_data)
-│
-├── 阶段 9：门禁判定
-│   调用：gate_res = MergeGateEngine(project_root).evaluate(
+├── 阶段 8：门禁判定 + 输出
+│   调用：gate_engine = MergeGateEngine(
+│             project_root,
+│             incremental_only=incremental_only,
+│             show_historical_debt=show_historical_debt,
+│         )
+│         gate_res = gate_engine.evaluate(
 │             gaps, risks,
 │             compliance_res=compliance_res,
 │             staged_items=staged_items,
@@ -136,17 +133,10 @@ run_analyze(project_root, ...)
 │             dangling_claims=dangling_claims,
 │             claim_evidence_gaps=claim_evidence_gaps,
 │             cov_violations=cov_violations)
-│         _print_gate_summary(gate_res, staged_items)
+│         report_doc = _build_report_document(...)
+│         _render_output(...)
 │
-├── 阶段 10：Agent 行动建议（仅 Gate blocked）
-│   调用：_print_agent_actions(ctx, gate_res)
-│
-├── 阶段 11：人类决策层（仅 Gate passed）
-│   调用：report_doc = _build_report_document(...)
-│         _render_dashboard(...)
-│         _print_reflection_prompts(...)
-│
-└── 阶段 12：返回退出码
+└── 阶段 9：返回退出码
     0=通过, 1=执行错误, 2=门禁 blocked
 ```
 
@@ -257,7 +247,33 @@ infra/
     └── executor.py                      # ToolExecutionEngine（工具执行引擎，调用 parsers.py）
 ```
 
-### 4.3 依赖方向
+### 4.3 CLI 包（命令层）
+
+```
+cli/
+├── main.py                         # CLI 入口与调度
+├── init.py                         # vt init
+├── finalize.py                     # vt finalize
+├── accept.py                       # vt accept
+├── doctor.py                       # vt doctor
+└── analyze/
+    ├── exceptions.py               # CLI 层共享异常（_GateBlocked）
+    ├── pipeline.py                 # 主流水线编排（调度层，含 _load_context）
+    ├── gates.py                    # 门禁检查（Gate 2 前置条件）
+    ├── tools.py                    # 工具执行
+    ├── reports.py                  # 报告生成（含 _rel_path_str）
+    ├── output.py                   # 终端输出渲染
+    ├── helpers.py                  # 辅助函数
+    ├── actions.py                  # Agent 行动建议
+    └── formatting.py               # 格式化工具
+```
+
+设计说明：
+- `exceptions.py` 独立存在，避免 `pipeline.py` ↔ `reports.py`/`tools.py` 的循环导入
+- `_load_context()` 从已删除的 `common.py` 迁入 `pipeline.py`，是阶段 1 的唯一入口
+- `_rel_path_str()` 仅 `reports.py` 使用，内联定义
+
+### 4.4 依赖方向
 
 ```
 CLI → Domain → Infra
@@ -302,7 +318,12 @@ class EvidenceBuilder:
 
 ```python
 class MergeGateEngine:
-    def __init__(self, project_root: Path):  # 不持有 conn
+    def __init__(
+        self,
+        project_root: Path,
+        incremental_only: bool = False,
+        show_historical_debt: bool = True,
+    ):  # 不持有 conn
 
     def evaluate(
         self,
@@ -320,7 +341,8 @@ class MergeGateEngine:
     ) -> Dict[str, Any]:
         """纯规则判定，不访问数据库。
 
-        返回字典包含：gate_decision, reasons, blocked_items, human_decisions_applied
+        返回字典包含：gate_decision, reasons, blocked_items, human_decisions_applied,
+                       incremental_mode, historical_debt_count
 
         设计变更说明（vs 原设计）：
         - 去掉 tool_outputs：工具结果已通过 ghost_files/cov_violations 阶段传入
@@ -328,7 +350,14 @@ class MergeGateEngine:
         - 增加 directly_staged_items：区分直接提交 vs 间接影响的 items
         - 增加 human_decisions：人类决策直接传入判定层
         - 返回类型改为 Dict（vs 原设计的 Tuple[str, List[str], List[dict]])：
-          字典可扩展新字段，岁己可读性更好
+          字典可扩展新字段，可读性更好
+
+        TASK-VT-096 增量模式增强：
+        - 增加 incremental_only 参数：只检查增量问题，历史债务不阻塞门禁
+        - 增加 show_historical_debt 参数：控制是否在终端显示历史债务详情
+        - Rule 2/3/4/5 在 incremental_only 模式下遵循 _is_current 判定
+        - 历史债务显示为摘要（如"📊 3 historical debts exist"）
+        - 配置优先级：命令行参数 > 环境变量 > config.json > 默认值
         """
 ```
 
@@ -463,6 +492,7 @@ TASK_STATUS_TO_COVERAGE = {
 | `gates.py._gate1b_prd_drift()` | 属于 finalize | 删除 |
 | `gates.py._gate1c_mapping()` | 属于 finalize | 删除 |
 | `gates.py._run_integrity_gates()` | Gate 1/1b/1c 已删除 | 重命名为 `_check_claim_coverage()`；保留别名向后兼容 |
+| `common.py` 整个文件 | YAGNI：单用途函数可内联到唯一调用方 | `_load_context` → `pipeline.py`；`_rel_path_str` → `reports.py`；`_GateBlocked` → `exceptions.py`；`_get_staged_files`/`_determine_affected_items` 已是 re-export，直接导入源模块；`_file_sha256` 零生产调用，删除 |
 
 ### 保留决策：_db_result_to_gaps
 
@@ -480,7 +510,7 @@ TASK_STATUS_TO_COVERAGE = {
 
 | 模块 | 变更类型 | 变更内容 |
 |------|---------|---------|
-| `cli/analyze/pipeline.py` | 重构 | 删除 evidence_dicts；接管 DB 调度；合并 analysis.py；新增 _db_result_to_gaps adapter |
+| `cli/analyze/pipeline.py` | 重构 | 删除 evidence_dicts；接管 DB 调度；合并 analysis.py；新增 _db_result_to_gaps adapter；接管 _load_context |
 | `cli/analyze/gates.py` | 重构 | `_run_integrity_gates` 重命名为 `_check_claim_coverage`；删除 Gate 1/1b/1c |
 | `cli/analyze/analysis.py` | 删除 | 逻辑拆分到 pipeline + staleness_tracker |
 | `domain/context.py` | 微调 | 删除 tool_evidence 字段 |
@@ -490,9 +520,10 @@ TASK_STATUS_TO_COVERAGE = {
 | `analyzers/` 3 个文件 | 删除 | 查询逻辑移入 db.check_* |
 | `domain/architecture_compliance_checker.py` | 接口变更 | check() 接收 conn |
 | `domain/merge_gate_engine.py` | 重构 | 解耦 conn，纯判定引擎 |
-| `cli/analyze/gates.py` | 重构 | 删除 Gate 1/1b/1c，Gate 2 前置条件 |
-| `cli/analyze/tools.py` | 无变更 | 接口已正确 |
-| `cli/analyze/reports.py` | 接口变更 | 从 DB 查询全链条数据 |
+| `cli/analyze/exceptions.py` | 新建 | `_GateBlocked` 异常类（避免循环导入） |
+| `cli/analyze/tools.py` | 微调 | `_GateBlocked` 改从 `.exceptions` 导入 |
+| `cli/analyze/reports.py` | 微调 | `_GateBlocked` 改从 `.exceptions` 导入；`_rel_path_str` 内联定义 |
+| `cli/common.py` | 删除 | 函数迁移至 `pipeline.py`/`reports.py`/`exceptions.py` |
 
 ---
 
@@ -531,6 +562,15 @@ Step 7: 删除 analysis.py
 Step 8: 更新测试文件
 
 Step 9: 运行全量测试验证
+
+Step 10: 消除 cli/common.py（TASK-VT-098）    ← ✅ 已完成
+  - 新建 cli/analyze/exceptions.py（_GateBlocked）
+  - _load_context 移入 pipeline.py（修正 schemas_dir 回退路径 parents[2]）
+  - _rel_path_str 内联到 reports.py
+  - _get_staged_files / _determine_affected_items 改为直接导入源模块
+  - 更新 cli/__init__.py re-exports
+  - 删除 _file_sha256 及其测试
+  - 删除 cli/common.py
 ```
 
 ---
@@ -656,6 +696,8 @@ Step 9: 运行全量测试验证
 main.py（全局捕获）
   └── pipeline.py（资源清理）
         ├── _GateBlocked → 已知业务错误，返回 exit_code
+        │     定义位置：cli/analyze/exceptions.py
+        │     raise 来源：pipeline.py, reports.py, tools.py
         ├── Exception → logger.exception() + print(stderr)，返回 1
         └── 正常 → 返回 0 或 2
 ```

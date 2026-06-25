@@ -5180,6 +5180,287 @@
         "保持文档风格一致",
         "确保依赖方向说明准确"
       ]
+    },
+    {
+      "task_id": "TASK-VT-096",
+      "phase_id": "PHASE-VT-010",
+      "title": "实现门禁增量模式与历史债务显示控制",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 MergeGateEngine 中实现 incremental_only 模式，支持历史债务显示控制，优化 AI Agent 的门禁体验。",
+      "atomic_scope": "1. 在 MergeGateEngine 初始化时支持 incremental_only 参数；2. 在 config.json 中支持 gate.incremental_only 和 gate.show_historical_debt 配置；3. 修正 Rule 2/3/4/5 的阻断逻辑，使其遵循 incremental_only 判定；4. 支持命令行参数和环境变量覆盖。",
+      "out_of_scope": [
+        "不修改 Rule 1 的现有逻辑",
+        "不修改 Dashboard 的全量数据显示",
+        "不实现自动修复历史债务的功能"
+      ],
+      "related_requirements": [
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-008-04"
+      ],
+      "related_modules": [
+        "MOD-VT-007"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-004",
+        "PRINCIPLE-VT-005"
+      ],
+      "depends_on": [
+        "TASK-VT-095"
+      ],
+      "expected_deliverables": [
+        "更新后的 domain/gate/engine.py",
+        "更新后的 cli/analyze/pipeline.py",
+        "更新后的 config.json schema",
+        "更新后的 docs/refactoring_design.md（§5.2 MergeGateEngine 接口说明）",
+        "更新后的 tests/test_merge_gate_engine.py（新增增量模式测试用例）",
+        "新增 tests/test_incremental_mode.py（增量模式专项测试）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-096-01",
+          "description": "MergeGateEngine 支持 incremental_only 参数"
+        },
+        {
+          "dod_id": "DOD-VT-096-02",
+          "description": "config.json 支持 gate.incremental_only 和 gate.show_historical_debt 配置"
+        },
+        {
+          "dod_id": "DOD-VT-096-03",
+          "description": "Rule 2/3/4/5 在 incremental_only 模式下遵循 _is_current 判定"
+        },
+        {
+          "dod_id": "DOD-VT-096-04",
+          "description": "命令行参数 --incremental-only 和 --show-debt 可覆盖配置"
+        },
+        {
+          "dod_id": "DOD-VT-096-05",
+          "description": "环境变量 VT_INCREMENTAL_ONLY=1 可启用增量模式"
+        },
+        {
+          "dod_id": "DOD-VT-096-06",
+          "description": "增量模式下，历史债务显示为摘要（如'📊 3 historical debts exist'）"
+        },
+        {
+          "dod_id": "DOD-VT-096-07",
+          "description": "Dashboard 保留全量数据，不受增量模式影响"
+        },
+        {
+          "dod_id": "DOD-VT-096-08",
+          "description": "refactoring_design.md §5.2 更新 MergeGateEngine 接口说明（新增 incremental_only、show_historical_debt 参数）"
+        },
+        {
+          "dod_id": "DOD-VT-096-09",
+          "description": "refactoring_design.md §3 阶段 9 更新门禁判定调用示例"
+        },
+        {
+          "dod_id": "DOD-VT-096-10",
+          "description": "tests/test_merge_gate_engine.py 新增增量模式测试用例（覆盖 Rule 2/3/4/5）"
+        },
+        {
+          "dod_id": "DOD-VT-096-11",
+          "description": "tests/test_incremental_mode.py 新增增量模式专项测试（覆盖 config.json、命令行参数、环境变量优先级）"
+        },
+        {
+          "dod_id": "DOD-VT-096-12",
+          "description": "全量测试通过，无回归"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保持向后兼容，默认行为不变",
+        "增量模式下只显示当前相关的 reasons",
+        "历史债务摘要使用 📊 图标",
+        "确保所有 Rule 的逻辑一致性"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-097",
+      "phase_id": "PHASE-VT-002",
+      "title": "支持加载人类决策 human_decisions",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 RawInputLoader 中支持读取 human_decisions.json，并将其包含在 manifest 和 UnifiedContext 中。",
+      "atomic_scope": "修改 RawInputLoader，将 human_decisions.json 作为可选文件进行加载并放入 manifest.inputs_used。更新 get_path 方法以支持该 key。编写对应单测。",
+      "out_of_scope": [
+        "不修改决策应用规则",
+        "不修改门禁引擎"
+      ],
+      "related_requirements": [
+        "REQ-VT-008"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-008-03"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-004"
+      ],
+      "depends_on": [
+        "TASK-VT-005"
+      ],
+      "expected_deliverables": [
+        "更新后的 src/vibe_tracing/infra/loader/raw_input.py",
+        "新增或更新的单元测试"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-097-01",
+          "description": "RawInputLoader 正确读取 .vibetracing/human_decisions.json 并在 manifest 中生成 status='ok' 的记录"
+        },
+        {
+          "dod_id": "DOD-VT-097-02",
+          "description": "当文件不存在时，生成 status='missing' 记录且不阻断加载"
+        },
+        {
+          "dod_id": "DOD-VT-097-03",
+          "description": "单元测试覆盖 human_decisions 的成功加载和缺失加载场景"
+        }
+      ],
+      "ai_coding_guidance": [
+        "在 RawInputLoader 默认路径映射中加入 human_decisions",
+        "在 load 的可选键中包含 human_decisions"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-098",
+      "phase_id": "PHASE-VT-011",
+      "title": "重构并消除 cli/common.py",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "消除 cli/common.py，消除死代码 _file_sha256，将唯一调用的 _load_context 移动到 pipeline.py 并修正 built-in schemas 路径回退，将 _GateBlocked 提取到 exceptions.py 以避免循环导入，彻底清理冗余导入。",
+      "atomic_scope": "在 cli/analyze/exceptions.py 中定义 _GateBlocked 异常以规避 pipeline/reports/tools 循环导入；在 pipeline.py 中实现 _load_context 函数，并修正内置 schemas_dir 的回退路径为 Path(__file__).parents[2] / 'infra' / 'validation' / 'schemas'；在 reports.py 中定义 _rel_path_str；在 cli/__init__.py 中重构导出以供单测向后兼容；删除 cli/common.py 并清理 test_cli_analyze.py 中的 _file_sha256 单测；确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 _load_context 的核心逻辑",
+        "不修改 merge gate 等其他核心逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-097"
+      ],
+      "expected_deliverables": [
+        "新建的 src/vibe_tracing/cli/analyze/exceptions.py",
+        "更新后的 src/vibe_tracing/cli/analyze/pipeline.py",
+        "更新后的 src/vibe_tracing/cli/analyze/reports.py",
+        "更新后的 src/vibe_tracing/cli/analyze/tools.py",
+        "更新后的 src/vibe_tracing/cli/__init__.py",
+        "删除的 src/vibe_tracing/cli/common.py",
+        "更新后的 tests/test_cli_analyze.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-098-01",
+          "description": "cli/common.py 文件已被彻底删除"
+        },
+        {
+          "dod_id": "DOD-VT-098-02",
+          "description": "新建 cli/analyze/exceptions.py 包含 _GateBlocked，避免了 pipeline/reports/tools 循环导入"
+        },
+        {
+          "dod_id": "DOD-VT-098-03",
+          "description": "_load_context 在 pipeline.py 中定义，且其 schemas_dir 内置路径回退被正确修正为 parents[2]"
+        },
+        {
+          "dod_id": "DOD-VT-098-04",
+          "description": "_rel_path_str 在 reports.py 中定义并正常工作"
+        },
+        {
+          "dod_id": "DOD-VT-098-05",
+          "description": "cli/__init__.py 导出了测试所需的原 common 函数，且其物理路径已被正确重定向，_file_sha256 导出已被移除"
+        },
+        {
+          "dod_id": "DOD-VT-098-06",
+          "description": "_file_sha256 的单测已被删除"
+        },
+        {
+          "dod_id": "DOD-VT-098-07",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "例外类定义必须独立在 exceptions.py 中",
+        "schemas_dir 回退路径在 pipeline.py 中应使用 Path(__file__).parents[2] 以指向 src/vibe_tracing/",
+        "保留必要的 CLI 层 re-exports 以向后兼容单测，但物理路径指向真实的物理位置",
+        "操作后运行 pytest 进行验证"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-099",
+      "phase_id": "PHASE-VT-011",
+      "title": "重构收尾：文档对齐与状态同步",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "TASK-VT-098 完成后，确保设计文档、spec 文档与代码实现完全一致，同步更新任务状态。",
+      "atomic_scope": "1. 更新 docs/refactoring_design.md，确保 §4.3 CLI 包结构、§7 删除清单、§8 变更影响矩阵、§9 实施步骤、§12 异常处理等段落与代码实际状态一致；2. 更新 docs/spec_pipeline_stage_1.md，确保阶段 1 的模块引用、处理逻辑步骤与 pipeline.py 中的 _load_context 实际代码一致；3. 将 TASK-VT-098 和 TASK-VT-099 的 status 更新为 done。",
+      "out_of_scope": [
+        "不修改代码逻辑",
+        "不新增功能"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-098"
+      ],
+      "expected_deliverables": [
+        "更新后的 docs/refactoring_design.md",
+        "更新后的 docs/spec_pipeline_stage_1.md",
+        "更新后的 docs/task_list.json（TASK-VT-098/099 status → done）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-099-01",
+          "description": "refactoring_design.md 中所有涉及 cli/common.py 的引用已清除或更新为新位置"
+        },
+        {
+          "dod_id": "DOD-VT-099-02",
+          "description": "refactoring_design.md §4.3 CLI 包结构与实际文件系统一致"
+        },
+        {
+          "dod_id": "DOD-VT-099-03",
+          "description": "spec_pipeline_stage_1.md 中所有模块路径、处理步骤与 pipeline.py 中 _load_context 的实际代码一致"
+        },
+        {
+          "dod_id": "DOD-VT-099-04",
+          "description": "spec_pipeline_stage_1.md §1 输入来源表中不再引用 cli/common.py"
+        },
+        {
+          "dod_id": "DOD-VT-099-05",
+          "description": "TASK-VT-098 和 TASK-VT-099 的 status 已更新为 done"
+        }
+      ],
+      "ai_coding_guidance": [
+        "逐段对照 refactoring_design.md 与实际代码，确认无遗留引用",
+        "spec_pipeline_stage_1.md 的处理逻辑步骤应以 pipeline.py 中 _load_context 的实际代码为准",
+        "task_list.json 的 status 更新使用 python 脚本批量修改，避免手动 JSON 编辑出错"
+      ]
     }
   ]
 }

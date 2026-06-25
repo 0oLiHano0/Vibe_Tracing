@@ -22,5 +22,9 @@
   "prd_hash": "62fa575db7ddf77aaed20ac0ae85b4cfb71646e1a30314394cb56f081b16c165",
   "logging": {
     "level": "DEBUG"
+  },
+  "gate": {
+    "incremental_only": false,
+    "show_historical_debt": true
   }
 }

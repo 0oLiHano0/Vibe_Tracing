@@ -10,16 +10,15 @@ VT 分析流水线编排模块
   2. Claim 覆盖前置检查 (_check_claim_coverage)
   3. 创建数据库 (init_in_memory_db)
   4. 执行工具 (_execute_tools)
-  5. 灰入基础数据 (load_prd + load_tasks + load_claims)
+  5. 灌入基础数据 (load_prd + load_tasks + load_claims)
   6. 构建证据 (EvidenceBuilder.merge/apply/persist)
   7. 运行分析 (db.check_*)
-  8. 提取 gaps + 生成 risks + staleness 标记
-  9. 门禁判定 + 输出
-  10. 返回退出码
+  8. 门禁判定 + 输出
+  9. 返回退出码
 
 依赖关系：
   被 cli/main.py 通过 _dispatch() 调用。
-  调用以下模块：common（上下文加载）、gates（门禁）、tools（工具执行）、
+  调用以下模块：gates（门禁）、tools（工具执行）、
   reports（报告）、output（渲染）、domain/evidence（证据构建）、
   domain/gate（门禁判定）、infra/db（数据库）
 """
@@ -29,22 +28,355 @@ import sys
 import time
 import uuid
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, Set, Tuple
 
 from vibe_tracing.domain.gate.engine import MergeGateEngine
 from vibe_tracing.domain.evidence.builder import EvidenceBuilder
 from vibe_tracing.domain.context import UnifiedContext
 
-from vibe_tracing.cli.common import (
-    _GateBlocked,
-    _load_context,
-    _get_staged_files,
-    _determine_affected_items,
-)
+from vibe_tracing.cli.analyze.exceptions import _GateBlocked
+from vibe_tracing.infra.loader.raw_input import RawInputLoader
+from vibe_tracing.infra.loader.prd_parser import PrdParser
+from vibe_tracing.infra.loader.task_loader import TaskLoader
+from vibe_tracing.infra.loader.claim_loader import ClaimLoader
+from vibe_tracing.infra.git.utils import get_staged_files as _get_staged_files
+from vibe_tracing.domain.gate.staleness import determine_affected_items as _determine_affected_items
+
 from vibe_tracing.cli.analyze.gates import _check_claim_coverage
 from vibe_tracing.cli.analyze.tools import _execute_tools
 from vibe_tracing.cli.analyze.reports import _build_report_document
 from vibe_tracing.cli.analyze.output import _render_output
+
+
+def _load_context(
+    project_root: Path,
+) -> Tuple[UnifiedContext, RawInputLoader]:
+    """Load all input files, validate schemas, and build UnifiedContext.
+
+    Raises _GateBlocked with exit_code=1 on any validation failure.
+    """
+    raw_loader = RawInputLoader(project_root)
+    manifest = raw_loader.load()
+
+    config_prefix = raw_loader.config_data.get("project_prefix", "VT")
+    from vibe_tracing.infra import validation as ids
+    ids.set_project_prefix(config_prefix)
+
+    # Check for missing required files
+    if manifest.has_required_errors:
+        for record in manifest.inputs_used:
+            if record.is_required and record.status != "ok":
+                print(
+                    f"Error loading required file {record.file_key} ({record.file_path}): {record.error_message}",
+                    file=sys.stderr,
+                )
+        raise _GateBlocked(1)
+
+    # Check for malformed files
+    for record in manifest.inputs_used:
+        if record.status not in ("ok", "missing"):
+            print(
+                f"Error loading file {record.file_key} ({record.file_path}): {record.error_message}",
+                file=sys.stderr,
+            )
+            raise _GateBlocked(1)
+
+    # 统一格式校验
+    from vibe_tracing.infra.validation import validate_inputs
+    schemas_dir = project_root / "schemas"
+    if not schemas_dir.is_dir():
+        schemas_dir = Path(__file__).parents[2] / "infra" / "validation" / "schemas"
+    validation_result = validate_inputs(manifest, config_prefix, schemas_dir=schemas_dir)
+    if not validation_result.is_valid:
+        print(validation_result.format_errors(), file=sys.stderr)
+        raise _GateBlocked(1)
+
+    records_dict = {r.file_key: r for r in manifest.inputs_used}
+    prd_record = records_dict.get("prd")
+    task_list_record = records_dict.get("task_list")
+    constraints_record = records_dict.get("architecture_constraints")
+    claims_record = records_dict.get("agent_claims")
+
+    if not prd_record or prd_record.status != "ok":
+        print("Error: PRD file missing or failed to load.", file=sys.stderr)
+        raise _GateBlocked(1)
+
+    # Parse PRD — use already-loaded content to avoid re-reading from disk
+    prd_parser = PrdParser()
+    prd_res = prd_parser.parse_text(prd_record.content)
+    if not prd_res.is_valid:
+        print(f"PRD parsing error: {'; '.join(prd_res.errors)}", file=sys.stderr)
+        raise _GateBlocked(1)
+
+    is_draft = (prd_res.status == "draft")
+
+    # Verify required files exist if not draft
+    if not is_draft:
+        if not task_list_record or task_list_record.status != "ok":
+            print(
+                f"Error loading required file task_list ({raw_loader.get_path('task_list')}): File not found",
+                file=sys.stderr,
+            )
+            raise _GateBlocked(1)
+        if not constraints_record or constraints_record.status != "ok":
+            print(
+                f"Error loading required file architecture_constraints ({raw_loader.get_path('architecture_constraints')}): File not found",
+                file=sys.stderr,
+            )
+            raise _GateBlocked(1)
+
+    # Load tasks
+    task_res = None
+    if task_list_record and task_list_record.status == "ok":
+        task_list_path = Path(task_list_record.file_path)
+        task_loader = TaskLoader()
+        arch_data = constraints_record.content if constraints_record and constraints_record.status == "ok" else None
+        task_res = task_loader.load_and_validate(
+            task_list_path, prd_res, arch_data=arch_data, content=task_list_record.content
+        )
+        if not task_res.is_valid:
+            print(
+                f"Task list validation error: {'; '.join(task_res.errors)}",
+                file=sys.stderr,
+            )
+            raise _GateBlocked(1)
+
+    # Load claims
+    claims_list = []
+    if claims_record and claims_record.status == "ok" and task_res:
+        claims_path = Path(claims_record.file_path)
+        claim_loader = ClaimLoader()
+        claim_res_loader = claim_loader.load(
+            claims_path, task_res, content=claims_record.content
+        )
+        if not claim_res_loader.is_valid:
+            print(
+                f"Agent claims validation error: {'; '.join(claim_res_loader.errors)}",
+                file=sys.stderr,
+            )
+            raise _GateBlocked(1)
+        claims_list = claim_res_loader.claims
+
+    # 加载 human_decisions
+    human_decisions_data = None
+    for record in manifest.inputs_used:
+        if record.file_key == "human_decisions" and record.status == "ok" and record.content is not None:
+            human_decisions_data = record.content
+            break
+
+    ctx = UnifiedContext(
+        config=raw_loader.config_data,
+        prd=prd_res,
+        constraints=constraints_record.content if constraints_record and constraints_record.status == "ok" else None,
+        task_result=task_res,
+        claims_list=claims_list,
+        manifest=manifest,
+        human_decisions=human_decisions_data,
+        config_prefix=config_prefix,
+    )
+    return ctx, raw_loader
+
+
+def run_analyze(
+    project_root: Path,
+    output_dir: Optional[Path] = None,
+    is_pre_commit: bool = False,
+    gates_only: bool = False,
+    incremental_only: bool = False,
+    show_historical_debt: bool = True,
+) -> int:
+    """执行完整的 VT 分析流水线。
+
+    输入：
+        project_root: 项目根目录（由 cli/main.py 传入）
+        output_dir:   输出目录（可选，默认从 config.json 读取）
+        is_pre_commit: 是否为 Git pre-commit hook 模式
+        gates_only:   是否仅运行门禁（快速模式，跳过工具执行和分析）
+        incremental_only: 是否只检查增量问题（历史债务不阻塞门禁）
+        show_historical_debt: 是否在终端显示历史债务详情
+    前置条件：
+        项目已完成 vt finalize（config.json 存在且有效）
+    处理逻辑（9 个阶段）：
+        1. _load_context：加载 PRD、Tasks、Claims、Config
+        2. _check_claim_coverage：Claim 覆盖前置检查
+        3. init_in_memory_db：创建内存数据库
+        4. _execute_tools：执行 pytest/ruff/bandit/coverage
+        5. load_prd + load_tasks + load_claims：将数据灌入数据库
+        6. EvidenceBuilder.merge/apply/persist：构建证据
+        7. _run_db_analysis：运行分析（db.check_*）
+        8. _evaluate_and_output：门禁判定 + 报告生成 + Dashboard 渲染
+        9. return exit_code
+    输出：
+        退出码：0=通过, 1=执行错误, 2=门禁 blocked
+    """
+    conn = None
+    try:
+        # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
+        from vibe_tracing.infra.logging.logger import OperationalLogger
+        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_prd
+        _run_start_t = time.perf_counter()
+
+        # ── 阶段 1：加载输入 ──────────────────────────────────────────────
+        _t_ctx = time.perf_counter()
+        ctx, raw_loader = _load_context(project_root)
+        prd_res = ctx.prd
+        is_draft = (prd_res.status == "draft")
+        config_prefix = ctx.config_prefix
+
+        log_level = ctx.config.get("logging", {}).get("level", "DEBUG")
+        try:
+            vt_logger = OperationalLogger.get_or_init(
+                run_id=f"ANALYZE-{uuid.uuid4()}", project_root=project_root,
+                level=log_level,
+            )
+        except Exception:
+            vt_logger = OperationalLogger.get()
+        vt_logger.info("run_start", "Analysis pipeline started",
+                       is_pre_commit=is_pre_commit, gates_only=gates_only)
+        vt_logger.info("phase_end", "Load context completed",
+                       phase="load_context",
+                       duration_ms=int((time.perf_counter() - _t_ctx) * 1000),
+                       config_prefix=config_prefix,
+                       has_prd=prd_res is not None,
+                       claims_count=len(ctx.claims_list),
+                       )
+
+        # 解析输出目录（未指定时从 config 读取）
+        if output_dir is None:
+            _out_rel = ctx.config.get("paths", {}).get("output_dir", "output")
+            output_dir = (project_root / _out_rel).resolve()
+
+        # ── 阶段 2：Claim 覆盖前置检查（Gate 2）────────────────────────
+        _t_gates = time.perf_counter()
+        exit_code = _check_claim_coverage(
+            ctx, project_root, is_pre_commit, config_prefix,
+        )
+        vt_logger.info("phase_end", "Integrity gates completed",
+                       phase="integrity_gates",
+                       duration_ms=int((time.perf_counter() - _t_gates) * 1000),
+                       gate_result="pass" if exit_code is None else "blocked",
+                       exit_code=exit_code if exit_code is not None else 0,
+                       )
+        if exit_code is not None:
+            return exit_code
+
+        # gates_only 模式：门禁通过后直接返回，跳过后续阶段
+        if gates_only:
+            print("Gates-only mode: integrity gates passed.")
+            print("  ✓ Rule 1 (Claim coverage): PASSED")
+            print("  ✓ Rule 2 (Ghost code detection): PASSED")
+            print("  ℹ Rule 3-8 (AC coverage, test results, compliance): Requires full analysis")
+            return 0
+
+        # ── 阶段 3：创建内存数据库 ──────────────────────────────────
+        conn = init_in_memory_db()
+
+        # ── 阶段 4：执行验证工具 ──────────────────────────────────
+        _t_tools = time.perf_counter()
+        tool_evidence = _execute_tools(ctx, project_root, is_draft)
+        # tool_evidence is a pipeline-local variable, NOT stored in ctx
+        vt_logger.info("phase_end", "Tool execution completed",
+                       phase="execute_tools",
+                       duration_ms=int((time.perf_counter() - _t_tools) * 1000),
+                       tools_executed=len(tool_evidence),
+                       )
+
+        # ── 阶段 5：灌入基础数据（load_prd 必须先于 load_tasks/load_claims）──
+        # load_prd 将 requirements + acceptance_criteria 写入 DB，
+        # 是 check_requirement_coverage 和 check_ac_coverage 新模式的前置依赖。
+        load_prd(conn, ctx.prd)
+        if ctx.task_result and ctx.task_result.tasks:
+            load_tasks(conn, [t.__dict__ for t in ctx.task_result.tasks])
+        if ctx.claims_list:
+            load_claims(conn, [c.__dict__ for c in ctx.claims_list])
+
+        # ── 阶段 6：构建证据（EvidenceBuilder）────────────────────────────
+        _t_build = time.perf_counter()
+        try:
+            # EvidenceBuilder：合并历史缓存 + 本次结果，导出拆分 JSON
+            evidence_builder = EvidenceBuilder(project_root)
+            merge_result = evidence_builder.merge(tool_evidence)
+            evidence_builder.apply(conn, merge_result)
+            evidence_builder.persist(output_dir / "evidences", merge_result)
+
+            # 从数据库获取全链路数据作为证据元数据（替代 evidence_dicts 中间层）
+            from vibe_tracing.infra.db.queries import get_full_chain
+            full_chain = get_full_chain(conn)
+
+            # 证据元数据（供报告使用）
+            evidence_meta = {
+                "run_id": f"RUN-{uuid.uuid4()}",
+                "project_id": f"PROJECT-{config_prefix}",
+                "scan_time": "",
+                "full_chain": full_chain,
+            }
+        except Exception as exc:
+            print(f"Error building evidence: {exc}", file=sys.stderr)
+            return 1
+        vt_logger.info("phase_end", "Evidence built",
+                       phase="build_evidence",
+                       duration_ms=int((time.perf_counter() - _t_build) * 1000),
+                       full_chain_count=len(evidence_meta.get("full_chain", [])),
+                       )
+
+        staged_files = _get_staged_files(project_root)
+
+        human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
+
+        # ── 阶段 7：运行分析（直接查 DB）────────────────────────────────
+        _t_analyzers = time.perf_counter()
+        merged_gaps, final_risks, compliance_res, analysis_details = _run_db_analysis(
+            conn, ctx, project_root,
+            staged_files=staged_files,
+            human_decisions=human_decisions,
+        )
+        claim_res = {}  # Legacy format, kept for report compatibility
+        req_res = {}    # Legacy format, kept for report compatibility
+        vt_logger.info("phase_end", "Analysis completed (db.check_*)",
+                       phase="run_analyzers",
+                       duration_ms=int((time.perf_counter() - _t_analyzers) * 1000),
+                       gaps_count=len(merged_gaps),
+                       risks_count=len(final_risks),
+                       has_compliance=compliance_res is not None,
+                       )
+
+        # ── 阶段 8：门禁判定 + 输出 ──────────────────────────────────────
+        _t_eval = time.perf_counter()
+        exit_code = _evaluate_and_output(
+            ctx, merged_gaps, final_risks, compliance_res,
+            output_dir, evidence_meta, claim_res, req_res,
+            project_root, is_draft, staged_files=staged_files,
+            is_pre_commit=is_pre_commit,
+            human_decisions=human_decisions,
+            conn=conn,
+            analysis_details=analysis_details,
+            incremental_only=incremental_only,
+            show_historical_debt=show_historical_debt,
+        )
+        gate_decision = "blocked" if exit_code == 2 else "pass"
+        vt_logger.info("phase_end", "Evaluate and output completed",
+                       phase="evaluate_and_output",
+                       duration_ms=int((time.perf_counter() - _t_eval) * 1000),
+                       gate_decision=gate_decision,
+                       )
+
+        # ── 阶段 9：返回退出码 ──────────────────────────────────────────
+        total_duration_ms = int((time.perf_counter() - _run_start_t) * 1000)
+        vt_logger.info("run_end", "Analysis pipeline completed",
+                       total_duration_ms=total_duration_ms,
+                       gate_decision=gate_decision,
+                       exit_code=exit_code,
+                       )
+        return exit_code
+
+    except _GateBlocked as exc:
+        return exc.exit_code
+    except Exception as exc:
+        print(f"Unexpected error running analyze command: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def _db_result_to_gaps(
@@ -52,7 +384,7 @@ def _db_result_to_gaps(
     ac_coverage: list,
     claim_evidence: list,
 ) -> list:
-    """将数据库查询结果转换为 MergeGateEngine 所需的缺口格式。
+    """[阶段 7 辅助] 将数据库查询结果转换为 MergeGateEngine 所需的缺口格式。
 
     输入：
         req_coverage:   需求覆盖查询结果（由 infra/db/queries.check_requirement_coverage() 返回）
@@ -185,7 +517,7 @@ def _run_db_analysis(
     staged_files: Optional[Set[str]] = None,
     human_decisions: Optional[dict] = None,
 ) -> tuple:
-    """使用数据库查询直接执行分析。
+    """[阶段 7] 使用数据库查询直接执行分析。
 
     输入：
         conn:            内存数据库连接（由 infra/db.init_in_memory_db() 创建）
@@ -303,7 +635,7 @@ def _run_analysis_phase(
     project_root: Path,
     staged_files: Optional[Set[str]] = None,
 ):
-    """过滤 stale 项并构建 staged_items（用于门禁判定的债务感知）。
+    """[阶段 8 辅助] 过滤 stale 项并构建 staged_items（用于门禁判定的债务感知）。
 
     输入：
         ctx:            统一上下文
@@ -376,8 +708,10 @@ def _run_gate_evaluation(
     dangling_claims: Optional[list] = None,
     claim_evidence_gaps: Optional[list] = None,
     cov_violations: Optional[list] = None,
+    incremental_only: bool = False,
+    show_historical_debt: bool = True,
 ) -> dict:
-    """调用 MergeGateEngine 执行门禁判定。
+    """[阶段 8 辅助] 调用 MergeGateEngine 执行门禁判定。
 
     输入：
         project_root:          项目根目录
@@ -394,12 +728,18 @@ def _run_gate_evaluation(
         dangling_claims:       悬空 Claim 列表
         claim_evidence_gaps:   Claim 证据缺口列表
         cov_violations:        覆盖率违规列表
+        incremental_only:      是否只检查增量问题
+        show_historical_debt:  是否显示历史债务详情
     输出：
         返回门禁结果字典（含 gate_decision、gaps、risks 等）
     """
     if human_decisions is None:
         human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
-    gate_engine = MergeGateEngine(project_root)
+    gate_engine = MergeGateEngine(
+        project_root,
+        incremental_only=incremental_only,
+        show_historical_debt=show_historical_debt,
+    )
     gate_res = gate_engine.evaluate(
         active_gaps, active_risks,
         compliance_res=compliance_res,
@@ -434,8 +774,10 @@ def _evaluate_and_output(
     human_decisions: Optional[dict] = None,
     conn=None,
     analysis_details: Optional[dict] = None,
+    incremental_only: bool = False,
+    show_historical_debt: bool = True,
 ) -> int:
-    """执行门禁判定并生成所有输出（报告、Dashboard、终端摘要）。
+    """[阶段 8] 执行门禁判定并生成所有输出（报告、Dashboard、终端摘要）。
 
     输入：
         ctx:              统一上下文
@@ -453,6 +795,8 @@ def _evaluate_and_output(
         human_decisions:  人类决策记录
         conn:             数据库连接
         analysis_details: 分析详情（ghost_files, ac_gaps, dangling_claims 等）
+        incremental_only: 是否只检查增量问题
+        show_historical_debt: 是否显示历史债务详情
     输出：
         返回退出码（0=通过, 2=blocked）
     """
@@ -476,6 +820,8 @@ def _evaluate_and_output(
         dangling_claims=analysis_details.get("dangling_claims"),
         claim_evidence_gaps=analysis_details.get("claim_evidence_gaps"),
         cov_violations=analysis_details.get("cov_violations"),
+        incremental_only=incremental_only,
+        show_historical_debt=show_historical_debt,
     )
 
     # 阶段 3：生成追溯报告
@@ -498,192 +844,3 @@ def _evaluate_and_output(
     return exit_code
 
 
-def run_analyze(project_root: Path, output_dir: Optional[Path] = None, is_pre_commit: bool = False, gates_only: bool = False) -> int:
-    """执行完整的 VT 分析流水线。
-
-    输入：
-        project_root: 项目根目录（由 cli/main.py 传入）
-        output_dir:   输出目录（可选，默认从 config.json 读取）
-        is_pre_commit: 是否为 Git pre-commit hook 模式
-        gates_only:   是否仅运行门禁（快速模式，跳过工具执行和分析）
-    前置条件：
-        项目已完成 vt finalize（config.json 存在且有效）
-    处理逻辑（9 个阶段）：
-        1. _load_context：加载 PRD、Tasks、Claims、Config
-        2. _check_claim_coverage：Claim 覆盖前置检查
-        3. init_in_memory_db：创建内存数据库
-        4. _execute_tools：执行 pytest/ruff/bandit/coverage
-        5. load_prd + load_tasks + load_claims：将数据灌入数据库
-        6. EvidenceBuilder.build：合并新旧证据，导出拆分 JSON
-        7. _run_analyzers：运行 3 个分析器（REQ→Task、AC→Test、Claim→Evidence）
-        8. _evaluate_and_output：门禁判定 + 报告生成 + Dashboard 渲染
-        9. return exit_code
-    输出：
-        退出码：0=通过, 1=执行错误, 2=门禁 blocked
-    """
-    conn = None
-    try:
-        # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
-        from vibe_tracing.infra.logging.logger import OperationalLogger
-        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_prd
-        _run_start_t = time.perf_counter()
-
-        # ── 阶段 1：加载输入 ──────────────────────────────────────────────
-        _t_ctx = time.perf_counter()
-        ctx, raw_loader = _load_context(project_root)
-        prd_res = ctx.prd
-        is_draft = (prd_res.status == "draft")
-        config_prefix = ctx.config_prefix
-
-        log_level = ctx.config.get("logging", {}).get("level", "DEBUG")
-        try:
-            vt_logger = OperationalLogger.get_or_init(
-                run_id=f"ANALYZE-{uuid.uuid4()}", project_root=project_root,
-                level=log_level,
-            )
-        except Exception:
-            vt_logger = OperationalLogger.get()
-        vt_logger.info("run_start", "Analysis pipeline started",
-                       is_pre_commit=is_pre_commit, gates_only=gates_only)
-        vt_logger.info("phase_end", "Load context completed",
-                       phase="load_context",
-                       duration_ms=int((time.perf_counter() - _t_ctx) * 1000),
-                       config_prefix=config_prefix,
-                       has_prd=prd_res is not None,
-                       claims_count=len(ctx.claims_list),
-                       )
-
-        # 解析输出目录（未指定时从 config 读取）
-        if output_dir is None:
-            _out_rel = ctx.config.get("paths", {}).get("output_dir", "output")
-            output_dir = (project_root / _out_rel).resolve()
-
-        # ── 阶段 2：Claim 覆盖前置检查（Gate 2）────────────────────────
-        _t_gates = time.perf_counter()
-        exit_code = _check_claim_coverage(
-            ctx, project_root, is_pre_commit, config_prefix,
-        )
-        vt_logger.info("phase_end", "Integrity gates completed",
-                       phase="integrity_gates",
-                       duration_ms=int((time.perf_counter() - _t_gates) * 1000),
-                       gate_result="pass" if exit_code is None else "blocked",
-                       exit_code=exit_code if exit_code is not None else 0,
-                       )
-        if exit_code is not None:
-            return exit_code
-
-        # gates_only 模式：门禁通过后直接返回，跳过后续阶段
-        if gates_only:
-            print("Gates-only mode: integrity gates passed.")
-            print("  ✓ Rule 1 (Claim coverage): PASSED")
-            print("  ✓ Rule 2 (Ghost code detection): PASSED")
-            print("  ℹ Rule 3-8 (AC coverage, test results, compliance): Requires full analysis")
-            return 0
-
-        # ── 阶段 3：创建内存数据库 ──────────────────────────────────
-        conn = init_in_memory_db()
-
-        # ── 阶段 4：执行验证工具 ──────────────────────────────────
-        _t_tools = time.perf_counter()
-        tool_evidence = _execute_tools(ctx, project_root, is_draft)
-        # tool_evidence is a pipeline-local variable, NOT stored in ctx
-        vt_logger.info("phase_end", "Tool execution completed",
-                       phase="execute_tools",
-                       duration_ms=int((time.perf_counter() - _t_tools) * 1000),
-                       tools_executed=len(tool_evidence),
-                       )
-
-        # ── 阶段 5：灌入基础数据（load_prd 必须先于 load_tasks/load_claims）──
-        # load_prd 将 requirements + acceptance_criteria 写入 DB，
-        # 是 check_requirement_coverage 和 check_ac_coverage 新模式的前置依赖。
-        load_prd(conn, ctx.prd)
-        if ctx.task_result and ctx.task_result.tasks:
-            load_tasks(conn, [t.__dict__ for t in ctx.task_result.tasks])
-        if ctx.claims_list:
-            load_claims(conn, [c.__dict__ for c in ctx.claims_list])
-
-        # ── 阶段 7：构建证据（EvidenceBuilder）────────────────────────────
-        _t_build = time.perf_counter()
-        try:
-            # EvidenceBuilder：合并历史缓存 + 本次结果，导出拆分 JSON
-            evidence_builder = EvidenceBuilder(project_root)
-            merge_result = evidence_builder.merge(tool_evidence)
-            evidence_builder.apply(conn, merge_result)
-            evidence_builder.persist(output_dir / "evidences", merge_result)
-
-            # 从数据库获取全链路数据作为证据元数据（替代 evidence_dicts 中间层）
-            from vibe_tracing.infra.db.queries import get_full_chain
-            full_chain = get_full_chain(conn)
-
-            # 证据元数据（供报告使用）
-            evidence_meta = {
-                "run_id": f"RUN-{uuid.uuid4()}",
-                "project_id": f"PROJECT-{config_prefix}",
-                "scan_time": "",
-                "full_chain": full_chain,
-            }
-        except Exception as exc:
-            print(f"Error building evidence: {exc}", file=sys.stderr)
-            return 1
-        vt_logger.info("phase_end", "Evidence built",
-                       phase="build_evidence",
-                       duration_ms=int((time.perf_counter() - _t_build) * 1000),
-                       full_chain_count=len(evidence_meta.get("full_chain", [])),
-                       )
-
-        staged_files = _get_staged_files(project_root)
-
-        human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
-
-        # ── 阶段 8：运行分析（直接查 DB）────────────────────────────────
-        _t_analyzers = time.perf_counter()
-        merged_gaps, final_risks, compliance_res, analysis_details = _run_db_analysis(
-            conn, ctx, project_root,
-            staged_files=staged_files,
-            human_decisions=human_decisions,
-        )
-        claim_res = {}  # Legacy format, kept for report compatibility
-        req_res = {}    # Legacy format, kept for report compatibility
-        vt_logger.info("phase_end", "Analysis completed (db.check_*)",
-                       phase="run_analyzers",
-                       duration_ms=int((time.perf_counter() - _t_analyzers) * 1000),
-                       gaps_count=len(merged_gaps),
-                       risks_count=len(final_risks),
-                       has_compliance=compliance_res is not None,
-                       )
-
-        # ── 阶段 9：门禁判定 + 输出 ──────────────────────────────────────
-        _t_eval = time.perf_counter()
-        exit_code = _evaluate_and_output(
-            ctx, merged_gaps, final_risks, compliance_res,
-            output_dir, evidence_meta, claim_res, req_res,
-            project_root, is_draft, staged_files=staged_files,
-            is_pre_commit=is_pre_commit,
-            human_decisions=human_decisions,
-            conn=conn,
-            analysis_details=analysis_details,
-        )
-        gate_decision = "blocked" if exit_code == 2 else "pass"
-        vt_logger.info("phase_end", "Evaluate and output completed",
-                       phase="evaluate_and_output",
-                       duration_ms=int((time.perf_counter() - _t_eval) * 1000),
-                       gate_decision=gate_decision,
-                       )
-
-        # ── 阶段 10：返回退出码 ──────────────────────────────────────────
-        total_duration_ms = int((time.perf_counter() - _run_start_t) * 1000)
-        vt_logger.info("run_end", "Analysis pipeline completed",
-                       total_duration_ms=total_duration_ms,
-                       gate_decision=gate_decision,
-                       exit_code=exit_code,
-                       )
-        return exit_code
-
-    except _GateBlocked as exc:
-        return exc.exit_code
-    except Exception as exc:
-        print(f"Unexpected error running analyze command: {exc}", file=sys.stderr)
-        return 1
-    finally:
-        if conn is not None:
-            conn.close()

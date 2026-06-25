@@ -596,3 +596,159 @@ class TestStagedItems:
 
         # Pre-existing items don't block in incremental mode
         assert res["gate_decision"] != "blocked" or any("[预存]" in msg for msg in res["reasons"])
+
+
+class TestIncrementalMode:
+    """Test incremental_only mode (TASK-VT-096)."""
+
+    def test_incremental_mode_initialization(self):
+        """Test MergeGateEngine initialization with incremental_only."""
+        engine = MergeGateEngine(
+            Path("/dummy/project/root"),
+            incremental_only=True,
+            show_historical_debt=False,
+        )
+
+        assert engine.incremental_only is True
+        assert engine.show_historical_debt is False
+
+    def test_rule2_incremental_mode(self):
+        """Test Rule 2 (ghost code) in incremental mode."""
+        engine = MergeGateEngine(
+            Path("/dummy/project/root"),
+            incremental_only=True,
+        )
+
+        gaps = []
+        risks = []
+        ghost_files = ["utils.py"]
+        staged_items = {"CLAIM-005"}  # Different claim
+
+        res = engine.evaluate(
+            gaps, risks,
+            ghost_files=ghost_files,
+            staged_items=staged_items,
+        )
+
+        # Historical ghost code should NOT block in incremental mode
+        assert res["gate_decision"] == "pass"
+        assert res["historical_debt_count"] == 1
+
+    def test_rule3_incremental_mode(self):
+        """Test Rule 3 (dangling claims) in incremental mode."""
+        engine = MergeGateEngine(
+            Path("/dummy/project/root"),
+            incremental_only=True,
+        )
+
+        gaps = []
+        risks = []
+        dangling_claims = [
+            {
+                "claim_id": "CLAIM-003",
+                "related_task": "TASK-999",
+            }
+        ]
+        staged_items = {"CLAIM-005"}  # Different claim
+
+        res = engine.evaluate(
+            gaps, risks,
+            dangling_claims=dangling_claims,
+            staged_items=staged_items,
+        )
+
+        # Historical dangling claim should NOT block in incremental mode
+        assert res["gate_decision"] == "pass"
+        assert res["historical_debt_count"] == 1
+
+    def test_rule4_incremental_mode(self):
+        """Test Rule 4 (claim evidence gaps) in incremental mode."""
+        engine = MergeGateEngine(
+            Path("/dummy/project/root"),
+            incremental_only=True,
+        )
+
+        gaps = []
+        risks = []
+        claim_evidence_gaps = [
+            {
+                "claim_id": "CLAIM-003",
+                "verification_status": "test_failed",
+            }
+        ]
+        staged_items = {"CLAIM-005"}  # Different claim
+
+        res = engine.evaluate(
+            gaps, risks,
+            claim_evidence_gaps=claim_evidence_gaps,
+            staged_items=staged_items,
+        )
+
+        # Historical failed test should NOT block in incremental mode
+        assert res["gate_decision"] == "pass"
+        assert res["historical_debt_count"] == 1
+
+    def test_rule5_incremental_mode(self):
+        """Test Rule 5 (AC coverage) in incremental mode."""
+        engine = MergeGateEngine(
+            Path("/dummy/project/root"),
+            incremental_only=True,
+        )
+
+        gaps = []
+        risks = []
+        ac_gaps = [
+            {
+                "ac_id": "AC-VT-001-01",
+                "task_id": "TASK-VT-001",
+                "coverage_status": "no_test_coverage",
+            }
+        ]
+        staged_items = {"CLAIM-005"}  # Different claim
+
+        res = engine.evaluate(
+            gaps, risks,
+            ac_gaps=ac_gaps,
+            staged_items=staged_items,
+        )
+
+        # Historical AC gap should NOT block in incremental mode
+        assert res["gate_decision"] == "pass"
+        assert res["historical_debt_count"] == 1
+
+    def test_incremental_mode_blocks_current_debt(self):
+        """Test that incremental mode still blocks current debt."""
+        engine = MergeGateEngine(
+            Path("/dummy/project/root"),
+            incremental_only=True,
+        )
+
+        gaps = []
+        risks = []
+        ghost_files = ["main.py"]
+        staged_items = {"main.py"}  # Current commit includes this file
+
+        res = engine.evaluate(
+            gaps, risks,
+            ghost_files=ghost_files,
+            staged_items=staged_items,
+        )
+
+        # Current debt should still block in incremental mode
+        assert res["gate_decision"] == "blocked"
+        assert len(res["blocked_items"]) > 0
+        assert res["historical_debt_count"] == 0
+
+    def test_incremental_mode_result_fields(self):
+        """Test that incremental mode adds result fields."""
+        engine = MergeGateEngine(
+            Path("/dummy/project/root"),
+            incremental_only=True,
+        )
+
+        res = engine.evaluate([], [], {})
+
+        assert "incremental_mode" in res
+        assert "historical_debt_count" in res
+        assert res["incremental_mode"] is True
+        assert res["historical_debt_count"] == 0

@@ -60,28 +60,14 @@ def run_accept(project_root: Path, rule_id: str, accepted_by: str = "human") -> 
                                 exc=exc, path=str(constraints_path))
         return 1
 
-    # All rule array keys to search
-    rule_keys = [
-        "architecture_principles",
-        "module_boundaries",
-        "dependency_rules",
-        "data_flow_rules",
-        "storage_rules",
-        "error_handling_rules",
-        "logging_rules",
-        "security_rules",
-        "technology_constraints",
-        "forbidden_patterns",
-        "quality_gates",
-        "interface_contracts",
-        "performance_constraints",
-        "deployment_constraints",
-        "test_constraints",
-    ]
-
+    # Dynamically search all list-type keys for the target rule
     found_rule = None
-    for key in rule_keys:
-        for rule in data.get(key, []):
+    for key, value in data.items():
+        if not isinstance(value, list):
+            continue
+        for rule in value:
+            if not isinstance(rule, dict):
+                continue
             r_id = (
                 rule.get("rule_id")
                 or rule.get("principle_id")
@@ -103,7 +89,7 @@ def run_accept(project_root: Path, rule_id: str, accepted_by: str = "human") -> 
         )
         if vt_logger:
             vt_logger.warning("accept_validation", "Rule not found",
-                              rule_id=rule_id, searched_keys=len(rule_keys))
+                              rule_id=rule_id)
         return 1
 
     if vt_logger:

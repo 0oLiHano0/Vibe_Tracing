@@ -206,3 +206,34 @@ def get_full_chain(conn: sqlite3.Connection) -> list:
         }
         for r in rows
     ]
+
+
+def query_related_code(conn: sqlite3.Connection, ac_id: str) -> list:
+    """查询与 AC 关联的代码文件路径（通过 task_acs → claims → claim_code_refs 链路）。
+
+    返回路径列表（最多 3 个），仅返回文件系统中实际存在的路径。
+    """
+    cursor = conn.execute("""
+        SELECT DISTINCT ccr.code_path
+        FROM task_acs ta
+        JOIN claims c ON c.related_task = ta.task_id
+        JOIN claim_code_refs ccr ON ccr.claim_id = c.claim_id
+        WHERE ta.ac_id = ?
+    """, (ac_id,))
+    from pathlib import Path
+    return [r[0] for r in cursor.fetchall() if Path(r[0]).exists()][:3]
+
+
+def query_existing_tests(conn: sqlite3.Connection, ac_id: str) -> list:
+    """查询与 AC 关联的测试 nodeid（通过 task_acs → claims → claim_test_refs 链路）。
+
+    返回 nodeid 列表（最多 2 个）。
+    """
+    cursor = conn.execute("""
+        SELECT DISTINCT ctr.test_nodeid
+        FROM task_acs ta
+        JOIN claims c ON c.related_task = ta.task_id
+        JOIN claim_test_refs ctr ON ctr.claim_id = c.claim_id
+        WHERE ta.ac_id = ?
+    """, (ac_id,))
+    return [r[0] for r in cursor.fetchall()][:2]

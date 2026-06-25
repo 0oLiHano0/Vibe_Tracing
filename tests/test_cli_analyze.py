@@ -634,7 +634,7 @@ def test_run_doctor_with_fragment_refs(tmp_path, capsys):
 
 def test_get_ac_description():
     """Test _get_ac_description extracts AC title from prd_result."""
-    from vibe_tracing.cli import _get_ac_description
+    from vibe_tracing.cli.analyze.actions import _get_ac_description
     from unittest.mock import MagicMock
 
     # Mock prd_result with requirements and ACs
@@ -655,7 +655,7 @@ def test_get_ac_description():
 
 def test_get_req_description():
     """Test _get_req_description extracts requirement title from prd_result."""
-    from vibe_tracing.cli import _get_req_description
+    from vibe_tracing.cli.analyze.actions import _get_req_description
     from unittest.mock import MagicMock
 
     req = MagicMock()
@@ -671,74 +671,60 @@ def test_get_req_description():
     assert _get_req_description("REQ-TEST-01", None) == ""
 
 
-def test_get_related_code(tmp_path, monkeypatch):
-    """Test _get_related_code finds code file paths related to an AC."""
-    from vibe_tracing.cli import _get_related_code
-    from unittest.mock import MagicMock
+def test_query_related_code(tmp_path):
+    """Test query_related_code finds code paths via DB JOIN."""
+    from vibe_tracing.infra.db.queries import query_related_code
+    from vibe_tracing.infra.db import init_in_memory_db
 
-    # Create a code file
-    code_file = tmp_path / "src" / "module.py"
-    code_file.parent.mkdir(parents=True, exist_ok=True)
-    code_file.write_text("# module code\n", encoding="utf-8")
+    dummy_file = tmp_path / "src" / "module.py"
+    dummy_file.parent.mkdir(parents=True, exist_ok=True)
+    dummy_file.write_text("# module code\n", encoding="utf-8")
 
-    # Monkeypatch Path.exists to return True for the known file
-    _orig_exists = Path.exists
-    def mock_exists(self):
-        if str(self).endswith("src/module.py"):
-            return True
-        return _orig_exists(self)
-    monkeypatch.setattr(Path, "exists", mock_exists)
+    conn = init_in_memory_db()
+    conn.execute("INSERT INTO task_acs (task_id, ac_id) VALUES ('TASK-001', 'AC-TEST-01')")
+    conn.execute("INSERT INTO claims (claim_id, related_task) VALUES ('CLAIM-001', 'TASK-001')")
+    conn.execute("INSERT INTO claim_code_refs (claim_id, code_path) VALUES ('CLAIM-001', ?)", (str(dummy_file),))
 
-    # Mock task and claim objects
-    task = MagicMock()
-    task.task_id = "TASK-001"
-    task.related_acceptance_criteria = ["AC-TEST-01"]
-
-    task_result = MagicMock()
-    task_result.tasks = [task]
-
-    claim = MagicMock()
-    claim.related_task = "TASK-001"
-    claim.code_refs = [f"src/module.py#L1-L5"]
-
-    result = _get_related_code("AC-TEST-01", task_result, [claim])
-    assert len(result) > 0
-    assert result[0] == "src/module.py"
-
-
-def test_get_related_code_no_claims():
-    """Test _get_related_code returns empty list when no claims."""
-    from vibe_tracing.cli import _get_related_code
-    assert _get_related_code("AC-TEST-01", None, None) == []
-    assert _get_related_code("AC-TEST-01", None, []) == []
-
-
-def test_get_existing_tests():
-    """Test _get_existing_tests finds test refs related to an AC."""
-    from vibe_tracing.cli import _get_existing_tests
-    from unittest.mock import MagicMock
-
-    task = MagicMock()
-    task.task_id = "TASK-001"
-    task.related_acceptance_criteria = ["AC-TEST-01"]
-
-    task_result = MagicMock()
-    task_result.tasks = [task]
-
-    claim = MagicMock()
-    claim.related_task = "TASK-001"
-    claim.test_refs = ["tests/test_module.py"]
-
-    result = _get_existing_tests("AC-TEST-01", task_result, [claim])
+    result = query_related_code(conn, "AC-TEST-01")
     assert len(result) == 1
-    assert "tests/test_module.py" in result
+    assert result[0] == str(dummy_file)
+    conn.close()
 
 
-def test_get_existing_tests_no_claims():
-    """Test _get_existing_tests returns empty list when no claims."""
-    from vibe_tracing.cli import _get_existing_tests
-    assert _get_existing_tests("AC-TEST-01", None, None) == []
-    assert _get_existing_tests("AC-TEST-01", None, []) == []
+def test_query_related_code_no_match():
+    """Test query_related_code returns empty list when no matching AC."""
+    from vibe_tracing.infra.db.queries import query_related_code
+    from vibe_tracing.infra.db import init_in_memory_db
+
+    conn = init_in_memory_db()
+    assert query_related_code(conn, "AC-NONEXISTENT") == []
+    conn.close()
+
+
+def test_query_existing_tests(tmp_path):
+    """Test query_existing_tests finds test nodeids via DB JOIN."""
+    from vibe_tracing.infra.db.queries import query_existing_tests
+    from vibe_tracing.infra.db import init_in_memory_db
+
+    conn = init_in_memory_db()
+    conn.execute("INSERT INTO task_acs (task_id, ac_id) VALUES ('TASK-001', 'AC-TEST-01')")
+    conn.execute("INSERT INTO claims (claim_id, related_task) VALUES ('CLAIM-001', 'TASK-001')")
+    conn.execute("INSERT INTO claim_test_refs (claim_id, test_nodeid) VALUES ('CLAIM-001', 'tests/test_module.py::test_run')")
+
+    result = query_existing_tests(conn, "AC-TEST-01")
+    assert len(result) == 1
+    assert result[0] == "tests/test_module.py::test_run"
+    conn.close()
+
+
+def test_query_existing_tests_no_match():
+    """Test query_existing_tests returns empty list when no matching AC."""
+    from vibe_tracing.infra.db.queries import query_existing_tests
+    from vibe_tracing.infra.db import init_in_memory_db
+
+    conn = init_in_memory_db()
+    assert query_existing_tests(conn, "AC-NONEXISTENT") == []
+    conn.close()
 
 
 # =========================================================================
@@ -747,7 +733,7 @@ def test_get_existing_tests_no_claims():
 
 def test_derive_test_scenarios():
     """Test _derive_test_scenarios generates scenarios from AC text."""
-    from vibe_tracing.cli import _derive_test_scenarios
+    from vibe_tracing.cli.analyze.actions import _derive_test_scenarios
 
     # Empty text returns default
     scenarios_empty = _derive_test_scenarios("")
@@ -768,7 +754,7 @@ def test_derive_test_scenarios():
 
 def test_hint_title():
     """Test _hint_title extracts title from action hints."""
-    from vibe_tracing.cli import _hint_title
+    from vibe_tracing.cli.analyze.actions import _hint_title
 
     # Test with a known action type (cover_gap should be in field_hints.json)
     title = _hint_title("cover_gap", ac_id="AC-TEST-01", ac_text="Test AC")
@@ -781,7 +767,7 @@ def test_hint_title():
 
 def test_hint_context():
     """Test _hint_context gets context values from action hints."""
-    from vibe_tracing.cli import _hint_context
+    from vibe_tracing.cli.analyze.actions import _hint_context
 
     # Test with known action type and key
     ctx = _hint_context("cover_gap", "verification", ac_id="AC-TEST-01")
@@ -980,7 +966,7 @@ def test_resolve_hint_non_string():
 
 def test_collect_gap_actions():
     """Test _collect_gap_actions generates actions for MUST gaps."""
-    from vibe_tracing.cli import _collect_gap_actions
+    from vibe_tracing.cli.analyze.actions import _collect_gap_actions
 
     gaps = [
         {"item_id": "AC-001", "severity": "must", "item_type": "ac", "requirement_id": "REQ-001"},
@@ -996,7 +982,7 @@ def test_collect_gap_actions():
 
 def test_collect_risk_actions_must():
     """Test _collect_risk_actions generates HIGH actions for must risks."""
-    from vibe_tracing.cli import _collect_risk_actions
+    from vibe_tracing.cli.analyze.actions import _collect_risk_actions
 
     risks = [
         {"risk_id": "R-001", "severity": "must", "title": "High Risk", "description": "desc"},
@@ -1010,7 +996,7 @@ def test_collect_risk_actions_must():
 
 def test_collect_risk_actions_self_referential():
     """Test _collect_risk_actions generates action for self-referential risks."""
-    from vibe_tracing.cli import _collect_risk_actions
+    from vibe_tracing.cli.analyze.actions import _collect_risk_actions
 
     risks = [
         {"risk_id": "R-001", "severity": "should", "title": "Self Ref", "description": "only self-referential evidence"},
@@ -1023,7 +1009,7 @@ def test_collect_risk_actions_self_referential():
 
 def test_collect_risk_actions_stale_debt():
     """Test _collect_risk_actions generates LOW action for stale risks."""
-    from vibe_tracing.cli import _collect_risk_actions
+    from vibe_tracing.cli.analyze.actions import _collect_risk_actions
 
     risks = [
         {"risk_id": "R-001", "severity": "should", "title": "Stale", "description": "old", "stale": True, "age_iterations": "3"},
@@ -1037,7 +1023,7 @@ def test_collect_risk_actions_stale_debt():
 
 def test_collect_risk_actions_stale_deferred_skipped():
     """Test _collect_risk_actions skips stale+deferred risks."""
-    from vibe_tracing.cli import _collect_risk_actions
+    from vibe_tracing.cli.analyze.actions import _collect_risk_actions
 
     risks = [
         {"risk_id": "R-001", "severity": "should", "title": "Stale", "description": "old", "stale": True, "deferred": True},
@@ -1049,7 +1035,7 @@ def test_collect_risk_actions_stale_deferred_skipped():
 
 def test_collect_violation_actions():
     """Test _collect_violation_actions generates actions for violations."""
-    from vibe_tracing.cli import _collect_violation_actions
+    from vibe_tracing.cli.analyze.actions import _collect_violation_actions
 
     violations = [{"rule_id": "R-001", "description": "Rule desc", "reason": "violation reason"}]
     compliance_status = []
@@ -1061,7 +1047,7 @@ def test_collect_violation_actions():
 
 def test_collect_violation_actions_arch_status():
     """Test _collect_violation_actions handles arch_status_violation."""
-    from vibe_tracing.cli import _collect_violation_actions
+    from vibe_tracing.cli.analyze.actions import _collect_violation_actions
 
     violations = []
     compliance_status = [
@@ -1076,7 +1062,7 @@ def test_collect_violation_actions_arch_status():
 
 def test_collect_gate_reason_actions():
     """Test _collect_gate_reason_actions generates fallback actions."""
-    from vibe_tracing.cli import _collect_gate_reason_actions
+    from vibe_tracing.cli.analyze.actions import _collect_gate_reason_actions
 
     # Blocked with no HIGH actions and reasons
     actions = _collect_gate_reason_actions("blocked", ["reason 1", "reason 2"], [])
@@ -1086,7 +1072,7 @@ def test_collect_gate_reason_actions():
 
 def test_collect_gate_reason_actions_skipped_when_high_exists():
     """Test _collect_gate_reason_actions skips when HIGH actions exist."""
-    from vibe_tracing.cli import _collect_gate_reason_actions
+    from vibe_tracing.cli.analyze.actions import _collect_gate_reason_actions
 
     existing = [{"priority": "HIGH", "type": "cover_gap", "title": "t", "context": {}}]
     actions = _collect_gate_reason_actions("blocked", ["reason"], existing)
@@ -1095,7 +1081,7 @@ def test_collect_gate_reason_actions_skipped_when_high_exists():
 
 def test_collect_gate_reason_actions_skipped_when_pass():
     """Test _collect_gate_reason_actions skips when decision is pass."""
-    from vibe_tracing.cli import _collect_gate_reason_actions
+    from vibe_tracing.cli.analyze.actions import _collect_gate_reason_actions
 
     actions = _collect_gate_reason_actions("pass", ["reason"], [])
     assert len(actions) == 0
@@ -1107,7 +1093,7 @@ def test_collect_gate_reason_actions_skipped_when_pass():
 
 def test_render_actions_empty():
     """Test _render_actions with no actions."""
-    from vibe_tracing.cli import _render_actions
+    from vibe_tracing.cli.analyze.formatting import _render_actions
 
     lines = _render_actions([])
     assert any("NO ACTION REQUIRED" in l for l in lines)
@@ -1115,7 +1101,7 @@ def test_render_actions_empty():
 
 def test_render_actions_with_actions():
     """Test _render_actions formats action items."""
-    from vibe_tracing.cli import _render_actions
+    from vibe_tracing.cli.analyze.formatting import _render_actions
 
     actions = [
         {
@@ -1144,7 +1130,7 @@ def test_render_actions_with_actions():
 
 def test_render_actions_with_human_decisions():
     """Test _render_actions includes human decision instructions."""
-    from vibe_tracing.cli import _render_actions
+    from vibe_tracing.cli.analyze.formatting import _render_actions
 
     actions = [
         {
@@ -1162,7 +1148,7 @@ def test_render_actions_with_human_decisions():
 
 def test_render_actions_with_coverage_summary():
     """Test _render_actions includes coverage info when actions exist."""
-    from vibe_tracing.cli import _render_actions
+    from vibe_tracing.cli.analyze.formatting import _render_actions
 
     # Need at least one action for coverage section to render
     actions = [
@@ -1176,7 +1162,7 @@ def test_render_actions_with_coverage_summary():
 
 def test_render_actions_coverage_below_threshold(tmp_path):
     """Test _render_actions flags BLOCKED when aggregate coverage is below threshold."""
-    from vibe_tracing.cli import _render_actions
+    from vibe_tracing.cli.analyze.formatting import _render_actions
 
     # Need at least one action for coverage section to render
     actions = [
@@ -1200,7 +1186,7 @@ def test_render_actions_coverage_below_threshold(tmp_path):
 
 def test_render_actions_per_file_violations_pass(tmp_path):
     """Test _render_actions shows PASS when aggregate coverage is above threshold."""
-    from vibe_tracing.cli import _render_actions
+    from vibe_tracing.cli.analyze.formatting import _render_actions
 
     actions = [
         {"priority": "HIGH", "type": "test", "title": "Test Action", "context": {}}
@@ -1221,7 +1207,7 @@ def test_render_actions_per_file_violations_pass(tmp_path):
 
 def test_format_agent_actions_pass():
     """Test _format_agent_actions formats a passing decision."""
-    from vibe_tracing.cli import _format_agent_actions
+    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
 
     result = _format_agent_actions(
         gate_decision="pass",
@@ -1236,7 +1222,7 @@ def test_format_agent_actions_pass():
 
 def test_format_agent_actions_blocked():
     """Test _format_agent_actions formats a blocked decision."""
-    from vibe_tracing.cli import _format_agent_actions
+    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
 
     result = _format_agent_actions(
         gate_decision="blocked",
@@ -1252,7 +1238,7 @@ def test_format_agent_actions_blocked():
 
 def test_format_agent_actions_with_violations():
     """Test _format_agent_actions includes violation actions."""
-    from vibe_tracing.cli import _format_agent_actions
+    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
 
     result = _format_agent_actions(
         gate_decision="blocked",
@@ -1271,7 +1257,7 @@ def test_format_agent_actions_with_violations():
 
 def test_check_staged_extensions_no_constraints():
     """Test _check_staged_extensions does nothing without constraints."""
-    from vibe_tracing.cli import _check_staged_extensions
+    from vibe_tracing.cli.analyze.tools import _check_staged_extensions
 
     # Should not raise
     _check_staged_extensions(Path("/fake"), None)
@@ -1279,7 +1265,7 @@ def test_check_staged_extensions_no_constraints():
 
 def test_check_staged_extensions_empty_ltm():
     """Test _check_staged_extensions does nothing with empty ltm."""
-    from vibe_tracing.cli import _check_staged_extensions
+    from vibe_tracing.cli.analyze.tools import _check_staged_extensions
 
     constraints = {"language_tool_matrix": {}}
     _check_staged_extensions(Path("/fake"), constraints)
@@ -1287,7 +1273,7 @@ def test_check_staged_extensions_empty_ltm():
 
 def test_check_staged_extensions_no_staged_files(tmp_path):
     """Test _check_staged_extensions does nothing when no staged files."""
-    from vibe_tracing.cli import _check_staged_extensions
+    from vibe_tracing.cli.analyze.tools import _check_staged_extensions
 
     constraints = {
         "language_tool_matrix": {"python": {"extensions": [".py"]}}
@@ -1497,7 +1483,7 @@ def test_run_finalize_language_not_in_matrix(tmp_path, capsys):
 
 def test_get_staged_files_no_git(tmp_path):
     """Test _get_staged_files returns empty set when not in git repo."""
-    from vibe_tracing.cli import _get_staged_files
+    from vibe_tracing.infra.git.utils import get_staged_files as _get_staged_files
 
     result = _get_staged_files(tmp_path)
     assert result == set()
@@ -1534,7 +1520,7 @@ def test_run_init_via_cli_no_name(tmp_path, capsys):
 
 def test_validate_constraints_change_first_finalize(tmp_path):
     """Test _validate_constraints_change passes on first finalization."""
-    from vibe_tracing.cli import _validate_constraints_change
+    from vibe_tracing.cli.finalize import _validate_constraints_change
 
     config_data = {}  # No finalize_commit
     passed, message = _validate_constraints_change(
@@ -1568,7 +1554,7 @@ def test_main_help(capsys):
 
 def test_print_post_finalize_guidance(tmp_path):
     """Test _print_post_finalize_guidance with dirty working dir."""
-    from vibe_tracing.cli import _print_post_finalize_guidance
+    from vibe_tracing.cli.finalize import _print_post_finalize_guidance
     import subprocess as sp
 
     # Create a git repo
@@ -1584,7 +1570,7 @@ def test_print_post_finalize_guidance(tmp_path):
 
 def test_print_post_finalize_guidance_clean(tmp_path):
     """Test _print_post_finalize_guidance with clean working dir."""
-    from vibe_tracing.cli import _print_post_finalize_guidance
+    from vibe_tracing.cli.finalize import _print_post_finalize_guidance
     import subprocess as sp
 
     sp.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)

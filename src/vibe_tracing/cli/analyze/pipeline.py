@@ -836,6 +836,7 @@ def _evaluate_and_output(
         active_gaps, active_risks, merged_gaps, final_risks, compliance_res,
         staged_items, output_dir, project_root, is_draft,
         is_pre_commit=is_pre_commit, staged_files=staged_files,
+        conn=conn,
     )
 
     # 计算退出码

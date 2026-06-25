@@ -1,24 +1,104 @@
 """
-Agent action collectors and urgency scoring.
+Agent action collectors, urgency scoring, and hint resolution.
+
+Absorbs former helpers.py: AC/requirement description helpers and hint resolution.
 """
 
 from typing import Any, Dict, Optional, Set
+
+from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
 
 URGENCY_STAGED = 85
 URGENCY_IN_EVIDENCE = 60
 URGENCY_DEFAULT = 30
 URGENCY_STALE = 25
 
+# --- Hint resolution (from former helpers.py) ---
 
-from vibe_tracing.cli.analyze.helpers import (
-    _hint_title,
-    _hint_context,
-    _derive_test_scenarios,
-    _get_ac_description,
-    _get_req_description,
-    _get_related_code,
-    _get_existing_tests,
-)
+# Module-level cache for action hints (loaded via centralized hint_loader)
+_action_hints: Dict[str, Any] = load_hints("action")
+
+
+def _hint_title(action_type: str, **kwargs: Any) -> str:
+    """Extract the title portion from the first sentence of a level1 hint."""
+    hint = _action_hints.get(action_type, {})
+    template = resolve_hint(hint, "level1")
+    idx = template.find("。")
+    if idx > 0:
+        template = template[:idx]
+    try:
+        return template.format(**kwargs)
+    except (KeyError, IndexError):
+        return template
+
+
+def _hint_context(action_type: str, key: str, **kwargs: Any) -> str:
+    """Get a context value from action hints and format with variables."""
+    hint = _action_hints.get(action_type, {})
+    template = hint.get(key, "")
+    if not template:
+        return ""
+    try:
+        return template.format(**kwargs)
+    except (KeyError, IndexError):
+        return template
+
+
+def _derive_test_scenarios(ac_text: str) -> list:
+    """Derive test scenarios from AC title text using hints."""
+    hints = _action_hints.get("test_scenarios", {})
+    default = hints.get("default", "")
+    if not ac_text:
+        return [default]
+    scenarios = []
+    if any(kw in ac_text for kw in ["无效", "错误", "invalid", "error"]):
+        scenarios.append(hints.get("invalid_input", ""))
+    if any(kw in ac_text for kw in ["空", "empty"]):
+        scenarios.append(hints.get("empty_input", ""))
+    if any(kw in ac_text for kw in ["正常", "valid", "正确"]):
+        scenarios.append(hints.get("valid_input", ""))
+    if not scenarios:
+        scenarios.append(default)
+    return scenarios
+
+
+def _get_ac_description(ac_id: str, prd_result) -> str:
+    """Extract AC title from PrdParseResult."""
+    if not prd_result or not hasattr(prd_result, "requirements"):
+        return ""
+    for req in prd_result.requirements:
+        for ac in req.acceptance_criteria:
+            if ac.ac_id == ac_id:
+                return ac.title
+    return ""
+
+
+def _get_req_description(req_id: str, prd_result) -> str:
+    """Extract requirement title from PrdParseResult."""
+    if not prd_result or not hasattr(prd_result, "requirements") or not req_id:
+        return ""
+    for req in prd_result.requirements:
+        if req.req_id == req_id:
+            return req.title
+    return ""
+
+
+def _get_related_code(conn, ac_id: str) -> list:
+    """Extract code file paths related to an AC via DB query.
+
+    Delegates to infra/db/queries.query_related_code.
+    """
+    from vibe_tracing.infra.db.queries import query_related_code
+    return query_related_code(conn, ac_id)
+
+
+def _get_existing_tests(conn, ac_id: str) -> list:
+    """Get test nodeids related to an AC via DB query.
+
+    Delegates to infra/db/queries.query_existing_tests.
+    """
+    from vibe_tracing.infra.db.queries import query_existing_tests
+    return query_existing_tests(conn, ac_id)
 
 
 def _compute_gap_urgency(
@@ -57,6 +137,7 @@ def _collect_gap_actions(
     claims_list: list,
     staged_items: Optional[Set[str]] = None,
     evidence_index: Optional[dict] = None,
+    conn=None,
 ) -> list:
     """Collect gap-related actions for MUST-level gaps."""
     actions = []
@@ -65,8 +146,8 @@ def _collect_gap_actions(
             continue
         ac_id = gap.get("item_id", "")
         ac_text = _get_ac_description(ac_id, prd_result) or gap.get("title", "")
-        related_code = _get_related_code(ac_id, task_result, claims_list)
-        existing_tests = _get_existing_tests(ac_id, task_result, claims_list)
+        related_code = _get_related_code(conn, ac_id) if conn else []
+        existing_tests = _get_existing_tests(conn, ac_id) if conn else []
         test_scenarios = _derive_test_scenarios(ac_text)
 
         ctx: Dict[str, Any] = {

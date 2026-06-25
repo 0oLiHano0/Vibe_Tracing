@@ -5461,6 +5461,174 @@
         "spec_pipeline_stage_1.md 的处理逻辑步骤应以 pipeline.py 中 _load_context 的实际代码为准",
         "task_list.json 的 status 更新使用 python 脚本批量修改，避免手动 JSON 编辑出错"
       ]
+    },
+    {
+      "task_id": "TASK-VT-100",
+      "phase_id": "PHASE-VT-011",
+      "title": "动态规则 Key 替换（accept.py + doctor.py）",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "移除 accept.py 和 doctor.py 中硬编码的 rule_keys 数组，改为动态遍历 constraints_data 中值类型为 list 的键值对进行规则查找。",
+      "atomic_scope": "1. accept.py：移除硬编码 rule_keys，改为遍历 data.items() 中 isinstance(value, list) 的条目；2. doctor.py：同上，修改 machine_rule_coverage 健康诊断步骤；3. 确保全量测试通过。",
+      "out_of_scope": [
+        "不修改规则判定逻辑",
+        "不修改 constraints.json 结构"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-099"
+      ],
+      "expected_deliverables": [
+        "更新后的 src/vibe_tracing/cli/accept.py",
+        "更新后的 src/vibe_tracing/cli/doctor.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-100-01",
+          "description": "accept.py 中不再有硬编码 rule_keys 数组，规则查找改为动态遍历 list 类型键"
+        },
+        {
+          "dod_id": "DOD-VT-100-02",
+          "description": "doctor.py 中不再有硬编码 rule_keys 数组，machine_rule_coverage 改为动态遍历"
+        },
+        {
+          "dod_id": "DOD-VT-100-03",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "动态遍历逻辑：for key, value in data.items(): if isinstance(value, list): for rule in value: ...",
+        "规则 ID 字段兼容多种命名：rule_id, principle_id, constraint_id, pattern_id, gate_id, contract_id"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-101",
+      "phase_id": "PHASE-VT-011",
+      "title": "CLI 层精简：合并叶子模块 + 清理 re-exports",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "合并叶子节点 helpers.py 到 actions.py，清理 cli/__init__.py 私有 re-exports，修正测试导入路径指向物理模块。",
+      "atomic_scope": "1. 将 helpers.py 全部函数复制到 actions.py 顶部并删除 helpers.py；2. 清理 cli/__init__.py，仅保留公共 CLI 入口和 _GateBlocked；3. 修正 tests/test_cli_analyze.py 和 test_incremental_mode.py 中所有 from vibe_tracing.cli import _xxx 为物理模块路径；4. 删除 gates.py 中 _run_integrity_gates alias（零调用）；5. 确保全量测试通过。",
+      "out_of_scope": [
+        "不合并 gates.py/output.py/formatting.py（职责清晰，非冗余间接层）",
+        "不修改业务逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-099"
+      ],
+      "expected_deliverables": [
+        "更新后的 src/vibe_tracing/cli/analyze/actions.py（吸收 helpers.py）",
+        "删除的 src/vibe_tracing/cli/analyze/helpers.py",
+        "更新后的 src/vibe_tracing/cli/__init__.py（仅公共 API）",
+        "更新后的 src/vibe_tracing/cli/analyze/gates.py（删除 _run_integrity_gates alias）",
+        "更新后的 tests/test_cli_analyze.py（物理路径导入）",
+        "更新后的 tests/test_incremental_mode.py（物理路径导入）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-101-01",
+          "description": "helpers.py 已物理删除，其函数已在 actions.py 中定义"
+        },
+        {
+          "dod_id": "DOD-VT-101-02",
+          "description": "cli/__init__.py 仅导出公共 CLI 入口和 _GateBlocked，无下划线开头的私有 helper 导出"
+        },
+        {
+          "dod_id": "DOD-VT-101-03",
+          "description": "tests/test_cli_analyze.py 中无 from vibe_tracing.cli import _ 形式的导入"
+        },
+        {
+          "dod_id": "DOD-VT-101-04",
+          "description": "_run_integrity_gates alias 已从 gates.py 和 __init__.py 中删除"
+        },
+        {
+          "dod_id": "DOD-VT-101-05",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "合并 helpers.py 前先确认其所有函数在 actions.py 中有对应调用方",
+        "清理 __init__.py 前先修正所有测试导入，避免中间状态导致测试失败",
+        "操作后运行 pytest 确认全量通过"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-102",
+      "phase_id": "PHASE-VT-011",
+      "title": "CLI 精简收尾：文档对齐与状态同步",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "TASK-VT-100/101 完成后，确保设计文档、spec 文档与代码实现完全一致，同步更新任务状态。",
+      "atomic_scope": "1. 更新 docs/refactoring_design.md §4.3 CLI 包结构树，确认与实际文件系统一致（helpers.py 已删除）；2. 更新 docs/cli_refactoring_plan.md 标记已完成；3. 更新 docs/spec_pipeline_stage_1.md 中涉及的模块路径；4. 将 TASK-VT-100/101/102 的 status 更新为 done。",
+      "out_of_scope": [
+        "不修改代码逻辑",
+        "不新增功能"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-100",
+        "TASK-VT-101"
+      ],
+      "expected_deliverables": [
+        "更新后的 docs/refactoring_design.md",
+        "更新后的 docs/cli_refactoring_plan.md",
+        "更新后的 docs/task_list.json（TASK-VT-100/101/102 status → done）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-102-01",
+          "description": "refactoring_design.md §4.3 CLI 包结构树与实际文件系统一致（无 helpers.py）"
+        },
+        {
+          "dod_id": "DOD-VT-102-02",
+          "description": "refactoring_design.md 中无对已删除模块的引用"
+        },
+        {
+          "dod_id": "DOD-VT-102-03",
+          "description": "TASK-VT-100/101/102 的 status 已更新为 done"
+        }
+      ],
+      "ai_coding_guidance": [
+        "逐段对照文档与实际代码，确认无遗留引用",
+        "task_list.json 的 status 更新使用 python 脚本批量修改"
+      ]
     }
   ]
 }

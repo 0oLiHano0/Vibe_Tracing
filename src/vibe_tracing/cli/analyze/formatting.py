@@ -102,14 +102,14 @@ def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
                           accepted_rules, prd_result=None, task_result=None,
                           claims_list=None, gate_reasons=None, merged_gaps=None,
                           compliance_status=None, coverage_summary=None,
-                          staged_items=None, evidence_meta=None):
+                          staged_items=None, evidence_meta=None, conn=None):
     """Format an Agent-executable action list with full inline context."""
     lines = [f"GATE DECISION: {gate_decision.upper()}", ""]
     gaps_for_actions = merged_gaps if merged_gaps is not None else active_gaps
     actions: list = []
     actions.extend(_collect_gap_actions(
         gaps_for_actions, prd_result, task_result, claims_list,
-        staged_items=staged_items, evidence_index=evidence_meta,
+        staged_items=staged_items, evidence_index=evidence_meta, conn=conn,
     ))
     actions.extend(_collect_risk_actions(
         active_risks, merged_gaps or [],

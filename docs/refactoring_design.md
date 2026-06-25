@@ -4,34 +4,7 @@
 
 ---
 
-## 1. 现状与目标
-
-### 1.1 核心问题
-
-| # | 问题 | 模块 | 状态 |
-|---|------|------|------|
-| P1 | pipeline.py 混入 ~250 行业务逻辑（evidence_dicts、文件分类、关联查询） | pipeline.py | ✅ 已修复 |
-| P2 | evidence_builder 内部 5 步自治，pipeline 无法控制顺序 | evidence_builder.py | ✅ 已修复 |
-| P3 | merge_gate_engine 直接调 db.check_*，绕过 pipeline | merge_gate_engine.py | ✅ 已修复 |
-| P4 | ghost_code_reconciler 与 MergeGateEngine 重复调 check_ghost_code | 两者 | ✅ 已修复 |
-| P5 | context.py 的 tool_evidence 后绑定，对象"半构造" | context.py | ✅ 已修复 |
-| P6 | analysis.py 与 pipeline.py 职责重叠 | 两者 | ✅ 已修复 |
-| P7 | Gate 1/1b/1c 属于 finalize 职责却在 analyze 中执行 | gates.py | ✅ 已修复 |
-| P8 | analyzers 消费 Python dict 而非直接查 DB | analyzers/ | ✅ 已修复 |
-
-### 1.2 已修复项
-
-| 项 | 说明 |
-|----|------|
-| db.py 拆分为 infra/db/ 子包 | schema.py, loaders.py, queries.py, exports.py |
-| purge_stale_cache 传 nodeid | 已改为传文件路径 |
-| export_* 未标内部函数 | 已加 `_` 前缀 |
-| _measure_source_coverage 无参数 | 已连接 coverage_baseline_path |
-| Severity 枚举死代码 | 已删除 |
-| _classify_staged_files | 已删除 |
-| _auto_generate_claim_from_staged | 已删除 |
-
-### 1.3 设计原则
+## 1. 设计原则
 
 | 原则 | 含义 |
 |------|------|
@@ -42,15 +15,14 @@
 
 ---
 
-## 2. 五项设计决策
+## 2. 设计决策
 
 ### 决策 1：分析器直接查询数据库
 
-analyzers 从"消费 Python dict"变为"查询 SQLite"。
+analyzers 查询 SQLite，不消费 Python dict。
 
-- **删除**：pipeline.py 中 ~100 行 evidence_dicts 构建
-- **删除**：`EVIDENCE-VT-{idx}` 顺序编号（用 source_path/nodeid 替代）
-- **替代**：状态映射用 SQL CASE WHEN
+- 状态映射用 SQL CASE WHEN
+- source_path/nodeid 替代顺序编号
 
 ### 决策 2：check_* 函数留在 db.py
 
@@ -58,27 +30,23 @@ analyzers 从"消费 Python dict"变为"查询 SQLite"。
 
 ### 决策 3：evidence_builder 只做"证据合并"
 
-- `build()` 拆为 `merge()` + `apply()` + `persist()`
 - `merge()` 纯数据处理，不需要 conn
 - `apply()` 需要 conn，内部处理 purge + upsert 路由
 - `persist()` 仅导出 JSON，不依赖 conn
 
-### 决策 4：analysis.py 合并到 pipeline.py
+### 决策 4：调度逻辑集中在 pipeline.py
 
-- 删除 analysis.py
-- 调度逻辑 → pipeline.py
-- staleness 标记 → 新建 `domain/staleness_tracker.py`
+- staleness 标记 → `domain/gate/staleness.py`
 - gap 合并逻辑 → pipeline.py（纯数据合并）
 
 ### 决策 5：tool_evidence 作为独立返回值
 
-- 从 UnifiedContext 中移除 `tool_evidence` 字段
 - `_execute_tools()` 返回 `List[ToolEvidenceCandidate]`
-- tool_evidence 作为 pipeline 局部变量传递
+- tool_evidence 作为 pipeline 局部变量传递，不存入 UnifiedContext
 
 ---
 
-## 3. 目标流水线（12 阶段）
+## 3. 目标流水线
 
 ```
 run_analyze(project_root, ...)
@@ -92,7 +60,6 @@ run_analyze(project_root, ...)
 ├── 阶段 2：Claim 覆盖检查（前置条件）
 │   调用：_check_claim_coverage(ctx, project_root, is_pre_commit, staged_files)
 │   输出：exit_code 或 None
-│   说明：Gate 1/1b/1c 已移除（属于 finalize）。Gate 2 提前为前置条件。
 │
 ├── 阶段 3：创建数据库
 │   调用：init_in_memory_db() → conn
@@ -140,16 +107,7 @@ run_analyze(project_root, ...)
     0=通过, 1=执行错误, 2=门禁 blocked
 ```
 
-### 3.1 Gate 归属
-
-| Gate | 原归属 | 新归属 | 理由 |
-|------|--------|--------|------|
-| Gate 1（constraints 哈希） | analyze 阶段 2 | **删除** | 属于 finalize |
-| Gate 1b（PRD 漂移） | analyze 阶段 2 | **删除** | 属于 finalize |
-| Gate 1c（PRD↔Arch 映射） | analyze 阶段 2 | **删除** | 属于 finalize |
-| Gate 2（幽灵代码） | analyze 阶段 2 | analyze 阶段 2（**前置条件**） | 阻断越早越好 |
-
-### 3.2 Gate 判定规则
+### 3.1 Gate 判定规则
 
 #### Gate 2：前置条件（Stage 2）
 
@@ -262,16 +220,16 @@ cli/
     ├── gates.py                    # 门禁检查（Gate 2 前置条件）
     ├── tools.py                    # 工具执行
     ├── reports.py                  # 报告生成（含 _rel_path_str）
-    ├── output.py                   # 终端输出渲染
-    ├── helpers.py                  # 辅助函数
-    ├── actions.py                  # Agent 行动建议
-    └── formatting.py               # 格式化工具
+    ├── actions.py                  # 行动建议收集 + 辅助查询（DB 查询委托 queries.py）
+    ├── formatting.py               # 行动建议格式化
+    └── output.py                   # 终端渲染
 ```
 
 设计说明：
 - `exceptions.py` 独立存在，避免 `pipeline.py` ↔ `reports.py`/`tools.py` 的循环导入
-- `_load_context()` 从已删除的 `common.py` 迁入 `pipeline.py`，是阶段 1 的唯一入口
+- `_load_context()` 定义在 `pipeline.py`，是阶段 1 的唯一入口
 - `_rel_path_str()` 仅 `reports.py` 使用，内联定义
+- `actions.py` 包含 hint 解析和 AC/需求描述查询函数（`_hint_title`、`_get_ac_description` 等）
 
 ### 4.4 依赖方向
 
@@ -289,14 +247,9 @@ governance/      → infra/governance/, infra/git/（通过参数注入）
 context          → infra/loader/, gate/, compliance/, risk/
 ```
 
-架构修复说明：
-- domain 层不再直接进行文件 I/O，所有 I/O 操作通过 infra 层函数完成
-- infra 层不再依赖 domain 层（已消除反向依赖）
-- dashboard.py 的提案引擎调用已移至 cli 层
-
 ---
 
-## 5. 接口变更
+## 5. 接口定义
 
 ### 5.1 EvidenceBuilder
 
@@ -344,17 +297,8 @@ class MergeGateEngine:
         返回字典包含：gate_decision, reasons, blocked_items, human_decisions_applied,
                        incremental_mode, historical_debt_count
 
-        设计变更说明（vs 原设计）：
-        - 去掉 tool_outputs：工具结果已通过 ghost_files/cov_violations 阶段传入
-        - 增加 compliance_res：架构合规检查结果直接传入，不需要 gap 转换
-        - 增加 directly_staged_items：区分直接提交 vs 间接影响的 items
-        - 增加 human_decisions：人类决策直接传入判定层
-        - 返回类型改为 Dict（vs 原设计的 Tuple[str, List[str], List[dict]])：
-          字典可扩展新字段，可读性更好
-
-        TASK-VT-096 增量模式增强：
-        - 增加 incremental_only 参数：只检查增量问题，历史债务不阻塞门禁
-        - 增加 show_historical_debt 参数：控制是否在终端显示历史债务详情
+        增量模式（incremental_only）：
+        - 只检查增量问题，历史债务不阻塞门禁
         - Rule 2/3/4/5 在 incremental_only 模式下遵循 _is_current 判定
         - 历史债务显示为摘要（如"📊 3 historical debts exist"）
         - 配置优先级：命令行参数 > 环境变量 > config.json > 默认值
@@ -371,7 +315,7 @@ class ArchitectureComplianceChecker:
         constraints_data: Dict[str, Any],
         human_decisions: Optional[dict] = None,
     ) -> Dict[str, Any]:
-        """直接从 DB 查询，不再接收 evidences list。"""
+        """直接从 DB 查询，不接收 evidences list。"""
 ```
 
 ### 5.4 UnifiedContext
@@ -387,12 +331,11 @@ class UnifiedContext:
     manifest: Optional[RawInputManifest] = None
     human_decisions: Optional[dict] = None
     config_prefix: str = "VT"
-    # tool_evidence 字段已删除
 ```
 
 ### 5.5 mark_staleness
 
-位置：`domain/gate/staleness.py`（而非设计文档原定的 `domain/staleness_tracker.py`）
+位置：`domain/gate/staleness.py`
 
 ```python
 def mark_staleness(
@@ -417,11 +360,27 @@ class EvidenceMergeResult:
     stats: Dict[str, int]  # test_count, coverage_count, skipped_count, purge_count
 ```
 
+### 5.7 _db_result_to_gaps
+
+位置：`cli/analyze/pipeline.py`
+
+```python
+def _db_result_to_gaps(
+    req_coverage: list,
+    ac_coverage: list,
+    claim_evidence: list,
+) -> list:
+    """DB 查询原始行 → gate/report 层所需的 gap dict 格式。
+
+    adapter 模式：隔离 db.check_* 的 SQL 行格式与 MergeGateEngine 的 dict 格式。
+    """
+```
+
 ---
 
-## 6. DB Schema 扩展
+## 6. DB Schema
 
-### 6.1 新增表
+### 6.1 表结构
 
 ```sql
 CREATE TABLE requirements (
@@ -439,16 +398,18 @@ CREATE TABLE acceptance_criteria (
 );
 ```
 
-### 6.2 新增/重构查询函数
+### 6.2 查询函数
 
-| 函数 | 说明 | 状态 |
-|------|------|------|
-| `check_requirement_coverage(conn)` | PRD → Task 覆盖 | ✅ 已实现 |
-| `check_claim_evidence(conn)` | Claim → Test 一致性 | ✅ 已实现 |
-| `get_full_chain(conn)` | 全链条 JOIN（Dashboard/Report 用） | ✅ 已实现 |
-| `check_ac_coverage(conn)` | 重构：从 acceptance_criteria 出发 | ✅ 已重构 |
-| `check_dangling_claims(conn)` | Claim → Task 存在性 | ✅ 已实现 |
-| `check_ghost_code(conn, config)` | staged_files LEFT JOIN claim_code_refs | ✅ 已实现 |
+| 函数 | 说明 |
+|------|------|
+| `check_requirement_coverage(conn)` | PRD → Task 覆盖 |
+| `check_claim_evidence(conn)` | Claim → Test 一致性 |
+| `get_full_chain(conn)` | 全链条 JOIN（Dashboard/Report 用） |
+| `check_ac_coverage(conn)` | 从 acceptance_criteria 出发检查覆盖 |
+| `check_dangling_claims(conn)` | Claim → Task 存在性 |
+| `check_ghost_code(conn, config)` | staged_files LEFT JOIN claim_code_refs |
+| `query_related_code(conn, ac_id)` | AC → 代码文件路径（task_acs → claims → claim_code_refs） |
+| `query_existing_tests(conn, ac_id)` | AC → 测试 nodeid（task_acs → claims → claim_test_refs） |
 
 ### 6.3 状态枚举约束
 
@@ -477,144 +438,14 @@ TASK_STATUS_TO_COVERAGE = {
 
 ---
 
-## 7. 删除清单
-
-| 文件/函数 | 删除原因 | 替代方案 |
-|-----------|---------|---------|
-| `analysis.py` 整个文件 | 职责重叠 | 合并到 pipeline.py |
-| `analyzers/requirement_task_analyzer.py` | 查询逻辑移入 db.py | `db.check_requirement_coverage()` |
-| `analyzers/ac_test_analyzer.py` | 查询逻辑移入 db.py | `db.check_ac_coverage()` |
-| `analyzers/claim_evidence_analyzer.py` | 查询逻辑移入 db.py | `db.check_claim_evidence()` |
-| pipeline.py evidence_dicts 构建 | 分析器直接查 DB | 删除 |
-| pipeline.py `EVIDENCE-VT-{idx}` 编号 | 编号漂移 | source_path/nodeid 替代 |
-| context.py `tool_evidence` 字段 | "半构造"状态 | 局部变量传递 |
-| `gates.py._gate1_constraints_hash()` | 属于 finalize | 删除 |
-| `gates.py._gate1b_prd_drift()` | 属于 finalize | 删除 |
-| `gates.py._gate1c_mapping()` | 属于 finalize | 删除 |
-| `gates.py._run_integrity_gates()` | Gate 1/1b/1c 已删除 | 重命名为 `_check_claim_coverage()`；保留别名向后兼容 |
-| `common.py` 整个文件 | YAGNI：单用途函数可内联到唯一调用方 | `_load_context` → `pipeline.py`；`_rel_path_str` → `reports.py`；`_GateBlocked` → `exceptions.py`；`_get_staged_files`/`_determine_affected_items` 已是 re-export，直接导入源模块；`_file_sha256` 零生产调用，删除 |
-
-### 保留决策：_db_result_to_gaps
-
-`pipeline.py` 中的 `_db_result_to_gaps()` 不属于删除范围。分析：
-
-| 项 | 说明 |
-|-----|------|
-| 职责领域 | DB 查询原始行 → gate 和 report 层所需的 gap dict 格式，**是 pipeline 调度层的模式转换**（adapter） |
-| 为什么保留 | db.check_* 返回的是存簹的 SQL 行（status 字符串）；MergeGateEngine.evaluate() 接受的是 `{item_id, item_type, reason}` 结构。这个转换是两层将来各自演化的设计隔离点。 |
-| 拓展发展 | 待未来 db.check_* 返回类型成熟后，可考虑将此函数下沉至 `infra/db/queries.py` 或独立为 domain 转换层 |
-
----
-
-## 8. 变更影响矩阵
-
-| 模块 | 变更类型 | 变更内容 |
-|------|---------|---------|
-| `cli/analyze/pipeline.py` | 重构 | 删除 evidence_dicts；接管 DB 调度；合并 analysis.py；新增 _db_result_to_gaps adapter；接管 _load_context |
-| `cli/analyze/gates.py` | 重构 | `_run_integrity_gates` 重命名为 `_check_claim_coverage`；删除 Gate 1/1b/1c |
-| `cli/analyze/analysis.py` | 删除 | 逻辑拆分到 pipeline + staleness_tracker |
-| `domain/context.py` | 微调 | 删除 tool_evidence 字段 |
-| `domain/evidence_builder.py` | 重构 | build → merge + apply + persist |
-| `domain/staleness_tracker.py` | 新建 | mark_staleness 纯函数 |
-| `domain/evidence_merge_result.py` | 新建 | EvidenceMergeResult dataclass |
-| `analyzers/` 3 个文件 | 删除 | 查询逻辑移入 db.check_* |
-| `domain/architecture_compliance_checker.py` | 接口变更 | check() 接收 conn |
-| `domain/merge_gate_engine.py` | 重构 | 解耦 conn，纯判定引擎 |
-| `cli/analyze/exceptions.py` | 新建 | `_GateBlocked` 异常类（避免循环导入） |
-| `cli/analyze/tools.py` | 微调 | `_GateBlocked` 改从 `.exceptions` 导入 |
-| `cli/analyze/reports.py` | 微调 | `_GateBlocked` 改从 `.exceptions` 导入；`_rel_path_str` 内联定义 |
-| `cli/common.py` | 删除 | 函数迁移至 `pipeline.py`/`reports.py`/`exceptions.py` |
-
----
-
-## 9. 实施步骤
-
-每一步必须保持测试通过。Step 0 是基础，其他步骤依赖它。
-
-```
-Step 0a: db 子模块拆分与表结构扩展          ← ✅ 已完成
-  - infra/db/ 子包（schema, loaders, queries, exports）
-  - requirements + acceptance_criteria 表
-  - load_prd()
-
-Step 0b: 新增与重构 SQL 查询函数            ← ✅ 已完成
-  - check_requirement_coverage, check_claim_evidence, get_full_chain
-  - check_ac_coverage 重构
-
-Step 1: 新建 staleness_tracker.py + evidence_merge_result.py
-
-Step 2: 修改 evidence_builder.py（build → merge + apply + persist）
-
-Step 3: 删除 analyzer 类 + 重构 pipeline.py
-  - 删除 3 个 analyzer
-  - pipeline 直接调 db.check_*
-  - 合并 analysis.py
-  - 删除 evidence_dicts
-
-Step 4: 修改 context.py（删除 tool_evidence 字段）
-
-Step 5: 重构 gates.py（删除 Gate 1/1b/1c，Gate 2 前置条件）
-
-Step 6: 修改 MergeGateEngine（解耦 conn，纯判定引擎）
-
-Step 7: 删除 analysis.py
-
-Step 8: 更新测试文件
-
-Step 9: 运行全量测试验证
-
-Step 10: 消除 cli/common.py（TASK-VT-098）    ← ✅ 已完成
-  - 新建 cli/analyze/exceptions.py（_GateBlocked）
-  - _load_context 移入 pipeline.py（修正 schemas_dir 回退路径 parents[2]）
-  - _rel_path_str 内联到 reports.py
-  - _get_staged_files / _determine_affected_items 改为直接导入源模块
-  - 更新 cli/__init__.py re-exports
-  - 删除 _file_sha256 及其测试
-  - 删除 cli/common.py
-```
-
----
-
-## 10. 测试影响
-
-### 测试策略
+## 7. 测试策略
 
 - **不新建测试 DB helper**：各测试自行构造 `conn` + 插入数据，不做共享 fixture 抽象。
-- **不保留 fixtures 项目**：已删除 `tests/fixtures/` 和 `test_e2e_samples.py`，反面用例通过直接构造 DB 数据覆盖。
 - **废弃测试直接删除**：不保留 `skip`/`xfail` 标记。
-
-### 已删除（前置清理）
-
-| 文件 | 测试数 | 原因 |
-|------|--------|------|
-| test_requirement_task_analyzer.py | 5 | analyzer 被删除 |
-| test_ac_test_analyzer.py | 6 | analyzer 被删除 |
-| test_claim_evidence_analyzer.py | 16 | analyzer 被删除 |
-| test_instrumentation_logging.py | 33 | import 3 个被删 analyzer |
-| test_ac_vt_009_coverage.py | 28 | import claim_evidence_analyzer |
-| test_exception_logging.py | 16 | import analysis.py |
-| test_analyze_refactor_integration.py | ~15 | 测试旧 pipeline 结构 |
-| test_quality_gates.py | ~20 | 测试旧 Gate 1/1b/1c + 旧 evaluate() |
-| test_e2e_samples.py | 4 | fixtures 已删除 |
-
-### 待修改（重构过程中）
-
-| 文件 | 测试数 | 变更 |
-|------|--------|------|
-| test_evidence_builder.py | 9 | build → merge + apply + persist |
-| test_merge_gate_engine.py | 63 | 新增 Rule 3/4，解耦 conn |
-| test_db_schema.py | 11 | 新增 requirements + acceptance_criteria 表 |
-
-### 待新增（重构过程中）
-
-| 文件 | 测试数 |
-|------|--------|
-| test_pipeline.py | ~10 |
-| test_staleness_tracker.py | ~5 |
 
 ---
 
-## 11. 数据流图
+## 8. 数据流图
 
 ```
                 ┌─────────────────────────────────────┐
@@ -682,7 +513,7 @@ Step 10: 消除 cli/common.py（TASK-VT-098）    ← ✅ 已完成
 
 ---
 
-## 12. 异常处理与日志
+## 9. 异常处理与日志
 
 | 规范项 | 实现方式 |
 |--------|---------|

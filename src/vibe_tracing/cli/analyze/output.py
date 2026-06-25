@@ -48,6 +48,7 @@ def _print_agent_actions(
     compliance_res: Optional[dict],
     staged_items: Optional[Set[str]],
     project_root,
+    conn=None,
 ) -> None:
     """Format and print the Agent action list."""
     gate_decision = gate_res["gate_decision"]
@@ -70,6 +71,7 @@ def _print_agent_actions(
         coverage_summary=report_doc.get("coverage_summary"),
         staged_items=staged_items,
         evidence_meta=evidence_meta,
+        conn=conn,
     )
     print(agent_output)
 
@@ -152,6 +154,7 @@ def _render_output(
     is_draft: bool,
     is_pre_commit: bool = False,
     staged_files: Optional[Set[str]] = None,
+    conn=None,
 ) -> None:
     """Render dashboard, print gate summary, agent actions, and reflection prompts."""
     _render_dashboard(ctx, report_doc, evidence_meta, output_dir, project_root)
@@ -161,6 +164,6 @@ def _render_output(
     _print_agent_actions(
         ctx, gate_res, report_doc, evidence_meta,
         active_gaps, active_risks, merged_gaps, compliance_res,
-        staged_items, project_root,
+        staged_items, project_root, conn=conn,
     )
     _print_reflection_prompts(ctx, gate_res, merged_gaps, final_risks, compliance_res, project_root)

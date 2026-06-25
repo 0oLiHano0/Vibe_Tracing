@@ -316,23 +316,6 @@ def run_doctor(project_root: Path) -> int:
     _t = time.perf_counter()
     issues_5: List[Dict[str, Any]] = []
     if constraints_data:
-        rule_keys = [
-            "architecture_principles",
-            "module_boundaries",
-            "dependency_rules",
-            "data_flow_rules",
-            "storage_rules",
-            "error_handling_rules",
-            "logging_rules",
-            "security_rules",
-            "technology_constraints",
-            "forbidden_patterns",
-            "quality_gates",
-            "interface_contracts",
-            "performance_constraints",
-            "deployment_constraints",
-            "test_constraints",
-        ]
         # Collect all module_ids from module_boundaries for heuristic matching
         module_ids: Set[str] = set()
         for mod in constraints_data.get("module_boundaries", []):
@@ -340,8 +323,13 @@ def run_doctor(project_root: Path) -> int:
             if mid:
                 module_ids.add(mid)
 
-        for key in rule_keys:
-            for rule in constraints_data.get(key, []):
+        # Dynamically iterate all list-type keys for machine rules
+        for key, value in constraints_data.items():
+            if not isinstance(value, list):
+                continue
+            for rule in value:
+                if not isinstance(rule, dict):
+                    continue
                 if rule.get("verification_method") != "machine":
                     continue
                 rule_id = (

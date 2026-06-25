@@ -1,12 +1,8 @@
 """
 Integrity gate functions for the analyze pipeline.
 
-After refactoring (TASK-VT-072):
-  - Gate 1/1b/1c are DELETED (belong to finalize, not analyze)
-  - Gate 2 (ghost code) is the ONLY gate in analyze, runs as 前置条件
-
+Gate 2 (ghost code) is the ONLY gate in analyze, runs as 前置条件。
 公共入口：_check_claim_coverage（与 refactoring_design.md §3 阶段 2 对齐）
-向后兼容别名：_run_integrity_gates
 """
 
 import sys
@@ -78,7 +74,3 @@ def _check_claim_coverage(
         return result
 
     return None
-
-
-# 向后兼容别名（旧名称保留以减少 diff 噪音，pipeline.py 优先使用新名）
-_run_integrity_gates = _check_claim_coverage

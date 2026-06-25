@@ -16,7 +16,7 @@ VT CLI 包初始化
 import subprocess  # re-exported so test mocks on vibe_tracing.cli.subprocess work
 
 # ---------------------------------------------------------------------------
-# Re-export command entry points
+# Public API
 # ---------------------------------------------------------------------------
 from vibe_tracing.cli.main import main
 from vibe_tracing.cli.init import run_init
@@ -24,63 +24,4 @@ from vibe_tracing.cli.finalize import run_finalize
 from vibe_tracing.cli.analyze import run_analyze
 from vibe_tracing.cli.doctor import run_doctor
 from vibe_tracing.cli.accept import run_accept
-
-# ---------------------------------------------------------------------------
-# Re-export internal helpers used by tests
-# ---------------------------------------------------------------------------
-
 from vibe_tracing.cli.analyze.exceptions import _GateBlocked
-from vibe_tracing.cli.analyze.pipeline import _load_context
-from vibe_tracing.cli.analyze.reports import _rel_path_str
-from vibe_tracing.infra.git.utils import get_staged_files as _get_staged_files
-from vibe_tracing.domain.gate.staleness import determine_affected_items as _determine_affected_items
-from vibe_tracing.cli.finalize import (
-    _validate_constraints_change,
-    _print_post_finalize_guidance,
-)
-from vibe_tracing.cli.analyze.gates import (
-    _gate2_code_claim_alignment,
-    _run_integrity_gates,
-)
-from vibe_tracing.cli.analyze.tools import (
-    _execute_tools,
-    _check_staged_extensions,
-)
-from vibe_tracing.cli.analyze.helpers import (
-    _action_hints,
-    _hint_title,
-    _hint_context,
-    _derive_test_scenarios,
-    _get_ac_description,
-    _get_req_description,
-    _get_related_code,
-    _get_existing_tests,
-)
-from vibe_tracing.cli.analyze.actions import (
-    _compute_gap_urgency,
-    _collect_gap_actions,
-    _compute_risk_urgency,
-    _collect_risk_actions,
-    _collect_violation_actions,
-    _collect_gate_reason_actions,
-)
-from vibe_tracing.cli.analyze.formatting import (
-    _render_actions,
-    _format_agent_actions,
-)
-from vibe_tracing.cli.analyze.reports import (
-    _build_report_document,
-    _build_metadata,
-    _render_dashboard,
-)
-from vibe_tracing.cli.analyze.output import (
-    _print_gate_summary,
-    _print_agent_actions,
-    _print_reflection_prompts,
-    _render_output,
-)
-from vibe_tracing.cli.analyze.pipeline import (
-    _run_analysis_phase,
-    _run_gate_evaluation,
-    _evaluate_and_output,
-)

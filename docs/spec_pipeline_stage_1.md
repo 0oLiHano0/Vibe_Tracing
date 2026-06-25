@@ -263,7 +263,7 @@ schemas 目录回退逻辑：优先使用 `{project_root}/schemas`，如果不�
 
 前提条件：`task_list` 记录存在且 `status == "ok"`。否则跳过（非 draft 模式下已在步骤 7 阻断）。
 
-加载 `docs/task_list.json`，解析任务数据，并与 PRD 和架构约束进行交叉引用校验：
+加载 `docs/task_list.json`（使用已加载的 `content`，不重新读取磁盘），解析任务数据。同时将 `architecture_constraints` 的 `content` 作为 `arch_data` 参数传入，与 PRD 和架构约束进行交叉引用校验：
 - 检查任务关联的需求 ID 是否存在
 - 检查任务关联的 AC ID 是否存在
 - 检查任务关联的模块 ID 和约束 ID 是否存在
@@ -369,7 +369,7 @@ config_data: {}                     # config.json 内容
 
 ### 日志事件
 
-阶段 1 本身不直接记录日志（logger 在阶段 1 期间初始化）。日志由 `pipeline.py:run_analyze()` 在阶段 1 完成后记录：
+阶段 1 本身不直接记录日志。`_load_context()` 返回后、阶段 2 之前，`run_analyze()` 执行 Logger 初始化（`OperationalLogger.get_or_init`）和输出目录解析（从 `config.json` 的 `paths.output_dir` 读取，或使用传入的 `output_dir`）。日志由 `pipeline.py:run_analyze()` 记录：
 
 | 事件名 | 级别 | 触发时机 | 附加字段 |
 |--------|------|----------|----------|
@@ -391,7 +391,8 @@ config_data: {}                     # config.json 内容
 
 | 下游模块 | 目标包 | 说明 |
 |----------|--------|------|
-| **阶段 2** | `cli/analyze/gates.py` | 检查 staged 文件是否被 Claim 覆盖（幽灵代码检测） |
-| **阶段 5** | `infra/db/loaders.py` | 将 PRD（步骤 6）、Tasks（步骤 8）、Claims（步骤 9）写入内存 SQLite 数据库 |
+| **阶段 2** | `cli/analyze/gates.py` | Gate 2：幽灵代码检测（仅 `is_pre_commit=True` 时执行 `GhostCodeReconciler.reconcile()`） |
+| **阶段 4** | `cli/analyze/tools.py` | 执行验证工具（pytest/ruff 等），内部过滤仅对 staged 文件执行 |
+| **阶段 5** | `infra/db/loaders.py` | 将 PRD、Tasks、Claims 写入内存 SQLite 数据库（`load_prd` 必须先于 `load_tasks`/`load_claims`） |
 | **阶段 6** | `domain/evidence/builder.py` | 合并历史证据 + 本次工具结果，生成完整证据链 |
 | **阶段 7** | `infra/db/queries.py` | 用 SQL 查询数据库，找出所有"缺口"（需求没任务、任务没测试等） |

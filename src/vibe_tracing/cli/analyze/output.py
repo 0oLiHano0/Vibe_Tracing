@@ -151,7 +151,6 @@ def _render_output(
     staged_items: Optional[Set[str]],
     output_dir,
     project_root,
-    is_draft: bool,
     is_pre_commit: bool = False,
     staged_files: Optional[Set[str]] = None,
     conn=None,

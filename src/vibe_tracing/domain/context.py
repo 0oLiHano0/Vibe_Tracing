@@ -30,6 +30,7 @@ class UnifiedContext:
     manifest: Optional["RawInputManifest"] = None
     human_decisions: Optional[dict] = None
     config_prefix: str = "VT"
+    is_draft: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.config, dict):

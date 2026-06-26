@@ -65,53 +65,27 @@ def check_active_task_coverage(conn: sqlite3.Connection) -> list:
 
 def check_ac_coverage(conn: sqlite3.Connection) -> list:
     """检查 MUST 优先级任务/验收标准的覆盖情况。"""
-    # 检查 acceptance_criteria 表是否为空 (legacy 模式)
-    cursor = conn.execute("SELECT COUNT(*) FROM acceptance_criteria")
-    count = cursor.fetchone()[0]
-
-    if count == 0:
-        # legacy 模式: 从 task_acs 开始查询，且只针对 MUST 任务
-        rows = conn.execute("""
-            SELECT ta.task_id, ta.ac_id,
-              CASE
-                WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
-                WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
-                WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'
-                WHEN SUM(CASE WHEN tr.outcome != 'passed' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
-                ELSE 'covered'
-              END as coverage_status
-            FROM task_acs ta
-            JOIN tasks t ON ta.task_id = t.task_id
-            LEFT JOIN claims c ON t.task_id = c.related_task
-            LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
-            LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
-            WHERE t.priority = 'must'
-            GROUP BY ta.task_id, ta.ac_id
-            HAVING coverage_status != 'covered'
-        """).fetchall()
-    else:
-        # 新模式: 从 acceptance_criteria 开始 LEFT JOIN
-        rows = conn.execute("""
-            SELECT ta.task_id, ac.ac_id,
-              CASE
-                WHEN ta.task_id IS NULL THEN 'no_task_for_ac'
-                WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
-                WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
-                WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'
-                WHEN SUM(CASE WHEN tr.outcome != 'passed' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
-                ELSE 'covered'
-              END as coverage_status
-            FROM acceptance_criteria ac
-            LEFT JOIN requirements r ON ac.req_id = r.req_id
-            LEFT JOIN task_acs ta ON ac.ac_id = ta.ac_id
-            LEFT JOIN tasks t ON ta.task_id = t.task_id
-            LEFT JOIN claims c ON t.task_id = c.related_task
-            LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
-            LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
-            WHERE t.priority = 'must' OR (r.priority = 'must' AND ac.is_testing_required = 1)
-            GROUP BY ta.task_id, ac.ac_id
-            HAVING coverage_status != 'covered'
-        """).fetchall()
+    rows = conn.execute("""
+        SELECT ta.task_id, ac.ac_id,
+          CASE
+            WHEN ta.task_id IS NULL THEN 'no_task_for_ac'
+            WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
+            WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
+            WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'
+            WHEN SUM(CASE WHEN tr.outcome != 'passed' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
+            ELSE 'covered'
+          END as coverage_status
+        FROM acceptance_criteria ac
+        LEFT JOIN requirements r ON ac.req_id = r.req_id
+        LEFT JOIN task_acs ta ON ac.ac_id = ta.ac_id
+        LEFT JOIN tasks t ON ta.task_id = t.task_id
+        LEFT JOIN claims c ON t.task_id = c.related_task
+        LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
+        LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
+        WHERE t.priority = 'must' OR (r.priority = 'must' AND ac.is_testing_required = 1)
+        GROUP BY ta.task_id, ac.ac_id
+        HAVING coverage_status != 'covered'
+    """).fetchall()
 
     return [
         {"task_id": r[0], "ac_id": r[1], "coverage_status": r[2]}

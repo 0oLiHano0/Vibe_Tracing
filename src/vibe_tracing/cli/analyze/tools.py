@@ -15,7 +15,6 @@ from vibe_tracing.infra.git.utils import get_staged_files
 def _execute_tools(
     ctx: UnifiedContext,
     project_root: Path,
-    is_draft: bool,
 ) -> List:
     """Execute validation tools and return tool evidence candidates.
 
@@ -40,7 +39,7 @@ def _execute_tools(
         raise _GateBlocked(1)
 
     ltm = constraints_record_content.get("language_tool_matrix", {})
-    if is_draft:
+    if ctx.is_draft:
         print("Skipping tool execution: project is in draft status (no tasks or claims).", file=sys.stderr)
         return []
     if not (config_language and ltm):

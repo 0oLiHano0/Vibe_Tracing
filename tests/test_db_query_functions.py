@@ -225,6 +225,7 @@ class MockAcceptanceCriteria:
 
 def test_tier1_f1_coverage_1_covered():
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_node_1"]}])
     upsert_test_result(conn, "test_node_1", "passed", 0, "pytest", False)
@@ -234,6 +235,7 @@ def test_tier1_f1_coverage_1_covered():
 
 def test_tier1_f1_coverage_2_no_claim():
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     res = check_ac_coverage(conn)
     assert len(res) == 1
@@ -242,6 +244,7 @@ def test_tier1_f1_coverage_2_no_claim():
 
 def test_tier1_f1_coverage_3_no_tests():
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": []}])
     res = check_ac_coverage(conn)
@@ -251,6 +254,7 @@ def test_tier1_f1_coverage_3_no_tests():
 
 def test_tier1_f1_coverage_4_test_not_run():
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_node_1"]}])
     res = check_ac_coverage(conn)
@@ -260,6 +264,7 @@ def test_tier1_f1_coverage_4_test_not_run():
 
 def test_tier1_f1_coverage_5_test_failed():
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_node_1"]}])
     upsert_test_result(conn, "test_node_1", "failed", 1, "pytest", False)
@@ -579,6 +584,7 @@ def test_tier2_f1_boundary_1_non_must_priority():
 
 def test_tier2_f1_boundary_2_multiple_acs():
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-2-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-2", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-2-1"]}])
     res = check_ac_coverage(conn)
     assert len(res) == 1
@@ -587,6 +593,7 @@ def test_tier2_f1_boundary_2_multiple_acs():
 
 def test_tier2_f1_boundary_3_duplicate_loads():
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     res = check_ac_coverage(conn)
@@ -595,6 +602,7 @@ def test_tier2_f1_boundary_3_duplicate_loads():
 
 def test_tier2_f1_boundary_4_multiple_tests_one_passes():
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1", "test_2"]}])
     upsert_test_result(conn, "test_1", "passed", 0, "pytest", False)
@@ -1074,6 +1082,7 @@ def test_tier4_scenario_3_feature_complete_verification():
 
 def test_tier4_scenario_4_critical_bug_hotfix():
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-911", "title": "Hotfix Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-911-1", "title": "Hotfix AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-911", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-911-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-911", "related_task": "TASK-911", "test_refs": ["tests/test_hotfix.py::test_bug"]}])
     upsert_test_result(conn, "tests/test_hotfix.py::test_bug", "failed", 1, "pytest", False)
@@ -1110,6 +1119,7 @@ def test_adversarial_ac_coverage_mixed_outcomes_bug():
     check_ac_coverage returns 'covered' (empty list) instead of 'test_failed'.
     """
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-AD-1", "title": "Adversarial Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-AD-1", "title": "Adversarial AC", "is_testing_required": True}]}]})
     load_tasks(conn, [
         {"task_id": "TASK-AD-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-AD-1"]}
     ])
@@ -1118,7 +1128,7 @@ def test_adversarial_ac_coverage_mixed_outcomes_bug():
     ])
     upsert_test_result(conn, "test_pass", "passed", 0, "pytest", False)
     upsert_test_result(conn, "test_fail", "failed", 1, "pytest", False)
-    
+
     res = check_ac_coverage(conn)
     assert len(res) == 1, f"Expected 1 uncovered AC due to failed test, got: {res}"
     assert res[0]["coverage_status"] == "test_failed"
@@ -1130,6 +1140,7 @@ def test_adversarial_ac_coverage_missing_test_bug():
     check_ac_coverage returns 'covered' (empty list) instead of 'test_not_run'.
     """
     conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-AD-2", "title": "Adversarial Requirement 2", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-AD-2", "title": "Adversarial AC 2", "is_testing_required": True}]}]})
     load_tasks(conn, [
         {"task_id": "TASK-AD-2", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-AD-2"]}
     ])
@@ -1137,7 +1148,7 @@ def test_adversarial_ac_coverage_missing_test_bug():
         {"claim_id": "CLAIM-AD-2", "related_task": "TASK-AD-2", "test_refs": ["test_pass", "test_missing"]}
     ])
     upsert_test_result(conn, "test_pass", "passed", 0, "pytest", False)
-    
+
     res = check_ac_coverage(conn)
     assert len(res) == 1, f"Expected 1 uncovered AC due to missing test execution, got: {res}"
     assert res[0]["coverage_status"] == "test_not_run"

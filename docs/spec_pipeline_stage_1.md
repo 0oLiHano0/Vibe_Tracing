@@ -174,15 +174,15 @@ inputs_used:                        # 所有文件的加载记录
 
 ---
 
-### 步骤 2：加载所有输入文件，生成 manifest
+### 步骤 2：物理读取所有输入文件，生成内存清单 (manifest)
 
 调用模块：`infra/loader/raw_input.py:RawInputLoader.load()`
 
-RawInputLoader 扫描并加载所有输入文件，生成 manifest（加载清单）。加载过程包含：
+RawInputLoader 从磁盘物理读取所有相关的输入文件，并在内存中生成 manifest（加载清单）。在此步骤后，所有待分析文件的数据已被加载并缓存在内存中，后续步骤不会再重新读取磁盘。物理读取过程包含：
 
-1. **加载 PRD**（必需文件）：读取 `docs/prd.md`
-2. **加载可选文件**：依次读取 `architecture_constraints`、`task_list`、`agent_claims`、`human_decisions`
-3. **扫描工具报告**：扫描 `.vibetracing/tool_reports/` 目录下的 `*.json` 文件，写入 `manifest.tool_report_files`
+1. **加载 PRD**（必需文件）：读取 `docs/prd.md` 纯文本内容
+2. **加载治理文件**（可选文件）：依次读取 `architecture_constraints.json`、`task_list.json`、`.vibetracing/claims/CLAIM-*.json` 和 `human_decisions.json` 的原始 JSON 结构
+3. **扫描工具报告**：扫描 `.vibetracing/tool_reports/` 目录下的 `*.json` 文件，将其路径写入 `manifest.tool_report_files`
 
 manifest 结构：
 ```yaml
@@ -196,11 +196,11 @@ inputs_used:                        # 所有文件的加载记录
 
 ---
 
-### 步骤 3：设置项目前缀
+### 步骤 3：读取项目前缀
 
-调用模块：`infra/validation/set_project_prefix()`
+调用模块：`cli/analyze/pipeline.py:_load_context()` 内联逻辑
 
-从 `config_data["project_prefix"]` 读取项目前缀（默认 `"VT"`），调用 `ids.set_project_prefix(config_prefix)` 设置全局前缀。后续所有 ID 校验（Schema 校验、PRD 解析等）使用此前缀构建正则表达式。
+从 `config_data["project_prefix"]` 读取项目前缀（默认 `"VT"`），存入局部变量 `config_prefix`。后续步骤 5 的 `validate_inputs()` 内部会调用 `set_project_prefix()` 设置全局前缀。
 
 ---
 
@@ -208,30 +208,30 @@ inputs_used:                        # 所有文件的加载记录
 
 调用模块：`cli/analyze/pipeline.py:_load_context()` 内联逻辑
 
-对 manifest 执行两道检查：
+对已物理加载的 manifest 执行两道基础完整性检查：
 
 1. **必需文件检查**：如果 `manifest.has_required_errors` 为 true，遍历 `inputs_used` 打印缺失的必需文件到 stderr，阻断门禁
-2. **文件格式检查**：遍历 `inputs_used`，如果任何文件的 `status` 不是 `"ok"` 或 `"missing"`（即 `"parse_error"` 或 `"read_error"`），阻断门禁
+2. **文件格式检查**：遍历 `inputs_used`，如果任何文件在物理读取或反序列化时报错（即 `status` 值为 `"parse_error"` 或 `"read_error"`），阻断门禁
 
 判定逻辑：任一检查失败则 `raise _GateBlocked(1)`。
 
 ---
 
-### 步骤 5：执行 Schema 校验
+### 步骤 5：对 manifest 中所有文件统一执行 Schema 与格式校验
 
 调用模块：`infra/validation/checks.py:validate_inputs()`
 
-对所有输入文件执行格式校验，包含 5 项子检查：
+对第一阶段在内存中已物理加载的所有文件数据统一进行静态格式与合规校验，包含 5 项子检查：
 
-1. **JSON Schema 校验**（`_check_schemas`）：对 `task_list`、`agent_claims`、`architecture_constraints`、`human_decisions` 等执行 JSON Schema 验证
-2. **ID 格式校验**（`_check_id_formats`）：校验 `task_id`、`phase_id`、`claim_id` 等是否符合 `{PREFIX}-{TYPE}-{NUM}` 格式
+1. **JSON Schema 校验**（`_check_schemas`）：对 `task_list`、`agent_claims`、`architecture_constraints`、`human_decisions` 的内存数据执行 JSON Schema 验证
+2. **ID 格式校验**（`_check_id_formats`）：校验所有 ID 字段（如 `task_id`、`phase_id`、`claim_id`）是否符合 `{PREFIX}-{TYPE}-{NUM}` 格式
 3. **重复 ID 检测**（`_check_duplicate_ids`）：检测 task_list 和 claims 中的重复 ID（排除 `-9999` 模板）
-4. **路径安全检查**（`_check_path_safety`）：检查 claims 的 `code_refs`/`test_refs` 是否包含绝对路径或路径穿越（`..`）
+4. **路径安全检查**（`_check_path_safety`）：检查 claims 中的 `code_refs` 与 `test_refs` 是否包含绝对路径或路径穿越（`..`）
 5. **人类决策 Schema 校验**（`_check_human_decisions`）：如果 manifest 中存在 `human_decisions` 记录，执行 Schema 验证
 
 schemas 目录回退逻辑：优先使用 `{project_root}/schemas`，如果不存在则回退到内置的 `infra/validation/schemas`。
 
-如果校验失败，输出错误信息并阻断门禁。
+如果任一格式校验失败，输出错误信息并阻断门禁。
 
 ---
 
@@ -241,7 +241,7 @@ schemas 目录回退逻辑：优先使用 `{project_root}/schemas`，如果不�
 
 首先检查 PRD 记录是否存在且 `status == "ok"`，如果不存在则阻断门禁。
 
-将 PRD Markdown 文件解析为结构化数据，提取需求（Requirement）和验收标准（AcceptanceCriteria）。解析结果包含：
+将 PRD Markdown 纯文本解析为结构化数据，提取需求（Requirement）和验收标准（AcceptanceCriteria）。解析结果包含：
 - requirements：需求列表（含 req_id、title、priority、category）
 - acceptance_criteria：每个需求下的验收标准列表
 
@@ -257,42 +257,42 @@ schemas 目录回退逻辑：优先使用 `{project_root}/schemas`，如果不�
 
 ---
 
-### 步骤 8：加载任务列表
+### 步骤 8：解析内存中的任务数据，并与 PRD 执行关联语义校验
 
 调用模块：`infra/loader/task_loader.py:TaskLoader.load_and_validate()`
 
-前提条件：`task_list` 记录存在且 `status == "ok"`。否则跳过（非 draft 模式下已在步骤 7 阻断）。
+前提条件：`task_list` 记录在内存中存在且 `status == "ok"`。否则跳过（非 draft 模式下已在步骤 7 阻断）。
 
-加载 `docs/task_list.json`（使用已加载的 `content`，不重新读取磁盘），解析任务数据。同时将 `architecture_constraints` 的 `content` 作为 `arch_data` 参数传入，与 PRD 和架构约束进行交叉引用校验：
-- 检查任务关联的需求 ID 是否存在
-- 检查任务关联的 AC ID 是否存在
-- 检查任务关联的模块 ID 和约束 ID 是否存在
+读取步骤 2 缓存在内存中的 `task_list` 数据，解析为任务实体。同时将 `architecture_constraints` 的内存数据作为 `arch_data` 参数传入，与解析好的 PRD 和架构约束执行关联语义交叉校验（Cross-Reference Validation）：
+- 检查任务关联的需求 ID 是否存在于 PRD 中
+- 检查任务关联的 AC ID 是否存在于 PRD 中
+- 检查任务关联的模块 ID 和约束 ID 是否存在于架构约束中
 - 检查孤立任务（未关联需求或 AC）
 - 生成覆盖缺口（gaps）
 
-如果校验失败（`task_res.is_valid` 为 false），阻断门禁。
+如果语义关联校验失败（`task_res.is_valid` 为 false），阻断门禁。
 
 ---
 
-### 步骤 9：加载 Claims
+### 步骤 9：解析内存中的 Claims 数据，并与任务列表执行关联语义校验
 
 调用模块：`infra/loader/claim_loader.py:ClaimLoader.load()`
 
-前提条件：`claims` 记录存在且 `status == "ok"`，**且** `task_res` 不为 None（即任务列表已成功加载）。如果 `task_res` 为 None，Claims 加载被跳过。
+前提条件：`claims` 记录在内存中存在且 `status == "ok"`，**且** `task_res` 不为 None（即任务列表已成功加载）。如果 `task_res` 为 None，Claims 加载被跳过。
 
-加载 `.vibetracing/claims/` 目录下的所有 CLAIM-*.json 文件，解析 Claim 数据，并与任务列表进行交叉引用校验：
-- 检查 Claim 关联的任务 ID 是否存在
+读取步骤 2 缓存在内存中的 Claims 数据，解析为 Claim 实体，并与构建好的任务列表执行语义交叉引用校验：
+- 检查 Claim 关联的任务 ID 是否存在于任务列表中
 - 生成覆盖缺口（gaps）
 
-如果校验失败（`claim_res_loader.is_valid` 为 false），阻断门禁。
+如果语义关联校验失败（`claim_res_loader.is_valid` 为 false），阻断门禁。
 
 ---
 
-### 步骤 10：加载人类决策
+### 步骤 10：解析内存中的人类决策数据
 
 调用模块：`cli/analyze/pipeline.py:_load_context()` 内联逻辑
 
-从 `manifest.inputs_used` 中查找 `file_key == "human_decisions"` 且 `status == "ok"` 的记录。如果找到，使用其 `content`；否则 `human_decisions_data` 为 None。此步骤不会阻断门禁。
+从步骤 4 构建的 `records_dict` 中查找 `file_key == "human_decisions"` 的记录。如果记录存在且 `status == "ok"`，直接使用其已反序列化的 `content`；否则 `human_decisions_data` 为 None。此步骤不会阻断门禁。
 
 ---
 
@@ -300,7 +300,7 @@ schemas 目录回退逻辑：优先使用 `{project_root}/schemas`，如果不�
 
 调用模块：`domain/context.py:UnifiedContext`
 
-将所有解析结果汇总到 UnifiedContext 对象中，作为后续阶段的统一数据源：
+将所有解析结果汇总到 UnifiedContext 对象中，作为后续阶段 of 统一数据源：
 
 ```yaml
 config: {}                          # config.json 内容
@@ -317,7 +317,7 @@ config_prefix: "VT"                 # 项目前缀
 
 ## 4. 输出结构
 
-**输出类型**：`Tuple[UnifiedContext, RawInputLoader]`
+**输出类型**：`UnifiedContext`
 **输出位置**：内存（通过 pipeline 局部变量传递，不落盘）
 
 ### UnifiedContext（统一上下文）
@@ -341,17 +341,6 @@ human_decisions: {}                 # 人类决策（可选）
 config_prefix: "VT"                 # 项目前缀
 ```
 
-### RawInputLoader（原始加载器）
-
-**包/模块**：`infra/loader/raw_input.py:RawInputLoader`
-
-```yaml
-project_root: "/path/to/project"    # 项目根目录
-config_data: {}                     # config.json 内容
-```
-
-用途：后续阶段可能用到 RawInputLoader 的方法（如 `get_path()`）
-
 ## 5. 异常捕获与日志
 
 ### 异常情况
@@ -369,12 +358,12 @@ config_data: {}                     # config.json 内容
 
 ### 日志事件
 
-阶段 1 本身不直接记录日志。`_load_context()` 返回后、阶段 2 之前，`run_analyze()` 执行 Logger 初始化（`OperationalLogger.get_or_init`）和输出目录解析（从 `config.json` 的 `paths.output_dir` 读取，或使用传入的 `output_dir`）。日志由 `pipeline.py:run_analyze()` 记录：
+阶段 1 本身不直接记录日志（logger 在阶段 1 期间初始化）。日志由 `pipeline.py:run_analyze()` 在阶段 1 完成后记录：
 
 | 事件名 | 级别 | 触发时机 | 附加字段 |
 |--------|------|----------|----------|
 | `run_start` | INFO | logger 初始化完成（阶段 1 末尾） | `is_pre_commit`, `gates_only` |
-| `phase_end` | INFO | 阶段 1 完成 | `phase="load_context"`, `duration_ms`, `config_prefix`, `has_prd`, `claims_count` |
+| `phase_end` | INFO | 阶段 1 完成 | `phase="load_context"`, `duration_ms`, `config_prefix`, `claims_count` |
 
 ### 错误传播
 
@@ -391,8 +380,90 @@ config_data: {}                     # config.json 内容
 
 | 下游模块 | 目标包 | 说明 |
 |----------|--------|------|
-| **阶段 2** | `cli/analyze/gates.py` | Gate 2：幽灵代码检测（仅 `is_pre_commit=True` 时执行 `GhostCodeReconciler.reconcile()`） |
-| **阶段 4** | `cli/analyze/tools.py` | 执行验证工具（pytest/ruff 等），内部过滤仅对 staged 文件执行 |
-| **阶段 5** | `infra/db/loaders.py` | 将 PRD、Tasks、Claims 写入内存 SQLite 数据库（`load_prd` 必须先于 `load_tasks`/`load_claims`） |
+| **阶段 2** | `cli/analyze/gates.py` | 检查 staged 文件是否被 Claim 覆盖（幽灵代码检测） |
+| **阶段 5** | `infra/db/loaders.py` | 将 PRD（步骤 6）、Tasks（步骤 8）、Claims（步骤 9）写入内存 SQLite 数据库 |
 | **阶段 6** | `domain/evidence/builder.py` | 合并历史证据 + 本次工具结果，生成完整证据链 |
 | **阶段 7** | `infra/db/queries.py` | 用 SQL 查询数据库，找出所有"缺口"（需求没任务、任务没测试等） |
+
+---
+
+## 7. 阶段一重构计划
+
+基于审计发现的 8 处优化点，合并为 5 个改动项（部分相关项合并处理）。
+
+| # | 改动项 | 涉及文件 | 风险 |
+|---|--------|----------|------|
+| 1 | `is_draft` 加入 UnifiedContext + 下游签名清理 | context.py, pipeline.py, tools.py, output.py | 低 |
+| 2 | `_load_context` 返回值精简（移除 `raw_loader`） | pipeline.py | 低 |
+| 3 | `human_decisions` 提取改用 `records_dict` | pipeline.py | 低 |
+| 4 | 移除 `set_project_prefix` 冗余调用 | pipeline.py | 低 |
+| 5 | 移除死代码/死参数 | pipeline.py, output.py | 低 |
+
+### 步骤 1：`is_draft` 加入 UnifiedContext + 下游签名清理
+
+**1a.** `domain/context.py` — UnifiedContext 新增 `is_draft: bool = False` 字段
+
+**1b.** `pipeline.py:_load_context()` — 构建 UnifiedContext 时传入 `is_draft=(prd_res.status == "draft")`
+
+**1c.** `pipeline.py:_load_context()` — 删除内部的 `is_draft = (prd_res.status == "draft")` 局部变量（line 111），改用 `ctx.is_draft`（构建 ctx 后回读）
+
+**1d.** `tools.py:_execute_tools()` — 签名移除 `is_draft: bool` 参数，函数体内改用 `ctx.is_draft`
+
+**1e.** `output.py:_render_output()` — 签名移除 `is_draft: bool` 参数（函数体未使用此参数，属死参数）
+
+**1f.** `pipeline.py:_evaluate_and_output()` — 签名移除 `is_draft: bool` 参数，改用 `ctx.is_draft`
+
+**1g.** `pipeline.py:run_analyze()` — 删除 `is_draft = (prd_res.status == "draft")`（line 223），改用 `ctx.is_draft`；更新所有调用点，移除 `is_draft` 参数传递
+
+**验证**：运行 `pytest tests/` 确认无回归
+
+---
+
+### 步骤 2：`_load_context` 返回值精简
+
+**2a.** `pipeline.py:_load_context()` — 返回类型从 `Tuple[UnifiedContext, RawInputLoader]` 改为 `UnifiedContext`
+
+**2b.** `pipeline.py:run_analyze()` — `ctx, raw_loader = _load_context(...)` 改为 `ctx = _load_context(...)`；删除未使用的 `raw_loader`
+
+**验证**：运行 `pytest tests/` 确认无回归
+
+---
+
+### 步骤 3：`human_decisions` 提取改用 `records_dict`
+
+**3a.** `pipeline.py:_load_context()` — 删除 lines 161-165 的线性扫描循环，改用已有的 `records_dict`：
+
+```python
+# 替换前（7 行）
+human_decisions_data = None
+for record in manifest.inputs_used:
+    if record.file_key == "human_decisions" and record.status == "ok" and record.content is not None:
+        human_decisions_data = record.content
+        break
+
+# 替换后（2 行）
+hd_record = records_dict.get("human_decisions")
+human_decisions_data = hd_record.content if hd_record and hd_record.status == "ok" else None
+```
+
+**验证**：运行 `pytest tests/` 确认无回归
+
+---
+
+### 步骤 4：移除 `set_project_prefix` 冗余调用
+
+**4a.** `pipeline.py:_load_context()` — 删除 `ids.set_project_prefix(config_prefix)`（line 63）及其 import（line 62-63）。`validate_inputs()` 内部已调用 `set_project_prefix()`，外部设置是冗余的全局状态写入。
+
+**验证**：运行 `pytest tests/` 确认无回归
+
+---
+
+### 步骤 5：移除死代码/死参数
+
+**5a.** `pipeline.py:run_analyze()` — 删除 `prd_res = ctx.prd`（line 222），后续直接使用 `ctx.prd`
+
+**5b.** `pipeline.py:run_analyze()` — 删除 `config_prefix = ctx.config_prefix`（line 224），后续直接使用 `ctx.config_prefix`
+
+**5c.** `pipeline.py:run_analyze()` — 日志字段 `has_prd=prd_res is not None` 改为删除（此值恒为 true，`_load_context()` 在 PRD 缺失时已 raise）
+
+**验证**：运行 `pytest tests/` 确认无回归

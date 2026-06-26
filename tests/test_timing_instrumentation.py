@@ -104,7 +104,7 @@ class TestPipelinePhaseTiming:
             mock_ctx.config = config
             mock_ctx.claims_list = []
             mock_ctx.manifest = None
-            mock_load.return_value = (mock_ctx, MagicMock())
+            mock_load.return_value = mock_ctx
 
             # The function will fail early because manifest is None,
             # but the logger should still be initialized
@@ -140,7 +140,7 @@ class TestPipelinePhaseTiming:
             mock_ctx.config = config
             mock_ctx.claims_list = []
             mock_ctx.manifest = None
-            mock_load.return_value = (mock_ctx, MagicMock())
+            mock_load.return_value = mock_ctx
 
             run_analyze(tmp_path)
 
@@ -170,7 +170,7 @@ class TestPipelinePhaseTiming:
             mock_ctx.config = config
             mock_ctx.claims_list = []
             mock_ctx.manifest = None
-            mock_load.return_value = (mock_ctx, MagicMock())
+            mock_load.return_value = mock_ctx
 
             run_analyze(tmp_path)
 

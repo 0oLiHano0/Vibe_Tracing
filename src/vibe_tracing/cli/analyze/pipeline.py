@@ -50,7 +50,7 @@ from vibe_tracing.cli.analyze.output import _render_output
 
 def _load_context(
     project_root: Path,
-) -> Tuple[UnifiedContext, RawInputLoader]:
+) -> UnifiedContext:
     """Load all input files, validate schemas, and build UnifiedContext.
 
     Raises _GateBlocked with exit_code=1 on any validation failure.
@@ -59,8 +59,6 @@ def _load_context(
     manifest = raw_loader.load()
 
     config_prefix = raw_loader.config_data.get("project_prefix", "VT")
-    from vibe_tracing.infra import validation as ids
-    ids.set_project_prefix(config_prefix)
 
     # Check for missing required files
     if manifest.has_required_errors:
@@ -108,10 +106,8 @@ def _load_context(
         print(f"PRD parsing error: {'; '.join(prd_res.errors)}", file=sys.stderr)
         raise _GateBlocked(1)
 
-    is_draft = (prd_res.status == "draft")
-
     # Verify required files exist if not draft
-    if not is_draft:
+    if prd_res.status != "draft":
         if not task_list_record or task_list_record.status != "ok":
             print(
                 f"Error loading required file task_list ({raw_loader.get_path('task_list')}): File not found",
@@ -158,11 +154,8 @@ def _load_context(
         claims_list = claim_res_loader.claims
 
     # 加载 human_decisions
-    human_decisions_data = None
-    for record in manifest.inputs_used:
-        if record.file_key == "human_decisions" and record.status == "ok" and record.content is not None:
-            human_decisions_data = record.content
-            break
+    hd_record = records_dict.get("human_decisions")
+    human_decisions_data = hd_record.content if hd_record and hd_record.status == "ok" else None
 
     ctx = UnifiedContext(
         config=raw_loader.config_data,
@@ -173,8 +166,9 @@ def _load_context(
         manifest=manifest,
         human_decisions=human_decisions_data,
         config_prefix=config_prefix,
+        is_draft=(prd_res.status == "draft"),
     )
-    return ctx, raw_loader
+    return ctx
 
 
 def run_analyze(
@@ -218,10 +212,7 @@ def run_analyze(
 
         # ── 阶段 1：加载输入 ──────────────────────────────────────────────
         _t_ctx = time.perf_counter()
-        ctx, raw_loader = _load_context(project_root)
-        prd_res = ctx.prd
-        is_draft = (prd_res.status == "draft")
-        config_prefix = ctx.config_prefix
+        ctx = _load_context(project_root)
 
         log_level = ctx.config.get("logging", {}).get("level", "DEBUG")
         try:
@@ -236,8 +227,7 @@ def run_analyze(
         vt_logger.info("phase_end", "Load context completed",
                        phase="load_context",
                        duration_ms=int((time.perf_counter() - _t_ctx) * 1000),
-                       config_prefix=config_prefix,
-                       has_prd=prd_res is not None,
+                       config_prefix=ctx.config_prefix,
                        claims_count=len(ctx.claims_list),
                        )
 
@@ -249,7 +239,7 @@ def run_analyze(
         # ── 阶段 2：Claim 覆盖前置检查（Gate 2）────────────────────────
         _t_gates = time.perf_counter()
         exit_code = _check_claim_coverage(
-            ctx, project_root, is_pre_commit, config_prefix,
+            ctx, project_root, is_pre_commit, ctx.config_prefix,
         )
         vt_logger.info("phase_end", "Integrity gates completed",
                        phase="integrity_gates",
@@ -273,7 +263,7 @@ def run_analyze(
 
         # ── 阶段 4：执行验证工具 ──────────────────────────────────
         _t_tools = time.perf_counter()
-        tool_evidence = _execute_tools(ctx, project_root, is_draft)
+        tool_evidence = _execute_tools(ctx, project_root)
         # tool_evidence is a pipeline-local variable, NOT stored in ctx
         vt_logger.info("phase_end", "Tool execution completed",
                        phase="execute_tools",
@@ -306,7 +296,7 @@ def run_analyze(
             # 证据元数据（供报告使用）
             evidence_meta = {
                 "run_id": f"RUN-{uuid.uuid4()}",
-                "project_id": f"PROJECT-{config_prefix}",
+                "project_id": f"PROJECT-{ctx.config_prefix}",
                 "scan_time": "",
                 "full_chain": full_chain,
             }
@@ -345,7 +335,7 @@ def run_analyze(
         exit_code = _evaluate_and_output(
             ctx, merged_gaps, final_risks, compliance_res,
             output_dir, evidence_meta, claim_res, req_res,
-            project_root, is_draft, staged_files=staged_files,
+            project_root, staged_files=staged_files,
             is_pre_commit=is_pre_commit,
             human_decisions=human_decisions,
             conn=conn,
@@ -701,7 +691,6 @@ def _run_gate_evaluation(
     ctx: UnifiedContext,
     staged_items: Optional[Set[str]],
     directly_staged_items: Optional[Set[str]],
-    conn=None,
     human_decisions: Optional[dict] = None,
     ghost_files: Optional[list] = None,
     ac_gaps: Optional[list] = None,
@@ -721,7 +710,6 @@ def _run_gate_evaluation(
         ctx:                   统一上下文
         staged_items:          受暂存文件影响的 items
         directly_staged_items: 直接被 staged 的 claim
-        conn:                  数据库连接（保留用于兼容，不再传递给 MergeGateEngine）
         human_decisions:       人类决策记录
         ghost_files:           幽灵代码文件列表
         ac_gaps:               AC 覆盖缺口列表
@@ -768,7 +756,6 @@ def _evaluate_and_output(
     claim_res: dict,
     req_res: dict,
     project_root: Path,
-    is_draft: bool,
     staged_files: Optional[Set[str]] = None,
     is_pre_commit: bool = False,
     human_decisions: Optional[dict] = None,
@@ -789,7 +776,6 @@ def _evaluate_and_output(
         claim_res:        Claim 分析结果
         req_res:          需求分析结果
         project_root:     项目根目录
-        is_draft:         是否草稿模式
         staged_files:     暂存区文件集合
         is_pre_commit:    是否预提交模式
         human_decisions:  人类决策记录
@@ -813,7 +799,7 @@ def _evaluate_and_output(
     # 阶段 2：门禁判定
     gate_res = _run_gate_evaluation(
         project_root, active_gaps, active_risks, compliance_res,
-        ctx, staged_items, directly_staged_items, conn,
+        ctx, staged_items, directly_staged_items,
         human_decisions=human_decisions,
         ghost_files=analysis_details.get("ghost_files"),
         ac_gaps=analysis_details.get("ac_gaps"),
@@ -834,7 +820,7 @@ def _evaluate_and_output(
     _render_output(
         ctx, gate_res, report_doc, evidence_meta,
         active_gaps, active_risks, merged_gaps, final_risks, compliance_res,
-        staged_items, output_dir, project_root, is_draft,
+        staged_items, output_dir, project_root,
         is_pre_commit=is_pre_commit, staged_files=staged_files,
         conn=conn,
     )

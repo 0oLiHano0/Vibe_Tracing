@@ -6007,6 +6007,474 @@
         "文档更新以最终代码为准，不保留历史变更记录",
         "task_list.json 的 status 更新使用 python 脚本批量修改"
       ]
+    },
+    {
+      "task_id": "TASK-VT-110",
+      "phase_id": "PHASE-VT-010",
+      "title": "流水线阶段交换：阶段 3（执行工具）与阶段 4（创建数据库）互换",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "交换 pipeline.py 中阶段 3 和阶段 4 的执行顺序，使流水线逻辑更清晰：先采集证据，再建库灌入。",
+      "atomic_scope": "1. pipeline.py:run_analyze() 中将 init_in_memory_db() 调用移到 _execute_tools() 之后；2. 更新 docs/refactoring_design.md §3 目标流水线图；3. 确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 _execute_tools 或 init_in_memory_db 的内部逻辑",
+        "不修改其他阶段的代码"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "更新后的 src/vibe_tracing/cli/analyze/pipeline.py",
+        "更新后的 docs/refactoring_design.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-110-01",
+          "description": "pipeline.py 中阶段 3 为 _execute_tools()，阶段 4 为 init_in_memory_db()"
+        },
+        {
+          "dod_id": "DOD-VT-110-02",
+          "description": "refactoring_design.md §3 目标流水线图与代码一致"
+        },
+        {
+          "dod_id": "DOD-VT-110-03",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "阶段 3 和阶段 4 之间无数据依赖，可安全交换",
+        "交换后 tool_evidence 仍是阶段 3 的局部变量，conn 仍是阶段 4 的局部变量"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-111",
+      "phase_id": "PHASE-VT-010",
+      "title": "DB Schema 扩展：新增架构约束与任务关联表",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 schema.py 中新增 4 张表，为架构约束引用校验下沉 SQL 做准备。",
+      "atomic_scope": "1. infra/db/schema.py:init_in_memory_db() 中新增 CREATE TABLE: arch_modules (module_id TEXT PRIMARY KEY), arch_constraints (constraint_id TEXT PRIMARY KEY), task_modules (task_id TEXT, module_id TEXT, PRIMARY KEY), task_constraints (task_id TEXT, constraint_id TEXT, PRIMARY KEY)；2. 确保 init_in_memory_db() 可正常创建所有 14 张表；3. 确保全量测试通过。",
+      "out_of_scope": [
+        "不修改现有表结构",
+        "不实现灌入逻辑（在 TASK-VT-112 中实现）"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-110"
+      ],
+      "expected_deliverables": [
+        "更新后的 src/vibe_tracing/infra/db/schema.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-111-01",
+          "description": "init_in_memory_db() 创建 14 张表（原 10 + 新增 4）"
+        },
+        {
+          "dod_id": "DOD-VT-111-02",
+          "description": "新表可正常 INSERT/SELECT，无语法错误"
+        },
+        {
+          "dod_id": "DOD-VT-111-03",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "新表结构参考 §7.3 决策 2 的定义",
+        "使用 CREATE TABLE IF NOT EXISTS 确保幂等"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-112",
+      "phase_id": "PHASE-VT-010",
+      "title": "灌库逻辑扩展：架构约束与任务关联数据入库",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 loaders.py 中实现架构约束和任务关联数据的灌库逻辑。",
+      "atomic_scope": "1. infra/db/loaders.py:新增 load_architecture_constraints(conn, constraints) 函数，从 architecture_constraints.json 的 module_boundaries 提取 module_id 写入 arch_modules 表，从各规则列表提取 constraint_id 写入 arch_constraints 表；2. 修改 load_tasks(conn, tasks) 函数，在灌入 tasks 表的同时，将 related_modules 写入 task_modules 表，将 related_architecture_constraints 写入 task_constraints 表；3. pipeline.py:run_analyze() 阶段 5 中调用 load_architecture_constraints(conn, ctx.constraints)；4. 确保全量测试通过。",
+      "out_of_scope": [
+        "不修改现有 load_prd/load_claims 的逻辑",
+        "不实现 SQL 查询（在 TASK-VT-113 中实现）"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-111"
+      ],
+      "expected_deliverables": [
+        "更新后的 src/vibe_tracing/infra/db/loaders.py",
+        "更新后的 src/vibe_tracing/cli/analyze/pipeline.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-112-01",
+          "description": "load_architecture_constraints() 可将 module_boundaries 写入 arch_modules 表"
+        },
+        {
+          "dod_id": "DOD-VT-112-02",
+          "description": "load_tasks() 可将 related_modules 写入 task_modules 表"
+        },
+        {
+          "dod_id": "DOD-VT-112-03",
+          "description": "load_tasks() 可将 related_architecture_constraints 写入 task_constraints 表"
+        },
+        {
+          "dod_id": "DOD-VT-112-04",
+          "description": "pipeline.py 阶段 5 调用 load_architecture_constraints()"
+        },
+        {
+          "dod_id": "DOD-VT-112-05",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "architecture_constraints.json 的结构参考 docs/architecture_constraints.json",
+        "module_boundaries 数组中每个元素有 module_id 字段",
+        "各规则列表（architecture_principles, dependency_rules 等）中每个元素有不同的 ID 字段名"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-113",
+      "phase_id": "PHASE-VT-010",
+      "title": "SQL 查询扩展：实现 5 项 Task 引用关联校验",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 queries.py 中实现 5 项 Task 引用关联校验的 SQL 查询函数。",
+      "atomic_scope": "1. infra/db/queries.py:新增 check_invalid_task_requirements(conn) — 查询 task_requirements 中引用不存在 requirement 的记录；2. 新增 check_invalid_task_acs(conn) — 查询 task_acs 中引用不存在 AC 的记录；3. 新增 check_invalid_task_modules(conn) — 查询 task_modules 中引用不存在 module 的记录；4. 新增 check_invalid_task_constraints(conn) — 查询 task_constraints 中引用不存在 constraint 的记录；5. 新增 check_invalid_ac_parent(conn) — 查询引用了 AC 但其父级 requirement 不在 task_requirements 中的记录（逆向关系校验）；6. 确保全量测试通过。",
+      "out_of_scope": [
+        "不修改现有查询函数",
+        "不修改 pipeline.py（在 TASK-VT-114 中修改）"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-111"
+      ],
+      "expected_deliverables": [
+        "更新后的 src/vibe_tracing/infra/db/queries.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-113-01",
+          "description": "check_invalid_task_requirements() 可检测引用不存在 REQ 的 Task"
+        },
+        {
+          "dod_id": "DOD-VT-113-02",
+          "description": "check_invalid_task_acs() 可检测引用不存在 AC 的 Task"
+        },
+        {
+          "dod_id": "DOD-VT-113-03",
+          "description": "check_invalid_task_modules() 可检测引用不存在 Module 的 Task"
+        },
+        {
+          "dod_id": "DOD-VT-113-04",
+          "description": "check_invalid_task_constraints() 可检测引用不存在 Constraint 的 Task"
+        },
+        {
+          "dod_id": "DOD-VT-113-05",
+          "description": "check_invalid_ac_parent() 可检测 AC 父 REQ 缺失的 Task"
+        },
+        {
+          "dod_id": "DOD-VT-113-06",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "SQL 语法参考 §7.5 的设计",
+        "使用 LEFT JOIN + WHERE IS NULL 模式检测不存在的引用",
+        "返回格式为 list[dict]，包含 task_id 和引用的 ID 字段"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-114",
+      "phase_id": "PHASE-VT-010",
+      "title": "流水线与门禁引擎更新：接入 SQL 引用校验结果",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新 pipeline.py 的 _run_db_analysis 调用新 SQL 查询，并更新 MergeGateEngine 新增 Rule 9。",
+      "atomic_scope": "1. pipeline.py:_run_db_analysis() 中调用 5 项新 SQL 查询函数，将结果合并到 analysis_details；2. pipeline.py:_run_gate_evaluation() 将 analysis_details 传递给 MergeGateEngine；3. domain/gate/engine.py:MergeGateEngine.evaluate() 新增 Rule 9: Invalid Task References，检测到任何无效引用则 gate_decision 设为 blocked；4. 确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 Loader 的清理逻辑（在 TASK-VT-115 中处理）",
+        "不修改测试（在 TASK-VT-116 中处理）"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-112",
+        "TASK-VT-113"
+      ],
+      "expected_deliverables": [
+        "更新后的 src/vibe_tracing/cli/analyze/pipeline.py",
+        "更新后的 src/vibe_tracing/domain/gate/engine.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-114-01",
+          "description": "_run_db_analysis() 调用 5 项新 SQL 查询并合并结果"
+        },
+        {
+          "dod_id": "DOD-VT-114-02",
+          "description": "MergeGateEngine 新增 Rule 9: Invalid Task References"
+        },
+        {
+          "dod_id": "DOD-VT-114-03",
+          "description": "检测到无效引用时 gate_decision 为 blocked"
+        },
+        {
+          "dod_id": "DOD-VT-114-04",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "analysis_details 字典中新增 invalid_task_references 键",
+        "MergeGateEngine 的 Rule 9 格式参考现有 Rule 1-8",
+        "blocked 时在 reasons 中列出具体的无效引用"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-115",
+      "phase_id": "PHASE-VT-010",
+      "title": "Loader 纯净化：移除 TaskLoader 和 ClaimLoader 中的引用校验循环",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "移除 TaskLoader 和 ClaimLoader 中用于跨文件引用的 Python 校验循环，使 Loader 彻底纯净化为 I/O 层。",
+      "atomic_scope": "1. infra/loader/task_loader.py:移除 validate_data() 中的 prd_result 和 arch_data 参数，删除 for req_id in related_requirements、for ac_id in related_acceptance_criteria、for mod_id in related_modules、for constraint_id in related_architecture_constraints 等校验循环；2. 移除 load_and_validate() 中的 prd_result 和 arch_data 参数，仅保留 content 参数；3. infra/loader/claim_loader.py:移除 validate_data() 中的 task_result 参数，删除 if related_task not in valid_task_ids 校验；4. 移除 load() 中的 task_result 参数；5. 更新 pipeline.py:_load_context() 中对 TaskLoader 和 ClaimLoader 的调用，移除 prd_result/arch_data/task_result 参数；6. 确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 Loader 的自洽检查（如孤立任务、架构孤儿等元数据校验）",
+        "不修改 DB Schema 或 SQL 查询"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-114"
+      ],
+      "expected_deliverables": [
+        "更新后的 src/vibe_tracing/infra/loader/task_loader.py",
+        "更新后的 src/vibe_tracing/infra/loader/claim_loader.py",
+        "更新后的 src/vibe_tracing/cli/analyze/pipeline.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-115-01",
+          "description": "TaskLoader.validate_data() 无 prd_result/arch_data 参数"
+        },
+        {
+          "dod_id": "DOD-VT-115-02",
+          "description": "ClaimLoader.validate_data() 无 task_result 参数"
+        },
+        {
+          "dod_id": "DOD-VT-115-03",
+          "description": "Loader 中无 for 循环比对 ID 的跨文件引用校验逻辑"
+        },
+        {
+          "dod_id": "DOD-VT-115-04",
+          "description": "Loader 仍保留自洽检查（孤立任务、架构孤儿等）"
+        },
+        {
+          "dod_id": "DOD-VT-115-05",
+          "description": "pipeline.py:_load_context() 调用 Loader 时不再传入 prd_result/arch_data/task_result"
+        },
+        {
+          "dod_id": "DOD-VT-115-06",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "保留 TaskLoader 中的孤立任务检查（strict_link 逻辑）和架构孤儿检查",
+        "保留 ClaimLoader 中的模板记录跳过逻辑（-9999）",
+        "移除的是跨文件引用校验，不是自洽检查"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-116",
+      "phase_id": "PHASE-VT-010",
+      "title": "测试更新：适配 Loader 纯净化与 SQL 引用校验",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新测试以适配 Loader 纯净化后的接口变化，并为新增的 SQL 查询和 Gate Rule 9 编写测试。",
+      "atomic_scope": "1. 更新 test_task_loader.py 中依赖 prd_result/arch_data 参数的测试，改为只测试纯加载行为；2. 更新 test_claim_loader.py 中依赖 task_result 参数的测试；3. 更新 test_db_query_functions.py，为 5 项新 SQL 查询函数编写测试；4. 更新 test_merge_gate_engine.py，为 Rule 9 编写测试；5. 确保全量测试通过。",
+      "out_of_scope": [
+        "不修改 Loader 或 pipeline 的业务逻辑",
+        "不修改文档"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-115"
+      ],
+      "expected_deliverables": [
+        "更新后的 tests/test_task_loader.py",
+        "更新后的 tests/test_claim_loader.py",
+        "更新后的 tests/test_db_query_functions.py",
+        "更新后的 tests/test_merge_gate_engine.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-116-01",
+          "description": "test_task_loader.py 中无 prd_result/arch_data 参数的测试"
+        },
+        {
+          "dod_id": "DOD-VT-116-02",
+          "description": "test_claim_loader.py 中无 task_result 参数的测试"
+        },
+        {
+          "dod_id": "DOD-VT-116-03",
+          "description": "5 项新 SQL 查询函数各有至少 1 个正向测试和 1 个反向测试"
+        },
+        {
+          "dod_id": "DOD-VT-116-04",
+          "description": "Rule 9 有至少 1 个 blocked 测试和 1 个 pass 测试"
+        },
+        {
+          "dod_id": "DOD-VT-116-05",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "Loader 测试改为只验证 JSON 解析和自洽检查",
+        "SQL 测试使用 init_in_memory_db() + load_*() 构造测试数据",
+        "Rule 9 测试参考现有 Rule 1-8 的测试模式"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-117",
+      "phase_id": "PHASE-VT-010",
+      "title": "文档对齐：更新 spec 与 refactoring_design 反映最终代码",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "TASK-VT-110~116 完成后，确保文档与代码完全一致。",
+      "atomic_scope": "1. 更新 docs/spec_pipeline_stage_1.md §7 收敛方案，删除设计计划（已完成，不留变更记录）；2. 更新 docs/refactoring_design.md §3 目标流水线，确认阶段 3/4 顺序与代码一致；3. 将 TASK-VT-110~117 的 status 更新为 done；4. 确保全量测试通过。",
+      "out_of_scope": [
+        "不修改代码逻辑",
+        "不新增功能"
+      ],
+      "related_requirements": [
+        "REQ-VT-009"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-009-12"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-110",
+        "TASK-VT-111",
+        "TASK-VT-112",
+        "TASK-VT-113",
+        "TASK-VT-114",
+        "TASK-VT-115",
+        "TASK-VT-116"
+      ],
+      "expected_deliverables": [
+        "更新后的 docs/spec_pipeline_stage_1.md",
+        "更新后的 docs/refactoring_design.md",
+        "更新后的 docs/task_list.json（TASK-VT-110~117 status → done）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-117-01",
+          "description": "spec_pipeline_stage_1.md 中无 §7 收敛方案（已完成，不留变更记录）"
+        },
+        {
+          "dod_id": "DOD-VT-117-02",
+          "description": "refactoring_design.md §3 目标流水线与代码一致"
+        },
+        {
+          "dod_id": "DOD-VT-117-03",
+          "description": "TASK-VT-110~117 的 status 已更新为 done"
+        },
+        {
+          "dod_id": "DOD-VT-117-04",
+          "description": "全量单元测试通过"
+        }
+      ],
+      "ai_coding_guidance": [
+        "文档更新以最终代码为准，不保留历史变更记录",
+        "task_list.json 的 status 更新使用 python 脚本批量修改"
+      ]
     }
   ]
 }

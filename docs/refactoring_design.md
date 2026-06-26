@@ -61,12 +61,12 @@ run_analyze(project_root, ...)
 │   调用：_check_claim_coverage(ctx, project_root, is_pre_commit, staged_files)
 │   输出：exit_code 或 None
 │
-├── 阶段 3：创建数据库
-│   调用：init_in_memory_db() → conn
-│
-├── 阶段 4：执行工具
+├── 阶段 3：执行工具
 │   调用：tool_evidence = _execute_tools(ctx)
 │   输出：List[ToolEvidenceCandidate]（局部变量）
+│
+├── 阶段 4：创建数据库
+│   调用：init_in_memory_db() → conn
 │
 ├── 阶段 5：灌入基础数据
 │   调用：load_prd(conn, ctx.prd)

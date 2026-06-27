@@ -7,14 +7,15 @@ import pytest
 USING_REAL_IMPL = False
 try:
     import vibe_tracing.infra.db as real_db
-    if all(hasattr(real_db, name) for name in ["load_prd", "check_requirement_coverage", "check_claim_evidence", "get_full_chain"]):
+    if all(hasattr(real_db, name) for name in ["load_prd", "check_requirement_coverage", "check_claim_evidence", "get_full_chain", "check_isolated_tasks"]):
         from vibe_tracing.infra.db import (
             load_prd,
             check_requirement_coverage,
             check_claim_evidence,
             get_full_chain,
             init_in_memory_db,
-            load_tasks
+            load_tasks,
+            check_isolated_tasks,
         )
         USING_REAL_IMPL = True
 except ImportError:
@@ -1445,6 +1446,66 @@ def test_check_invalid_ac_parent():
     assert res[0]["task_id"] == "TASK-2"
     assert res[0]["ac_id"] == "AC-1-1"
     assert res[0]["parent_req_id"] == "REQ-1"
+    conn.close()
+
+
+# ── check_isolated_tasks ────────────────────────────────────────────────────
+
+def test_check_isolated_tasks_no_links():
+    """Task with no requirements and no ACs is detected as isolated."""
+    conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Req", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC", "is_testing_required": True}]}]})
+    load_tasks(conn, [
+        {"task_id": "TASK-1", "priority": "must", "status": "todo", "related_requirements": [], "related_acceptance_criteria": []},
+    ])
+    res = check_isolated_tasks(conn, strict_link=False)
+    assert len(res) == 1
+    assert res[0]["task_id"] == "TASK-1"
+    conn.close()
+
+
+def test_check_isolated_tasks_with_req_pass():
+    """Task with requirements but no ACs passes in OR mode (strict_link=False)."""
+    conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Req", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC", "is_testing_required": True}]}]})
+    load_tasks(conn, [
+        {"task_id": "TASK-1", "priority": "must", "status": "todo", "related_requirements": ["REQ-1"], "related_acceptance_criteria": []},
+    ])
+    res = check_isolated_tasks(conn, strict_link=False)
+    assert len(res) == 0
+    conn.close()
+
+
+def test_check_isolated_tasks_with_ac_pass():
+    """Task with ACs but no requirements passes in OR mode (strict_link=False)."""
+    conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Req", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC", "is_testing_required": True}]}]})
+    load_tasks(conn, [
+        {"task_id": "TASK-1", "priority": "must", "status": "todo", "related_requirements": [], "related_acceptance_criteria": ["AC-1-1"]},
+    ])
+    res = check_isolated_tasks(conn, strict_link=False)
+    assert len(res) == 0
+    conn.close()
+
+
+def test_check_isolated_tasks_strict_link():
+    """Task with only REQ but no AC is detected in AND mode (strict_link=True)."""
+    conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Req", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC", "is_testing_required": True}]}]})
+    load_tasks(conn, [
+        {"task_id": "TASK-1", "priority": "must", "status": "todo", "related_requirements": ["REQ-1"], "related_acceptance_criteria": []},
+    ])
+    res = check_isolated_tasks(conn, strict_link=True)
+    assert len(res) == 1
+    assert res[0]["task_id"] == "TASK-1"
+    conn.close()
+
+
+def test_check_isolated_tasks_empty_db():
+    """Empty database returns empty list."""
+    conn = init_in_memory_db()
+    res = check_isolated_tasks(conn, strict_link=False)
+    assert len(res) == 0
     conn.close()
 
 

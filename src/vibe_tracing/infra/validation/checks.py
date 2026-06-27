@@ -109,7 +109,7 @@ def _check_id_formats(
     issues = []
 
     def _check_id(id_str: str, field_path: str, source_file: str):
-        if not id_str or id_str.endswith("-9999"):
+        if not id_str:
             return
         is_valid, err_msg = validate_id(id_str)
         if not is_valid:
@@ -135,8 +135,7 @@ def _check_id_formats(
         # task_list: 检查 task_id, phase_id, related_requirements, related_acceptance_criteria
         if record.file_key == "task_list" and isinstance(content, dict):
             for i, task in enumerate(content.get("tasks", [])):
-                if task.get("task_id", "").endswith("-9999"):
-                    continue
+
                 _check_id(task.get("task_id", ""), f"tasks[{i}].task_id", source)
                 _check_id(task.get("phase_id", ""), f"tasks[{i}].phase_id", source)
                 for j, req_id in enumerate(task.get("related_requirements", [])):
@@ -147,8 +146,7 @@ def _check_id_formats(
         # claims: 检查 claim_id, related_task
         elif record.file_key == "agent_claims" and isinstance(content, list):
             for i, claim in enumerate(content):
-                if claim.get("claim_id", "").endswith("-9999"):
-                    continue
+
                 _check_id(claim.get("claim_id", ""), f"[{i}].claim_id", source)
                 _check_id(claim.get("related_task", ""), f"[{i}].related_task", source)
 
@@ -158,7 +156,7 @@ def _check_id_formats(
 def _check_duplicate_ids(
     manifest: Any,
 ) -> List[ValidationIssue]:
-    """同一文件内重复 ID 检测（排除 -9999 模板）。"""
+    """同一文件内重复 ID 检测。"""
     vt_logger = OperationalLogger.get()
     issues = []
 
@@ -174,7 +172,7 @@ def _check_duplicate_ids(
             seen = set()
             for i, task in enumerate(content.get("tasks", [])):
                 tid = task.get("task_id", "")
-                if tid.endswith("-9999") or not tid:
+                if not tid:
                     continue
                 if tid in seen:
                     vt_logger.debug("duplicate_id", f"Duplicate task_id: {tid}",
@@ -195,7 +193,7 @@ def _check_duplicate_ids(
             seen = set()
             for i, claim in enumerate(content):
                 cid = claim.get("claim_id", "")
-                if cid.endswith("-9999") or not cid:
+                if not cid:
                     continue
                 if cid in seen:
                     vt_logger.debug("duplicate_id", f"Duplicate claim_id: {cid}",

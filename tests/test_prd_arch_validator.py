@@ -680,7 +680,7 @@ class TestValidateFromPath:
         prd_path.write_text("# Invalid PRD")
 
         with patch("vibe_tracing.infra.loader.prd_parser.PrdParser") as mock_parser_cls:
-            mock_parser_cls.return_value.parse_file.side_effect = Exception("parse error")
+            mock_parser_cls.return_value.parse_text.side_effect = Exception("parse error")
 
             result = validate_prd_architecture_mapping_from_path(
                 tmp_path, {"design_rules": []}
@@ -702,7 +702,7 @@ class TestValidateFromPath:
         mock_result = PrdParseResult(requirements=[])
 
         with patch("vibe_tracing.infra.loader.prd_parser.PrdParser") as mock_parser_cls:
-            mock_parser_cls.return_value.parse_file.return_value = mock_result
+            mock_parser_cls.return_value.parse_text.return_value = mock_result
 
             result = validate_prd_architecture_mapping_from_path(
                 tmp_path, {"design_rules": []}
@@ -725,7 +725,7 @@ class TestValidateFromPath:
         mock_result = PrdParseResult(requirements=[fake_req])
 
         with patch("vibe_tracing.infra.loader.prd_parser.PrdParser") as mock_parser_cls:
-            mock_parser_cls.return_value.parse_file.return_value = mock_result
+            mock_parser_cls.return_value.parse_text.return_value = mock_result
 
             constraints = {
                 "design_rules": [
@@ -756,7 +756,7 @@ class TestValidateFromPath:
         mock_result = PrdParseResult(requirements=fake_reqs)
 
         with patch("vibe_tracing.infra.loader.prd_parser.PrdParser") as mock_parser_cls:
-            mock_parser_cls.return_value.parse_file.return_value = mock_result
+            mock_parser_cls.return_value.parse_text.return_value = mock_result
 
             constraints = {
                 "design_rules": [
@@ -787,7 +787,7 @@ class TestValidateFromPath:
         mock_result = PrdParseResult(requirements=fake_reqs)
 
         with patch("vibe_tracing.infra.loader.prd_parser.PrdParser") as mock_parser_cls:
-            mock_parser_cls.return_value.parse_file.return_value = mock_result
+            mock_parser_cls.return_value.parse_text.return_value = mock_result
 
             constraints = {
                 "design_rules": [
@@ -816,7 +816,7 @@ class TestValidateFromPath:
         mock_result = PrdParseResult(requirements=fake_reqs)
 
         with patch("vibe_tracing.infra.loader.prd_parser.PrdParser") as mock_parser_cls:
-            mock_parser_cls.return_value.parse_file.return_value = mock_result
+            mock_parser_cls.return_value.parse_text.return_value = mock_result
 
             constraints = {
                 "design_rules": [

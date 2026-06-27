@@ -53,7 +53,7 @@ def test_run_init_creates_scaffolding(tmp_path):
     assert constraints_data["project"]["project_id"] == "PROJECT-VT"
     assert len(constraints_data["architecture_principles"]) == 0
     assert len(constraints_data["module_boundaries"]) == 1
-    assert constraints_data["module_boundaries"][0]["related_requirements"] == ["REQ-VT-9999"]
+    assert constraints_data["module_boundaries"][0]["related_requirements"] == ["REQ-VT-001"]
     assert len(constraints_data["dependency_rules"]) == 0
 
     # Verify config.json content

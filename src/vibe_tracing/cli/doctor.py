@@ -109,7 +109,7 @@ def run_doctor(project_root: Path) -> int:
         try:
             from vibe_tracing.infra.loader.prd_parser import PrdParser
             prd_parser = PrdParser()
-            prd_res = prd_parser.parse_file(prd_path)
+            prd_res = prd_parser.parse_text(prd_path.read_text(encoding="utf-8"))
             for req in prd_res.requirements:
                 prd_req_ids.add(req.req_id)
                 for ac in req.acceptance_criteria:

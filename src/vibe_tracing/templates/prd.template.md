@@ -58,7 +58,7 @@ AI Agent Guide:
 
 ### 2.2 核心使用场景
 
-#### SCENE-{{PROJECT_PREFIX}}-9999：样例场景
+#### SCENE-{{PROJECT_PREFIX}}-001：样例场景
 
 - 使用者：
 - 触发条件：
@@ -71,7 +71,7 @@ AI Agent Guide:
 
 ## 3. 功能需求
 
-### REQ-{{PROJECT_PREFIX}}-9999：样例需求标题
+### REQ-{{PROJECT_PREFIX}}-001：样例需求标题
 
 #### 需求说明
 
@@ -99,7 +99,7 @@ must
 
 #### 验收标准
 
-##### AC-{{PROJECT_PREFIX}}-9999-99：样例验收标准名称
+##### AC-{{PROJECT_PREFIX}}-001-01：样例验收标准名称
 
 - 条件：什么情况下触发这个验收？
 - 输入：给系统什么数据？
@@ -107,7 +107,7 @@ must
 - 异常处理：出错时怎么办？
 - 是否必须有测试：否
 
-##### AC-{{PROJECT_PREFIX}}-9999-98：样例验收标准名称2
+##### AC-{{PROJECT_PREFIX}}-001-02：样例验收标准名称2
 
 - 条件：
 - 输入：
@@ -125,7 +125,7 @@ must
 
 #### 依赖需求
 
-- REQ-{{PROJECT_PREFIX}}-9999
+- REQ-{{PROJECT_PREFIX}}-001
 
 ---
 

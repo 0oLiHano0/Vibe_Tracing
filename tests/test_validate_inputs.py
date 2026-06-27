@@ -150,22 +150,6 @@ class TestDuplicateIds:
         assert not result.is_valid
         assert any(i.error_code == "DUPLICATE_ID" for i in result.issues)
 
-    def test_template_excluded(self):
-        """-9999 模板应排除在重复检测之外。"""
-        records = [
-            _make_record("task_list", _make_task_list([
-                {"task_id": "TASK-VT-9999", "title": "A", "phase_id": "PHASE-VT-001",
-                 "priority": "must", "status": "todo", "owner_role": "AI", "objective": "A",
-                 "related_requirements": [], "related_acceptance_criteria": [], "definition_of_done": []},
-                {"task_id": "TASK-VT-9999", "title": "B", "phase_id": "PHASE-VT-001",
-                 "priority": "should", "status": "todo", "owner_role": "AI", "objective": "B",
-                 "related_requirements": [], "related_acceptance_criteria": [], "definition_of_done": []},
-            ])),
-        ]
-        manifest = _make_manifest(records)
-        result = validate_inputs(manifest, "VT")
-        # 不应有 DUPLICATE_ID 错误
-        assert not any(i.error_code == "DUPLICATE_ID" for i in result.issues)
 
 
 class TestPathSafety:

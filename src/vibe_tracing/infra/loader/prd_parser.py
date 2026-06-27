@@ -164,17 +164,6 @@ class PrdParser:
     使用 mistune AST 模式解析 PRD 文档，提取需求和验收标准实体。
     """
 
-    def parse_file(self, file_path: Path) -> PrdParseResult:
-        """从文件路径读取并解析 PRD。"""
-        try:
-            text = file_path.read_text(encoding="utf-8")
-        except Exception as e:
-            return PrdParseResult(
-                requirements=[],
-                is_valid=False,
-                errors=[f"Failed to read file {file_path}: {e}"],
-            )
-        return self.parse_text(text)
 
     def parse_text(self, text: str) -> PrdParseResult:
         """从文本内容解析 PRD（pipeline 主要入口）。"""

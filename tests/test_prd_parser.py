@@ -6,7 +6,7 @@ def test_parse_real_prd():
     """covers: AC-VT-001-01, AC-VT-001-02"""
     parser = PrdParser()
     prd_path = Path("docs/prd.md")
-    result = parser.parse_file(prd_path)
+    result = parser.parse_text(prd_path.read_text())
 
     assert result.is_valid is True
     assert len(result.errors) == 0

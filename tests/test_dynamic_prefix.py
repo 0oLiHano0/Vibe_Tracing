@@ -37,15 +37,15 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
     # 2. Parse prd.md and verify dynamic ID registration
     ids.set_project_prefix("CapL")
     parser = PrdParser()
-    prd_res = parser.parse_file(prd_path)
+    prd_res = parser.parse_text(prd_path.read_text())
     assert prd_res.is_valid is True
     assert len(prd_res.requirements) == 1
     
     req = prd_res.requirements[0]
-    assert req.req_id == "REQ-CapL-9999"
+    assert req.req_id == "REQ-CapL-001"
     assert req.priority == "must"
     assert len(req.acceptance_criteria) == 2
-    assert req.acceptance_criteria[0].ac_id == "AC-CapL-9999-99"
+    assert req.acceptance_criteria[0].ac_id == "AC-CapL-001-01"
 
     # Ensure dynamic prefix is registered in ids module
     assert ids.get_project_prefix() == "CapL"
@@ -61,9 +61,9 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
 
     # 4. Load tasks using TaskLoader and verify no errors
     task_loader = TaskLoader()
-    task_res = task_loader.load_and_validate(task_list_path)
+    task_res = task_loader.load_and_validate(json.loads(task_list_path.read_text()))
     assert task_res.is_valid is True, f"Failed to load task list: {task_res.errors}"
-    assert len(task_res.tasks) == 0  # Legacy templates -9999 are silently ignored in TaskLoader!
+    assert len(task_res.tasks) == 0
  
     # Ensure project_name and project_id are correctly stored on prd_res
     assert prd_res.project_name == "Capacity Limit"

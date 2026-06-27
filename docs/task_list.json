@@ -2271,7 +2271,7 @@
         },
         {
           "dod_id": "DOD-VT-035-03",
-          "description": "所有数据分析与自检逻辑静默过滤掉以 -9999 结尾的模板项目，不引发虚警。"
+          "description": "所有数据分析与自检逻辑严格校验数据有效性。"
         },
         {
           "dod_id": "DOD-VT-035-04",
@@ -2280,27 +2280,6 @@
       ],
       "ai_coding_guidance": [
         "字段修复指南必须用清晰、通俗的中文编写，突出正则匹配格式或命名要求。"
-      ]
-    },
-    {
-      "task_id": "TASK-VT-9999",
-      "title": "样例任务标题",
-      "phase_id": "PHASE-VT-9999",
-      "priority": "must",
-      "status": "todo",
-      "owner_role": "AI Developer",
-      "objective": "样例任务目标，用于演示字段填写规范。",
-      "related_requirements": [
-        "REQ-VT-9999"
-      ],
-      "related_acceptance_criteria": [
-        "AC-VT-9999-99"
-      ],
-      "definition_of_done": [
-        {
-          "dod_id": "DOD-VT-9999-99",
-          "description": "样例DoD描述"
-        }
       ]
     },
     {
@@ -6348,7 +6327,6 @@
       ],
       "ai_coding_guidance": [
         "保留 TaskLoader 中的孤立任务检查（strict_link 逻辑）和架构孤儿检查",
-        "保留 ClaimLoader 中的模板记录跳过逻辑（-9999）",
         "移除的是跨文件引用校验，不是自洽检查"
       ]
     },
@@ -6821,6 +6799,396 @@
       ],
       "ai_coding_guidance": [
         "只补充注释和文档，不修改业务逻辑。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-124",
+      "title": "全量删除 -9999 机制：模板与源码",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "从模板文件和源码中删除所有 -9999 过滤逻辑，从源头消除该过时机制。",
+      "atomic_scope": "1. prd.template.md 删除 5 处 -9999 示例行，改为不含 ID 的结构占位；2. architecture_constraints.template.json 将 REQ-9999 改为 REQ-001；3. task_loader.py 删除 -9999 跳过；4. claim_loader.py 删除 -9999 跳过；5. governance/loader.py 删除 -9999 跳过；6. validation/checks.py 删除 6 处 -9999 过滤。",
+      "out_of_scope": [
+        "不修改测试文件（由后续任务处理）",
+        "不修改 task_list.json 生产数据（由后续任务处理）",
+        "不修改文档（由后续任务处理）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-004"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-123"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/templates/prd.template.md",
+        "src/vibe_tracing/templates/architecture_constraints.template.json",
+        "src/vibe_tracing/infra/loader/task_loader.py",
+        "src/vibe_tracing/infra/loader/claim_loader.py",
+        "src/vibe_tracing/infra/governance/loader.py",
+        "src/vibe_tracing/infra/validation/checks.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-124-01",
+          "description": "grep -rn '9999' src/ 返回 0 结果。"
+        },
+        {
+          "dod_id": "DOD-VT-124-02",
+          "description": "模板文件不含 -9999 示例记录。"
+        },
+        {
+          "dod_id": "DOD-VT-124-03",
+          "description": "validation/checks.py 中仅保留空值检查（if not id_str），无 -9999 特殊处理。"
+        },
+        {
+          "dod_id": "DOD-VT-124-04",
+          "description": "全量测试通过（部分测试可能因 -9999 断言失败，允许标记为后续任务修复）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "prd.template.md 保留标题层级骨架（h3→优先级→类别→h5），示例内容改为不含 ID 的占位文本。",
+        "validation/checks.py 中 L112 的 if not id_str or id_str.endswith('-9999') 改为 if not id_str。",
+        "L177/L198 的 if tid.endswith('-9999') or not tid 改为 if not tid。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-125",
+      "title": "全量删除 -9999 机制：测试与生产数据",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除所有 -9999 相关测试用例，清理 task_list.json 中的模板任务记录。",
+      "atomic_scope": "1. test_dynamic_hints.py 删除 -9999 模板过滤测试；2. test_validate_inputs.py 删除 -9999 重复检测排除测试；3. test_dynamic_prefix.py 删除 -9999 注释并更新断言；4. test_ghost_code_reconciler.py 删除 -9999 过滤测试；5. test_scaffolding.py 将 REQ-VT-9999 断言改为 REQ-VT-001；6. task_list.json 删除 TASK-VT-9999 模板记录及关联引用。",
+      "out_of_scope": [
+        "不修改源码（由 TASK-VT-124 处理）",
+        "不修改文档（由后续任务处理）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-004"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-124"
+      ],
+      "expected_deliverables": [
+        "tests/test_dynamic_hints.py",
+        "tests/test_validate_inputs.py",
+        "tests/test_dynamic_prefix.py",
+        "tests/test_ghost_code_reconciler.py",
+        "tests/test_scaffolding.py",
+        "docs/task_list.json"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-125-01",
+          "description": "grep -rn '9999' src/ tests/ docs/ --include='*.py' --include='*.json' --include='*.md' | grep -v loader_refactoring_plan 返回 0 结果。"
+        },
+        {
+          "dod_id": "DOD-VT-125-02",
+          "description": "task_list.json 中无 TASK-VT-9999 记录。"
+        },
+        {
+          "dod_id": "DOD-VT-125-03",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "test_dynamic_prefix.py L66 的断言需根据模板变化调整，确认 prd.template.md 改动后解析结果是否仍包含 REQ 记录。",
+        "task_list.json L2274 的 DoD 描述需同步删除 -9999 相关文字。",
+        "task_list.json L6351 的 ai_coding_guidance 需删除 -9999 相关指引。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-126",
+      "title": "新增 check_isolated_tasks 查询并集成到 pipeline",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 infra/db/queries.py 新增 check_isolated_tasks() SQL 查询，在 pipeline.py 阶段 7 调用，结果写入 analysis_details 供 dashboard 展示。不阻断门禁。",
+      "atomic_scope": "1. queries.py 新增 check_isolated_tasks(conn)；2. __init__.py 导出；3. pipeline.py _run_db_analysis() 调用并写入 analysis_details；4. pipeline.py _evaluate_and_output() 提取并传递给 _build_report_document()；5. reports.py _build_report_document() 新增 isolated_tasks 参数，格式化为 warning 字符串追加到 report_doc[\"warnings\"]。",
+      "out_of_scope": [
+        "不阻断门禁（不在 gate_engine.evaluate() 中使用）",
+        "不修改 dashboard 模板（现有数据流自动传递）",
+        "不做架构孤儿检测（留待后续评估）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-003"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-127"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/db/queries.py",
+        "src/vibe_tracing/infra/db/__init__.py",
+        "src/vibe_tracing/cli/analyze/pipeline.py",
+        "src/vibe_tracing/cli/analyze/reports.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-126-01",
+          "description": "check_isolated_tasks(conn) 函数存在，返回 List[dict]。"
+        },
+        {
+          "dod_id": "DOD-VT-126-02",
+          "description": "函数从 infra/db/__init__.py 正确导出。"
+        },
+        {
+          "dod_id": "DOD-VT-126-03",
+          "description": "pipeline.py _run_db_analysis() 调用该函数，结果写入 analysis_details['isolated_tasks']。"
+        },
+        {
+          "dod_id": "DOD-VT-126-04",
+          "description": "_evaluate_and_output() 提取 isolated_tasks 并传递给 _build_report_document()。"
+        },
+        {
+          "dod_id": "DOD-VT-126-05",
+          "description": "_build_report_document() 将 isolated_tasks 写入 report_doc 字典。"
+        },
+        {
+          "dod_id": "DOD-VT-126-06",
+          "description": "函数不在 gate_engine.evaluate() 的参数中使用（不阻断门禁）。"
+        },
+        {
+          "dod_id": "DOD-VT-126-07",
+          "description": "_build_report_document() 将孤立任务格式化为 warning 字符串追加到 report_doc['warnings']。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "SQL 使用 LEFT JOIN task_requirements + task_acs，找出两者均为 NULL 的任务。",
+        "结果格式为 [{\"task_id\": \"...\", \"reason\": \"no linked requirements or ACs\"}]，与现有 check_* 风格一致。",
+        "在 _run_db_analysis() 中与其他 check_* 调用并列，结果追加到 analysis_details 字典。",
+        "数据流不会自动到达 dashboard：_build_report_document() 当前不接收 analysis_details。需要在 _evaluate_and_output() 中提取 isolated_tasks 并作为新参数传递给 _build_report_document()，再写入 report_doc。",
+        "不需要修改门禁引擎——isolated_tasks 不参与 gate_engine.evaluate()。",
+        "report_doc 作为 traceability_report 整体传入 DashboardRenderer，模板可通过 bootData 访问。如需专门 UI 卡片需修改 HTML 模板。",
+        "isolated_tasks 不需要单独的 dashboard 卡片。格式化为 warning 字符串追加到 report_doc['warnings']，现有治理警告卡片自动渲染。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-127",
+      "title": "从 task_loader.py 删除全部判定逻辑并清理残留",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除 task_loader.py 中的孤立任务检测、架构孤儿检测、strict_link 配置读取及所有关联残留代码。AND 模式废弃，SQL 查询下沉作为 P2 后续改进。",
+      "atomic_scope": "1. 删除孤立任务检测代码块（strict_link + AND/OR 逻辑）；2. 删除架构孤儿检测代码块；3. 删除 TaskGap 数据类；4. 删除 TaskListLoadResult.gaps 字段；5. 删除 get_err_msg() 函数；6. 删除 load_hints/resolve_hint import 和 _task_field_hints 延迟加载。",
+      "out_of_scope": [
+        "不修改 queries.py（由 TASK-VT-126 处理）",
+        "不修改 pipeline.py（由后续任务处理）",
+        "不修改测试（由后续任务处理）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-124"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/loader/task_loader.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-127-01",
+          "description": "task_loader.py 中无 isolated、orphan、strict_link、TaskGap、gaps、get_err_msg、load_hints 引用。"
+        },
+        {
+          "dod_id": "DOD-VT-127-02",
+          "description": "TaskListLoadResult 不含 gaps 字段。"
+        },
+        {
+          "dod_id": "DOD-VT-127-03",
+          "description": "task_loader.py 只保留 Task、DodItem 数据类 + TaskLoader 反序列化逻辑。"
+        },
+        {
+          "dod_id": "DOD-VT-127-04",
+          "description": "import task_loader 不触发 load_hints 磁盘 I/O。"
+        },
+        {
+          "dod_id": "DOD-VT-127-05",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "删除 validate_data() 中全部判定逻辑，只保留反序列化循环。",
+        "TaskLoader 只做：遍历 tasks 列表 → 构造 Task 对象。",
+        "保留 validate_data() 方法签名不变，返回类型不变（但删除 gaps 字段的默认值）。",
+        "AND 模式（strict_link）永久废弃，不再保留配置透传。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-129",
+      "title": "更新测试与文档",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除已废弃的判定逻辑测试用例，更新 gaps 断言，统一更新所有受影响的文档。",
+      "atomic_scope": "1. test_task_loader.py 删除 4 个判定相关测试、更新 gaps 断言；2. spec_infra_loader.md 删除 -9999 和 gaps 描述、更新 task_loader 职责；3. spec_pipeline_stage_1.md 同步 TaskListLoadResult 结构；4. refactoring_design.md 更新包结构注释；5. loader_refactoring_plan.md 标记完成状态。；6. spec_infra_loader.md §6 下游依赖新增 infra/db/queries.py。",
+      "out_of_scope": [
+        "不修改源码",
+        "不修改测试",
+        "不修改 task_list.json"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-003"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-125",
+        "TASK-VT-126",
+        "TASK-VT-127"
+      ],
+      "expected_deliverables": [
+        "tests/test_task_loader.py",
+        "docs/spec_infra_loader.md",
+        "docs/spec_pipeline_stage_1.md",
+        "docs/refactoring_design.md",
+        "docs/loader_refactoring_plan.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-129-01",
+          "description": "test_task_loader.py 无 isolated、orphan、strict_link、TaskGap、gaps 引用。"
+        },
+        {
+          "dod_id": "DOD-VT-129-02",
+          "description": "grep -rn '\\-9999' docs/ --include='*.md' | grep -v loader_refactoring_plan 返回 0 结果。"
+        },
+        {
+          "dod_id": "DOD-VT-129-03",
+          "description": "spec_infra_loader.md 中 TaskListLoadResult 无 gaps 字段。"
+        },
+        {
+          "dod_id": "DOD-VT-129-04",
+          "description": "refactoring_design.md §4.2 task_loader 注释为'反序列化'而非'校验'。"
+        },
+        {
+          "dod_id": "DOD-VT-129-05",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "先完成所有代码变更，最后统一更新文档。",
+        "test_task_loader.py 删除 test_isolated_task_fails、test_strict_link_rejects_req_only_task、test_or_logic_allows_req_only_task、test_architectural_orphan_rejection。",
+        "test_valid_task_list_passes 中删除 assert len(res.gaps) == 0。",
+        "spec_infra_loader.md §3 步骤 4 改为'反序列化为 Task 实体列表，不含判定逻辑'。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-130",
+      "title": "切断 loader 包 I/O 后路",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除 TaskLoader、ClaimLoader 的磁盘读取回退路径和 PrdParser.parse_file() 方法，让 loader 包只做纯内存反序列化。",
+      "atomic_scope": "1. TaskLoader.load_and_validate() 删除 content/path 参数，改为接收 dict；2. ClaimLoader.load() 删除 content/path 参数，改为接收 list；3. PrdParser 删除 parse_file() 方法；4. 改造 doctor.py 和 prd_arch_validator.py 使用 parse_text()；5. 更新测试。",
+      "out_of_scope": [
+        "不修改 pipeline.py（已通过 content 参数传入，无需改）",
+        "不修改 RawInputLoader（它是唯一的 I/O 入口，保留）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-129"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/loader/task_loader.py",
+        "src/vibe_tracing/infra/loader/claim_loader.py",
+        "src/vibe_tracing/infra/loader/prd_parser.py",
+        "src/vibe_tracing/cli/doctor.py",
+        "src/vibe_tracing/domain/compliance/prd_arch_validator.py",
+        "tests/test_task_loader.py",
+        "tests/test_claim_loader.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-130-01",
+          "description": "task_loader.py 中无 json.load、open()、read_text 等 I/O 调用。"
+        },
+        {
+          "dod_id": "DOD-VT-130-02",
+          "description": "claim_loader.py 中无 json.load、glob.glob、open() 等 I/O 调用。"
+        },
+        {
+          "dod_id": "DOD-VT-130-03",
+          "description": "prd_parser.py 中无 parse_file 方法。"
+        },
+        {
+          "dod_id": "DOD-VT-130-04",
+          "description": "doctor.py 和 prd_arch_validator.py 使用 parse_text() 而非 parse_file()。"
+        },
+        {
+          "dod_id": "DOD-VT-130-05",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "TaskLoader.load_and_validate(self, data: dict) — 调用方传入已解析的 dict。",
+        "ClaimLoader.load(self, data: list) — 调用方传入已解析的 list。",
+        "pipeline.py 已通过 content 参数传入数据，无需修改。",
+        "doctor.py 和 prd_arch_validator.py 改为 prd_path.read_text() + prd_parser.parse_text(text)。",
+        "test_validate_real_files_load 测试改为直接调用 validate_data()，或删除（集成测试职责不在 loader 层）。"
       ]
     }
   ]

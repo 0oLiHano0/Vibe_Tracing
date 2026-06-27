@@ -181,7 +181,7 @@ infra/
 │   ├── config.py                        # load_config, resolve_path, REQUIRED_FILES
 │   ├── raw_input.py                     # RawInputLoader, InputFileRecord, RawInputManifest
 │   ├── prd_parser.py                    # PrdParser, PrdParseResult
-│   ├── task_loader.py                   # TaskLoader, TaskListLoadResult
+│   ├── task_loader.py                   # TaskLoader（纯反序列化）, TaskListLoadResult
 │   └── claim_loader.py                  # ClaimLoader, ClaimListLoadResult
 │
 ├── report/                              # 报告生成（文件写入、HTML 渲染）
@@ -538,41 +538,51 @@ main.py（全局捕获）
 
 ## 附录：域包接口契约（__init__.py 导出）
 
+> 以下导出清单与代码同步（2026-06-27）。数据模型类定义在各自模块内，不从 `__init__.py` 导出。
+
 ```python
 # infra/loader/__init__.py
 from .config import load_config, resolve_path, REQUIRED_FILES
-from .raw_input import RawInputLoader, InputFileRecord, RawInputManifest
-from .prd_parser import PrdParser, PrdParseResult, Requirement, AcceptanceCriteria
-from .task_loader import TaskLoader, TaskListLoadResult, Task, DodItem, TaskGap
-from .claim_loader import ClaimLoader, ClaimListLoadResult, Claim, ClaimGap
+from .raw_input import RawInputLoader
+from .prd_parser import PrdParser, PrdParseResult
+from .task_loader import TaskLoader, TaskListLoadResult
+from .claim_loader import ClaimLoader, ClaimListLoadResult
 
 # domain/evidence/__init__.py
 from .builder import EvidenceBuilder
-from .tool_adapter import ToolExecutionEngine, ToolEvidenceCandidate
+from .merge_result import EvidenceMergeResult
 
 # domain/gate/__init__.py
 from .engine import MergeGateEngine
+from .staleness import mark_staleness, determine_affected_items
 
 # domain/compliance/__init__.py
 from .checker import ArchitectureComplianceChecker
-from .prd_arch_validator import validate_prd_architecture_mapping, MappingResult
+from .prd_arch_validator import validate_prd_architecture_mapping
 
 # domain/risk/__init__.py
 from .advisor import RiskAdvisor
 
-# domain/report/__init__.py
+# infra/report/__init__.py
 from .traceability import TraceabilityReportBuilder
 from .dashboard import DashboardRenderer
 from .reflection import render_reflection_prompts
 
 # domain/governance/__init__.py
 from .ghost_code import GhostCodeReconciler
-from .change_proposal import ArchitectureChangeProposalEngine
 
 # infra/db/__init__.py
 from .schema import init_in_memory_db
-from .loaders import load_tasks, load_claims, load_staged_files, load_initial_cache, load_prd
-from .queries import check_ac_coverage, check_coverage_violations, check_requirement_coverage,
-                      check_claim_evidence, check_dangling_claims, check_ghost_code, get_full_chain
-from .exports import upsert_test_result, upsert_coverage_report, purge_stale_cache
+from .loaders import (load_tasks, load_claims, load_staged_files,
+                      load_initial_cache, load_prd, load_architecture_constraints)
+from .queries import (check_ac_coverage, check_coverage_violations,
+                      check_requirement_coverage, check_claim_evidence,
+                      check_dangling_claims, check_ghost_code, get_full_chain,
+                      check_test_dead_links, check_active_task_coverage,
+                      check_invalid_task_requirements, check_invalid_task_acs,
+                      check_invalid_task_modules, check_invalid_task_constraints,
+                      check_invalid_ac_parent,
+                      check_isolated_tasks)
+from .exports import (upsert_test_result, upsert_coverage_report,
+                      purge_stale_cache, persist_evidences)
 ```

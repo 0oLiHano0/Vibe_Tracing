@@ -257,15 +257,6 @@ class TestReadClaimsFromFilesystem:
         result = reconciler._read_claims_from_filesystem()
         assert result == []
 
-    def test_template_record_skipped(self, project, conn):
-        """claim_id ending in -9999 is filtered out."""
-        template = {"claim_id": "C-9999", "related_task": "T-0001", "code_refs": ["src/template.py"]}
-        claims_path = project / ".vibetracing" / "claims" / "CLAIM-VT-001.json"
-        claims_path.write_text(json.dumps([template]), encoding="utf-8")
-
-        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
-        result = reconciler._read_claims_from_filesystem()
-        assert len(result) == 0
 
     def test_missing_required_fields_skipped(self, project, conn):
         """Claims without claim_id or related_task are skipped."""

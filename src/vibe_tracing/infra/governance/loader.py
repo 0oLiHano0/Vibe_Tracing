@@ -31,9 +31,6 @@ def read_claims_from_filesystem(claims_dir: Path) -> List[dict]:
             data = json.loads(claim_file.read_text(encoding="utf-8"))
             items = data if isinstance(data, list) else [data]
             for item in items:
-                # Skip template records
-                if item.get("claim_id", "").endswith("-9999"):
-                    continue
                 # Skip claims missing required fields
                 if not item.get("claim_id") or not item.get("related_task"):
                     continue

@@ -31,6 +31,7 @@ def _build_report_document(
     req_res: dict,
     output_dir: Path,
     project_root: Path,
+    isolated_tasks: Optional[list] = None,
 ) -> dict:
     """Assemble report document, build traceability report with metadata, and return it."""
     from vibe_tracing.infra.report.traceability import TraceabilityReportBuilder
@@ -56,6 +57,20 @@ def _build_report_document(
         "accepted_rules": compliance_res.get("accepted_rules", [])
         if compliance_res else [],
     }
+
+    # Add isolated tasks as non-blocking warnings
+    if isolated_tasks:
+        warnings = []
+        for task in isolated_tasks:
+            reason = task.get("reason", "")
+            if reason == "missing_req":
+                desc = f"孤立任务 {task['task_id']}: 缺少需求关联"
+            elif reason == "missing_ac":
+                desc = f"孤立任务 {task['task_id']}: 缺少验收标准关联"
+            else:
+                desc = f"孤立任务 {task['task_id']}: 缺少需求和验收标准关联"
+            warnings.append(desc)
+        report_doc["warnings"] = warnings
 
     # Add coverage summary to report
     cb_data = evidence_meta.get("coverage_baseline", {})

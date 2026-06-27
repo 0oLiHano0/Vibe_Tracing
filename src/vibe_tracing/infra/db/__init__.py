@@ -28,6 +28,7 @@ from vibe_tracing.infra.db.queries import (
     check_invalid_task_modules,
     check_invalid_task_constraints,
     check_invalid_ac_parent,
+    check_isolated_tasks,
 )
 from vibe_tracing.infra.db.exports import (
     upsert_test_result,
@@ -60,6 +61,7 @@ __all__ = [
     "check_invalid_task_modules",
     "check_invalid_task_constraints",
     "check_invalid_ac_parent",
+    "check_isolated_tasks",
     "upsert_test_result",
     "upsert_coverage_report",
     "purge_stale_cache",

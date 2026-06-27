@@ -136,7 +136,7 @@ def validate_prd_architecture_mapping_from_path(
 
     try:
         prd_parser = PrdParser()
-        prd_res = prd_parser.parse_file(prd_path)
+        prd_res = prd_parser.parse_text(prd_path.read_text(encoding="utf-8"))
     except Exception as e:
         return PathValidationResult(
             exit_code=0,

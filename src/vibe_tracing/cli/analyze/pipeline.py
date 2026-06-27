@@ -135,9 +135,7 @@ def _load_context(
     if task_list_record and task_list_record.status == "ok":
         task_list_path = Path(task_list_record.file_path)
         task_loader = TaskLoader()
-        task_res = task_loader.load_and_validate(
-            task_list_path, content=task_list_record.content
-        )
+        task_res = task_loader.load_and_validate(task_list_record.content)
         if not task_res.is_valid:
             print(
                 f"Task list validation error: {'; '.join(task_res.errors)}",
@@ -150,9 +148,7 @@ def _load_context(
     if claims_record and claims_record.status == "ok":
         claims_path = Path(claims_record.file_path)
         claim_loader = ClaimLoader()
-        claim_res_loader = claim_loader.load(
-            claims_path, content=claims_record.content
-        )
+        claim_res_loader = claim_loader.load(claims_record.content)
         if not claim_res_loader.is_valid:
             print(
                 f"Agent claims validation error: {'; '.join(claim_res_loader.errors)}",
@@ -552,6 +548,8 @@ def _run_db_analysis(
         check_invalid_task_modules,
         check_invalid_task_constraints,
         check_invalid_ac_parent,
+        check_isolated_tasks,
+        check_architectural_orphans,
     )
     from vibe_tracing.domain.compliance.checker import ArchitectureComplianceChecker
     from vibe_tracing.domain.risk.advisor import RiskAdvisor
@@ -561,6 +559,13 @@ def _run_db_analysis(
     req_coverage = check_requirement_coverage(conn)
     ac_coverage = check_ac_coverage(conn)
     claim_evidence = check_claim_evidence(conn)
+    
+    strict_link = ctx.config.get("id_rules", {}).get(
+        "all_tasks_must_link_requirements_and_acceptance_criteria", False
+    )
+    isolated_tasks = check_isolated_tasks(conn, strict_link)
+    arch_orphans = check_architectural_orphans(conn)
+
 
     # Additional queries for MergeGateEngine
     ghost_files = check_ghost_code(conn)
@@ -574,8 +579,17 @@ def _run_db_analysis(
     invalid_task_consts = check_invalid_task_constraints(conn)
     invalid_ac_parents = check_invalid_ac_parent(conn)
 
+
     # Convert db results to gap format
     merged_gaps = _db_result_to_gaps(req_coverage, ac_coverage, claim_evidence)
+
+    for task in arch_orphans:
+        merged_gaps.append({
+            "item_id": task["task_id"],
+            "item_type": "task",
+            "reason": f"Architectural orphan: Task {task['task_id']} is not linked to any module.",
+        })
+
 
     # Architecture compliance check
     compliance_res = None
@@ -633,7 +647,10 @@ def _run_db_analysis(
         "dangling_claims": dangling_claims_list,
         "claim_evidence_gaps": claim_evidence,
         "cov_violations": cov_violations,
+        "isolated_tasks": isolated_tasks,
+        "arch_orphans": arch_orphans,
         "invalid_task_references": {
+
             "invalid_requirements": invalid_task_reqs,
             "invalid_acs": invalid_task_acs_list,
             "invalid_modules": invalid_task_mods,
@@ -845,6 +862,7 @@ def _evaluate_and_output(
     report_doc = _build_report_document(
         ctx, gate_res, evidence_meta, merged_gaps, final_risks,
         compliance_res, req_res, output_dir, project_root,
+        isolated_tasks=analysis_details.get("isolated_tasks"),
     )
 
     # 阶段 4：渲染输出（Dashboard + 终端摘要 + Agent 行动建议 + 反思提示）

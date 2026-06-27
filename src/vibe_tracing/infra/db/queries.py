@@ -267,3 +267,42 @@ def check_invalid_ac_parent(conn: sqlite3.Connection) -> list:
         WHERE tr.req_id IS NULL
     """).fetchall()
     return [{"task_id": r[0], "ac_id": r[1], "parent_req_id": r[2]} for r in rows]
+
+def check_isolated_tasks(conn: sqlite3.Connection, strict_link: bool) -> list:
+    """检查孤立任务（无 REQ 或 无 AC 的情况，具体取决于 strict_link 配置）。"""
+    if strict_link:
+        query = """
+            SELECT t.task_id, 
+                   CASE 
+                     WHEN COUNT(tr.req_id) = 0 THEN 'missing_req'
+                     WHEN COUNT(ta.ac_id) = 0 THEN 'missing_ac'
+                   END as reason
+            FROM tasks t
+            LEFT JOIN task_requirements tr ON t.task_id = tr.task_id
+            LEFT JOIN task_acs ta ON t.task_id = ta.task_id
+            GROUP BY t.task_id
+            HAVING COUNT(tr.req_id) = 0 OR COUNT(ta.ac_id) = 0
+        """
+    else:
+        query = """
+            SELECT t.task_id, 'isolated' as reason
+            FROM tasks t
+            LEFT JOIN task_requirements tr ON t.task_id = tr.task_id
+            LEFT JOIN task_acs ta ON t.task_id = ta.task_id
+            GROUP BY t.task_id
+            HAVING COUNT(tr.req_id) = 0 AND COUNT(ta.ac_id) = 0
+        """
+    rows = conn.execute(query).fetchall()
+    return [{"task_id": r[0], "reason": r[1]} for r in rows]
+
+def check_architectural_orphans(conn: sqlite3.Connection) -> list:
+    """检查架构孤儿任务（状态不为 done 且未关联任何模块）。"""
+    rows = conn.execute("""
+        SELECT t.task_id, 'architectural_orphan' as reason
+        FROM tasks t
+        LEFT JOIN task_modules tm ON t.task_id = tm.task_id
+        WHERE t.status != 'done'
+        GROUP BY t.task_id
+        HAVING COUNT(tm.module_id) = 0
+    """).fetchall()
+    return [{"task_id": r[0], "reason": r[1]} for r in rows]

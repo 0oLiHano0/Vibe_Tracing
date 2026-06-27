@@ -35,7 +35,7 @@ def _gate2_code_claim_alignment(
 
     if conn is None:
         conn = init_in_memory_db()
-    reconciler = GhostCodeReconciler(project_root, conn)
+    reconciler = GhostCodeReconciler(project_root, conn, config_data=ctx.config)
     success, error_msg = reconciler.reconcile()
     if error_msg:
         print(error_msg, file=sys.stderr)

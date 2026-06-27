@@ -130,7 +130,17 @@ class TestPipelinePhaseTiming:
         """Each phase_end event must include duration_ms >= 0."""
         from vibe_tracing.cli.analyze.pipeline import run_analyze
 
-        config = {"language": "python", "logging": {"level": "DEBUG"}}
+        config = {
+            "language": "python",
+            "logging": {"level": "DEBUG"},
+            "paths": {
+                "prd": "docs/prd.md",
+                "architecture_constraints": "docs/architecture_constraints.json",
+                "task_list": "docs/task_list.json",
+                "human_decisions": ".vibetracing/human_decisions.json",
+                "output_dir": "output",
+            },
+        }
         with patch(
             "vibe_tracing.cli.analyze.pipeline._load_context"
         ) as mock_load:
@@ -160,7 +170,17 @@ class TestPipelinePhaseTiming:
         """Phase names should match the expected set."""
         from vibe_tracing.cli.analyze.pipeline import run_analyze
 
-        config = {"language": "python", "logging": {"level": "DEBUG"}}
+        config = {
+            "language": "python",
+            "logging": {"level": "DEBUG"},
+            "paths": {
+                "prd": "docs/prd.md",
+                "architecture_constraints": "docs/architecture_constraints.json",
+                "task_list": "docs/task_list.json",
+                "human_decisions": ".vibetracing/human_decisions.json",
+                "output_dir": "output",
+            },
+        }
         with patch(
             "vibe_tracing.cli.analyze.pipeline._load_context"
         ) as mock_load:

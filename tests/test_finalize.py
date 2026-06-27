@@ -24,7 +24,7 @@ def _setup_project(base: Path, config_data: Optional[dict] = None, constraints_d
             "prd": "docs/prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
-            "agent_claims": ".vibetracing/claims",
+            "human_decisions": ".vibetracing/human_decisions.json",
             "output_dir": "output",
         },
     }
@@ -162,7 +162,13 @@ def test_finalize_conflict_language(tmp_path, capsys):
         "project_prefix": "TEST",
         "project_name": "Test Project",
         "language": "go",
-        "paths": {},
+        "paths": {
+            "prd": "docs/prd.md",
+            "architecture_constraints": "docs/architecture_constraints.json",
+            "task_list": "docs/task_list.json",
+            "human_decisions": ".vibetracing/human_decisions.json",
+            "output_dir": "output",
+        },
     })
 
     exit_code = main(["finalize", "--project-root", str(tmp_path)])
@@ -1130,7 +1136,13 @@ class TestFinalizeLogging:
             "project_prefix": "TEST",
             "project_name": "Test Project",
             "language": "go",
-            "paths": {},
+            "paths": {
+                "prd": "docs/prd.md",
+                "architecture_constraints": "docs/architecture_constraints.json",
+                "task_list": "docs/task_list.json",
+                "human_decisions": ".vibetracing/human_decisions.json",
+                "output_dir": "output",
+            },
         })
 
         exit_code = main(["finalize", "--project-root", str(tmp_path)])

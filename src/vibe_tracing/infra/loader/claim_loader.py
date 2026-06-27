@@ -46,20 +46,17 @@ class ClaimListLoadResult:
 
 
 class ClaimLoader:
-    """加载并校验 agent claims，与 task_list 进行交叉引用校验。"""
-
-    def __init__(self) -> None:
-        pass
+    """加载并校验 agent claims。"""
 
     def load(
         self,
         claims_path: Path,
         content: Optional[list] = None,
     ) -> ClaimListLoadResult:
-        """
-        加载 agent claims。
+        """加载 agent claims。
 
-        claims_path 必须是目录（批量模式：加载目录下所有 CLAIM-*.json 文件并合并）。
+        当 content 参数传入时，直接使用传入数据（pipeline 模式，跳过文件读取）。
+        当 content 为 None 时，从 claims_path 目录读取 CLAIM-*.json 文件（独立使用模式）。
         """
         if content is not None:
             # 直接使用外部传入的数据（测试或内存模式）

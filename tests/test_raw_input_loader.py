@@ -6,8 +6,8 @@ All tests cover the pure file-loading layer only — no governance decisions.
 
 from pathlib import Path
 
-
 from vibe_tracing.infra.config.enums import ErrorCode
+from vibe_tracing.infra.loader.config import REQUIRED_FILES, load_config
 from vibe_tracing.infra.loader.raw_input import RawInputManifest, RawInputLoader
 
 # ---------------------------------------------------------------------------
@@ -16,6 +16,17 @@ from vibe_tracing.infra.loader.raw_input import RawInputManifest, RawInputLoader
 
 # Actual project root — used for tests that load the real files.
 PROJECT_ROOT = Path(__file__).parent.parent
+
+# Minimal complete paths config for tmp_path tests
+_MINIMAL_PATHS = {
+    "paths": {
+        "prd": "docs/prd.md",
+        "architecture_constraints": "docs/architecture_constraints.json",
+        "task_list": "docs/task_list.json",
+        "human_decisions": ".vibetracing/human_decisions.json",
+        "output_dir": "output",
+    }
+}
 
 
 def _make_required_files(base: Path) -> None:
@@ -40,14 +51,13 @@ def test_load_all_valid_files_returns_ok_manifest():
     exist must produce a manifest with has_required_errors=False and every
     required InputFileRecord having status='ok'.
     """
-    loader = RawInputLoader(PROJECT_ROOT)
+    loader = RawInputLoader(PROJECT_ROOT, config_data=load_config(PROJECT_ROOT))
     manifest = loader.load()
 
     assert manifest.has_required_errors is False
 
-    required_keys = set(RawInputLoader.REQUIRED_FILES.keys())
     for record in manifest.inputs_used:
-        if record.file_key in required_keys:
+        if record.file_key in REQUIRED_FILES:
             assert record.status == "ok", (
                 f"Expected status='ok' for required file '{record.file_key}', "
                 f"got '{record.status}': {record.error_message}"
@@ -59,7 +69,7 @@ def test_required_files_have_content():
     AC-VT-001-01: After a successful load the prd content must be a str,
     and task_list / architecture_constraints must be dicts.
     """
-    loader = RawInputLoader(PROJECT_ROOT)
+    loader = RawInputLoader(PROJECT_ROOT, config_data=load_config(PROJECT_ROOT))
     manifest = loader.load()
 
     records = {r.file_key: r for r in manifest.inputs_used}
@@ -80,7 +90,7 @@ def test_missing_required_file_sets_has_required_errors(tmp_path):
     AC-VT-001-04: When the project_root has no raw/ files, has_required_errors
     must be True.
     """
-    loader = RawInputLoader(tmp_path)
+    loader = RawInputLoader(tmp_path, config_data=_MINIMAL_PATHS)
     manifest = loader.load()
 
     assert manifest.has_required_errors is True
@@ -91,14 +101,13 @@ def test_missing_required_file_record_has_error_code(tmp_path):
     AC-VT-001-04: A missing required file's InputFileRecord must carry
     error_code == ErrorCode.MISSING_INPUT.
     """
-    loader = RawInputLoader(tmp_path)
+    loader = RawInputLoader(tmp_path, config_data=_MINIMAL_PATHS)
     manifest = loader.load()
 
-    required_keys = set(RawInputLoader.REQUIRED_FILES.keys())
     missing_records = [
         r
         for r in manifest.inputs_used
-        if r.file_key in required_keys and r.status == "missing"
+        if r.file_key in REQUIRED_FILES and r.status == "missing"
     ]
     assert len(missing_records) > 0, (
         "Expected at least one missing required file record"
@@ -117,9 +126,8 @@ def test_missing_optional_file_does_not_set_has_required_errors(tmp_path):
     absent, has_required_errors must remain False.
     """
     _make_required_files(tmp_path)
-    # Intentionally do NOT create optional claims/current.json
 
-    loader = RawInputLoader(tmp_path)
+    loader = RawInputLoader(tmp_path, config_data=_MINIMAL_PATHS)
     manifest = loader.load()
 
     assert manifest.has_required_errors is False
@@ -136,7 +144,7 @@ def test_invalid_json_file_sets_parse_error(tmp_path):
     bad_json_path = tmp_path / "docs" / "task_list.json"
     bad_json_path.write_text("{ this is not valid json !!!}", encoding="utf-8")
 
-    loader = RawInputLoader(tmp_path)
+    loader = RawInputLoader(tmp_path, config_data=_MINIMAL_PATHS)
     manifest = loader.load()
 
     records = {r.file_key: r for r in manifest.inputs_used}
@@ -155,7 +163,7 @@ def test_raw_files_not_modified():
     AC-VT-001-01: The loader must be read-only. No raw input file's mtime
     should change after calling load().
     """
-    loader = RawInputLoader(PROJECT_ROOT)
+    loader = RawInputLoader(PROJECT_ROOT, config_data=load_config(PROJECT_ROOT))
 
     # Collect mtimes before loading
     docs_dir = PROJECT_ROOT / "docs"
@@ -176,13 +184,13 @@ def test_raw_files_not_modified():
 def test_manifest_records_all_required_file_keys():
     """
     AC-VT-001-04: The manifest.inputs_used list must contain an InputFileRecord
-    for every key in RawInputLoader.REQUIRED_FILES.
+    for every key in REQUIRED_FILES.
     """
-    loader = RawInputLoader(PROJECT_ROOT)
+    loader = RawInputLoader(PROJECT_ROOT, config_data=load_config(PROJECT_ROOT))
     manifest = loader.load()
 
     found_keys = {r.file_key for r in manifest.inputs_used}
-    for required_key in RawInputLoader.REQUIRED_FILES:
+    for required_key in REQUIRED_FILES:
         assert required_key in found_keys, (
             f"No InputFileRecord found for required key '{required_key}'"
         )
@@ -209,13 +217,12 @@ def test_loader_has_no_gate_decision_attribute():
 def test_config_json_path_overrides_and_safe_fallback(tmp_path):
     """
     covers: AC-VT-009-05
-    Verify that RawInputLoader loads custom paths from .vibetracing/config.json,
-    and falls back to standard paths when config is missing.
+    Verify that RawInputLoader loads custom paths from config_data,
+    and falls back to standard paths when config is empty.
     """
     import json
 
-    # 1. Test fallback when config is missing
-    # Create default structure
+    # 1. Test fallback when config is empty
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
     (tmp_path / "docs" / "prd.md").write_text("# Default PRD", encoding="utf-8")
     (tmp_path / "docs" / "architecture_constraints.json").write_text(
@@ -223,27 +230,24 @@ def test_config_json_path_overrides_and_safe_fallback(tmp_path):
     )
     (tmp_path / "docs" / "task_list.json").write_text('{"tasks": []}', encoding="utf-8")
 
-    loader = RawInputLoader(tmp_path)
+    loader = RawInputLoader(tmp_path, config_data=_MINIMAL_PATHS)
     manifest = loader.load()
     assert manifest.has_required_errors is False
     records = {r.file_key: r for r in manifest.inputs_used}
     assert records["prd"].content == "# Default PRD"
 
     # 2. Test custom config paths override
-    config_dir = tmp_path / ".vibetracing"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    config_file = config_dir / "config.json"
-
-    config_data = {
+    custom_config = {
         "schema_version": "1.0.0",
         "project_id": "PROJECT-VT",
         "paths": {
             "prd": "custom_dir/custom_prd.md",
             "architecture_constraints": "docs/architecture_constraints.json",
             "task_list": "docs/task_list.json",
+            "human_decisions": ".vibetracing/human_decisions.json",
+            "output_dir": "output",
         },
     }
-    config_file.write_text(json.dumps(config_data), encoding="utf-8")
 
     # Create custom PRD file
     (tmp_path / "custom_dir").mkdir(parents=True, exist_ok=True)
@@ -251,79 +255,11 @@ def test_config_json_path_overrides_and_safe_fallback(tmp_path):
         "# Custom PRD", encoding="utf-8"
     )
 
-    loader_custom = RawInputLoader(tmp_path)
+    loader_custom = RawInputLoader(tmp_path, config_data=custom_config)
     manifest_custom = loader_custom.load()
     assert manifest_custom.has_required_errors is False
     records_custom = {r.file_key: r for r in manifest_custom.inputs_used}
     assert records_custom["prd"].content == "# Custom PRD"
-
-
-def test_self_governance_rules_contract(tmp_path):
-    """
-    covers: AC-VT-009-06
-    Verify that architecture constraints drift is detected via hash comparison
-    and reported as warnings (read-only). check_governance always returns
-    is_valid=True — it never blocks, only exposes drift for human review.
-    """
-    import hashlib
-    import json
-    from unittest.mock import patch
-
-    from vibe_tracing.domain.governance.change_proposal import (
-        ArchitectureChangeProposalEngine,
-    )
-
-    # Set up basic required files
-    (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
-
-    base_constraints = {"schema_version": "1.0.0", "quality_gates": []}
-    modified_constraints = {
-        "schema_version": "1.0.0",
-        "quality_gates": [{"gate_id": "GATE-VT-099", "severity": "must"}],
-    }
-
-    # Write modified constraints (current state)
-    (tmp_path / "docs" / "architecture_constraints.json").write_text(
-        json.dumps(modified_constraints), encoding="utf-8"
-    )
-    (tmp_path / "docs" / "prd.md").write_text("# PRD", encoding="utf-8")
-    (tmp_path / "docs" / "task_list.json").write_text('{"tasks": []}', encoding="utf-8")
-
-    # 1. No stored hash -> check_governance skips, is_valid=True, no warnings
-    config = {"project_id": "PROJECT-VT", "paths": {}}
-    (tmp_path / ".vibetracing" / "config.json").write_text(
-        json.dumps(config), encoding="utf-8"
-    )
-
-    proposal = ArchitectureChangeProposalEngine(tmp_path)
-    res = proposal.check_governance()
-    assert res["is_valid"] is True
-    assert len(res["warnings"]) == 0
-    assert len(res["errors"]) == 0
-
-    # 2. Hash mismatch (drift detected) + git_show reveals rule change
-    #    -> is_valid=True, warnings with diff details
-    config["architecture_constraints_hash"] = "old_stored_hash"
-    config["finalize_git_commit"] = "abc123"
-    config["finalize_constraints_path"] = "docs/architecture_constraints.json"
-    (tmp_path / ".vibetracing" / "config.json").write_text(
-        json.dumps(config), encoding="utf-8"
-    )
-
-    with patch(
-        "vibe_tracing.domain.governance.change_proposal.git_show",
-        return_value=json.dumps(base_constraints),
-    ):
-        proposal = ArchitectureChangeProposalEngine(tmp_path)
-        res = proposal.check_governance()
-
-    # check_governance is read-only: always is_valid=True
-    assert res["is_valid"] is True
-    assert len(res["errors"]) == 0
-    assert len(res["warnings"]) > 0
-    # Diff details should mention GATE-VT-099
-    assert any("GATE-VT-099" in w for w in res["warnings"])
 
 
 def test_load_human_decisions_file_exists(tmp_path):
@@ -352,7 +288,7 @@ def test_load_human_decisions_file_exists(tmp_path):
         json.dumps(decisions_data), encoding="utf-8"
     )
 
-    loader = RawInputLoader(tmp_path)
+    loader = RawInputLoader(tmp_path, config_data=_MINIMAL_PATHS)
     manifest = loader.load()
     assert manifest.has_required_errors is False
 
@@ -369,9 +305,8 @@ def test_load_human_decisions_file_missing(tmp_path):
     when the file is absent, and this does not set has_required_errors.
     """
     _make_required_files(tmp_path)
-    # Ensure .vibetracing/human_decisions.json does NOT exist
 
-    loader = RawInputLoader(tmp_path)
+    loader = RawInputLoader(tmp_path, config_data=_MINIMAL_PATHS)
     manifest = loader.load()
     assert manifest.has_required_errors is False
 
@@ -380,4 +315,3 @@ def test_load_human_decisions_file_missing(tmp_path):
     record = records["human_decisions"]
     assert record.status == "missing"
     assert record.content is None
-

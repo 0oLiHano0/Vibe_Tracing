@@ -1418,7 +1418,16 @@ def test_run_finalize_missing_constraints(tmp_path, capsys):
     from vibe_tracing.cli import run_finalize
 
     (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
-    config = {"project_prefix": "VT"}
+    config = {
+        "project_prefix": "VT",
+        "paths": {
+            "prd": "docs/prd.md",
+            "architecture_constraints": "docs/architecture_constraints.json",
+            "task_list": "docs/task_list.json",
+            "human_decisions": ".vibetracing/human_decisions.json",
+            "output_dir": "output",
+        },
+    }
     (tmp_path / ".vibetracing" / "config.json").write_text(json.dumps(config), encoding="utf-8")
 
     exit_code = run_finalize(tmp_path)
@@ -1434,7 +1443,16 @@ def test_run_finalize_missing_language(tmp_path, capsys):
     (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
 
-    config = {"project_prefix": "VT"}
+    config = {
+        "project_prefix": "VT",
+        "paths": {
+            "prd": "docs/prd.md",
+            "architecture_constraints": "docs/architecture_constraints.json",
+            "task_list": "docs/task_list.json",
+            "human_decisions": ".vibetracing/human_decisions.json",
+            "output_dir": "output",
+        },
+    }
     (tmp_path / ".vibetracing" / "config.json").write_text(json.dumps(config), encoding="utf-8")
 
     constraints = {
@@ -1459,7 +1477,16 @@ def test_run_finalize_language_not_in_matrix(tmp_path, capsys):
     (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
 
-    config = {"project_prefix": "VT"}
+    config = {
+        "project_prefix": "VT",
+        "paths": {
+            "prd": "docs/prd.md",
+            "architecture_constraints": "docs/architecture_constraints.json",
+            "task_list": "docs/task_list.json",
+            "human_decisions": ".vibetracing/human_decisions.json",
+            "output_dir": "output",
+        },
+    }
     (tmp_path / ".vibetracing" / "config.json").write_text(json.dumps(config), encoding="utf-8")
 
     constraints = {

@@ -11,12 +11,24 @@ from vibe_tracing.domain.governance.ghost_code import GhostCodeReconciler
 from vibe_tracing.infra.db import init_in_memory_db
 
 
+_MINIMAL_CONFIG = {
+    "paths": {
+        "prd": "docs/prd.md",
+        "architecture_constraints": "docs/architecture_constraints.json",
+        "task_list": "docs/task_list.json",
+        "human_decisions": ".vibetracing/human_decisions.json",
+        "output_dir": "output",
+    }
+}
+
+
 @pytest.fixture
 def project(tmp_path: Path):
     """Create a minimal project structure with .vibetracing directory."""
     vibetracing_dir = tmp_path / ".vibetracing"
     claims_dir = vibetracing_dir / "claims"
     claims_dir.mkdir(parents=True)
+    (vibetracing_dir / "config.json").write_text(json.dumps(_MINIMAL_CONFIG), encoding="utf-8")
     return tmp_path
 
 
@@ -44,7 +56,7 @@ class TestMalformedClaimsWarning:
         claims_path.write_text("{not valid json!!", encoding="utf-8")
         subprocess.run(["git", "add", str(claims_path)], cwd=project, capture_output=True, check=True)
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
 
         # Mock _get_staged_files so reconcile() exercises the claims path
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}):
@@ -59,7 +71,7 @@ class TestMalformedClaimsWarning:
         claims_dir = project / ".vibetracing" / "claims"
         assert not list(claims_dir.glob("CLAIM-*.json"))
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
 
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}):
             ok, msg = reconciler.reconcile()
@@ -69,7 +81,7 @@ class TestMalformedClaimsWarning:
 
     def test_valid_claims_passes(self, project, capsys, conn):
         """Valid claims with matching code_refs should pass the gate."""
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
 
         # Mock _get_staged_files and _read_claims_from_filesystem directly
         # to isolate the reconcile gate from git subprocess complexity.
@@ -93,7 +105,7 @@ class TestNoStagedCodeFiles:
     """When no business code files are staged, the gate must pass."""
 
     def test_no_staged_files_passes(self, project, conn):
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         with patch.object(reconciler, "_get_staged_files", return_value=set()):
             ok, msg = reconciler.reconcile()
         assert ok is True
@@ -101,7 +113,7 @@ class TestNoStagedCodeFiles:
 
     def test_only_whitelisted_files_passes(self, project, conn):
         """Staging only whitelisted files (e.g. claims, config, output) should pass."""
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         staged = {
             ".vibetracing/config.json",
             "docs/task_list.json",
@@ -121,7 +133,7 @@ class TestNoClaimsFile:
         """No claims files and staged code files should produce ghost code error."""
         claims_dir = project / ".vibetracing" / "claims"
         assert not list(claims_dir.glob("CLAIM-*.json"))
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}):
             ok, msg = reconciler.reconcile()
         assert ok is False
@@ -136,7 +148,7 @@ class TestClaimsCoverCodeRefs:
         (project / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py", "src/bar.py"}), \
              patch.object(reconciler, "_read_claims_from_filesystem", return_value=[
                  {"claim_id": "C-0001", "related_task": "T-0001", "code_refs": ["src/foo.py", "src/bar.py"]}
@@ -153,7 +165,7 @@ class TestClaimsCoverCodeRefs:
         (project / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}), \
              patch.object(reconciler, "_read_claims_from_filesystem", return_value=[
                  {"claim_id": "C-0001", "related_task": "T-0001", "code_refs": ["src/foo.py", "src/bar.py", "src/baz.py"]}
@@ -170,7 +182,7 @@ class TestClaimsCoverCodeRefs:
         (project / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py", "src/bar.py"}), \
              patch.object(reconciler, "_read_claims_from_filesystem", return_value=[
                  {"claim_id": "C-0001", "related_task": "T-0001", "code_refs": ["src/foo.py"]}
@@ -190,7 +202,7 @@ class TestClaimsReferenceNonExistentFile:
         (project / ".vibetracing" / "claims" / "CLAIM-VT-001.json").write_text(
             json.dumps(claims), encoding="utf-8"
         )
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}), \
              patch.object(reconciler, "_read_claims_from_filesystem", return_value=[
                  {"claim_id": "C-0001", "related_task": "T-0001", "code_refs": ["src/foo.py", "src/ghost.py"]}
@@ -207,7 +219,7 @@ class TestEmptyClaimsArray:
 
     def test_empty_claims_blocks(self, project, conn):
         # Empty directory -- no CLAIM-*.json files
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}), \
              patch.object(reconciler, "_read_claims_from_filesystem", return_value=[]):
             ok, msg = reconciler.reconcile()
@@ -224,7 +236,7 @@ class TestReadClaimsFromFilesystem:
         claims_path = project / ".vibetracing" / "claims" / "CLAIM-VT-001.json"
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         result = reconciler._read_claims_from_filesystem()
         assert len(result) == 1
         assert result[0]["claim_id"] == "C-0001"
@@ -235,13 +247,13 @@ class TestReadClaimsFromFilesystem:
         claims_path = project / ".vibetracing" / "claims" / "CLAIM-VT-001.json"
         claims_path.write_text("{not valid json!!", encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         result = reconciler._read_claims_from_filesystem()
         assert result == []
 
     def test_empty_directory(self, project, conn):
         """Empty claims dir returns empty list."""
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         result = reconciler._read_claims_from_filesystem()
         assert result == []
 
@@ -251,7 +263,7 @@ class TestReadClaimsFromFilesystem:
         claims_path = project / ".vibetracing" / "claims" / "CLAIM-VT-001.json"
         claims_path.write_text(json.dumps([template]), encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         result = reconciler._read_claims_from_filesystem()
         assert len(result) == 0
 
@@ -267,7 +279,7 @@ class TestReadClaimsFromFilesystem:
         claims_path = project / ".vibetracing" / "claims" / "CLAIM-VT-001.json"
         claims_path.write_text(json.dumps([no_id, no_task, valid]), encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         result = reconciler._read_claims_from_filesystem()
         assert len(result) == 1
         assert result[0]["claim_id"] == "C-0002"
@@ -281,7 +293,7 @@ class TestReadClaimsFromFilesystem:
         claims_path = project / ".vibetracing" / "claims" / "CLAIM-VT-001.json"
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         result = reconciler._read_claims_from_filesystem()
         assert len(result) == 2
 
@@ -296,7 +308,7 @@ class TestReadClaimsFromFilesystem:
             json.dumps(claims2), encoding="utf-8"
         )
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         result = reconciler._read_claims_from_filesystem()
         assert len(result) == 2
         claim_ids = {r["claim_id"] for r in result}
@@ -307,17 +319,17 @@ class TestWhitelistLogic:
     """Verify _is_whitelisted correctly identifies whitelisted paths."""
 
     def test_exact_whitelist_paths(self, project, conn):
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         for path in [".vibetracing/claims/CLAIM-VT-001.json", ".vibetracing/config.json", "docs/task_list.json"]:
             assert reconciler._is_whitelisted(path) is True
 
     def test_prefix_whitelist(self, project, conn):
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         assert reconciler._is_whitelisted(".git/config") is True
         assert reconciler._is_whitelisted("output/report.html") is True
 
     def test_non_whitelisted(self, project, conn):
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         assert reconciler._is_whitelisted("src/main.py") is False
         assert reconciler._is_whitelisted("README.md") is False
 
@@ -330,7 +342,7 @@ class TestMalformedFilesystemClaims:
         claims_path = project / ".vibetracing" / "claims" / "CLAIM-VT-001.json"
         claims_path.write_text("{invalid", encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         result = reconciler._read_claims_from_filesystem()
         assert result == []
 
@@ -341,7 +353,7 @@ class TestGitNotInstalled:
     @patch("vibe_tracing.infra.git.utils.subprocess.run", side_effect=FileNotFoundError)
     def test_git_not_installed_graceful(self, mock_run, project, conn):
         """When git is not on PATH, reconcile() returns gracefully without crashing."""
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         ok, msg = reconciler.reconcile()
 
         assert ok is True
@@ -392,7 +404,7 @@ class TestTaskCoverageCheck:
         task_list = {"tasks": [{"task_id": "TASK-OTHER", "title": "Other"}]}
         (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         blocked, warnings = reconciler._check_task_coverage({"src/foo.py"})
         assert len(blocked) == 1
         assert "TASK-MISSING" in blocked[0]
@@ -400,7 +412,7 @@ class TestTaskCoverageCheck:
 
     def test_file_not_covered_skipped(self, project, conn):
         """File not covered by any claim is skipped (ghost code check handles it)."""
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         blocked, warnings = reconciler._check_task_coverage({"src/uncovered.py"})
         assert len(blocked) == 0
         assert len(warnings) == 0
@@ -416,7 +428,7 @@ class TestTaskCoverageCheck:
         task_list = {"tasks": [{"task_id": "TASK-001", "title": "T1"}]}
         (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         blocked, warnings = reconciler._check_task_coverage({"src/foo.py"})
         assert len(blocked) == 0
         assert len(warnings) == 0
@@ -432,7 +444,7 @@ class TestTaskCoverageCheck:
         task_list = {"tasks": [{"task_id": "TASK-001", "title": "Modified"}]}
         (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         # src/foo.py should match despite line range in claim
         blocked, warnings = reconciler._check_task_coverage({"src/foo.py"})
         assert len(blocked) == 0
@@ -446,7 +458,7 @@ class TestTaskCoverageCheck:
         claims_path.write_text(json.dumps(claims), encoding="utf-8")
 
         # No task_list.json on disk
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         blocked, warnings = reconciler._check_task_coverage({"src/foo.py"})
         assert len(blocked) == 1
         assert "TASK-001" in blocked[0]
@@ -468,7 +480,7 @@ class TestTaskCoverageCheck:
         (project / "src" / "foo.py").write_text("print('modified')", encoding="utf-8")
         subprocess.run(["git", "add", "src/foo.py"], cwd=project, capture_output=True, check=True)
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         ok, msg = reconciler.reconcile()
         assert ok is False
         assert "TASK-MISSING" in msg
@@ -495,7 +507,7 @@ class TestACFreshnessCheck:
         prd = "# PRD\n### REQ-VT-001\n##### AC-VT-001-01: Basic\n"
         (project / "docs" / "prd.md").write_text(prd, encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         warnings = reconciler._check_ac_freshness()
         assert len(warnings) == 1
         assert "TASK-001" in warnings[0]
@@ -515,7 +527,7 @@ class TestACFreshnessCheck:
         prd = "# PRD\n### REQ-VT-001\n##### AC-VT-001-01: Basic\n"
         (project / "docs" / "prd.md").write_text(prd, encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         warnings = reconciler._check_ac_freshness()
         assert len(warnings) == 0
 
@@ -530,7 +542,7 @@ class TestACFreshnessCheck:
         (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
 
         # No PRD file on disk
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         warnings = reconciler._check_ac_freshness()
         assert len(warnings) == 1
         assert "PRD" in warnings[0]
@@ -545,13 +557,13 @@ class TestACFreshnessCheck:
         }
         (project / "docs" / "task_list.json").write_text(json.dumps(task_list), encoding="utf-8")
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         warnings = reconciler._check_ac_freshness()
         assert len(warnings) == 0
 
     def test_no_task_list_no_warning(self, project, conn):
         """When task_list.json doesn't exist, no warnings."""
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         warnings = reconciler._check_ac_freshness()
         assert len(warnings) == 0
 
@@ -581,7 +593,7 @@ class TestACFreshnessCheck:
         (project / "src" / "foo.py").write_text("print('hello')", encoding="utf-8")
         subprocess.run(["git", "add", "src/foo.py"], cwd=project, capture_output=True, check=True)
 
-        reconciler = GhostCodeReconciler(project, conn)
+        reconciler = GhostCodeReconciler(project, conn, config_data=_MINIMAL_CONFIG)
         # Mock _get_staged_files to only report business code files (not PRD/docs)
         # so the ghost code check passes
         with patch.object(reconciler, "_get_staged_files", return_value={"src/foo.py"}):

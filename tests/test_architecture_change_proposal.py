@@ -17,6 +17,7 @@ from unittest.mock import patch
 import pytest
 
 from vibe_tracing.domain.governance.change_proposal import ArchitectureChangeProposalEngine
+from vibe_tracing.infra.loader.config import load_config
 
 
 # ---------------------------------------------------------------------------
@@ -38,8 +39,9 @@ BASE_CONSTRAINTS = {
 
 
 def _write_config(proj: Path, constraints_hash: str, git_commit: str = "abc123",
-                  constraints_path: str = "docs/architecture_constraints.json") -> None:
-    """Write a config.json with architecture_constraints_hash and finalize metadata."""
+                  constraints_path: str = "docs/architecture_constraints.json") -> dict:
+    """Write a config.json with architecture_constraints_hash and finalize metadata.
+    Returns the config dict."""
     config = {
         "project_id": "PROJECT-VT",
         "project_prefix": "VT",
@@ -58,6 +60,7 @@ def _write_config(proj: Path, constraints_hash: str, git_commit: str = "abc123",
     (proj / ".vibetracing" / "config.json").write_text(
         json.dumps(config, indent=2), encoding="utf-8"
     )
+    return config
 
 
 @pytest.fixture
@@ -88,13 +91,13 @@ def proj(tmp_path):
 def test_no_stored_hash_skips_check(proj):
     """When config.json has no architecture_constraints_hash, check_governance
     returns is_valid=True with no warnings, risks, or gaps."""
-    # Write config WITHOUT hash (not yet finalized)
     config = {"project_id": "PROJECT-VT", "paths": {}}
     (proj / ".vibetracing" / "config.json").write_text(
         json.dumps(config), encoding="utf-8"
     )
 
-    engine = ArchitectureChangeProposalEngine(proj)
+    constraints_path = proj / "docs" / "architecture_constraints.json"
+    engine = ArchitectureChangeProposalEngine(proj, config_data=config, constraints_path=constraints_path)
     res = engine.check_governance()
 
     assert res["is_valid"] is True
@@ -115,9 +118,9 @@ def test_hash_match_no_drift(proj):
     constraints_path = proj / "docs" / "architecture_constraints.json"
     current_hash = hashlib.sha256(constraints_path.read_bytes()).hexdigest()
 
-    _write_config(proj, current_hash)
+    config = _write_config(proj, current_hash)
 
-    engine = ArchitectureChangeProposalEngine(proj)
+    engine = ArchitectureChangeProposalEngine(proj, config_data=config)
     res = engine.check_governance()
 
     assert res["is_valid"] is True
@@ -148,7 +151,7 @@ def test_hash_mismatch_no_finalize_metadata(proj):
         json.dumps(config), encoding="utf-8"
     )
 
-    engine = ArchitectureChangeProposalEngine(proj)
+    engine = ArchitectureChangeProposalEngine(proj, config_data=config, constraints_path=constraints_path)
     res = engine.check_governance()
 
     assert res["is_valid"] is True
@@ -168,10 +171,10 @@ def test_hash_mismatch_git_show_fails(proj):
     constraints_path = proj / "docs" / "architecture_constraints.json"
     current_hash = hashlib.sha256(constraints_path.read_bytes()).hexdigest()
 
-    _write_config(proj, "different_hash_value", git_commit="deadbeef")
+    config = _write_config(proj, "different_hash_value", git_commit="deadbeef")
 
     with patch("vibe_tracing.domain.governance.change_proposal.git_show", return_value=None):
-        engine = ArchitectureChangeProposalEngine(proj)
+        engine = ArchitectureChangeProposalEngine(proj, config_data=config)
         res = engine.check_governance()
 
     assert res["is_valid"] is True
@@ -206,13 +209,13 @@ def test_hash_mismatch_with_diff(proj):
 
     # Hash of the MODIFIED file (different from stored)
     current_hash = hashlib.sha256(constraints_path.read_bytes()).hexdigest()
-    _write_config(proj, "stored_old_hash_value", git_commit="abc123")
+    config = _write_config(proj, "stored_old_hash_value", git_commit="abc123")
 
     # git_show returns the BASE version (original)
     base_content = json.dumps(BASE_CONSTRAINTS, indent=2)
 
     with patch("vibe_tracing.domain.governance.change_proposal.git_show", return_value=base_content):
-        engine = ArchitectureChangeProposalEngine(proj)
+        engine = ArchitectureChangeProposalEngine(proj, config_data=config)
         res = engine.check_governance()
 
     assert res["is_valid"] is True
@@ -239,13 +242,13 @@ def test_hash_mismatch_format_change_only(proj):
     constraints_path.write_text(reformatted, encoding="utf-8")
 
     current_hash = hashlib.sha256(reformatted.encode()).hexdigest()
-    _write_config(proj, "stored_old_hash_value", git_commit="abc123")
+    config = _write_config(proj, "stored_old_hash_value", git_commit="abc123")
 
     # git_show returns the base with different formatting but same rules
     base_content = json.dumps(BASE_CONSTRAINTS, indent=2)
 
     with patch("vibe_tracing.domain.governance.change_proposal.git_show", return_value=base_content):
-        engine = ArchitectureChangeProposalEngine(proj)
+        engine = ArchitectureChangeProposalEngine(proj, config_data=config)
         res = engine.check_governance()
 
     assert res["is_valid"] is True
@@ -264,7 +267,7 @@ def test_hash_mismatch_format_change_only(proj):
 
 def test_find_differences_detects_addition(proj):
     """_find_differences detects additions in the current config."""
-    engine = ArchitectureChangeProposalEngine(proj)
+    engine = ArchitectureChangeProposalEngine(proj, config_data={}, constraints_path=proj / "dummy.json")
 
     base = {"key_a": "value_a"}
     current = {"key_a": "value_a", "key_b": "value_b"}
@@ -277,7 +280,7 @@ def test_find_differences_detects_addition(proj):
 
 def test_find_differences_detects_deletion(proj):
     """_find_differences detects deletions from the base config."""
-    engine = ArchitectureChangeProposalEngine(proj)
+    engine = ArchitectureChangeProposalEngine(proj, config_data={}, constraints_path=proj / "dummy.json")
 
     base = {"key_a": "value_a", "key_b": "value_b"}
     current = {"key_a": "value_a"}
@@ -290,7 +293,7 @@ def test_find_differences_detects_deletion(proj):
 
 def test_find_differences_detects_modification(proj):
     """_find_differences detects value modifications."""
-    engine = ArchitectureChangeProposalEngine(proj)
+    engine = ArchitectureChangeProposalEngine(proj, config_data={}, constraints_path=proj / "dummy.json")
 
     base = {"key_a": "old_value"}
     current = {"key_a": "new_value"}
@@ -303,7 +306,7 @@ def test_find_differences_detects_modification(proj):
 
 def test_find_differences_no_diff(proj):
     """_find_differences returns empty list for identical configs."""
-    engine = ArchitectureChangeProposalEngine(proj)
+    engine = ArchitectureChangeProposalEngine(proj, config_data={}, constraints_path=proj / "dummy.json")
 
     data = {"key_a": "value_a", "nested": {"inner": 42}}
     diffs = engine._find_differences(data, data)
@@ -317,7 +320,7 @@ def test_find_differences_no_diff(proj):
 
 def test_compare_lists_by_id_detects_addition(proj):
     """_compare_lists_by_id detects added items."""
-    engine = ArchitectureChangeProposalEngine(proj)
+    engine = ArchitectureChangeProposalEngine(proj, config_data={}, constraints_path=proj / "dummy.json")
 
     base_list = [{"rule_id": "R1", "value": "a"}]
     current_list = [
@@ -333,7 +336,7 @@ def test_compare_lists_by_id_detects_addition(proj):
 
 def test_compare_lists_by_id_detects_deletion(proj):
     """_compare_lists_by_id detects deleted items."""
-    engine = ArchitectureChangeProposalEngine(proj)
+    engine = ArchitectureChangeProposalEngine(proj, config_data={}, constraints_path=proj / "dummy.json")
 
     base_list = [
         {"rule_id": "R1", "value": "a"},
@@ -349,7 +352,7 @@ def test_compare_lists_by_id_detects_deletion(proj):
 
 def test_compare_lists_by_id_detects_modification(proj):
     """_compare_lists_by_id detects modified items."""
-    engine = ArchitectureChangeProposalEngine(proj)
+    engine = ArchitectureChangeProposalEngine(proj, config_data={}, constraints_path=proj / "dummy.json")
 
     base_list = [{"rule_id": "R1", "value": "old"}]
     current_list = [{"rule_id": "R1", "value": "new"}]
@@ -358,3 +361,69 @@ def test_compare_lists_by_id_detects_modification(proj):
     assert len(diffs) == 1
     assert diffs[0]["action"] == "modify"
     assert diffs[0]["rule_id"] == "R1"
+
+
+# ---------------------------------------------------------------------------
+# Test: Self-governance rules contract (migrated from test_raw_input_loader.py)
+# ---------------------------------------------------------------------------
+
+
+def test_self_governance_rules_contract(tmp_path):
+    """
+    covers: AC-VT-009-06
+    Verify that architecture constraints drift is detected via hash comparison
+    and reported as warnings (read-only). check_governance always returns
+    is_valid=True — it never blocks, only exposes drift for human review.
+    """
+    # Set up basic required files
+    (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".vibetracing").mkdir(parents=True, exist_ok=True)
+
+    base_constraints = {"schema_version": "1.0.0", "quality_gates": []}
+    modified_constraints = {
+        "schema_version": "1.0.0",
+        "quality_gates": [{"gate_id": "GATE-VT-099", "severity": "must"}],
+    }
+
+    # Write modified constraints (current state)
+    (tmp_path / "docs" / "architecture_constraints.json").write_text(
+        json.dumps(modified_constraints), encoding="utf-8"
+    )
+    (tmp_path / "docs" / "prd.md").write_text("# PRD", encoding="utf-8")
+    (tmp_path / "docs" / "task_list.json").write_text('{"tasks": []}', encoding="utf-8")
+
+    # 1. No stored hash -> check_governance skips, is_valid=True, no warnings
+    config = {"project_id": "PROJECT-VT", "paths": {}}
+    (tmp_path / ".vibetracing" / "config.json").write_text(
+        json.dumps(config), encoding="utf-8"
+    )
+
+    constraints_path = tmp_path / "docs" / "architecture_constraints.json"
+    proposal = ArchitectureChangeProposalEngine(tmp_path, config_data=config, constraints_path=constraints_path)
+    res = proposal.check_governance()
+    assert res["is_valid"] is True
+    assert len(res["warnings"]) == 0
+    assert len(res["errors"]) == 0
+
+    # 2. Hash mismatch (drift detected) + git_show reveals rule change
+    #    -> is_valid=True, warnings with diff details
+    config["architecture_constraints_hash"] = "old_stored_hash"
+    config["finalize_git_commit"] = "abc123"
+    config["finalize_constraints_path"] = "docs/architecture_constraints.json"
+    (tmp_path / ".vibetracing" / "config.json").write_text(
+        json.dumps(config), encoding="utf-8"
+    )
+
+    with patch(
+        "vibe_tracing.domain.governance.change_proposal.git_show",
+        return_value=json.dumps(base_constraints),
+    ):
+        proposal = ArchitectureChangeProposalEngine(tmp_path, config_data=config, constraints_path=constraints_path)
+        res = proposal.check_governance()
+
+    # check_governance is read-only: always is_valid=True
+    assert res["is_valid"] is True
+    assert len(res["errors"]) == 0
+    assert len(res["warnings"]) > 0
+    # Diff details should mention GATE-VT-099
+    assert any("GATE-VT-099" in w for w in res["warnings"])

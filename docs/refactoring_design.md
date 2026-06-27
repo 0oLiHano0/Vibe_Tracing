@@ -178,7 +178,8 @@ infra/
 ├── validation/                          # 校验（Schema 校验、输入检查）
 │
 ├── loader/                              # 数据加载（文件 I/O）
-│   ├── raw_input.py                     # RawInputLoader
+│   ├── config.py                        # load_config, resolve_path, REQUIRED_FILES
+│   ├── raw_input.py                     # RawInputLoader, InputFileRecord, RawInputManifest
 │   ├── prd_parser.py                    # PrdParser, PrdParseResult
 │   ├── task_loader.py                   # TaskLoader, TaskListLoadResult
 │   └── claim_loader.py                  # ClaimLoader, ClaimListLoadResult
@@ -538,7 +539,8 @@ main.py（全局捕获）
 ## 附录：域包接口契约（__init__.py 导出）
 
 ```python
-# domain/loader/__init__.py
+# infra/loader/__init__.py
+from .config import load_config, resolve_path, REQUIRED_FILES
 from .raw_input import RawInputLoader, InputFileRecord, RawInputManifest
 from .prd_parser import PrdParser, PrdParseResult, Requirement, AcceptanceCriteria
 from .task_loader import TaskLoader, TaskListLoadResult, Task, DodItem, TaskGap

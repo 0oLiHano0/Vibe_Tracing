@@ -11,6 +11,7 @@ import uuid
 
 from pathlib import Path
 
+from vibe_tracing.infra.loader.config import load_config, resolve_path
 from vibe_tracing.infra.logging.logger import OperationalLogger
 
 
@@ -90,7 +91,7 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
 
     # Import _find_differences from architecture_change_proposal
     from vibe_tracing.domain.governance.change_proposal import ArchitectureChangeProposalEngine
-    engine = ArchitectureChangeProposalEngine(project_root)
+    engine = ArchitectureChangeProposalEngine(project_root, config_data=config_data)
     diffs = engine._find_differences(base_data, curr_data)
     logger.debug("constraints_diff_result", "Constraints diff computed", diffs_count=len(diffs))
 
@@ -129,30 +130,32 @@ def run_finalize(project_root: Path) -> int:
 
     try:
         config_path = project_root / ".vibetracing" / "config.json"
-        constraints_path = project_root / "docs" / "architecture_constraints.json"
 
-        # 1. Check config.json exists
-        if not config_path.exists():
+        # 1. Load config（config.json 不存在时 load_config 抛出 FileNotFoundError）
+        try:
+            config_data = load_config(project_root)
+        except FileNotFoundError as exc:
             vt_logger.error("config_missing", "config.json not found")
-            print("Error: config.json not found. Run 'vibe-tracing init' first.", file=sys.stderr)
+            print(f"Error: {exc}", file=sys.stderr)
             return 1
 
-        # 2. Check architecture_constraints.json exists
+        # 2. Resolve paths
+        constraints_path = resolve_path(project_root, config_data, "architecture_constraints")
+
+        # 3. Check architecture_constraints.json exists
         if not constraints_path.exists():
             vt_logger.error("constraints_missing", "architecture_constraints.json not found")
             print("Error: architecture_constraints.json not found. Agent must generate it before finalization.", file=sys.stderr)
             return 1
 
-        # 3. Load both files
+        # 4. Load constraints file
         _t = time.perf_counter()
-        with config_path.open("r", encoding="utf-8") as f:
-            config_data = json.load(f)
         with constraints_path.open("r", encoding="utf-8") as f:
             constraints_data = json.load(f)
-        vt_logger.info("phase_end", "Loaded config and constraints",
+        vt_logger.info("phase_end", "Loaded constraints file",
                        phase="load_files", duration_ms=int((time.perf_counter() - _t) * 1000))
 
-        # 4. Extract language from architecture constraints
+        # 5. Extract language from architecture constraints
         project_data = constraints_data.get("project", {})
         language = project_data.get("language")
         if not language:
@@ -198,8 +201,7 @@ def run_finalize(project_root: Path) -> int:
         computed_hash = hashlib.sha256(constraints_path.read_bytes()).hexdigest()
 
         # Compute SHA256 hash of PRD file
-        prd_rel = config_data.get("paths", {}).get("prd", "docs/prd.md")
-        prd_abs = project_root / prd_rel
+        prd_abs = resolve_path(project_root, config_data, "prd")
         prd_hash = hashlib.sha256(prd_abs.read_bytes()).hexdigest() if prd_abs.exists() else ""
         vt_logger.debug("hashes_computed", "Computed SHA256 hashes",
                         constraints_hash=computed_hash[:16], prd_hash=prd_hash[:16] if prd_hash else "",
@@ -266,8 +268,8 @@ def run_finalize(project_root: Path) -> int:
             _t = time.perf_counter()
             try:
                 files_to_add = [
-                    "docs/prd.md",
-                    "docs/architecture_constraints.json",
+                    str(resolve_path(project_root, config_data, "prd").relative_to(project_root)),
+                    str(resolve_path(project_root, config_data, "architecture_constraints").relative_to(project_root)),
                     ".vibetracing/config.json",
                 ]
                 change_log = project_root / "docs" / "architecture_change_log.md"
@@ -338,8 +340,8 @@ def run_finalize(project_root: Path) -> int:
         _t = time.perf_counter()
         try:
             files_to_add = [
-                "docs/prd.md",
-                "docs/architecture_constraints.json",
+                str(resolve_path(project_root, config_data, "prd").relative_to(project_root)),
+                str(resolve_path(project_root, config_data, "architecture_constraints").relative_to(project_root)),
                 ".vibetracing/config.json",
             ]
             change_log = project_root / "docs" / "architecture_change_log.md"

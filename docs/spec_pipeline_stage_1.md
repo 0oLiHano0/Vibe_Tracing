@@ -4,7 +4,7 @@
 
 | 来源 | 包/模块 | 文件 |
 |------|---------|------|
-| **配置文件** | `infra/loader/raw_input.py` | `.vibetracing/config.json` |
+| **配置文件** | `infra/loader/config.py` | `.vibetracing/config.json` |
 | **PRD** | `infra/loader/prd_parser.py` | `docs/prd.md` |
 | **架构约束** | `infra/loader/raw_input.py` | `docs/architecture_constraints.json` |
 | **任务列表** | `infra/loader/task_loader.py` | `docs/task_list.json` |
@@ -151,7 +151,6 @@ is_draft: false                     # 是否草稿模式
 ```yaml
 has_required_errors: false          # 是否有必需文件加载失败
 error_count: 0                      # 加载失败的文件总数
-tool_report_files: []               # 工具报告文件路径列表
 inputs_used:                        # 所有文件的加载记录
   - file_key: "prd"                 # 文件标识符
     file_path: "docs/prd.md"        # 文件路径
@@ -171,10 +170,13 @@ inputs_used:                        # 所有文件的加载记录
 
 ### 阶段 1：物理读取所有输入文件 (Physical Load)
 
-调用模块：`infra/loader/raw_input.py:RawInputLoader`
+调用模块：`infra/loader/config.py` + `infra/loader/raw_input.py:RawInputLoader`
 
-1. 实例化 `RawInputLoader`，自动读取 `.vibetracing/config.json` 配置文件。
-2. 调用 `RawInputLoader.load()` 一次性物理读取所有治理文件（PRD、Architecture Constraints、Task List、Agent Claims、Human Decisions），并在内存中生成包含原始文件内容（Dict 或纯文本）和哈希校验值的 `RawInputManifest`。在此步骤后，所有物理磁盘读取操作全部结束。
+1. 调用 `load_config(project_root)` 显式加载 `.vibetracing/config.json` 配置文件。
+2. 实例化 `RawInputLoader(project_root, config_data=config)`，将配置传入 loader（构造函数无 I/O）。
+3. 调用 `RawInputLoader.load()` 一次性物理读取所有治理文件（PRD、Architecture Constraints、Task List、Agent Claims、Human Decisions），并在内存中生成包含原始文件内容（Dict 或纯文本）和哈希校验值的 `RawInputManifest`。在此步骤后，所有物理磁盘读取操作全部结束。
+
+> 路径解析由 `config.py:resolve_path()` 统一处理，loader 和 pipeline 均不硬编码路径。
 
 ---
 
@@ -244,6 +246,7 @@ is_draft: false                     # 是否草稿模式 (prd_res.status == "dra
 
 | 异常类型 | 退出码 | 触发条件 | 对应步骤 |
 |----------|--------|----------|----------|
+| `_GateBlocked` | 1 | config.json 缺失或 `paths` 字段缺失 | 阶段 1 |
 | `_GateBlocked` | 1 | 必需文件缺失（`manifest.has_required_errors` 为 true） | 阶段 2 |
 | `_GateBlocked` | 1 | 文件格式错误（status 为 `parse_error` 或 `read_error`） | 阶段 2 |
 | `_GateBlocked` | 1 | Schema/ID/路径校验失败（`validate_inputs()` 返回 `is_valid=false`） | 阶段 2 |

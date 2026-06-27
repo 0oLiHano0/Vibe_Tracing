@@ -1,3 +1,21 @@
+"""PRD Markdown 解析器。
+
+使用 mistune AST 模式解析 docs/prd.md，提取需求（Requirement）和
+验收标准（AcceptanceCriteria）实体。
+
+职责：
+- 解析 YAML front matter（项目元数据）
+- 从 Markdown 标题层级提取 REQ/AC 结构
+- 校验 ID 格式、父子关系、优先级、类别
+- 校验重复 ID 和缺失字段
+
+依赖：
+- mistune（AST 模式 Markdown 解析）
+
+被依赖：
+- cli/analyze/pipeline.py（阶段 3：领域模型解析）
+"""
+
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -9,26 +27,29 @@ import mistune
 
 @dataclass
 class AcceptanceCriteria:
-    ac_id: str  # e.g., "AC-VT-001-01"
-    title: str  # e.g., "需求必须能关联任务"
-    is_testing_required: bool  # True for "是", False for "否", or False/default if invalid/unclear (with error flagged)
+    """验收标准数据对象。"""
+    ac_id: str           # 如 "AC-VT-001-01"
+    title: str           # 如 "需求必须能关联任务"
+    is_testing_required: bool  # 是否必须有测试
 
 
 @dataclass
 class Requirement:
-    req_id: str  # e.g., "REQ-VT-001"
-    title: str  # e.g., "全链路需求追踪"
-    priority: str  # "must", "should", "could", or "unclear" (lowercase)
-    category: str  # "functional" or "quality_evolution" (required, no default)
+    """需求数据对象。"""
+    req_id: str          # 如 "REQ-VT-001"
+    title: str           # 如 "全链路需求追踪"
+    priority: str        # "must" | "should" | "could" | "unclear"
+    category: str        # "functional" | "quality_evolution" | "unclear"
     acceptance_criteria: List[AcceptanceCriteria] = field(default_factory=list)
 
 
 @dataclass
 class PrdParseResult:
+    """PRD 解析结果容器。"""
     requirements: List[Requirement] = field(default_factory=list)
     is_valid: bool = True
     errors: List[str] = field(default_factory=list)
-    status: str = "active"
+    status: str = "active"      # "active" | "draft"
     project_name: Optional[str] = None
     project_id: Optional[str] = None
 
@@ -138,9 +159,13 @@ def _apply_test_req(
 
 
 class PrdParser:
-    """Parses Vibe Tracing PRD Markdown files to extract requirements and ACs."""
+    """PRD Markdown 解析器。
+
+    使用 mistune AST 模式解析 PRD 文档，提取需求和验收标准实体。
+    """
 
     def parse_file(self, file_path: Path) -> PrdParseResult:
+        """从文件路径读取并解析 PRD。"""
         try:
             text = file_path.read_text(encoding="utf-8")
         except Exception as e:
@@ -152,6 +177,7 @@ class PrdParser:
         return self.parse_text(text)
 
     def parse_text(self, text: str) -> PrdParseResult:
+        """从文本内容解析 PRD（pipeline 主要入口）。"""
         metadata = parse_front_matter(text)
         prd_prefix = metadata.get("project_abbreviation") or metadata.get("project_prefix") or "VT"
         status = metadata.get("status") or "active"

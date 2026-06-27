@@ -6475,6 +6475,353 @@
         "文档更新以最终代码为准，不保留历史变更记录",
         "task_list.json 的 status 更新使用 python 脚本批量修改"
       ]
+    },
+    {
+      "task_id": "TASK-VT-118",
+      "title": "删除 tool_reports 死代码",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除 RawInputManifest.tool_report_files 字段、load() 中的 tool_reports 扫描逻辑、conftest.py 中的 _patch_loader fixture。",
+      "atomic_scope": "删除 raw_input.py 中 tool_report_files 字段和扫描逻辑；删除 tests/conftest.py 中 _patch_loader fixture；删除 spec 中 tool_report_files 说明。三处变更同次提交。",
+      "out_of_scope": [
+        "不修改 loader 的其他逻辑",
+        "不修改 pipeline 或 change_proposal"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "ERR-VT-001",
+        "STORE-VT-004"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/loader/raw_input.py",
+        "tests/conftest.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-118-01",
+          "description": "grep tool_report_files src/ tests/ 返回 0 结果。"
+        },
+        {
+          "dod_id": "DOD-VT-118-02",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "三处变更（raw_input.py、conftest.py、spec）必须同次提交，不留中间破损状态。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-119",
+      "title": "配置解析从 loader 剥离：新增 config.py + 重构核心模块",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 _load_config() 和 get_path() 从 RawInputLoader 剥离为独立函数，消除 __init__ 的 I/O 副作用，解耦 pipeline 和 change_proposal 对 loader 内部的依赖。",
+      "atomic_scope": "1. 新增 infra/loader/config.py（load_config + resolve_path + REQUIRED_FILES）；2. 重构 raw_input.py（删除 _load_config/get_path，__init__ 接收 config_data，load() 从 REQUIRED_FILES 驱动）；3. 重构 pipeline.py（显式 load_config，消除所有硬编码路径含 L574）；4. 重构 change_proposal.py（删除 RawInputLoader 依赖，config_data 必填）；5. 更新 finalize.py（L132/L201/L269/L341 硬编码路径改 resolve_path）；6. 更新 __init__.py 导出（含 __all__）。全部同次提交。",
+      "out_of_scope": [
+        "不重构 change_proposal.py 核心逻辑",
+        "不重构 pipeline.py 阶段 2-9",
+        "不修改 governance/loader.py（步骤 5 独立任务）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-001",
+        "MOD-VT-013"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006",
+        "ERR-VT-001",
+        "FLOW-VT-009",
+        "STORE-VT-004"
+      ],
+      "depends_on": [
+        "TASK-VT-118"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/loader/config.py",
+        "src/vibe_tracing/infra/loader/raw_input.py",
+        "src/vibe_tracing/infra/loader/__init__.py",
+        "src/vibe_tracing/cli/analyze/pipeline.py",
+        "src/vibe_tracing/domain/governance/change_proposal.py",
+        "src/vibe_tracing/cli/finalize.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-119-01",
+          "description": "RawInputLoader.__init__ 不执行 I/O，config_data 由调用方显式传入。"
+        },
+        {
+          "dod_id": "DOD-VT-119-02",
+          "description": "pipeline 在 load() 之后不访问 loader 实例（raw_loader. 仅出现 2 行）。"
+        },
+        {
+          "dod_id": "DOD-VT-119-03",
+          "description": "change_proposal.py 不导入 RawInputLoader。"
+        },
+        {
+          "dod_id": "DOD-VT-119-04",
+          "description": "pipeline.py 和 finalize.py 中无硬编码路径（docs/prd.md 等）。"
+        },
+        {
+          "dod_id": "DOD-VT-119-05",
+          "description": "REQUIRED_FILES 定义在 config.py，raw_input.py 从 config.py 导入。"
+        },
+        {
+          "dod_id": "DOD-VT-119-06",
+          "description": "__init__.py 导出含 __all__，包含 load_config、resolve_path、REQUIRED_FILES。"
+        },
+        {
+          "dod_id": "DOD-VT-119-07",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "所有文件变更必须同次提交——单独修改任何一个都会导致测试失败。",
+        "config.py 是路径配置的唯一权威来源，其他模块不得硬编码路径。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-120",
+      "title": "测试文件清理与适配",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "适配 loader 签名变更后的测试文件，清理死代码和错位测试。",
+      "atomic_scope": "1. test_raw_input_loader.py：约 16 处 RawInputLoader 适配 config_data 签名（tmp_path 传 {}，PROJECT_ROOT 传 load_config）；迁移 test_self_governance_rules_contract 到 test_architecture_change_proposal.py；2. test_architecture_change_proposal.py：13 处适配 config_data 签名 + 接收迁移测试；3. test_task_loader.py：删除无用 import（PrdParseResult 等）和死代码 get_mock_prd_result()。",
+      "out_of_scope": [
+        "不修改测试的断言逻辑",
+        "不删除有效测试用例"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-001",
+        "ERR-VT-001"
+      ],
+      "depends_on": [
+        "TASK-VT-119"
+      ],
+      "expected_deliverables": [
+        "tests/test_raw_input_loader.py",
+        "tests/test_architecture_change_proposal.py",
+        "tests/test_task_loader.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-120-01",
+          "description": "test_raw_input_loader.py 无 ArchitectureChangeProposalEngine 引用。"
+        },
+        {
+          "dod_id": "DOD-VT-120-02",
+          "description": "test_task_loader.py 无 PrdParseResult 引用和 get_mock_prd_result 定义。"
+        },
+        {
+          "dod_id": "DOD-VT-120-03",
+          "description": "conftest.py 无 tool_report_files 引用。"
+        },
+        {
+          "dod_id": "DOD-VT-120-04",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "tmp_path 型测试传 config_data={}，不引入无意义 I/O。",
+        "PROJECT_ROOT 型测试传 config_data=load_config(PROJECT_ROOT)。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-121",
+      "title": "清理 task_loader.py 无用代码与延迟加载",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "清理 task_loader.py 中的无用 import、过时 docstring、模块级 I/O 和空 __init__。",
+      "atomic_scope": "1. 删除无用 import（PrdParseResult, get_parent_req_id）；2. 修正模块 docstring；3. load_hints 改为延迟加载；4. 删除空 __init__ 方法。同时清理 claim_loader.py 的空 __init__。",
+      "out_of_scope": [
+        "不修改 task_loader 的校验逻辑",
+        "不修改 claim_loader 的加载逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-120"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/loader/task_loader.py",
+        "src/vibe_tracing/infra/loader/claim_loader.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-121-01",
+          "description": "task_loader.py 无 PrdParseResult/get_parent_req_id 引用。"
+        },
+        {
+          "dod_id": "DOD-VT-121-02",
+          "description": "import task_loader 不触发磁盘 I/O。"
+        },
+        {
+          "dod_id": "DOD-VT-121-03",
+          "description": "task_loader.py 和 claim_loader.py 无空 __init__ 方法。"
+        },
+        {
+          "dod_id": "DOD-VT-121-04",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "延迟加载使用全局变量 + 函数模式，不引入 functools.lru_cache。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-122",
+      "title": "修复 governance/loader.py 硬编码路径",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 infra/governance/loader.py 中硬编码的文件路径改为参数传入，使 ghost_code.py 和 compliance/checker.py 通过 resolve_path() 获取路径。",
+      "atomic_scope": "read_task_list()、read_prd_ac_ids()、check_prd_exists()、read_constraints_file()、read_constraints_json() 改为接收 Path 参数。调用方通过 resolve_path() 获取路径后传入。",
+      "out_of_scope": [
+        "不重构 ghost_code.py 核心逻辑",
+        "不重构 compliance/checker.py 核心逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002",
+        "MOD-VT-009"
+      ],
+      "related_architecture_constraints": [
+        "ERR-VT-001",
+        "STORE-VT-004"
+      ],
+      "depends_on": [
+        "TASK-VT-119"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/governance/loader.py",
+        "src/vibe_tracing/domain/governance/ghost_code.py",
+        "src/vibe_tracing/domain/compliance/checker.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-122-01",
+          "description": "governance/loader.py 无硬编码路径（docs/prd.md 等）。"
+        },
+        {
+          "dod_id": "DOD-VT-122-02",
+          "description": "config.json 自定义路径场景下 Gate 2 不因路径不一致失败。"
+        },
+        {
+          "dod_id": "DOD-VT-122-03",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "只修改函数签名和调用方，不修改函数核心逻辑。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-123",
+      "title": "P2 清理与 spec 对齐",
+      "phase_id": "PHASE-VT-011",
+      "priority": "should",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "补充 loader 包中文注释，更新 spec 和 refactoring_design 反映最终架构。",
+      "atomic_scope": "1. prd_parser.py 补充模块级和公共类中文 docstring；2. claim_loader.py 补充 load() docstring；3. 更新 spec_pipeline_stage_1.md：RawInputManifest 结构、阶段 1 描述、RawInputLoader 构造函数说明；4. 更新 refactoring_design.md：loader 包结构（新增 config.py）、__init__.py 导出、RawInputLoader 接口变更。",
+      "out_of_scope": [
+        "不修改 prd_parser 的解析逻辑",
+        "不修改 claim_loader 的加载逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-003"
+      ],
+      "depends_on": [
+        "TASK-VT-121",
+        "TASK-VT-122"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/loader/prd_parser.py",
+        "src/vibe_tracing/infra/loader/claim_loader.py",
+        "docs/spec_pipeline_stage_1.md",
+        "docs/refactoring_design.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-123-01",
+          "description": "prd_parser.py 有模块级中文 docstring 和公共类中文 docstring。"
+        },
+        {
+          "dod_id": "DOD-VT-123-02",
+          "description": "spec 中 RawInputManifest 结构与代码一致。"
+        },
+        {
+          "dod_id": "DOD-VT-123-03",
+          "description": "refactoring_design.md 中 loader 包结构包含 config.py，__init__.py 导出包含 load_config/resolve_path/REQUIRED_FILES。"
+        },
+        {
+          "dod_id": "DOD-VT-123-04",
+          "description": "refactoring_design.md 中 RawInputLoader 接口描述为 __init__(project_root, config_data)，不含 _load_config/get_path。"
+        },
+        {
+          "dod_id": "DOD-VT-123-05",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "只补充注释和文档，不修改业务逻辑。"
+      ]
     }
   ]
 }

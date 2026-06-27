@@ -1,8 +1,11 @@
 """
-Task List Loader and Validator for Vibe Tracing.
+任务列表加载器与校验器。
 
-Loads task_list.json, validates it against the JSON Schema contract, and
-performs cross-reference validation against the parsed PRD.
+从 task_list.json 加载任务列表，进行任务自身属性的自洽校验
+（孤立任务检测、架构孤儿检测）。
+
+注意：Task↔PRD 的跨引用校验已下沉至 SQL 查询层（check_invalid_task_* 系列函数），
+本模块不进行文件之间的交叉引用校验。
 """
 
 import json
@@ -11,10 +14,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
-from vibe_tracing.infra.loader.prd_parser import PrdParseResult, get_parent_req_id
 
 
-_task_field_hints = load_hints("input")
+_task_field_hints = None
+
+
+def _get_task_field_hints() -> dict:
+    """延迟加载输入字段提示信息。"""
+    global _task_field_hints
+    if _task_field_hints is None:
+        _task_field_hints = load_hints("input")
+    return _task_field_hints
 
 
 @dataclass
@@ -65,10 +75,7 @@ class TaskListLoadResult:
 
 
 class TaskLoader:
-    """Loads and validates the task list, cross-referencing with the PRD."""
-
-    def __init__(self) -> None:
-        pass
+    """加载并校验任务列表。"""
 
     def load_and_validate(
         self,
@@ -114,7 +121,7 @@ class TaskLoader:
 
 
         def get_err_msg(field_key: str, base_msg: str, level: str = "level3") -> str:
-            hint_raw = _task_field_hints.get(field_key)
+            hint_raw = _get_task_field_hints().get(field_key)
             if hint_raw:
                 from vibe_tracing.infra import validation as ids
                 hint = resolve_hint(hint_raw, level).replace("{PROJECT_PREFIX}", ids.get_project_prefix())

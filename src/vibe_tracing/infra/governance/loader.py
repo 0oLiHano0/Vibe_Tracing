@@ -47,16 +47,15 @@ def read_claims_from_filesystem(claims_dir: Path) -> List[dict]:
     return all_claims
 
 
-def read_task_list(project_root: Path) -> Optional[dict]:
-    """Read task_list.json from the filesystem.
+def read_task_list(task_list_path: Path) -> Optional[dict]:
+    """读取 task_list.json。
 
     Args:
-        project_root: Project root directory.
+        task_list_path: task_list.json 的完整路径。
 
     Returns:
-        Task list dict or None if not found.
+        任务列表字典，读取失败时返回 None。
     """
-    task_list_path = project_root / "docs" / "task_list.json"
     try:
         return json.loads(task_list_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -66,16 +65,15 @@ def read_task_list(project_root: Path) -> Optional[dict]:
         return None
 
 
-def read_prd_ac_ids(project_root: Path) -> Set[str]:
-    """Parse PRD content from filesystem and extract all AC IDs.
+def read_prd_ac_ids(prd_path: Path) -> Set[str]:
+    """从 PRD 文件中提取所有 AC ID。
 
     Args:
-        project_root: Project root directory.
+        prd_path: prd.md 的完整路径。
 
     Returns:
-        Set of AC ID strings.
+        AC ID 字符串集合。
     """
-    prd_path = project_root / "docs" / "prd.md"
     try:
         content = prd_path.read_text(encoding="utf-8")
         ac_pattern = re.compile(r"AC-[A-Z]+-\d+-\d+")
@@ -87,16 +85,16 @@ def read_prd_ac_ids(project_root: Path) -> Set[str]:
         return set()
 
 
-def check_prd_exists(project_root: Path) -> bool:
-    """Check if PRD file exists.
+def check_prd_exists(prd_path: Path) -> bool:
+    """检查 PRD 文件是否存在。
 
     Args:
-        project_root: Project root directory.
+        prd_path: prd.md 的完整路径。
 
     Returns:
-        True if prd.md exists.
+        文件存在时返回 True。
     """
-    return (project_root / "docs" / "prd.md").is_file()
+    return prd_path.is_file()
 
 
 def read_constraints_file(constraints_path: Path) -> Tuple[Optional[bytes], Optional[str]]:

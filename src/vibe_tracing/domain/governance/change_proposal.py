@@ -47,7 +47,7 @@ from typing import Any, Dict, List, Optional
 from vibe_tracing.infra import validation as ids
 from vibe_tracing.infra.git.utils import git_show
 from vibe_tracing.infra.governance.loader import read_constraints_file, read_constraints_json
-from vibe_tracing.infra.loader.raw_input import RawInputLoader
+from vibe_tracing.infra.loader.config import resolve_path
 
 
 class ArchitectureChangeProposalEngine:
@@ -56,21 +56,15 @@ class ArchitectureChangeProposalEngine:
     def __init__(
         self,
         project_root: Path,
+        config_data: dict,
+        constraints_path: Optional[Path] = None,
         schema_validator: Optional[Any] = None,
         proposals_dir: Optional[Path] = None,
-        constraints_path: Optional[Path] = None,
-        config_data: Optional[dict] = None,
     ) -> None:
         self.project_root = Path(project_root)
-        if config_data is not None:
-            # Reuse pre-loaded config to avoid re-reading from disk
-            self.raw_loader = RawInputLoader.__new__(RawInputLoader)
-            self.raw_loader.project_root = self.project_root
-            self.raw_loader.config_data = config_data
-        else:
-            self.raw_loader = RawInputLoader(self.project_root)
-        self.constraints_path = constraints_path or self.raw_loader.get_path(
-            "architecture_constraints"
+        self.config_data = config_data
+        self.constraints_path = constraints_path or resolve_path(
+            project_root, config_data, "architecture_constraints"
         )
 
         # Resolve change log path
@@ -216,7 +210,7 @@ class ArchitectureChangeProposalEngine:
             }
 
         # Step 1: Read stored hash from config. If missing, not finalized — skip.
-        stored_hash = self.raw_loader.config_data.get("architecture_constraints_hash")
+        stored_hash = self.config_data.get("architecture_constraints_hash")
         if not stored_hash:
             return _empty_result()
 
@@ -233,8 +227,8 @@ class ArchitectureChangeProposalEngine:
             return _empty_result()
 
         # Step 3: Hash mismatch — check for finalize metadata.
-        finalize_commit = self.raw_loader.config_data.get("finalize_git_commit")
-        finalize_constraints_path = self.raw_loader.config_data.get(
+        finalize_commit = self.config_data.get("finalize_git_commit")
+        finalize_constraints_path = self.config_data.get(
             "finalize_constraints_path"
         )
         if not finalize_commit or not finalize_constraints_path:

@@ -7,7 +7,6 @@ Each test function declares its AC/DoD coverage in its docstring.
 from pathlib import Path
 import pytest
 
-from vibe_tracing.infra.loader.prd_parser import PrdParseResult, Requirement, AcceptanceCriteria
 from vibe_tracing.infra.loader.task_loader import TaskLoader
 
 DOCS_DIR = Path(__file__).parent.parent / "docs"
@@ -48,46 +47,6 @@ def get_valid_task_list_dict(tasks=None):
         },
         "tasks": tasks,
     }
-
-
-# Helper: Create a mock PrdParseResult
-def get_mock_prd_result():
-    return PrdParseResult(
-        requirements=[
-            Requirement(
-                req_id="REQ-VT-001",
-                title="Full Traceability",
-                priority="must",
-                category="functional",
-                acceptance_criteria=[
-                    AcceptanceCriteria(
-                        ac_id="AC-VT-001-01",
-                        title="Requirement must map to task",
-                        is_testing_required=True,
-                    ),
-                    AcceptanceCriteria(
-                        ac_id="AC-VT-001-02",
-                        title="AC must map to test evidence",
-                        is_testing_required=True,
-                    ),
-                ],
-            ),
-            Requirement(
-                req_id="REQ-VT-002",
-                title="Agent Claim Verification",
-                priority="must",
-                category="functional",
-                acceptance_criteria=[
-                    AcceptanceCriteria(
-                        ac_id="AC-VT-002-01",
-                        title="Claim validation",
-                        is_testing_required=True,
-                    )
-                ],
-            ),
-        ],
-        is_valid=True,
-    )
 
 
 # ---------------------------------------------------------------------------

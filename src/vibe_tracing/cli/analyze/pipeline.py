@@ -35,6 +35,7 @@ from vibe_tracing.domain.evidence.builder import EvidenceBuilder
 from vibe_tracing.domain.context import UnifiedContext
 
 from vibe_tracing.cli.analyze.exceptions import _GateBlocked
+from vibe_tracing.infra.loader.config import load_config, resolve_path
 from vibe_tracing.infra.loader.raw_input import RawInputLoader
 from vibe_tracing.infra.loader.prd_parser import PrdParser
 from vibe_tracing.infra.loader.task_loader import TaskLoader
@@ -55,10 +56,16 @@ def _load_context(
 
     Raises _GateBlocked with exit_code=1 on any validation failure.
     """
-    raw_loader = RawInputLoader(project_root)
+    try:
+        config = load_config(project_root)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise _GateBlocked(1)
+
+    raw_loader = RawInputLoader(project_root, config_data=config)
     manifest = raw_loader.load()
 
-    config_prefix = raw_loader.config_data.get("project_prefix", "VT")
+    config_prefix = config.get("project_prefix", "VT")
 
     # Check for missing required files
     if manifest.has_required_errors:
@@ -109,14 +116,16 @@ def _load_context(
     # Verify required files exist if not draft
     if prd_res.status != "draft":
         if not task_list_record or task_list_record.status != "ok":
+            task_list_path = resolve_path(project_root, config, "task_list")
             print(
-                f"Error loading required file task_list ({raw_loader.get_path('task_list')}): File not found",
+                f"Error loading required file task_list ({task_list_path}): File not found",
                 file=sys.stderr,
             )
             raise _GateBlocked(1)
         if not constraints_record or constraints_record.status != "ok":
+            constraints_path = resolve_path(project_root, config, "architecture_constraints")
             print(
-                f"Error loading required file architecture_constraints ({raw_loader.get_path('architecture_constraints')}): File not found",
+                f"Error loading required file architecture_constraints ({constraints_path}): File not found",
                 file=sys.stderr,
             )
             raise _GateBlocked(1)
@@ -157,7 +166,7 @@ def _load_context(
     human_decisions_data = hd_record.content if hd_record and hd_record.status == "ok" else None
 
     ctx = UnifiedContext(
-        config=raw_loader.config_data,
+        config=config,
         prd=prd_res,
         constraints=constraints_record.content if constraints_record and constraints_record.status == "ok" else None,
         task_result=task_res,
@@ -232,8 +241,7 @@ def run_analyze(
 
         # 解析输出目录（未指定时从 config 读取）
         if output_dir is None:
-            _out_rel = ctx.config.get("paths", {}).get("output_dir", "output")
-            output_dir = (project_root / _out_rel).resolve()
+            output_dir = resolve_path(project_root, ctx.config, "output_dir")
 
         # ── 阶段 2：Claim 覆盖前置检查（Gate 2）────────────────────────
         _t_gates = time.perf_counter()
@@ -571,7 +579,7 @@ def _run_db_analysis(
 
     # Architecture compliance check
     compliance_res = None
-    constraints_path = project_root / "docs" / "architecture_constraints.json"
+    constraints_path = resolve_path(project_root, ctx.config, "architecture_constraints")
     if constraints_path.exists() and ctx.constraints is not None:
         _constraints_hash = None
         if ctx.manifest:

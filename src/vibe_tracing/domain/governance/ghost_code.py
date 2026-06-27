@@ -10,6 +10,7 @@ from vibe_tracing.infra.governance.loader import (
     read_prd_ac_ids,
     check_prd_exists,
 )
+from vibe_tracing.infra.loader.config import resolve_path
 from vibe_tracing.infra.logging.logger import OperationalLogger
 
 class GhostCodeReconciler:
@@ -20,16 +21,21 @@ class GhostCodeReconciler:
     Enforces the First Principle (State is Delta) to detect Reusable Receipt
     Exploits, and validates task coverage and AC freshness for staged code.
     """
-    def __init__(self, project_root: Path, conn: sqlite3.Connection):
+    def __init__(self, project_root: Path, conn: sqlite3.Connection, config_data: dict):
         self.project_root = project_root
         self.conn = conn
-        self.claims_dir = project_root / ".vibetracing" / "claims"
+        self.config_data = config_data
+        self.claims_dir = resolve_path(project_root, self.config_data, "agent_claims")
 
-        # Exact Whitelist (The ledger itself shouldn't require a receipt)
-        self.whitelist_paths = {
-            ".vibetracing/config.json",
-            "docs/task_list.json",
-        }
+        # 治理输入文件白名单（从 config 动态构建，不硬编码路径）
+        governance_keys = ["prd", "architecture_constraints", "task_list", "human_decisions"]
+        self.whitelist_paths = {".vibetracing/config.json"}
+        for key in governance_keys:
+            try:
+                resolved = resolve_path(project_root, self.config_data, key)
+                self.whitelist_paths.add(str(resolved.relative_to(project_root)))
+            except ValueError:
+                pass  # config 中未定义的路径不加入白名单
 
         # Prefix Whitelist for claims directory files
         self.whitelist_prefixes_claims = ".vibetracing/claims/"
@@ -112,7 +118,8 @@ class GhostCodeReconciler:
 
     def _get_staged_tasks(self) -> Optional[dict]:
         """Read task_list.json from the filesystem."""
-        return read_task_list(self.project_root)
+        task_list_path = resolve_path(self.project_root, self.config_data, "task_list")
+        return read_task_list(task_list_path)
 
     # ------------------------------------------------------------------
     # Gate 2.5 -- Reverse coverage check
@@ -197,7 +204,8 @@ class GhostCodeReconciler:
             return []
 
         # Check if PRD exists on disk
-        prd_exists = check_prd_exists(self.project_root)
+        prd_path = resolve_path(self.project_root, self.config_data, "prd")
+        prd_exists = check_prd_exists(prd_path)
 
         # Get AC IDs from PRD
         staged_ac_ids: Set[str] = set()
@@ -234,4 +242,5 @@ class GhostCodeReconciler:
 
     def _get_staged_prd_ac_ids(self) -> Set[str]:
         """Parse PRD content from filesystem and extract all AC IDs."""
-        return read_prd_ac_ids(self.project_root)
+        prd_path = resolve_path(self.project_root, self.config_data, "prd")
+        return read_prd_ac_ids(prd_path)

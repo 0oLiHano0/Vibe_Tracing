@@ -15,7 +15,7 @@ from vibe_tracing.infra.db import (
 
 
 class TestDDL:
-    def test_init_creates_8_tables(self):
+    def test_init_creates_tables(self):
         conn = init_in_memory_db()
         rows = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
@@ -33,6 +33,10 @@ class TestDDL:
             "requirements",
             "acceptance_criteria",
             "task_requirements",
+            "arch_modules",
+            "arch_constraints",
+            "task_modules",
+            "task_constraints",
         }
         assert table_names == expected, f"Got {table_names}, expected {expected}"
         conn.close()

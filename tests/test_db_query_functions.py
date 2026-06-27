@@ -198,6 +198,12 @@ else:
         check_ghost_code,
         check_dangling_claims,
         check_test_dead_links,
+        check_invalid_task_requirements,
+        check_invalid_task_acs,
+        check_invalid_task_modules,
+        check_invalid_task_constraints,
+        check_invalid_ac_parent,
+        load_architecture_constraints,
     )
 
 
@@ -1362,5 +1368,83 @@ def test_adversarial_closed_database_connection_graceful_failure():
         get_full_chain(conn)
     with pytest.raises(sqlite3.ProgrammingError):
         load_tasks(conn, [{"task_id": "T1", "priority": "must", "status": "done"}])
+
+
+# ── Invalid Task References Checks ──────────────────────────────────────────
+
+def test_check_invalid_task_requirements():
+    """Test that check_invalid_task_requirements detects tasks referencing non-existent requirements."""
+    conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Req 1", "priority": "must", "category": "functional", "acceptance_criteria": []}]})
+    load_tasks(conn, [
+        {"task_id": "TASK-1", "priority": "must", "status": "done", "related_requirements": ["REQ-1"]},
+        {"task_id": "TASK-2", "priority": "must", "status": "done", "related_requirements": ["REQ-999"]},
+    ])
+    res = check_invalid_task_requirements(conn)
+    assert len(res) == 1
+    assert res[0]["task_id"] == "TASK-2"
+    assert res[0]["req_id"] == "REQ-999"
+    conn.close()
+
+
+def test_check_invalid_task_acs():
+    """Test that check_invalid_task_acs detects tasks referencing non-existent ACs."""
+    conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Req 1", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC 1", "is_testing_required": True}]}]})
+    load_tasks(conn, [
+        {"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]},
+        {"task_id": "TASK-2", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-999"]},
+    ])
+    res = check_invalid_task_acs(conn)
+    assert len(res) == 1
+    assert res[0]["task_id"] == "TASK-2"
+    assert res[0]["ac_id"] == "AC-999"
+    conn.close()
+
+
+def test_check_invalid_task_modules():
+    """Test that check_invalid_task_modules detects tasks referencing non-existent modules."""
+    conn = init_in_memory_db()
+    load_architecture_constraints(conn, {"module_boundaries": [{"module_id": "MOD-1"}]})
+    load_tasks(conn, [
+        {"task_id": "TASK-1", "priority": "must", "status": "done", "related_modules": ["MOD-1"]},
+        {"task_id": "TASK-2", "priority": "must", "status": "done", "related_modules": ["MOD-999"]},
+    ])
+    res = check_invalid_task_modules(conn)
+    assert len(res) == 1
+    assert res[0]["task_id"] == "TASK-2"
+    assert res[0]["module_id"] == "MOD-999"
+    conn.close()
+
+
+def test_check_invalid_task_constraints():
+    """Test that check_invalid_task_constraints detects tasks referencing non-existent constraints."""
+    conn = init_in_memory_db()
+    load_architecture_constraints(conn, {"architecture_principles": [{"principle_id": "PRINCIPLE-1"}]})
+    load_tasks(conn, [
+        {"task_id": "TASK-1", "priority": "must", "status": "done", "related_architecture_constraints": ["PRINCIPLE-1"]},
+        {"task_id": "TASK-2", "priority": "must", "status": "done", "related_architecture_constraints": ["PRINCIPLE-999"]},
+    ])
+    res = check_invalid_task_constraints(conn)
+    assert len(res) == 1
+    assert res[0]["task_id"] == "TASK-2"
+    assert res[0]["constraint_id"] == "PRINCIPLE-999"
+    conn.close()
+
+
+def test_check_invalid_ac_parent():
+    """Test that check_invalid_ac_parent detects tasks referencing ACs without parent requirement."""
+    conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Req 1", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC 1", "is_testing_required": True}]}]})
+    load_tasks(conn, [
+        {"task_id": "TASK-1", "priority": "must", "status": "done", "related_requirements": ["REQ-1"], "related_acceptance_criteria": ["AC-1-1"]},
+        {"task_id": "TASK-2", "priority": "must", "status": "done", "related_requirements": ["REQ-2"], "related_acceptance_criteria": ["AC-1-1"]},
+    ])
+    res = check_invalid_ac_parent(conn)
+    assert len(res) == 1
+    assert res[0]["task_id"] == "TASK-2"
+    assert res[0]["ac_id"] == "AC-1-1"
+    assert res[0]["parent_req_id"] == "REQ-1"
+    conn.close()
 
 

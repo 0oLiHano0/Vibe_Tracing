@@ -300,6 +300,84 @@ class MergeGateEngine:
                 self._historical_debt_count += 1
         return has_blocked
 
+    def _check_invalid_task_references(
+        self,
+        invalid_task_references: Dict[str, List[Dict[str, Any]]],
+        staged_items: Optional[Set[str]],
+        reasons: List[str],
+        blocked_items: List[str],
+    ) -> bool:
+        """Rule 9: Invalid task references detection.
+
+        Tasks referencing non-existent requirements, ACs, modules, or constraints are blocked.
+        Returns ``True`` if the gate should be set to ``blocked``.
+        """
+        OperationalLogger.get().debug("gate_invalid_task_refs", "Invalid task references check")
+        has_blocked = False
+
+        # Check invalid requirements
+        for ref in invalid_task_references.get("invalid_requirements", []):
+            task_id = ref.get("task_id", "")
+            req_id = ref.get("req_id", "")
+            msg = f"Task {task_id} 引用不存在的需求 {req_id}。"
+            reasons.append(self._tag_reason(msg, {task_id}, staged_items))
+            if not self.incremental_only or self._is_current({task_id}, staged_items):
+                blocked_items.append(msg)
+                has_blocked = True
+            else:
+                self._historical_debt_count += 1
+
+        # Check invalid ACs
+        for ref in invalid_task_references.get("invalid_acs", []):
+            task_id = ref.get("task_id", "")
+            ac_id = ref.get("ac_id", "")
+            msg = f"Task {task_id} 引用不存在的验收标准 {ac_id}。"
+            reasons.append(self._tag_reason(msg, {task_id}, staged_items))
+            if not self.incremental_only or self._is_current({task_id}, staged_items):
+                blocked_items.append(msg)
+                has_blocked = True
+            else:
+                self._historical_debt_count += 1
+
+        # Check invalid modules
+        for ref in invalid_task_references.get("invalid_modules", []):
+            task_id = ref.get("task_id", "")
+            module_id = ref.get("module_id", "")
+            msg = f"Task {task_id} 引用不存在的模块 {module_id}。"
+            reasons.append(self._tag_reason(msg, {task_id}, staged_items))
+            if not self.incremental_only or self._is_current({task_id}, staged_items):
+                blocked_items.append(msg)
+                has_blocked = True
+            else:
+                self._historical_debt_count += 1
+
+        # Check invalid constraints
+        for ref in invalid_task_references.get("invalid_constraints", []):
+            task_id = ref.get("task_id", "")
+            constraint_id = ref.get("constraint_id", "")
+            msg = f"Task {task_id} 引用不存在的约束 {constraint_id}。"
+            reasons.append(self._tag_reason(msg, {task_id}, staged_items))
+            if not self.incremental_only or self._is_current({task_id}, staged_items):
+                blocked_items.append(msg)
+                has_blocked = True
+            else:
+                self._historical_debt_count += 1
+
+        # Check invalid AC parents
+        for ref in invalid_task_references.get("invalid_ac_parents", []):
+            task_id = ref.get("task_id", "")
+            ac_id = ref.get("ac_id", "")
+            parent_req_id = ref.get("parent_req_id", "")
+            msg = f"Task {task_id} 引用验收标准 {ac_id}，但其父需求 {parent_req_id} 未在关联需求中。"
+            reasons.append(self._tag_reason(msg, {task_id}, staged_items))
+            if not self.incremental_only or self._is_current({task_id}, staged_items):
+                blocked_items.append(msg)
+                has_blocked = True
+            else:
+                self._historical_debt_count += 1
+
+        return has_blocked
+
     def _process_must_gaps(
         self,
         gaps: List[Dict[str, Any]],
@@ -538,6 +616,7 @@ class MergeGateEngine:
         dangling_claims: Optional[List[Dict[str, Any]]] = None,
         claim_evidence_gaps: Optional[List[Dict[str, Any]]] = None,
         cov_violations: Optional[List[Dict[str, Any]]] = None,
+        invalid_task_references: Optional[Dict[str, List[Dict[str, Any]]]] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate merge gate criteria.
@@ -625,6 +704,15 @@ class MergeGateEngine:
         if ac_gaps is not None:
             if self._check_ac_coverage(
                 ac_gaps, staged_items, gaps, reasons, blocked_items,
+            ):
+                gate_decision = "blocked"
+
+        # ----------------------------------------------------
+        # Rule 9: Invalid task references
+        # ----------------------------------------------------
+        if invalid_task_references is not None:
+            if self._check_invalid_task_references(
+                invalid_task_references, staged_items, reasons, blocked_items
             ):
                 gate_decision = "blocked"
 

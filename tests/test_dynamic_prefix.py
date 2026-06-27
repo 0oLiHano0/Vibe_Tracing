@@ -61,7 +61,7 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
 
     # 4. Load tasks using TaskLoader and verify no errors
     task_loader = TaskLoader()
-    task_res = task_loader.load_and_validate(task_list_path, prd_res)
+    task_res = task_loader.load_and_validate(task_list_path)
     assert task_res.is_valid is True, f"Failed to load task list: {task_res.errors}"
     assert len(task_res.tasks) == 0  # Legacy templates -9999 are silently ignored in TaskLoader!
  

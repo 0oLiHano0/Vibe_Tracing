@@ -54,11 +54,10 @@ class ClaimLoader:
     def load(
         self,
         claims_path: Path,
-        task_result: Optional[TaskListLoadResult] = None,
         content: Optional[list] = None,
     ) -> ClaimListLoadResult:
         """
-        加载 agent claims，与 task_list 交叉引用校验。
+        加载 agent claims。
 
         claims_path 必须是目录（批量模式：加载目录下所有 CLAIM-*.json 文件并合并）。
         """
@@ -97,12 +96,11 @@ class ClaimLoader:
                 errors=[f"claims_path is not a directory: {claims_path}"],
             )
 
-        return self.validate_data(data, task_result, source_label=source_label)
+        return self.validate_data(data, source_label=source_label)
 
     def validate_data(
         self,
         data: List[Dict[str, Any]],
-        task_result: Optional[TaskListLoadResult] = None,
         source_label: str = "",
     ) -> ClaimListLoadResult:
         """
@@ -112,12 +110,6 @@ class ClaimLoader:
         errors: List[str] = []
         gaps: List[ClaimGap] = []
         is_valid = True
-
-        # 构建合法 task_id 集合（用于交叉引用校验）
-        valid_task_ids: Set[str] = set()
-        if task_result:
-            for task in task_result.tasks:
-                valid_task_ids.add(task.task_id)
 
         for claim_dict in data:
             claim_id = claim_dict.get("claim_id", "")
@@ -140,19 +132,6 @@ class ClaimLoader:
                 notes=notes,
                 timestamp=timestamp,
             )
-
-            # 交叉引用校验：claim 引用的 task 是否在 task_list 中存在
-            if task_result:
-                if related_task not in valid_task_ids:
-                    full_msg = f"References non-existent task: {related_task}."
-                    errors.append(full_msg)
-                    is_valid = False
-                    gaps.append(
-                        ClaimGap(
-                            item_id=claim_id,
-                            reason=full_msg,
-                        )
-                    )
 
             parsed_claims.append(claim_obj)
 

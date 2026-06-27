@@ -73,5 +73,21 @@ def init_in_memory_db() -> sqlite3.Connection:
             title TEXT NOT NULL,
             is_testing_required INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS arch_modules (
+            module_id TEXT PRIMARY KEY
+        );
+        CREATE TABLE IF NOT EXISTS arch_constraints (
+            constraint_id TEXT PRIMARY KEY
+        );
+        CREATE TABLE IF NOT EXISTS task_modules (
+            task_id TEXT,
+            module_id TEXT,
+            PRIMARY KEY (task_id, module_id)
+        );
+        CREATE TABLE IF NOT EXISTS task_constraints (
+            task_id TEXT,
+            constraint_id TEXT,
+            PRIMARY KEY (task_id, constraint_id)
+        );
     """)
     return conn

@@ -33,6 +33,16 @@ def load_tasks(conn: sqlite3.Connection, tasks: list) -> None:
                 "INSERT OR REPLACE INTO task_requirements (task_id, req_id) VALUES (?, ?)",
                 (task["task_id"], req_id),
             )
+        for mod_id in _coerce_strlist(task.get("related_modules", [])):
+            conn.execute(
+                "INSERT OR REPLACE INTO task_modules (task_id, module_id) VALUES (?, ?)",
+                (task["task_id"], mod_id),
+            )
+        for constraint_id in _coerce_strlist(task.get("related_architecture_constraints", [])):
+            conn.execute(
+                "INSERT OR REPLACE INTO task_constraints (task_id, constraint_id) VALUES (?, ?)",
+                (task["task_id"], constraint_id),
+            )
     conn.commit()
 
 
@@ -71,6 +81,51 @@ def load_staged_files(conn: sqlite3.Connection, files: set) -> list:
         inserted.append(f)
     conn.commit()
     return inserted
+
+
+def load_architecture_constraints(conn: sqlite3.Connection, constraints: dict) -> None:
+    """从 architecture_constraints.json 加载模块和约束到数据库。"""
+    if not constraints:
+        return
+
+    # 加载 module_boundaries
+    for mod in constraints.get("module_boundaries", []):
+        module_id = mod.get("module_id")
+        if module_id:
+            conn.execute(
+                "INSERT OR REPLACE INTO arch_modules (module_id) VALUES (?)",
+                (module_id,),
+            )
+
+    # 加载各规则列表中的 constraint_id
+    constraint_keys = [
+        "architecture_principles",
+        "dependency_rules",
+        "data_flow_rules",
+        "storage_rules",
+        "error_handling_rules",
+        "logging_rules",
+        "security_rules",
+        "technology_constraints",
+        "forbidden_patterns",
+        "quality_gates",
+    ]
+    id_fields = [
+        "principle_id", "constraint_id", "rule_id", "gate_id",
+        "pattern_id", "tech_id", "dep_id",
+    ]
+    for key in constraint_keys:
+        for item in constraints.get(key, []):
+            for id_field in id_fields:
+                constraint_id = item.get(id_field)
+                if constraint_id:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO arch_constraints (constraint_id) VALUES (?)",
+                        (constraint_id,),
+                    )
+                    break
+
+    conn.commit()
 
 
 def load_initial_cache(conn: sqlite3.Connection, cache_dir: str) -> None:

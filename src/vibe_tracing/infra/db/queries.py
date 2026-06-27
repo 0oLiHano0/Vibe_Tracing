@@ -211,3 +211,59 @@ def query_existing_tests(conn: sqlite3.Connection, ac_id: str) -> list:
         WHERE ta.ac_id = ?
     """, (ac_id,))
     return [r[0] for r in cursor.fetchall()][:2]
+
+
+def check_invalid_task_requirements(conn: sqlite3.Connection) -> list:
+    """检查 Task 引用的 Requirement 是否存在。"""
+    rows = conn.execute("""
+        SELECT tr.task_id, tr.req_id
+        FROM task_requirements tr
+        LEFT JOIN requirements r ON tr.req_id = r.req_id
+        WHERE r.req_id IS NULL
+    """).fetchall()
+    return [{"task_id": r[0], "req_id": r[1]} for r in rows]
+
+
+def check_invalid_task_acs(conn: sqlite3.Connection) -> list:
+    """检查 Task 引用的 AC 是否存在。"""
+    rows = conn.execute("""
+        SELECT ta.task_id, ta.ac_id
+        FROM task_acs ta
+        LEFT JOIN acceptance_criteria ac ON ta.ac_id = ac.ac_id
+        WHERE ac.ac_id IS NULL
+    """).fetchall()
+    return [{"task_id": r[0], "ac_id": r[1]} for r in rows]
+
+
+def check_invalid_task_modules(conn: sqlite3.Connection) -> list:
+    """检查 Task 引用的 Module 是否存在。"""
+    rows = conn.execute("""
+        SELECT tm.task_id, tm.module_id
+        FROM task_modules tm
+        LEFT JOIN arch_modules am ON tm.module_id = am.module_id
+        WHERE am.module_id IS NULL
+    """).fetchall()
+    return [{"task_id": r[0], "module_id": r[1]} for r in rows]
+
+
+def check_invalid_task_constraints(conn: sqlite3.Connection) -> list:
+    """检查 Task 引用的 Constraint 是否存在。"""
+    rows = conn.execute("""
+        SELECT tc.task_id, tc.constraint_id
+        FROM task_constraints tc
+        LEFT JOIN arch_constraints ac ON tc.constraint_id = ac.constraint_id
+        WHERE ac.constraint_id IS NULL
+    """).fetchall()
+    return [{"task_id": r[0], "constraint_id": r[1]} for r in rows]
+
+
+def check_invalid_ac_parent(conn: sqlite3.Connection) -> list:
+    """检查 Task 引用的 AC 其父 Requirement 是否在 Task 的关联需求中。"""
+    rows = conn.execute("""
+        SELECT ta.task_id, ta.ac_id, ac.req_id
+        FROM task_acs ta
+        JOIN acceptance_criteria ac ON ta.ac_id = ac.ac_id
+        LEFT JOIN task_requirements tr ON ta.task_id = tr.task_id AND ac.req_id = tr.req_id
+        WHERE tr.req_id IS NULL
+    """).fetchall()
+    return [{"task_id": r[0], "ac_id": r[1], "parent_req_id": r[2]} for r in rows]

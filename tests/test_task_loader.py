@@ -97,13 +97,12 @@ def get_mock_prd_result():
 
 def test_valid_task_list_passes(task_loader):
     """
-    Validate a clean and compliant task list against schema and mock PRD.
+    Validate a clean and compliant task list against schema.
     Covers: AC-VT-001-01, AC-VT-001-04.
     """
-    prd_res = get_mock_prd_result()
     data = get_valid_task_list_dict()
 
-    res = task_loader.validate_data(data, prd_result=prd_res)
+    res = task_loader.validate_data(data)
 
     assert res.is_valid is True
     assert len(res.errors) == 0
@@ -145,152 +144,20 @@ def test_isolated_task_fails(task_loader):
     assert "isolated" in res.gaps[0].reason
 
 
-def test_references_non_existent_requirement_forms_gap(task_loader):
-    """
-    Validate that referencing a non-existent requirement ID generates a gap.
-    Covers: DOD-VT-007-02.
-    """
-    prd_res = get_mock_prd_result()
-    tasks = [
-        {
-            "task_id": "TASK-VT-001",
-            "title": "Task Referencing Bad Req",
-            "phase_id": "PHASE-VT-001",
-            "priority": "must",
-            "status": "todo",
-            "owner_role": "AI Coding Agent",
-            "objective": "Task objective",
-            "related_modules": ["MOD-VT-001"],
-            "related_requirements": [
-                "REQ-VT-999",
-                "REQ-VT-001",
-            ],  # Non-existent requirement + valid parent requirement
-            "related_acceptance_criteria": ["AC-VT-001-01"],
-            "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
-        }
-    ]
-    data = get_valid_task_list_dict(tasks)
-    res = task_loader.validate_data(data, prd_result=prd_res)
-
-    assert res.is_valid is False
-    assert res.tasks[0].is_valid is False
-    assert any(
-        "References non-existent requirement: REQ-VT-999" in err
-        for err in res.tasks[0].errors
-    )
-    assert len(res.gaps) == 1
-    assert res.gaps[0].item_id == "TASK-VT-001"
-    assert "References non-existent requirement: REQ-VT-999" in res.gaps[0].reason
-
-
-def test_references_non_existent_acceptance_criterion_forms_gap(task_loader):
-    """
-    Validate that referencing a non-existent AC ID generates a gap.
-    Covers: DOD-VT-007-02.
-    """
-    prd_res = get_mock_prd_result()
-    tasks = [
-        {
-            "task_id": "TASK-VT-001",
-            "title": "Task Referencing Bad AC",
-            "phase_id": "PHASE-VT-001",
-            "priority": "must",
-            "status": "todo",
-            "owner_role": "AI Coding Agent",
-            "objective": "Task objective",
-            "related_modules": ["MOD-VT-001"],
-            "related_requirements": ["REQ-VT-001"],
-            "related_acceptance_criteria": ["AC-VT-001-99"],  # Non-existent AC
-            "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
-        }
-    ]
-    data = get_valid_task_list_dict(tasks)
-    res = task_loader.validate_data(data, prd_result=prd_res)
-
-    assert res.is_valid is False
-    assert res.tasks[0].is_valid is False
-    assert any(
-        "References non-existent acceptance criterion: AC-VT-001-99" in err
-        for err in res.tasks[0].errors
-    )
-    assert len(res.gaps) == 1
-    assert res.gaps[0].item_id == "TASK-VT-001"
-    assert (
-        "References non-existent acceptance criterion: AC-VT-001-99"
-        in res.gaps[0].reason
-    )
-
-
-def test_inverse_relationship_mismatch_forms_gap(task_loader):
-    """
-    Validate that referencing an AC but missing its parent requirement in related_requirements generates a gap.
-    Covers: DOD-VT-007-02.
-    """
-    prd_res = get_mock_prd_result()
-    tasks = [
-        {
-            "task_id": "TASK-VT-001",
-            "title": "Task with Mismatched Parent",
-            "phase_id": "PHASE-VT-001",
-            "priority": "must",
-            "status": "todo",
-            "owner_role": "AI Coding Agent",
-            "objective": "Task objective",
-            "related_modules": ["MOD-VT-001"],
-            "related_requirements": ["REQ-VT-002"],  # Missing REQ-VT-001
-            "related_acceptance_criteria": ["AC-VT-001-01"],  # Belongs to REQ-VT-001
-            "definition_of_done": [{"dod_id": "DOD-VT-001-01", "description": "Done."}],
-        }
-    ]
-    data = get_valid_task_list_dict(tasks)
-    res = task_loader.validate_data(data, prd_result=prd_res)
-
-    assert res.is_valid is False
-    assert res.tasks[0].is_valid is False
-    assert any(
-        "parent requirement REQ-VT-001 is missing from related_requirements" in err
-        for err in res.tasks[0].errors
-    )
-    assert len(res.gaps) == 1
-    assert res.gaps[0].item_id == "TASK-VT-001"
-    assert "parent requirement REQ-VT-001 is missing" in res.gaps[0].reason
-
-
 def test_validate_real_files_load(task_loader):
     """
-    Validate loading the real task_list.json file and parsing it with the real prd.md.
+    Validate loading the real task_list.json file.
     Covers: AC-VT-001-01, AC-VT-001-04, DOD-VT-007-03.
     """
     task_list_path = DOCS_DIR / "task_list.json"
-    prd_path = DOCS_DIR / "prd.md"
 
-    if not task_list_path.exists() or not prd_path.exists():
+    if not task_list_path.exists():
         pytest.skip("Real standard input files do not exist.")
 
-    from vibe_tracing.infra.loader.prd_parser import PrdParser
+    res = task_loader.load_and_validate(task_list_path)
 
-    prd_parser = PrdParser()
-    prd_res = prd_parser.parse_file(prd_path)
-    assert prd_res.is_valid is True
-
-    res = task_loader.load_and_validate(task_list_path, prd_result=prd_res)
-
-    # The real task_list.json has id_rules.all_tasks_must_link_requirements_and_acceptance_criteria=true,
-    # and some tasks (e.g. TASK-VT-036, TASK-VT-042) have REQ but no AC.
-    # Under the new AND logic, these are correctly flagged as invalid.
     assert len(res.tasks) > 0
-    # Verify the strict-link rule is enforced on real data
-    req_only_tasks = [
-        t for t in res.tasks
-        if t.related_requirements and not t.related_acceptance_criteria
-    ]
-    if req_only_tasks:
-        assert res.is_valid is False
-        for t in req_only_tasks:
-            assert t.is_valid is False
-            assert any("缺少验收标准关联" in e for e in t.errors)
-    else:
-        assert res.is_valid is True, f"Real files load failed: {res.errors}"
+    assert res.is_valid is True, f"Real files load failed: {res.errors}"
 
 def test_strict_link_rejects_req_only_task(task_loader):
     """

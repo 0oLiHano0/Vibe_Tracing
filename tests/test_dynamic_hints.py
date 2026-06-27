@@ -120,32 +120,12 @@ def test_task_loader_logical_validation_error_with_dynamic_hints(tmp_path):
     assert "【修复指南】" in error_msg
 
 
-def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
-    """Test that cross-reference validation error in ClaimLoader dynamically appends Chinese hint."""
-    # Create task_list with one task
-    task_list_data = {
-        "schema_version": "0.1",
-        "project": {"project_id": "PROJECT-VT", "name": "Test", "stage": "mvp"},
-        "tasks": [
-            {
-                "task_id": "TASK-VT-001",
-                "title": "Test",
-                "phase_id": "PHASE-VT-001",
-                "priority": "must",
-                "status": "todo",
-                "owner_role": "AI",
-                "objective": "Test",
-                "related_requirements": [],
-                "related_acceptance_criteria": [],
-                "definition_of_done": [],
-            }
-        ],
-    }
-    # Claim references a non-existent task
+def test_claim_loader_loads_valid_claims(tmp_path):
+    """Test that ClaimLoader loads valid claims without errors."""
     data = [
         {
             "claim_id": "CLAIM-VT-001",
-            "related_task": "TASK-VT-999",  # Does not exist in task_list
+            "related_task": "TASK-VT-001",
             "timestamp": "2026-05-31T10:00:00Z",
         },
     ]
@@ -155,17 +135,11 @@ def test_claim_loader_logical_validation_error_with_dynamic_hints(tmp_path):
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(data, f)
 
-    from vibe_tracing.infra.loader.task_loader import TaskLoader
-    task_loader = TaskLoader()
-    task_res = task_loader.load_and_validate(None, content=task_list_data)
-
     loader = ClaimLoader()
-    res = loader.load(tmp_path / "claims", task_result=task_res)
-    assert res.is_valid is False
-
-    error_msg = "; ".join(res.errors)
-    assert "TASK-VT-999" in error_msg
-    assert "non-existent task" in error_msg.lower() or "不存在" in error_msg
+    res = loader.load(tmp_path / "claims")
+    assert res.is_valid is True
+    assert len(res.claims) == 1
+    assert res.claims[0].claim_id == "CLAIM-VT-001"
 
 
 def test_silent_filtering_of_template_records(tmp_path):
@@ -236,7 +210,7 @@ def test_silent_filtering_of_template_records(tmp_path):
         json.dump(claim_data, f)
 
     claim_loader = ClaimLoader()
-    claim_res = claim_loader.load(tmp_path / "claims", task_res)
+    claim_res = claim_loader.load(tmp_path / "claims")
 
     parsed_cids = [c.claim_id for c in claim_res.claims]
     assert "CLAIM-VT-001" in parsed_cids

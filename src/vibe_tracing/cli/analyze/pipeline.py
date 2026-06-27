@@ -126,9 +126,8 @@ def _load_context(
     if task_list_record and task_list_record.status == "ok":
         task_list_path = Path(task_list_record.file_path)
         task_loader = TaskLoader()
-        arch_data = constraints_record.content if constraints_record and constraints_record.status == "ok" else None
         task_res = task_loader.load_and_validate(
-            task_list_path, prd_res, arch_data=arch_data, content=task_list_record.content
+            task_list_path, content=task_list_record.content
         )
         if not task_res.is_valid:
             print(
@@ -139,11 +138,11 @@ def _load_context(
 
     # Load claims
     claims_list = []
-    if claims_record and claims_record.status == "ok" and task_res:
+    if claims_record and claims_record.status == "ok":
         claims_path = Path(claims_record.file_path)
         claim_loader = ClaimLoader()
         claim_res_loader = claim_loader.load(
-            claims_path, task_res, content=claims_record.content
+            claims_path, content=claims_record.content
         )
         if not claim_res_loader.is_valid:
             print(
@@ -207,7 +206,7 @@ def run_analyze(
     try:
         # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
         from vibe_tracing.infra.logging.logger import OperationalLogger
-        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_prd
+        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_prd, load_architecture_constraints
         _run_start_t = time.perf_counter()
 
         # ── 阶段 1：加载输入 ──────────────────────────────────────────────
@@ -258,10 +257,7 @@ def run_analyze(
             print("  ℹ Rule 3-8 (AC coverage, test results, compliance): Requires full analysis")
             return 0
 
-        # ── 阶段 3：创建内存数据库 ──────────────────────────────────
-        conn = init_in_memory_db()
-
-        # ── 阶段 4：执行验证工具 ──────────────────────────────────
+        # ── 阶段 3：执行验证工具 ──────────────────────────────────
         _t_tools = time.perf_counter()
         tool_evidence = _execute_tools(ctx, project_root)
         # tool_evidence is a pipeline-local variable, NOT stored in ctx
@@ -271,6 +267,9 @@ def run_analyze(
                        tools_executed=len(tool_evidence),
                        )
 
+        # ── 阶段 4：创建内存数据库 ──────────────────────────────────
+        conn = init_in_memory_db()
+
         # ── 阶段 5：灌入基础数据（load_prd 必须先于 load_tasks/load_claims）──
         # load_prd 将 requirements + acceptance_criteria 写入 DB，
         # 是 check_requirement_coverage 和 check_ac_coverage 新模式的前置依赖。
@@ -279,6 +278,8 @@ def run_analyze(
             load_tasks(conn, [t.__dict__ for t in ctx.task_result.tasks])
         if ctx.claims_list:
             load_claims(conn, [c.__dict__ for c in ctx.claims_list])
+        if ctx.constraints:
+            load_architecture_constraints(conn, ctx.constraints)
 
         # ── 阶段 6：构建证据（EvidenceBuilder）────────────────────────────
         _t_build = time.perf_counter()
@@ -538,6 +539,11 @@ def _run_db_analysis(
         check_ghost_code,
         check_dangling_claims,
         check_coverage_violations,
+        check_invalid_task_requirements,
+        check_invalid_task_acs,
+        check_invalid_task_modules,
+        check_invalid_task_constraints,
+        check_invalid_ac_parent,
     )
     from vibe_tracing.domain.compliance.checker import ArchitectureComplianceChecker
     from vibe_tracing.domain.risk.advisor import RiskAdvisor
@@ -552,6 +558,13 @@ def _run_db_analysis(
     ghost_files = check_ghost_code(conn)
     dangling_claims_list = check_dangling_claims(conn)
     cov_violations = check_coverage_violations(conn)
+
+    # Invalid task reference queries
+    invalid_task_reqs = check_invalid_task_requirements(conn)
+    invalid_task_acs_list = check_invalid_task_acs(conn)
+    invalid_task_mods = check_invalid_task_modules(conn)
+    invalid_task_consts = check_invalid_task_constraints(conn)
+    invalid_ac_parents = check_invalid_ac_parent(conn)
 
     # Convert db results to gap format
     merged_gaps = _db_result_to_gaps(req_coverage, ac_coverage, claim_evidence)
@@ -612,6 +625,13 @@ def _run_db_analysis(
         "dangling_claims": dangling_claims_list,
         "claim_evidence_gaps": claim_evidence,
         "cov_violations": cov_violations,
+        "invalid_task_references": {
+            "invalid_requirements": invalid_task_reqs,
+            "invalid_acs": invalid_task_acs_list,
+            "invalid_modules": invalid_task_mods,
+            "invalid_constraints": invalid_task_consts,
+            "invalid_ac_parents": invalid_ac_parents,
+        },
     }
 
     return merged_gaps, final_risks, compliance_res, analysis_details
@@ -697,6 +717,7 @@ def _run_gate_evaluation(
     dangling_claims: Optional[list] = None,
     claim_evidence_gaps: Optional[list] = None,
     cov_violations: Optional[list] = None,
+    analysis_details: Optional[dict] = None,
     incremental_only: bool = False,
     show_historical_debt: bool = True,
 ) -> dict:
@@ -739,6 +760,7 @@ def _run_gate_evaluation(
         dangling_claims=dangling_claims,
         claim_evidence_gaps=claim_evidence_gaps,
         cov_violations=cov_violations,
+        invalid_task_references=analysis_details.get("invalid_task_references") if analysis_details else None,
     )
     hd_applied = gate_res.get("human_decisions_applied", 0)
     if hd_applied > 0:
@@ -806,6 +828,7 @@ def _evaluate_and_output(
         dangling_claims=analysis_details.get("dangling_claims"),
         claim_evidence_gaps=analysis_details.get("claim_evidence_gaps"),
         cov_violations=analysis_details.get("cov_violations"),
+        analysis_details=analysis_details,
         incremental_only=incremental_only,
         show_historical_debt=show_historical_debt,
     )

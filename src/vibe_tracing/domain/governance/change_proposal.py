@@ -45,8 +45,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from vibe_tracing.infra import validation as ids
-from vibe_tracing.infra.git.utils import git_show
-from vibe_tracing.infra.governance.loader import read_constraints_file, read_constraints_json
 from vibe_tracing.infra.loader.config import resolve_path
 
 
@@ -58,6 +56,7 @@ class ArchitectureChangeProposalEngine:
         project_root: Path,
         config_data: dict,
         constraints_path: Optional[Path] = None,
+        constraints_data: Optional[dict] = None,
         schema_validator: Optional[Any] = None,
         proposals_dir: Optional[Path] = None,
     ) -> None:
@@ -66,9 +65,24 @@ class ArchitectureChangeProposalEngine:
         self.constraints_path = constraints_path or resolve_path(
             project_root, config_data, "architecture_constraints"
         )
+        self.constraints_data = constraints_data
 
         # Resolve change log path
         self.change_log_path = self.project_root / "docs/architecture_change_log.md"
+
+    def _git_show(self, commit: str, path: str) -> Optional[str]:
+        """Read file content at a specific Git commit (inline of infra/git/utils.git_show)."""
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["git", "show", f"{commit}:{path}"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+            )
+            return result.stdout if result.returncode == 0 else None
+        except Exception:
+            return None
 
     def _compare_lists_by_id(
         self, base_list: list, current_list: list, id_key: str, category_path: str
@@ -219,8 +233,12 @@ class ArchitectureChangeProposalEngine:
         if constraints_hash:
             current_hash = constraints_hash
         else:
-            _, current_hash = read_constraints_file(self.constraints_path)
-            if current_hash is None:
+            import hashlib
+            try:
+                current_hash = hashlib.sha256(
+                    self.constraints_path.read_bytes()
+                ).hexdigest()
+            except OSError:
                 return _empty_result()
         if current_hash == stored_hash:
             # No drift — fast path.
@@ -248,9 +266,7 @@ class ArchitectureChangeProposalEngine:
             return _empty_result()
 
         # Step 4: Reconstruct baseline via git show, parse both as JSON.
-        base_content = git_show(
-            finalize_commit, finalize_constraints_path, self.project_root
-        )
+        base_content = self._git_show(finalize_commit, finalize_constraints_path)
         if base_content is None:
             warn = "请运行 vt finalize"
             warnings.append(warn)
@@ -268,7 +284,7 @@ class ArchitectureChangeProposalEngine:
             return _empty_result()
 
         base_data = json.loads(base_content)
-        curr_data = read_constraints_json(self.constraints_path)
+        curr_data = self.constraints_data or json.loads(self.constraints_path.read_text(encoding="utf-8"))
         if curr_data is None:
             return _empty_result()
 

@@ -181,6 +181,7 @@ def _render_dashboard(
         # Get proposal status (cli layer calls domain layer)
         prop_engine = ArchitectureChangeProposalEngine(
             project_root, config_data=ctx.config,
+            constraints_data=ctx.constraints,
         )
         try:
             prop_res = prop_engine.check_governance(

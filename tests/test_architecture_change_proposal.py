@@ -173,7 +173,7 @@ def test_hash_mismatch_git_show_fails(proj):
 
     config = _write_config(proj, "different_hash_value", git_commit="deadbeef")
 
-    with patch("vibe_tracing.domain.governance.change_proposal.git_show", return_value=None):
+    with patch("vibe_tracing.domain.governance.change_proposal.ArchitectureChangeProposalEngine._git_show", return_value=None):
         engine = ArchitectureChangeProposalEngine(proj, config_data=config)
         res = engine.check_governance()
 
@@ -214,7 +214,7 @@ def test_hash_mismatch_with_diff(proj):
     # git_show returns the BASE version (original)
     base_content = json.dumps(BASE_CONSTRAINTS, indent=2)
 
-    with patch("vibe_tracing.domain.governance.change_proposal.git_show", return_value=base_content):
+    with patch("vibe_tracing.domain.governance.change_proposal.ArchitectureChangeProposalEngine._git_show", return_value=base_content):
         engine = ArchitectureChangeProposalEngine(proj, config_data=config)
         res = engine.check_governance()
 
@@ -247,7 +247,7 @@ def test_hash_mismatch_format_change_only(proj):
     # git_show returns the base with different formatting but same rules
     base_content = json.dumps(BASE_CONSTRAINTS, indent=2)
 
-    with patch("vibe_tracing.domain.governance.change_proposal.git_show", return_value=base_content):
+    with patch("vibe_tracing.domain.governance.change_proposal.ArchitectureChangeProposalEngine._git_show", return_value=base_content):
         engine = ArchitectureChangeProposalEngine(proj, config_data=config)
         res = engine.check_governance()
 
@@ -415,7 +415,7 @@ def test_self_governance_rules_contract(tmp_path):
     )
 
     with patch(
-        "vibe_tracing.domain.governance.change_proposal.git_show",
+        "vibe_tracing.domain.governance.change_proposal.ArchitectureChangeProposalEngine._git_show",
         return_value=json.dumps(base_constraints),
     ):
         proposal = ArchitectureChangeProposalEngine(tmp_path, config_data=config, constraints_path=constraints_path)

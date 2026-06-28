@@ -1252,36 +1252,6 @@ def test_format_agent_actions_with_violations():
 
 
 # =========================================================================
-# Tests for _check_staged_extensions
-# =========================================================================
-
-def test_check_staged_extensions_no_constraints():
-    """Test _check_staged_extensions does nothing without constraints."""
-    from vibe_tracing.cli.analyze.tools import _check_staged_extensions
-
-    # Should not raise
-    _check_staged_extensions(Path("/fake"), None)
-
-
-def test_check_staged_extensions_empty_ltm():
-    """Test _check_staged_extensions does nothing with empty ltm."""
-    from vibe_tracing.cli.analyze.tools import _check_staged_extensions
-
-    constraints = {"language_tool_matrix": {}}
-    _check_staged_extensions(Path("/fake"), constraints)
-
-
-def test_check_staged_extensions_no_staged_files(tmp_path):
-    """Test _check_staged_extensions does nothing when no staged files."""
-    from vibe_tracing.cli.analyze.tools import _check_staged_extensions
-
-    constraints = {
-        "language_tool_matrix": {"python": {"extensions": [".py"]}}
-    }
-    _check_staged_extensions(tmp_path, constraints)
-
-
-# =========================================================================
 # Tests for main CLI parsing
 # =========================================================================
 
@@ -1502,18 +1472,6 @@ def test_run_finalize_language_not_in_matrix(tmp_path, capsys):
     assert exit_code == 1
     captured = capsys.readouterr()
     assert "not found in language_tool_matrix" in captured.err
-
-
-# =========================================================================
-# Tests for _get_staged_files
-# =========================================================================
-
-def test_get_staged_files_no_git(tmp_path):
-    """Test _get_staged_files returns empty set when not in git repo."""
-    from vibe_tracing.infra.git.utils import get_staged_files as _get_staged_files
-
-    result = _get_staged_files(tmp_path)
-    assert result == set()
 
 
 # =========================================================================

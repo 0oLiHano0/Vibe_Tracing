@@ -275,7 +275,7 @@ is_draft: false                     # 是否草稿模式 (prd_res.status == "dra
 
 | 下游模块 | 目标包 | 说明 |
 |----------|--------|------|
-| **阶段 2** | `cli/analyze/gates.py` | 检查 staged 文件是否被 Claim 覆盖（幽灵代码检测） |
+| **阶段 2** | `domain/gate/claim_coverage.py` | 检查 staged 文件是否被 Claim 覆盖（幽灵代码检测） |
 | **阶段 5** | `infra/db/loaders.py` | 将 PRD、Tasks、Claims 写入内存 SQLite 数据库 |
 | **阶段 6** | `domain/evidence/builder.py` | 合并历史证据 + 本次工具结果，生成完整证据链 |
 | **阶段 7** | `infra/db/queries.py` | 用 SQL 查询数据库，找出所有"缺口"（包括新增的无效引用 SQL 校验） |

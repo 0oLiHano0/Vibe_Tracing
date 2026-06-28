@@ -2,19 +2,18 @@
 Tool execution and staged-file checks.
 """
 
-import subprocess
 import sys
 from pathlib import Path
 from typing import List, Optional, Set
 
 from vibe_tracing.domain.context import UnifiedContext
 from vibe_tracing.cli.analyze.exceptions import _GateBlocked
-from vibe_tracing.infra.git.utils import get_staged_files
 
 
 def _execute_tools(
     ctx: UnifiedContext,
     project_root: Path,
+    staged_files: Optional[Set[str]] = None,
 ) -> List:
     """Execute validation tools and return tool evidence candidates.
 
@@ -116,22 +115,9 @@ def _execute_tools(
         return []
 
     # Filter to only staged files (EVO-TASK-016)
-    try:
-        staged_result = subprocess.run(
-            ["git", "diff", "--cached", "--name-only"],
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if staged_result.returncode == 0 and staged_result.stdout.strip():
-            staged_files = set(
-                f for f in staged_result.stdout.splitlines() if f.strip()
-            )
-            test_paths = [p for p in test_paths if p in staged_files]
-            source_paths = [p for p in source_paths if p in staged_files]
-    except Exception:
-        pass  # If git is unavailable or fails, run on all paths (fallback)
+    if staged_files is not None:
+        test_paths = [p for p in test_paths if p in staged_files]
+        source_paths = [p for p in source_paths if p in staged_files]
 
     total_paths = len(test_paths) + len(source_paths)
     if total_paths == 0:
@@ -186,65 +172,3 @@ def _execute_tools(
                 )
     print(f"Tool execution complete: {executed_count} evidence candidates ({blocked_count} blocked)")
     return tool_evidence_candidates
-
-
-def _check_staged_extensions(project_root: Path, constraints: Optional[dict], config_language: Optional[str] = None) -> None:
-    """Warn about staged code files whose extensions are not in any language's tool configuration.
-
-    Only checks extensions that have actual tool configurations (test/lint/type_check/security),
-    not bare extension declarations. This avoids false warnings for non-code files (.md, .json, .html, etc.).
-
-    This is a WARNING-only check: it does not block the analysis pipeline.
-    """
-    if not constraints:
-        return
-
-    ltm = constraints.get("language_tool_matrix", {})
-    # Collect all extensions that have actual tool configurations
-    tool_configured_exts: Set[str] = set()
-    for lang_config in ltm.values():
-        if not isinstance(lang_config, dict):
-            continue
-        lang_exts = lang_config.get("extensions", [])
-        # Only include extensions from languages that have at least one tool configured
-        has_tools = any(
-            lang_config.get(cat)
-            for cat in ("test", "lint", "type_check", "security", "coverage")
-            if isinstance(lang_config.get(cat), dict)
-        )
-        if has_tools:
-            tool_configured_exts.update(lang_exts)
-
-    if not tool_configured_exts:
-        return
-
-    try:
-        staged_files_set = get_staged_files(project_root)
-        staged_files = list(staged_files_set)
-    except Exception:
-        return
-
-    if not staged_files:
-        return
-
-    unrecognized: Set[str] = set()
-    for staged_file in staged_files:
-        ext = Path(staged_file).suffix
-        # Only warn about extensions that look like code but aren't configured
-        if ext and ext not in tool_configured_exts:
-            # Check if this extension is registered in ANY language (even without tools)
-            # If so, it's a known non-code type — skip warning
-            is_known_non_code = any(
-                ext in lang_config.get("extensions", [])
-                for lang_config in ltm.values()
-                if isinstance(lang_config, dict)
-            )
-            if not is_known_non_code:
-                unrecognized.add(ext)
-
-    for ext in sorted(unrecognized):
-        print(
-            f"WARNING: 发现未配置的代码文件类型 {ext}，"
-            "请更新 architecture_constraints.json 的 language_tool_matrix 并通过 vt finalize 锁定。",
-            file=sys.stderr,
-        )

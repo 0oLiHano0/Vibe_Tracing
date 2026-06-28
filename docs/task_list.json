@@ -7190,6 +7190,539 @@
         "doctor.py 和 prd_arch_validator.py 改为 prd_path.read_text() + prd_parser.parse_text(text)。",
         "test_validate_real_files_load 测试改为直接调用 validate_data()，或删除（集成测试职责不在 loader 层）。"
       ]
+    },
+    {
+      "task_id": "TASK-VT-131",
+      "title": "新建 domain/gate/claim_coverage.py — 阶段二纯业务逻辑",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将阶段二的幽灵代码检测、任务覆盖检查、AC 新鲜度检查从 GhostCodeReconciler（含 DB + 磁盘 I/O）重构为纯内存 set 操作的 domain 层模块。",
+      "atomic_scope": "1. 新建 domain/gate/claim_coverage.py；2. 定义 ClaimCoverageResult dataclass（ghost_files: set, task_coverage_blocked: list, ac_freshness_warnings: list, is_pass property）；3. 实现 check_claim_coverage(ctx, staged_files, project_root) 主函数；4. 实现内部辅助函数：_filter_business_files（白名单 + 治理边界过滤）、_detect_ghost_files（set 差集，code_refs 去除 # 后缀）、_check_task_coverage（dataclass 访问）、_check_ac_freshness（遍历 ctx.prd.requirements）；5. 处理 nullable guard（task_result=None 跳过、constraints=None 返回默认边界）；6. 不做日志记录、不创建 DB、不读磁盘。",
+      "out_of_scope": [
+        "不修改 pipeline.py（步骤 2）",
+        "不删除 GhostCodeReconciler（步骤 3）",
+        "不写测试（步骤 8）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006",
+        "PRINCIPLE-VT-007"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/gate/claim_coverage.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-131-01",
+          "description": "ClaimCoverageResult dataclass 定义完成，含 ghost_files、task_coverage_blocked、ac_freshness_warnings 字段和 is_pass 属性。"
+        },
+        {
+          "dod_id": "DOD-VT-131-02",
+          "description": "check_claim_coverage 函数接受 (ctx, staged_files, project_root) 参数，返回 ClaimCoverageResult。"
+        },
+        {
+          "dod_id": "DOD-VT-131-03",
+          "description": "幽灵代码检测使用 set 差集，code_refs 含 # 后缀时正确去除。"
+        },
+        {
+          "dod_id": "DOD-VT-131-04",
+          "description": "task_result=None 时跳过任务覆盖和 AC 新鲜度检查，不抛异常。"
+        },
+        {
+          "dod_id": "DOD-VT-131-05",
+          "description": "constraints=None 时 load_boundary 返回默认空边界。"
+        },
+        {
+          "dod_id": "DOD-VT-131-06",
+          "description": "模块内无 import OperationalLogger、无 subprocess、无 sqlite3、无 Path.read_text。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "Claim dataclass：claim.related_task (str), claim.code_refs (List[str])，定义于 infra/loader/claim_loader.py:12。",
+        "Task dataclass：task.task_id (str), task.related_acceptance_criteria (List[str])，定义于 infra/loader/task_loader.py:23。",
+        "PrdParseResult：ctx.prd.requirements → req.acceptance_criteria → ac.ac_id，定义于 infra/loader/prd_parser.py:28。",
+        "load_boundary 接受 constraints_data 参数，ctx.constraints 为 None 时返回默认空边界，定义于 infra/config/boundary.py:24。",
+        "is_in_scope 接受 (filepath, boundary) 参数，定义于 infra/config/boundary.py:49。",
+        "白名单路径从 ctx.config 通过 resolve_path 构建（仅路径构建，不读文件）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-132",
+      "title": "pipeline.py 阶段二重构：内联 + 删除 gates_only + 统一 staged_files",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将阶段二调度逻辑内联到 pipeline.py，删除 gates_only 模式，统一 staged_files 获取（一次 subprocess，阶段 2/3 共用）。",
+      "atomic_scope": "1. 删除 gates.py 文件；2. pipeline.py 删除 from gates import；3. pipeline.py 删除 gates_only 参数、分支、日志字段；4. main.py 删除 --gates-only argparse 参数和传参；5. pipeline.py 阶段 2 内联：staged_files 获取（try/except + warning 日志）+ 调用 check_claim_coverage + stderr 输出 + phase_end 日志；6. staged_files 作为局部变量传递给阶段 3 _execute_tools()；7. 删除 pipeline.py 中重复的 _get_staged_files 调用（原 line 305）。",
+      "out_of_scope": [
+        "不修改 claim_coverage.py（步骤 1）",
+        "不删除 GhostCodeReconciler（步骤 3）",
+        "不修改 tests（步骤 8）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006",
+        "PRINCIPLE-VT-007"
+      ],
+      "depends_on": [
+        "TASK-VT-131"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/pipeline.py",
+        "src/vibe_tracing/cli/main.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-132-01",
+          "description": "gates.py 文件不存在。"
+        },
+        {
+          "dod_id": "DOD-VT-132-02",
+          "description": "pipeline.py 中无 gates_only 参数和相关分支。"
+        },
+        {
+          "dod_id": "DOD-VT-132-03",
+          "description": "main.py 中无 --gates-only CLI 参数。"
+        },
+        {
+          "dod_id": "DOD-VT-132-04",
+          "description": "staged_files 在阶段 2 获取一次，阶段 3 复用，无重复 subprocess 调用。"
+        },
+        {
+          "dod_id": "DOD-VT-132-05",
+          "description": "staged_files 获取失败时 vt_logger.warning 记录日志并降级为空集合。"
+        },
+        {
+          "dod_id": "DOD-VT-132-06",
+          "description": "阶段 2 phase_end 日志包含 staged_files_count 字段。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "check_claim_coverage 从 domain/gate/claim_coverage.py 导入。",
+        "staged_files 获取的 inline 代码需包含 try/except Exception，降级为 set()。",
+        "vt_logger 在阶段 1 已初始化，阶段 2 直接使用。",
+        "_execute_tools 需接受 staged_files 参数（或保持现有签名但内部不再调用 get_staged_files）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-133",
+      "title": "删除 GhostCodeReconciler",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除 domain/governance/ghost_code.py，清理 domain/governance/__init__.py 中的导出。",
+      "atomic_scope": "1. 删除 src/vibe_tracing/domain/governance/ghost_code.py；2. 修改 domain/governance/__init__.py：删除 GhostCodeReconciler 的 import 和 __all__ 条目，仅保留 ArchitectureChangeProposalEngine。",
+      "out_of_scope": [
+        "不修改 change_proposal.py",
+        "不删除 infra/governance/（步骤 6）",
+        "不修改 tests（步骤 8）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-132"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/governance/__init__.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-133-01",
+          "description": "domain/governance/ghost_code.py 文件不存在。"
+        },
+        {
+          "dod_id": "DOD-VT-133-02",
+          "description": "domain/governance/__init__.py 仅导出 ArchitectureChangeProposalEngine。"
+        },
+        {
+          "dod_id": "DOD-VT-133-03",
+          "description": "pipeline.py 中无对 GhostCodeReconciler 的 import。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "GhostCodeReconciler 的唯一调用方是 gates.py（已删除），可安全删除。",
+        "domain/governance/__init__.py 的 __all__ 改为 ['ArchitectureChangeProposalEngine']。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-134",
+      "title": "重构 change_proposal.py 接受 constraints_data 参数",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "让 ArchitectureChangeProposalEngine 接受 constraints_data 参数，消除 check_governance 中对 read_constraints_json 的磁盘读取。",
+      "atomic_scope": "1. __init__ 新增 constraints_data: Optional[dict] = None 参数，存储为 self.constraints_data；2. check_governance 内部 line 271 改为 self.constraints_data or json.loads(self.constraints_path.read_text(...))；3. 删除 from infra.governance.loader import read_constraints_file, read_constraints_json；4. 更新 reports.py 调用方传入 constraints_data=ctx.constraints；5. 更新 compliance/checker.py 调用方传入 constraints_data=self.constraints_data。",
+      "out_of_scope": [
+        "不修改 finalize.py（仅调用 _find_differences，不调用 check_governance）",
+        "不删除 infra/governance/（步骤 6）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006",
+        "PRINCIPLE-VT-007"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/governance/change_proposal.py",
+        "src/vibe_tracing/cli/analyze/reports.py",
+        "src/vibe_tracing/domain/compliance/checker.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-134-01",
+          "description": "ArchitectureChangeProposalEngine.__init__ 接受 constraints_data 可选参数。"
+        },
+        {
+          "dod_id": "DOD-VT-134-02",
+          "description": "check_governance 在 constraints_data 存在时不调用 read_constraints_json。"
+        },
+        {
+          "dod_id": "DOD-VT-134-03",
+          "description": "change_proposal.py 中无 from infra.governance.loader import 语句。"
+        },
+        {
+          "dod_id": "DOD-VT-134-04",
+          "description": "reports.py 和 compliance/checker.py 调用时传入 constraints_data。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "check_governance line 271 原代码：curr_data = read_constraints_json(self.constraints_path)。",
+        "改为：curr_data = self.constraints_data or json.loads(self.constraints_path.read_text(encoding='utf-8'))。",
+        "reports.py line 182：ArchitectureChangeProposalEngine(project_root, config_data=ctx.config, constraints_data=ctx.constraints)。",
+        "compliance/checker.py line 695：ArchitectureChangeProposalEngine(self.project_root, config_data=self.config_data, constraints_data=self.constraints_data)。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-135",
+      "title": "删除 infra/governance/ 包",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除 infra/governance/loader.py 和 infra/governance/__init__.py，所有函数均已变为死代码。",
+      "atomic_scope": "1. 删除 src/vibe_tracing/infra/governance/loader.py；2. 删除 src/vibe_tracing/infra/governance/__init__.py；3. 确认无其他模块 import from vibe_tracing.infra.governance。",
+      "out_of_scope": [
+        "不修改 change_proposal.py（步骤 4 已完成）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-133",
+        "TASK-VT-134"
+      ],
+      "expected_deliverables": [],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-135-01",
+          "description": "infra/governance/ 目录不存在。"
+        },
+        {
+          "dod_id": "DOD-VT-135-02",
+          "description": "grep -rn 'from vibe_tracing.infra.governance' src/ 返回空结果。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "确认 TASK-VT-133（删除 GhostCodeReconciler）和 TASK-VT-134（change_proposal 移除 import）已完成。",
+        "loader.py 中 6 个函数：read_claims_from_filesystem、read_task_list、read_prd_ac_ids、check_prd_exists（被 GhostCodeReconciler 使用，已删除）、read_constraints_file、read_constraints_json（被 change_proposal 使用，已移除 import）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-136",
+      "title": "Git 工具函数 inline 到调用方，删除 infra/git/ 包",
+      "phase_id": "PHASE-VT-011",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 get_staged_files、git_show、git_has_uncommitted_changes inline 到各自调用方，删除 infra/git/ 包。",
+      "atomic_scope": "1. finalize.py：inline git_show 和 git_has_uncommitted_changes（含 try/except + OperationalLogger.get().exception 日志）；2. change_proposal.py：inline git_show（含 try/except + OperationalLogger.get().exception 日志）；3. 删除 infra/git/utils.py 和 infra/git/__init__.py；4. 删除 tests/test_git_utils.py；5. 删除 tests/test_cli_analyze.py 中的 test_get_staged_files_no_git 函数。",
+      "out_of_scope": [
+        "不修改 pipeline.py（步骤 2 已处理 staged_files inline）",
+        "不修改 tools.py（staged_files 由 pipeline 传入）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-132"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/finalize.py",
+        "src/vibe_tracing/domain/governance/change_proposal.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-136-01",
+          "description": "infra/git/ 目录不存在。"
+        },
+        {
+          "dod_id": "DOD-VT-136-02",
+          "description": "finalize.py 中无 from vibe_tracing.infra.git.utils import 语句。"
+        },
+        {
+          "dod_id": "DOD-VT-136-03",
+          "description": "change_proposal.py 中无 from vibe_tracing.infra.git.utils import 语句。"
+        },
+        {
+          "dod_id": "DOD-VT-136-04",
+          "description": "git_show inline 后保持 try/except + vt_logger.exception('git_show_error', ...) 日志和 None 降级。"
+        },
+        {
+          "dod_id": "DOD-VT-136-05",
+          "description": "git_has_uncommitted_changes inline 后保持 try/except + vt_logger.exception 日志和 False 降级。"
+        },
+        {
+          "dod_id": "DOD-VT-136-06",
+          "description": "tests/test_git_utils.py 不存在。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "git_show 原实现：subprocess.run(['git', 'show', f'{commit}:{path}'], cwd=cwd, capture_output=True, text=True)，成功返回 stdout，失败返回 None。",
+        "git_has_uncommitted_changes 原实现：两次 subprocess.run（git diff --name-only + git diff --cached --name-only），任一有输出返回 True。",
+        "日志事件名：git_show_error、git_uncommitted_check_error（snake_case，与现有 git_utils_error 风格一致）。",
+        "finalize.py 中 git_show 的 import 在函数内部（line 68），inline 后删除该 import。",
+        "change_proposal.py 中 git_show 的 import 在模块顶部（line 48），inline 后删除该 import。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-137",
+      "title": "重写阶段二测试",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除 test_ghost_code_reconciler.py，新建 test_stage2_claim_coverage.py 测试新的 domain 层模块。",
+      "atomic_scope": "1. 删除 tests/test_ghost_code_reconciler.py；2. 新建 tests/test_stage2_claim_coverage.py；3. 测试用例覆盖：无 staged 代码通过、无 claims 阻断、claims 完全覆盖通过、claims 部分覆盖阻断、空 claims 阻断、白名单过滤、治理边界过滤、code_refs 含 # 锚点匹配、task_result=None 跳过、constraints=None 跳过、AC 新鲜度警告、非 pre-commit 跳过、is_pass 属性。",
+      "out_of_scope": [
+        "不修改 test_db_query_functions.py（阶段 7 DB 查询测试不受影响）",
+        "不修改 test_merge_gate_engine.py（阶段 8 门禁测试不受影响）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-131",
+        "TASK-VT-132",
+        "TASK-VT-136"
+      ],
+      "expected_deliverables": [
+        "tests/test_stage2_claim_coverage.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-137-01",
+          "description": "tests/test_ghost_code_reconciler.py 不存在。"
+        },
+        {
+          "dod_id": "DOD-VT-137-02",
+          "description": "tests/test_stage2_claim_coverage.py 存在且包含 ≥10 个测试用例。"
+        },
+        {
+          "dod_id": "DOD-VT-137-03",
+          "description": "测试使用 Claim/Task/PrdParseResult dataclass 构造输入，不依赖磁盘文件。"
+        },
+        {
+          "dod_id": "DOD-VT-137-04",
+          "description": "code_refs 含 # 锚点的测试用例通过。"
+        },
+        {
+          "dod_id": "DOD-VT-137-05",
+          "description": "task_result=None 和 constraints=None 的测试用例通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "测试构造 UnifiedContext 时直接传入 Claim/Task/PrdParseResult dataclass 实例。",
+        "Claim(claim_id='C1', related_task='T1', code_refs=['src/a.py#L42']) 构造含锚点的测试数据。",
+        "Task(task_id='T1', title='...', phase_id='P1', priority='must', status='done', owner_role='AI', objective='...') 构造任务数据。",
+        "PrdParseResult(requirements=[Requirement(req_id='R1', title='...', priority='must', category='functional', acceptance_criteria=[AcceptanceCriteria(ac_id='AC-1', title='...', is_testing_required=True)])]) 构造 PRD 数据。",
+        "Mock get_staged_files 已不需要（staged_files 作为参数传入 check_claim_coverage）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-138",
+      "title": "全量测试验证与 spec 文档同步",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "运行全量测试确认无回归，更新 spec_pipeline_stage_2.md 文档与实现一致。",
+      "atomic_scope": "1. pytest tests/ -v 全量通过；2. pytest tests/test_db_query_functions.py -v -k ghost 通过（阶段 7 DB 查询不受影响）；3. pytest tests/test_merge_gate_engine.py -v -k ghost 通过（阶段 8 门禁不受影响）；4. 更新 docs/spec_pipeline_stage_2.md：反映新的架构分层、数据来源、处理逻辑；5. 确认无遗留的 from vibe_tracing.infra.git import 和 from vibe_tracing.infra.governance import。",
+      "out_of_scope": [
+        "不修改业务代码（仅验证 + 文档更新）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-133",
+        "TASK-VT-134",
+        "TASK-VT-135",
+        "TASK-VT-136",
+        "TASK-VT-137"
+      ],
+      "expected_deliverables": [
+        "docs/spec_pipeline_stage_2.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-138-01",
+          "description": "pytest tests/ -v 全量通过（0 failures）。"
+        },
+        {
+          "dod_id": "DOD-VT-138-02",
+          "description": "grep -rn 'from vibe_tracing.infra.git' src/ tests/ 返回空结果（除已删除文件外）。"
+        },
+        {
+          "dod_id": "DOD-VT-138-03",
+          "description": "grep -rn 'from vibe_tracing.infra.governance' src/ tests/ 返回空结果（除已删除文件外）。"
+        },
+        {
+          "dod_id": "DOD-VT-138-04",
+          "description": "spec_pipeline_stage_2.md 反映新的 domain/gate/claim_coverage.py 架构。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "验证顺序：先跑新测试（test_stage2_claim_coverage.py），再跑 DB 测试（test_db_query_functions.py -k ghost），最后全量。",
+        "spec 文档需更新：输入来源（删除 GhostCodeReconciler 相关）、处理逻辑（Python set 操作）、输出结构（ClaimCoverageResult）、异常捕获（phase_end 日志）。",
+        "清理遗留 import 时注意 tests/ 目录也可能有旧 import。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-139",
+      "title": "更新设计文档与 spec 文档，确保与代码一致",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "重构完成后，更新 docs/refactoring_design.md 和 docs/spec_pipeline_stage_2.md，确保文档准确反映重构后的代码逻辑。",
+      "atomic_scope": "1. 更新 docs/refactoring_design.md §3 目标流水线：阶段二描述从 '_check_claim_coverage 调用 gates.py' 改为 '内联逻辑调用 domain/gate/claim_coverage.py'；删除 gates_only 相关描述；staged_files 统一获取描述；2. 更新 docs/spec_pipeline_stage_2.md：输入来源（删除 GhostCodeReconciler、infra/governance/loader、infra/git/utils 相关条目）、输入结构（ClaimCoverageResult 替代旧返回值）、处理逻辑（Python set 操作替代 DB 查询）、输出结构（ClaimCoverageResult dataclass）、异常捕获（phase_end 日志 + staged_files_unavailable 警告）、下游依赖（阶段 3 接收 staged_files 参数）；3. 检查 docs/ 下其他文档是否有对已删除模块的引用（ghost_code.py、gates.py、infra/governance/、infra/git/），如有则更新。",
+      "out_of_scope": [
+        "不修改业务代码或测试",
+        "不修改 pipeline_stage-2-refacting.md（规划文档，保留原始状态）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-138"
+      ],
+      "expected_deliverables": [
+        "docs/refactoring_design.md",
+        "docs/spec_pipeline_stage_2.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-139-01",
+          "description": "refactoring_design.md §3 阶段二描述与 pipeline.py 实际代码一致。"
+        },
+        {
+          "dod_id": "DOD-VT-139-02",
+          "description": "spec_pipeline_stage_2.md 的输入来源、处理逻辑、输出结构与 claim_coverage.py 实际代码一致。"
+        },
+        {
+          "dod_id": "DOD-VT-139-03",
+          "description": "spec_pipeline_stage_2.md 的异常捕获与日志部分反映 phase_end 事件和 staged_files_unavailable 警告。"
+        },
+        {
+          "dod_id": "DOD-VT-139-04",
+          "description": "docs/ 下无对已删除模块（ghost_code.py、gates.py、infra/governance/、infra/git/）的引用。"
+        },
+        {
+          "dod_id": "DOD-VT-139-05",
+          "description": "文档中的 YAML 示例数据结构与实际 dataclass 字段一致（ClaimCoverageResult、Claim、Task、PrdParseResult）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "refactoring_design.md §3 阶段二当前描述：'调用：_check_claim_coverage(ctx, project_root, is_pre_commit, staged_files)'，需改为新的内联逻辑。",
+        "spec_pipeline_stage_2.md 需重写大部分章节，参考实际代码而非照搬旧文档。",
+        "检查 docs/architecture_vision.md、docs/spec_infra_loader.md 等是否引用已删除模块。",
+        "pipeline_stage-2-refacting.md 是规划文档，记录的是'计划做什么'，不需要更新为'实际做了什么'。"
+      ]
     }
   ]
 }

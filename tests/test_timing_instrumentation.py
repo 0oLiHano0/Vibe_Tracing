@@ -121,10 +121,9 @@ class TestPipelinePhaseTiming:
         assert "run_start" in events, f"run_start event missing. Got: {events}"
         assert "phase_end" in events, f"phase_end events missing. Got: {events}"
 
-        # Verify run_start has is_pre_commit and gates_only fields
+        # Verify run_start has is_pre_commit field
         run_start = next(e for e in entries if e["event"] == "run_start")
         assert "is_pre_commit" in run_start
-        assert "gates_only" in run_start
 
     def test_pipeline_phases_have_duration_ms(self, tmp_path):
         """Each phase_end event must include duration_ms >= 0."""

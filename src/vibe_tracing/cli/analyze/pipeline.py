@@ -7,23 +7,23 @@ VT 分析流水线编排模块
 
 核心设计（与 refactoring_design.md §3 对齐）：
   1. 加载输入 (_load_context)
-  2. Claim 覆盖前置检查 (_check_claim_coverage)
-  3. 创建数据库 (init_in_memory_db)
-  4. 执行工具 (_execute_tools)
+  2. Claim 覆盖前置检查（domain/gate/claim_coverage.py）
+  3. 执行工具 (_execute_tools)
+  4. 创建数据库 (init_in_memory_db)
   5. 灌入基础数据 (load_prd + load_tasks + load_claims)
   6. 构建证据 (EvidenceBuilder.merge/apply/persist)
   7. 运行分析 (db.check_*)
   8. 门禁判定 + 输出
-  9. 返回退出码
 
 依赖关系：
   被 cli/main.py 通过 _dispatch() 调用。
-  调用以下模块：gates（门禁）、tools（工具执行）、
+  调用以下模块：tools（工具执行）、
   reports（报告）、output（渲染）、domain/evidence（证据构建）、
-  domain/gate（门禁判定）、infra/db（数据库）
+  domain/gate（门禁判定 + claim_coverage）、infra/db（数据库）
 """
 
 import json
+import subprocess
 import sys
 import time
 import uuid
@@ -40,10 +40,8 @@ from vibe_tracing.infra.loader.raw_input import RawInputLoader, STATUS_OK, STATU
 from vibe_tracing.infra.loader.prd_parser import PrdParser
 from vibe_tracing.infra.loader.task_loader import TaskLoader
 from vibe_tracing.infra.loader.claim_loader import ClaimLoader
-from vibe_tracing.infra.git.utils import get_staged_files as _get_staged_files
 from vibe_tracing.domain.gate.staleness import determine_affected_items as _determine_affected_items
 
-from vibe_tracing.cli.analyze.gates import _check_claim_coverage
 from vibe_tracing.cli.analyze.tools import _execute_tools
 from vibe_tracing.cli.analyze.reports import _build_report_document
 from vibe_tracing.cli.analyze.output import _render_output
@@ -167,7 +165,6 @@ def run_analyze(
     project_root: Path,
     output_dir: Optional[Path] = None,
     is_pre_commit: bool = False,
-    gates_only: bool = False,
     incremental_only: bool = False,
     show_historical_debt: bool = True,
 ) -> int:
@@ -177,21 +174,19 @@ def run_analyze(
         project_root: 项目根目录（由 cli/main.py 传入）
         output_dir:   输出目录（可选，默认从 config.json 读取）
         is_pre_commit: 是否为 Git pre-commit hook 模式
-        gates_only:   是否仅运行门禁（快速模式，跳过工具执行和分析）
         incremental_only: 是否只检查增量问题（历史债务不阻塞门禁）
         show_historical_debt: 是否在终端显示历史债务详情
     前置条件：
         项目已完成 vt finalize（config.json 存在且有效）
-    处理逻辑（9 个阶段）：
+    处理逻辑（8 个阶段）：
         1. _load_context：加载 PRD、Tasks、Claims、Config
-        2. _check_claim_coverage：Claim 覆盖前置检查
-        3. init_in_memory_db：创建内存数据库
-        4. _execute_tools：执行 pytest/ruff/bandit/coverage
+        2. Claim 覆盖前置检查（domain/gate/claim_coverage.py）
+        3. _execute_tools：执行 pytest/ruff/bandit/coverage
+        4. init_in_memory_db：创建内存数据库
         5. load_prd + load_tasks + load_claims：将数据灌入数据库
         6. EvidenceBuilder.merge/apply/persist：构建证据
         7. _run_db_analysis：运行分析（db.check_*）
         8. _evaluate_and_output：门禁判定 + 报告生成 + Dashboard 渲染
-        9. return exit_code
     输出：
         退出码：0=通过, 1=执行错误, 2=门禁 blocked
     """
@@ -215,7 +210,7 @@ def run_analyze(
         except Exception:
             vt_logger = OperationalLogger.get()
         vt_logger.info("run_start", "Analysis pipeline started",
-                       is_pre_commit=is_pre_commit, gates_only=gates_only)
+                       is_pre_commit=is_pre_commit)
         vt_logger.info("phase_end", "Load context completed",
                        phase="load_context",
                        duration_ms=int((time.perf_counter() - _t_ctx) * 1000),
@@ -229,29 +224,57 @@ def run_analyze(
 
         # ── 阶段 2：Claim 覆盖前置检查（Gate 2）────────────────────────
         _t_gates = time.perf_counter()
-        exit_code = _check_claim_coverage(
-            ctx, project_root, is_pre_commit, ctx.config_prefix,
-        )
+
+        # staged_files 获取（一次 subprocess，阶段 2/3/7 共用）
+        try:
+            _git_result = subprocess.run(
+                ["git", "diff", "--cached", "--name-only"],
+                cwd=project_root, capture_output=True, text=True, timeout=10,
+            )
+            staged_files = (
+                {f for f in _git_result.stdout.splitlines() if f.strip()}
+                if _git_result.returncode == 0 and _git_result.stdout.strip()
+                else set()
+            )
+        except Exception as exc:
+            vt_logger.warning("staged_files_unavailable",
+                              "Could not get staged files from git", exc=exc)
+            staged_files = set()
+
+        exit_code = None
+        if is_pre_commit:
+            from vibe_tracing.domain.gate.claim_coverage import check_claim_coverage
+            result = check_claim_coverage(ctx, staged_files, project_root)
+            if not result.is_pass:
+                if result.ghost_files:
+                    files_str = "\n".join(f"  - {f}" for f in sorted(result.ghost_files))
+                    print(
+                        "发现未经报备的幽灵代码！\n"
+                        f"{files_str}\n"
+                        "上述文件在本次提交中没有对应的【活跃发票】（Claim）。\n"
+                        "如果它是合法代码，请在 .vibetracing/claims/ 中创建或更新对应的 Claim 文件，"
+                        "并将其与代码一同提交。",
+                        file=sys.stderr,
+                    )
+                if result.task_coverage_blocked:
+                    print("\n".join(result.task_coverage_blocked), file=sys.stderr)
+                exit_code = 1
+            elif result.ac_freshness_warnings:
+                print("\n".join(result.ac_freshness_warnings), file=sys.stderr)
+
         vt_logger.info("phase_end", "Integrity gates completed",
                        phase="integrity_gates",
                        duration_ms=int((time.perf_counter() - _t_gates) * 1000),
                        gate_result="pass" if exit_code is None else "blocked",
                        exit_code=exit_code if exit_code is not None else 0,
+                       staged_files_count=len(staged_files),
                        )
         if exit_code is not None:
             return exit_code
 
-        # gates_only 模式：门禁通过后直接返回，跳过后续阶段
-        if gates_only:
-            print("Gates-only mode: integrity gates passed.")
-            print("  ✓ Rule 1 (Claim coverage): PASSED")
-            print("  ✓ Rule 2 (Ghost code detection): PASSED")
-            print("  ℹ Rule 3-8 (AC coverage, test results, compliance): Requires full analysis")
-            return 0
-
         # ── 阶段 3：执行验证工具 ──────────────────────────────────
         _t_tools = time.perf_counter()
-        tool_evidence = _execute_tools(ctx, project_root)
+        tool_evidence = _execute_tools(ctx, project_root, staged_files=staged_files)
         # tool_evidence is a pipeline-local variable, NOT stored in ctx
         vt_logger.info("phase_end", "Tool execution completed",
                        phase="execute_tools",
@@ -301,8 +324,6 @@ def run_analyze(
                        duration_ms=int((time.perf_counter() - _t_build) * 1000),
                        full_chain_count=len(evidence_meta.get("full_chain", [])),
                        )
-
-        staged_files = _get_staged_files(project_root)
 
         human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
 

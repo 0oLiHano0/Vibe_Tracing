@@ -65,7 +65,6 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
     Returns:
         (passed: bool, message: str)
     """
-    from vibe_tracing.infra.git.utils import git_show, git_has_uncommitted_changes
     logger = OperationalLogger.get()
 
     finalize_commit = config_data.get("finalize_git_commit")
@@ -76,9 +75,17 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
         logger.debug("constraints_change_check", "First finalization, skipping change validation")
         return True, "首次定稿"
 
-    # Get baseline via git show
+    # Get baseline via git show (inline of infra/git/utils.git_show)
     t0 = time.perf_counter()
-    base_content = git_show(finalize_commit, finalize_constraints_path, project_root)
+    try:
+        _git_result = subprocess.run(
+            ["git", "show", f"{finalize_commit}:{finalize_constraints_path}"],
+            cwd=project_root, capture_output=True, text=True,
+        )
+        base_content = _git_result.stdout if _git_result.returncode == 0 else None
+    except Exception as exc:
+        logger.exception("git_show_error", "Git operation failed: git_show", exc=exc)
+        base_content = None
     duration_ms = int((time.perf_counter() - t0) * 1000)
     logger.info("git_show", "Retrieved baseline constraints",
                 finalize_commit=finalize_commit, duration_ms=duration_ms,
@@ -101,7 +108,23 @@ def _validate_constraints_change(project_root: Path, constraints_path: Path, con
 
     # In V4, finalize creates the commit. We expect architecture_change_log.md to have uncommitted changes.
     change_log_rel = "docs/architecture_change_log.md"
-    has_uncommitted = git_has_uncommitted_changes(change_log_rel, project_root)
+    # Check uncommitted changes (inline of infra/git/utils.git_has_uncommitted_changes)
+    try:
+        _diff_result = subprocess.run(
+            ["git", "diff", "--name-only", "--", change_log_rel],
+            cwd=project_root, capture_output=True, text=True,
+        )
+        has_uncommitted = bool(_diff_result.returncode == 0 and _diff_result.stdout.strip())
+        if not has_uncommitted:
+            _cached_result = subprocess.run(
+                ["git", "diff", "--cached", "--name-only", "--", change_log_rel],
+                cwd=project_root, capture_output=True, text=True,
+            )
+            has_uncommitted = bool(_cached_result.returncode == 0 and _cached_result.stdout.strip())
+    except Exception as exc:
+        logger.exception("git_uncommitted_check_error",
+                         "Git operation failed: git_has_uncommitted_changes", exc=exc)
+        has_uncommitted = False
     logger.debug("change_log_check", "Checked change_log uncommitted status",
                  has_uncommitted=has_uncommitted)
     if not has_uncommitted:

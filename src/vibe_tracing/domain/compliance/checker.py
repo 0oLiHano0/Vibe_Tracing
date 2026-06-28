@@ -694,6 +694,7 @@ class ArchitectureComplianceChecker:
             try:
                 proposal_engine = ArchitectureChangeProposalEngine(
                     self.project_root, config_data=self.config_data,
+                    constraints_data=self.constraints,
                 )
                 prop_res = proposal_engine.check_governance(
                     start_counter=200,

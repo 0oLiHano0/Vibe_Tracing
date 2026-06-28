@@ -87,11 +87,6 @@ def _build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument(
         "--pre-commit", action="store_true", help="以 Git pre-commit hook 模式运行（启用幽灵代码检测）"
     )
-    # --gates-only 模式：仅运行门禁（快速模式），跳过工具执行和分析
-    analyze_parser.add_argument(
-        "--gates-only", action="store_true",
-        help="仅运行完整性门禁（1, 2, 2.5），跳过工具执行和分析（pre-commit 快速模式）"
-    )
     # --incremental-only 模式：只检查增量问题，历史债务不阻塞门禁
     analyze_parser.add_argument(
         "--incremental-only", action="store_true",
@@ -314,7 +309,6 @@ def _dispatch(args, project_root: Path) -> int:
         return run_analyze(
             project_root, output_dir,
             is_pre_commit=args.pre_commit,
-            gates_only=args.gates_only,
             incremental_only=args.incremental_only,
             show_historical_debt=args.show_debt,
         )

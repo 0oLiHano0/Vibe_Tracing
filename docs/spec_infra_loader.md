@@ -332,4 +332,4 @@ loader 包内部不记录日志事件。日志由调用方（`pipeline.py:run_an
 | **doctor 命令** | `cli/doctor.py` | 调用 `PrdParser.parse_file()` 独立解析 PRD |
 | **PRD-Arch 校验** | `domain/compliance/prd_arch_validator.py` | 调用 `PrdParser.parse_file()` 独立解析 PRD |
 | **变更提案引擎** | `domain/governance/change_proposal.py` | 调用 `load_config()` 读取配置 |
-| **幽灵代码协调器** | `domain/governance/ghost_code.py` | 调用 `load_config()` 读取配置 |
+| **幽灵代码检测** | `domain/gate/claim_coverage.py` | 使用 `ctx.config` 构建白名单路径 |

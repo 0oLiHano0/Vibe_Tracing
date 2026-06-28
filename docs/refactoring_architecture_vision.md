@@ -133,7 +133,7 @@ WHERE t.status = 'in_progress' AND (cr.source_path IS NULL OR cr.status = 'viola
 
 | 规则 | 名称 | 判定逻辑 | 代码位置 |
 |------|------|---------|---------|
-| GhostCodeReconciler | 幽灵代码 | staged 文件 - claim_code_refs = 幽灵文件 | `domain/ghost_code_reconciler.py` |
+| 幽灵代码检测 | 幽灵代码 | staged 文件 - claim_code_refs = 幽灵文件 | `domain/gate/claim_coverage.py` |
 | GATE-VT-001 | 必需输入存在 | prd.md + constraints + task_list 存在 | `domain/architecture_compliance_checker.py` |
 | GATE-VT-002 | Schema 校验 | JSON Schema 合规 | `infra/validation/schema_validator.py` |
 | GATE-VT-003 | Must REQ 覆盖 | Must 需求有任务覆盖 | `analyzers/requirement_task_analyzer.py` |

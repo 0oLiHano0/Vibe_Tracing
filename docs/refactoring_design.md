@@ -58,7 +58,8 @@ run_analyze(project_root, ...)
 │   输出：ctx: UnifiedContext（不含 tool_evidence）
 │
 ├── 阶段 2：Claim 覆盖检查（前置条件）
-│   调用：_check_claim_coverage(ctx, project_root, is_pre_commit, staged_files)
+│   调用：staged_files = subprocess.run(["git", "diff", "--cached", ...])
+│         check_claim_coverage(ctx, staged_files, project_root)  # domain/gate/claim_coverage.py
 │   输出：exit_code 或 None
 │
 ├── 阶段 3：执行工具
@@ -159,7 +160,6 @@ domain/
 │   └── advisor.py                       # RiskAdvisor
 │
 ├── governance/                          # 治理规则（纯规则）
-│   ├── ghost_code.py                    # GhostCodeReconciler
 │   └── change_proposal.py              # ArchitectureChangeProposalEngine
 │
 └── context.py                           # UnifiedContext（数据模型）
@@ -217,8 +217,7 @@ cli/
 ├── doctor.py                       # vt doctor
 └── analyze/
     ├── exceptions.py               # CLI 层共享异常（_GateBlocked）
-    ├── pipeline.py                 # 主流水线编排（调度层，含 _load_context）
-    ├── gates.py                    # 门禁检查（Gate 2 前置条件）
+    ├── pipeline.py                 # 主流水线编排（调度层，含 _load_context + 阶段 2 内联）
     ├── tools.py                    # 工具执行
     ├── reports.py                  # 报告生成（含 _rel_path_str）
     ├── actions.py                  # 行动建议收集 + 辅助查询（DB 查询委托 queries.py）
@@ -244,7 +243,7 @@ evidence/        → 无域内依赖
 gate/            → 无域内依赖
 compliance/      → infra/compliance/（通过参数注入）
 risk/            → 无域内依赖
-governance/      → infra/governance/, infra/git/（通过参数注入）
+governance/      → infra/loader/config（通过参数注入）
 context          → infra/loader/, gate/, compliance/, risk/
 ```
 
@@ -569,7 +568,7 @@ from .dashboard import DashboardRenderer
 from .reflection import render_reflection_prompts
 
 # domain/governance/__init__.py
-from .ghost_code import GhostCodeReconciler
+from .change_proposal import ArchitectureChangeProposalEngine
 
 # infra/db/__init__.py
 from .schema import init_in_memory_db

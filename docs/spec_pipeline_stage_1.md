@@ -196,7 +196,7 @@ inputs_used:                        # 所有文件的加载记录
 
 将内存中通过校验的原始数据，转换为强类型的 Python 领域模型对象。在此步骤中，**不进行任何文件之间的跨引用（如 Task 引用 PRD）关系校验**：
 1. **解析 PRD**：通过 `PrdParser.parse_text()` 将 Markdown 文本解析为 `PrdParseResult` 实体对象。
-2. **解析 Tasks**：通过 `TaskLoader().load_and_validate()` 将 Task List 原始字典反序列化为 `Task` 实体列表，纯反序列化，不含判定逻辑。
+2. **解析 Tasks**：通过 `TaskLoader().deserialize()` 将 Task List 原始字典反序列化为 `Task` 实体列表，纯反序列化，不含判定逻辑。
 3. **解析 Claims**：通过 `ClaimLoader().load()` 将 Claims 原始字典反序列化为 `Claim` 实体列表。
 4. **提取人类决策**：利用 `records_dict` 快速取得人类决策已反序列化的 Dict 对象。
 
@@ -251,7 +251,6 @@ is_draft: false                     # 是否草稿模式 (prd_res.status == "dra
 | `_GateBlocked` | 1 | Schema/ID/路径校验失败（`validate_inputs()` 返回 `is_valid=false`） | 阶段 2 |
 | `_GateBlocked` | 1 | PRD 记录缺失或加载失败 | 阶段 3 |
 | `_GateBlocked` | 1 | PRD 解析错误（`prd_res.is_valid` 为 false） | 阶段 3 |
-| `_GateBlocked` | 1 | Claims 加载失败（`claim_res_loader.is_valid` 为 false） | 阶段 3 |
 | `_GateBlocked` | 1 | 任务列表或架构约束缺失（非 draft 模式） | 阶段 4 |
 
 > [!NOTE]

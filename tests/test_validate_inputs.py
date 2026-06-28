@@ -4,9 +4,10 @@ import pytest
 from pathlib import Path
 from types import SimpleNamespace
 from vibe_tracing.infra.validation import validate_inputs, PreImportResult
+from vibe_tracing.infra.loader.raw_input import STATUS_OK
 
 
-def _make_record(file_key, content, status="ok", file_path=None):
+def _make_record(file_key, content, status=STATUS_OK, file_path=None):
     """构造一个 manifest 记录对象。"""
     if file_path is None:
         file_path = f"docs/{file_key}.json"

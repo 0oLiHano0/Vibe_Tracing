@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, List, Optional
 
+from vibe_tracing.infra.loader.raw_input import STATUS_OK
+
 from vibe_tracing.infra.logging.logger import OperationalLogger
 from vibe_tracing.infra.validation.schema_validator import SchemaValidator
 
@@ -70,13 +72,13 @@ def _check_schemas(
         file_key = record.file_key
         if file_key not in schema_map:
             continue
-        if record.status != "ok" or record.content is None:
+        if record.status != STATUS_OK or record.content is None:
             continue
 
         schema_name = schema_map[file_key]
         result = validator.validate_dict(
             record.content, schema_name,
-            source_label=record.file_path,
+            file_path=record.file_path,
         )
         if not result.is_valid:
             vt_logger.debug("schema_violation", result.message,
@@ -126,7 +128,7 @@ def _check_id_formats(
             ))
 
     for record in manifest.inputs_used:
-        if record.status != "ok" or record.content is None:
+        if record.status != STATUS_OK or record.content is None:
             continue
 
         content = record.content
@@ -161,7 +163,7 @@ def _check_duplicate_ids(
     issues = []
 
     for record in manifest.inputs_used:
-        if record.status != "ok" or record.content is None:
+        if record.status != STATUS_OK or record.content is None:
             continue
 
         content = record.content
@@ -222,7 +224,7 @@ def _check_path_safety(
     for record in manifest.inputs_used:
         if record.file_key != "agent_claims":
             continue
-        if record.status != "ok" or record.content is None:
+        if record.status != STATUS_OK or record.content is None:
             continue
 
         content = record.content
@@ -281,12 +283,12 @@ def _check_human_decisions(
     for record in manifest.inputs_used:
         if record.file_key != "human_decisions":
             continue
-        if record.status != "ok" or record.content is None:
+        if record.status != STATUS_OK or record.content is None:
             continue
 
         result = validator.validate_dict(
             record.content, "human_decisions",
-            source_label=record.file_path,
+            file_path=record.file_path,
         )
         if not result.is_valid:
             issues.append(ValidationIssue(

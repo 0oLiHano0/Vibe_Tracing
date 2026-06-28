@@ -5,6 +5,7 @@ Output rendering: gate summary, agent actions, and reflection prompts.
 from typing import List, Optional, Set
 
 from vibe_tracing.domain.context import UnifiedContext
+from vibe_tracing.infra.loader.raw_input import STATUS_OK
 from vibe_tracing.cli.analyze.formatting import _format_agent_actions
 from vibe_tracing.cli.analyze.reports import (
     _build_report_document,
@@ -116,7 +117,7 @@ def _print_reflection_prompts(
 
     records_dict_all = {r.file_key: r for r in manifest.inputs_used}
     task_list_record = records_dict_all.get("task_list")
-    task_list_raw = task_list_record.content if task_list_record and task_list_record.status == "ok" else {"tasks": []}
+    task_list_raw = task_list_record.content if task_list_record and task_list_record.status == STATUS_OK else {"tasks": []}
 
     print(render_reflection_prompts(
         gate_decision=gate_decision,

@@ -1,7 +1,7 @@
 """
-任务列表加载器与校验器。
+任务列表反序列化器。
 
-从已解析的 dict 加载任务列表数据。
+从已解析的 dict 反序列化任务列表数据为结构化对象。
 
 注意：Task↔PRD 的跨引用校验已下沉至 SQL 查询层，
 本模块不进行文件之间的交叉引用校验。
@@ -13,7 +13,7 @@ from typing import Any, Dict, List
 
 @dataclass
 class DodItem:
-    """Definition of Done item for a task."""
+    """任务的完成定义条目。"""
 
     dod_id: str
     description: str
@@ -21,7 +21,7 @@ class DodItem:
 
 @dataclass
 class Task:
-    """Representation of a task parsed from the task list."""
+    """从任务列表中解析出的任务数据对象。"""
 
     task_id: str
     title: str
@@ -35,39 +35,23 @@ class Task:
     related_modules: List[str] = field(default_factory=list)
     related_architecture_constraints: List[str] = field(default_factory=list)
     definition_of_done: List[DodItem] = field(default_factory=list)
-    is_valid: bool = True
-    errors: List[str] = field(default_factory=list)
 
 
 @dataclass
 class TaskListLoadResult:
-    """Result of loading and validating the task list."""
+    """任务列表加载与校验的结果容器。"""
 
     tasks: List[Task] = field(default_factory=list)
-    is_valid: bool = True
-    errors: List[str] = field(default_factory=list)
 
 
 class TaskLoader:
     """加载并反序列化任务列表。"""
 
-    def load_and_validate(
-        self,
-        data: dict,
-    ) -> TaskListLoadResult:
-        """
-        Load task list data.
-        """
-        return self.validate_data(data)
-
-    def validate_data(
+    def deserialize(
         self,
         data: Dict[str, Any],
-        source_label: str = "",
     ) -> TaskListLoadResult:
-        """
-        Validate task list data directly (useful for testing and in-memory validation).
-        """
+        """反序列化任务列表数据为结构化对象。"""
         tasks_list = data.get("tasks", [])
         parsed_tasks: List[Task] = []
 
@@ -114,8 +98,4 @@ class TaskLoader:
 
             parsed_tasks.append(task_obj)
 
-        return TaskListLoadResult(
-            tasks=parsed_tasks,
-            is_valid=True,
-            errors=[],
-        )
+        return TaskListLoadResult(tasks=parsed_tasks)

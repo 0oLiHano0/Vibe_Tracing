@@ -170,7 +170,7 @@ class SchemaValidator:
             known = list(self.KNOWN_SCHEMAS.keys())
             OperationalLogger.get().warning("unknown_schema_name", f"Unknown schema name '{schema_name}'",
                 schema_name=schema_name,
-                source_label=str(file_path),
+                file_path=str(file_path),
             )
             return ValidationResult(
                 is_valid=False,
@@ -215,20 +215,20 @@ class SchemaValidator:
             )
 
         # 步骤 4-5：加载 schema 并执行校验
-        return self._run_validation(data, schema_name, source_label=str(file_path))
+        return self._run_validation(data, schema_name, file_path=str(file_path))
 
     def validate_dict(
         self,
         data: Union[dict, list],
         schema_name: str,
-        source_label: str = "",
+        file_path: str = "",
     ) -> ValidationResult:
         """校验已解析的 dict/list 是否符合指定 schema。
 
         Args:
             data: 待校验的 JSON 数据（已解析为 dict 或 list）。
             schema_name: KNOWN_SCHEMAS 中的键名。
-            source_label: 来源标识，用于填充结果中的 file_path。
+            file_path: 来源文件路径，用于填充结果中的 file_path。
 
         Returns:
             校验成功返回 is_valid=True，失败时返回 error_code、field_path、message、hint。
@@ -238,28 +238,28 @@ class SchemaValidator:
             known = list(self.KNOWN_SCHEMAS.keys())
             OperationalLogger.get().warning("unknown_schema_name", f"Unknown schema name '{schema_name}'",
                 schema_name=schema_name,
-                source_label=source_label,
+                file_path=file_path,
             )
             return ValidationResult(
                 is_valid=False,
                 error_code=ErrorCode.INVALID_INPUT,
-                file_path=source_label,
+                file_path=file_path,
                 field_path="",
                 message=f"Unknown schema name '{schema_name}'. Known schemas: {known}.",
                 hint=f"Use one of the known schema names: {known}.",
             )
 
-        return self._run_validation(data, schema_name, source_label=source_label)
+        return self._run_validation(data, schema_name, file_path=file_path)
 
     def _run_validation(
-        self, data: Union[dict, list], schema_name: str, source_label: str
+        self, data: Union[dict, list], schema_name: str, file_path: str
     ) -> ValidationResult:
         """执行 jsonschema 校验并返回 ValidationResult。
 
         Args:
             data: 已解析的 JSON 数据。
             schema_name: KNOWN_SCHEMAS 中的键名（已由调用方校验）。
-            source_label: 来源标识，用于填充结果中的 file_path。
+            file_path: 来源文件路径，用于填充结果中的 file_path。
 
         Returns:
             ValidationResult。
@@ -269,12 +269,12 @@ class SchemaValidator:
         except (FileNotFoundError, json.JSONDecodeError, SchemaError) as exc:
             OperationalLogger.get().error("schema_load_error", f"Failed to load schema '{schema_name}': {exc}",
                 schema_name=schema_name,
-                source_label=source_label,
+                file_path=file_path,
             )
             return ValidationResult(
                 is_valid=False,
                 error_code=ErrorCode.INVALID_INPUT,
-                file_path=source_label,
+                file_path=file_path,
                 field_path="",
                 message=f"Failed to load schema '{schema_name}': {exc}",
                 hint="Ensure the schema file exists and is valid JSON Schema.",
@@ -287,16 +287,16 @@ class SchemaValidator:
             hint = _build_hint(exc)
             OperationalLogger.get().debug("schema_validation_failed", exc.message,
                 schema_name=schema_name,
-                source_label=source_label,
+                file_path=file_path,
                 field_path=field_path,
             )
             return ValidationResult(
                 is_valid=False,
                 error_code=ErrorCode.SCHEMA_VIOLATION,
-                file_path=source_label,
+                file_path=file_path,
                 field_path=field_path,
                 message=exc.message,
                 hint=hint,
             )
 
-        return ValidationResult(is_valid=True, file_path=source_label)
+        return ValidationResult(is_valid=True, file_path=file_path)

@@ -61,8 +61,7 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
 
     # 4. Load tasks using TaskLoader and verify no errors
     task_loader = TaskLoader()
-    task_res = task_loader.load_and_validate(json.loads(task_list_path.read_text()))
-    assert task_res.is_valid is True, f"Failed to load task list: {task_res.errors}"
+    task_res = task_loader.deserialize(json.loads(task_list_path.read_text()))
     assert len(task_res.tasks) == 0
  
     # Ensure project_name and project_id are correctly stored on prd_res

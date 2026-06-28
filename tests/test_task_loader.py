@@ -48,12 +48,9 @@ def get_valid_task_list_dict(tasks=None):
 
 def test_valid_task_list_passes(task_loader):
     data = get_valid_task_list_dict()
-    res = task_loader.validate_data(data)
-    assert res.is_valid is True
-    assert len(res.errors) == 0
+    res = task_loader.deserialize(data)
     assert len(res.tasks) == 1
     assert res.tasks[0].task_id == "TASK-VT-001"
-    assert res.tasks[0].is_valid is True
 
 
 def test_validate_real_files_load(task_loader):
@@ -61,6 +58,5 @@ def test_validate_real_files_load(task_loader):
     if not task_list_path.exists():
         pytest.skip("Real standard input files do not exist.")
     import json
-    res = task_loader.load_and_validate(json.loads(task_list_path.read_text()))
+    res = task_loader.deserialize(json.loads(task_list_path.read_text()))
     assert len(res.tasks) > 0
-    assert res.is_valid is True, f"Real files load failed: {res.errors}"

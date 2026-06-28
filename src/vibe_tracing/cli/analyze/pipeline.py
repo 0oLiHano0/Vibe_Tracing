@@ -36,7 +36,7 @@ from vibe_tracing.domain.context import UnifiedContext
 
 from vibe_tracing.cli.analyze.exceptions import _GateBlocked
 from vibe_tracing.infra.loader.config import load_config, resolve_path
-from vibe_tracing.infra.loader.raw_input import RawInputLoader
+from vibe_tracing.infra.loader.raw_input import RawInputLoader, STATUS_OK, STATUS_MISSING
 from vibe_tracing.infra.loader.prd_parser import PrdParser
 from vibe_tracing.infra.loader.task_loader import TaskLoader
 from vibe_tracing.infra.loader.claim_loader import ClaimLoader
@@ -70,7 +70,7 @@ def _load_context(
     # Check for missing required files
     if manifest.has_required_errors:
         for record in manifest.inputs_used:
-            if record.is_required and record.status != "ok":
+            if record.is_required and record.status != STATUS_OK:
                 print(
                     f"Error loading required file {record.file_key} ({record.file_path}): {record.error_message}",
                     file=sys.stderr,
@@ -79,7 +79,7 @@ def _load_context(
 
     # Check for malformed files
     for record in manifest.inputs_used:
-        if record.status not in ("ok", "missing"):
+        if record.status not in (STATUS_OK, STATUS_MISSING):
             print(
                 f"Error loading file {record.file_key} ({record.file_path}): {record.error_message}",
                 file=sys.stderr,
@@ -102,7 +102,7 @@ def _load_context(
     constraints_record = records_dict.get("architecture_constraints")
     claims_record = records_dict.get("agent_claims")
 
-    if not prd_record or prd_record.status != "ok":
+    if not prd_record or prd_record.status != STATUS_OK:
         print("Error: PRD file missing or failed to load.", file=sys.stderr)
         raise _GateBlocked(1)
 
@@ -115,14 +115,14 @@ def _load_context(
 
     # Verify required files exist if not draft
     if prd_res.status != "draft":
-        if not task_list_record or task_list_record.status != "ok":
+        if not task_list_record or task_list_record.status != STATUS_OK:
             task_list_path = resolve_path(project_root, config, "task_list")
             print(
                 f"Error loading required file task_list ({task_list_path}): File not found",
                 file=sys.stderr,
             )
             raise _GateBlocked(1)
-        if not constraints_record or constraints_record.status != "ok":
+        if not constraints_record or constraints_record.status != STATUS_OK:
             constraints_path = resolve_path(project_root, config, "architecture_constraints")
             print(
                 f"Error loading required file architecture_constraints ({constraints_path}): File not found",
@@ -132,39 +132,27 @@ def _load_context(
 
     # Load tasks
     task_res = None
-    if task_list_record and task_list_record.status == "ok":
+    if task_list_record and task_list_record.status == STATUS_OK:
         task_list_path = Path(task_list_record.file_path)
         task_loader = TaskLoader()
-        task_res = task_loader.load_and_validate(task_list_record.content)
-        if not task_res.is_valid:
-            print(
-                f"Task list validation error: {'; '.join(task_res.errors)}",
-                file=sys.stderr,
-            )
-            raise _GateBlocked(1)
+        task_res = task_loader.deserialize(task_list_record.content)
 
     # Load claims
     claims_list = []
-    if claims_record and claims_record.status == "ok":
+    if claims_record and claims_record.status == STATUS_OK:
         claims_path = Path(claims_record.file_path)
         claim_loader = ClaimLoader()
-        claim_res_loader = claim_loader.load(claims_record.content)
-        if not claim_res_loader.is_valid:
-            print(
-                f"Agent claims validation error: {'; '.join(claim_res_loader.errors)}",
-                file=sys.stderr,
-            )
-            raise _GateBlocked(1)
+        claim_res_loader = claim_loader.deserialize(claims_record.content)
         claims_list = claim_res_loader.claims
 
     # 加载 human_decisions
     hd_record = records_dict.get("human_decisions")
-    human_decisions_data = hd_record.content if hd_record and hd_record.status == "ok" else None
+    human_decisions_data = hd_record.content if hd_record and hd_record.status == STATUS_OK else None
 
     ctx = UnifiedContext(
         config=config,
         prd=prd_res,
-        constraints=constraints_record.content if constraints_record and constraints_record.status == "ok" else None,
+        constraints=constraints_record.content if constraints_record and constraints_record.status == STATUS_OK else None,
         task_result=task_res,
         claims_list=claims_list,
         manifest=manifest,

@@ -25,31 +25,16 @@ class ClaimListLoadResult:
     """加载 agent claims 后的结果容器。"""
 
     claims: List[Claim] = field(default_factory=list)
-    is_valid: bool = True
-    errors: List[str] = field(default_factory=list)
 
 
 class ClaimLoader:
     """加载并反序列化 agent claims。"""
 
-    def load(
-        self,
-        data: list,
-    ) -> ClaimListLoadResult:
-        """加载 agent claims。
-        
-        只接受从外部解析好的列表数据（跳过文件读取）。
-        """
-        return self.validate_data(data)
-
-    def validate_data(
+    def deserialize(
         self,
         data: List[Dict[str, Any]],
-        source_label: str = "",
     ) -> ClaimListLoadResult:
-        """
-        反序列化 agent claims 数据。
-        """
+        """反序列化 agent claims 数据为结构化对象。"""
         parsed_claims: List[Claim] = []
 
         for claim_dict in data:
@@ -71,8 +56,4 @@ class ClaimLoader:
 
             parsed_claims.append(claim_obj)
 
-        return ClaimListLoadResult(
-            claims=parsed_claims,
-            is_valid=True,
-            errors=[],
-        )
+        return ClaimListLoadResult(claims=parsed_claims)

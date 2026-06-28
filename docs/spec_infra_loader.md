@@ -108,7 +108,7 @@ requirements:                       # 需求列表
 
 ### TaskListLoadResult（任务列表解析结果）
 
-**输入位置**：内存（由 `TaskLoader.load_and_validate()` 构建）
+**输入位置**：内存（由 `TaskLoader.deserialize()` 构建）
 **包/模块**：`infra/loader/task_loader.py:TaskListLoadResult`
 
 ```yaml
@@ -217,7 +217,7 @@ claims:                             # Claim 列表
 
 ### 步骤 4：校验任务列表
 
-调用模块：`infra/loader/task_loader.py:TaskLoader.load_and_validate()`
+调用模块：`infra/loader/task_loader.py:TaskLoader.deserialize()`
 
 将已加载的任务列表 JSON 字典反序列化为 `Task` 实体列表。纯反序列化，不含判定逻辑。孤立任务检测已移至 SQL 查询层（`check_isolated_tasks()`），作为 dashboard 警告呈现。
 
@@ -308,8 +308,6 @@ loader 包内的异常处理分两种模式：
 | `InputFileRecord.status="parse_error"` | JSON 解析失败 | `record.status not in ("ok", "missing")` |
 | `InputFileRecord.status="read_error"` | 文件读取失败 | `record.status not in ("ok", "missing")` |
 | `PrdParseResult.is_valid=false` | PRD 校验失败（ID 格式、父子关系、重复等） | `prd_res.is_valid` |
-| `TaskListLoadResult.is_valid=false` | 任务校验失败（孤立任务、架构孤儿） | `task_res.is_valid` |
-| `ClaimListLoadResult.is_valid=false` | Claim 加载失败（目录为空、解析错误） | `claim_res_loader.is_valid` |
 
 > loader 包本身不抛出 `_GateBlocked`。所有 `_GateBlocked(1)` 由调用方（`pipeline.py`）根据上述错误状态决定是否抛出。
 

@@ -15,6 +15,12 @@ from typing import Any, List, Optional
 from vibe_tracing.infra.config.enums import ErrorCode
 from vibe_tracing.infra.loader.config import REQUIRED_FILES, resolve_path
 
+# 输入文件加载状态
+STATUS_OK = "ok"
+STATUS_MISSING = "missing"
+STATUS_PARSE_ERROR = "parse_error"
+STATUS_READ_ERROR = "read_error"
+
 
 @dataclass
 class InputFileRecord:
@@ -23,7 +29,7 @@ class InputFileRecord:
     file_key: str  # 文件标识符，如 "prd"、"task_list"、"agent_claims"
     file_path: str  # 文件路径（绝对或相对）
     is_required: bool  # 是否为必需文件
-    status: str  # 加载状态："ok"、"missing"、"parse_error"、"read_error"
+    status: str  # 加载状态：STATUS_OK / STATUS_MISSING / STATUS_PARSE_ERROR / STATUS_READ_ERROR
     error_code: Optional[str] = None  # 失败时的 ErrorCode 枚举值
     error_message: str = ""  # 错误描述信息
     content: Optional[Any] = None  # 已解析的内容（dict/list/str，加载失败为 None）
@@ -71,7 +77,7 @@ class RawInputLoader:
             resolved = resolve_path(self.project_root, self._config_data, file_key)
             record = self._load_file(file_key, resolved, is_required=True)
             manifest.inputs_used.append(record)
-            if record.status != "ok":
+            if record.status != STATUS_OK:
                 manifest.has_required_errors = True
                 manifest.error_count += 1
 
@@ -86,7 +92,7 @@ class RawInputLoader:
             resolved = resolve_path(self.project_root, self._config_data, file_key)
             record = self._load_file(file_key, resolved, is_required=False)
             manifest.inputs_used.append(record)
-            if record.status not in ("ok", "missing"):
+            if record.status not in (STATUS_OK, STATUS_MISSING):
                 manifest.error_count += 1
 
         return manifest
@@ -112,7 +118,7 @@ class RawInputLoader:
                     file_key=file_key,
                     file_path=path_str,
                     is_required=is_required,
-                    status="missing",
+                    status=STATUS_MISSING,
                     error_message=f"No CLAIM-*.json files found in {path_str}",
                 )
             all_claims = []
@@ -129,7 +135,7 @@ class RawInputLoader:
                         file_key=file_key,
                         file_path=path_str,
                         is_required=is_required,
-                        status="parse_error",
+                        status=STATUS_PARSE_ERROR,
                         error_code=ErrorCode.INVALID_INPUT.value,
                         error_message=f"Failed to read/parse {fp}: {exc}",
                     )
@@ -141,7 +147,7 @@ class RawInputLoader:
                 file_key=file_key,
                 file_path=path_str,
                 is_required=is_required,
-                status="ok",
+                status=STATUS_OK,
                 content=all_claims,
                 sha256_hash=h.hexdigest(),
             )
@@ -153,7 +159,7 @@ class RawInputLoader:
                 file_key=file_key,
                 file_path=path_str,
                 is_required=is_required,
-                status="missing",
+                status=STATUS_MISSING,
                 error_code=error_code,
                 error_message=f"File not found: {path_str}" if is_required else "",
             )
@@ -168,7 +174,7 @@ class RawInputLoader:
                 file_key=file_key,
                 file_path=path_str,
                 is_required=is_required,
-                status="read_error",
+                status=STATUS_READ_ERROR,
                 error_code=ErrorCode.INVALID_INPUT.value,
                 error_message=f"Could not read file: {exc}",
             )
@@ -183,7 +189,7 @@ class RawInputLoader:
                     file_key=file_key,
                     file_path=path_str,
                     is_required=is_required,
-                    status="parse_error",
+                    status=STATUS_PARSE_ERROR,
                     error_code=ErrorCode.INVALID_INPUT.value,
                     error_message=f"JSON parse error: {exc}",
                 )
@@ -195,7 +201,7 @@ class RawInputLoader:
             file_key=file_key,
             file_path=path_str,
             is_required=is_required,
-            status="ok",
+            status=STATUS_OK,
             content=content,
             sha256_hash=file_hash,
         )

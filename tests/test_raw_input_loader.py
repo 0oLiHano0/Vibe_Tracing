@@ -8,6 +8,7 @@ from pathlib import Path
 
 from vibe_tracing.infra.config.enums import ErrorCode
 from vibe_tracing.infra.loader.config import REQUIRED_FILES, load_config
+from vibe_tracing.infra.loader.raw_input import STATUS_OK, STATUS_MISSING, STATUS_PARSE_ERROR
 from vibe_tracing.infra.loader.raw_input import RawInputManifest, RawInputLoader
 
 # ---------------------------------------------------------------------------
@@ -58,7 +59,7 @@ def test_load_all_valid_files_returns_ok_manifest():
 
     for record in manifest.inputs_used:
         if record.file_key in REQUIRED_FILES:
-            assert record.status == "ok", (
+            assert record.status == STATUS_OK, (
                 f"Expected status='ok' for required file '{record.file_key}', "
                 f"got '{record.status}': {record.error_message}"
             )
@@ -107,7 +108,7 @@ def test_missing_required_file_record_has_error_code(tmp_path):
     missing_records = [
         r
         for r in manifest.inputs_used
-        if r.file_key in REQUIRED_FILES and r.status == "missing"
+        if r.file_key in REQUIRED_FILES and r.status == STATUS_MISSING
     ]
     assert len(missing_records) > 0, (
         "Expected at least one missing required file record"
@@ -150,7 +151,7 @@ def test_invalid_json_file_sets_parse_error(tmp_path):
     records = {r.file_key: r for r in manifest.inputs_used}
     task_record = records["task_list"]
 
-    assert task_record.status == "parse_error", (
+    assert task_record.status == STATUS_PARSE_ERROR, (
         f"Expected status='parse_error', got '{task_record.status}'"
     )
     assert task_record.error_code == ErrorCode.INVALID_INPUT.value, (
@@ -295,7 +296,7 @@ def test_load_human_decisions_file_exists(tmp_path):
     records = {r.file_key: r for r in manifest.inputs_used}
     assert "human_decisions" in records
     record = records["human_decisions"]
-    assert record.status == "ok"
+    assert record.status == STATUS_OK
     assert record.content == decisions_data
 
 
@@ -313,5 +314,5 @@ def test_load_human_decisions_file_missing(tmp_path):
     records = {r.file_key: r for r in manifest.inputs_used}
     assert "human_decisions" in records
     record = records["human_decisions"]
-    assert record.status == "missing"
+    assert record.status == STATUS_MISSING
     assert record.content is None

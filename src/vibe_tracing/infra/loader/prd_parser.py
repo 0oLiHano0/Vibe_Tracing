@@ -18,7 +18,6 @@
 
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import List, Optional, cast
 from collections import Counter
 
@@ -59,7 +58,7 @@ _md = mistune.create_markdown(renderer="ast")
 
 
 def parse_front_matter(text: str) -> dict:
-    """Parse YAML-like front matter from the top of the markdown text."""
+    """解析 Markdown 文本顶部的 YAML front matter 元数据。"""
     metadata: dict = {}
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
@@ -90,7 +89,7 @@ def parse_front_matter(text: str) -> dict:
 
 
 def _strip_front_matter(text: str) -> str:
-    """Remove the YAML front matter block so mistune receives clean Markdown."""
+    """移除 YAML front matter 块，使 mistune 收到纯净的 Markdown 正文。"""
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return text
@@ -101,6 +100,7 @@ def _strip_front_matter(text: str) -> str:
 
 
 def clean_title(title: str) -> str:
+    """清理标题文本，去除首尾的冒号和空白字符。"""
     title = title.strip()
     while title and (title[0] in (":", "：") or title[0].isspace()):
         title = title[1:]
@@ -110,6 +110,7 @@ def clean_title(title: str) -> str:
 
 
 def get_parent_req_id(ac_id: str) -> str:
+    """从 AC ID 推导其父需求 ID（如 AC-VT-001-01 → REQ-VT-001）。"""
     match = re.match(r"^AC-([a-zA-Z0-9_-]+)-(\d+)-(\d+)$", ac_id)
     if match:
         return f"REQ-{match.group(1)}-{match.group(2)}"
@@ -117,7 +118,7 @@ def get_parent_req_id(ac_id: str) -> str:
 
 
 def _extract_text(token: dict) -> str:
-    """Recursively extract plain text from a mistune AST token."""
+    """递归提取 mistune AST token 中的纯文本内容。"""
     if token.get("type") in ("text", "codespan", "raw_html"):
         return token.get("raw", "")
     children = token.get("children") or []
@@ -125,7 +126,7 @@ def _extract_text(token: dict) -> str:
 
 
 def _list_item_texts(list_token: dict) -> List[str]:
-    """Return the plain text of each direct list_item in a list token."""
+    """提取列表 token 中每个直接子 list_item 的纯文本。"""
     return [
         _extract_text(item).strip()
         for item in (list_token.get("children") or [])
@@ -139,8 +140,10 @@ def _apply_test_req(
     ac_test_found: set,
     errors: List[str],
 ) -> bool:
-    """Check a sequence of text lines for '是否必须有测试'. Returns True if the
-    field was found (valid or invalid), False if the field was absent."""
+    """检查文本行中是否包含"是否必须有测试"字段。
+
+    字段存在（无论值是否有效）返回 True，字段缺失返回 False。
+    """
     for line in lines:
         if "是否必须有测试" not in line:
             continue

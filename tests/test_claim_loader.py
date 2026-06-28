@@ -27,9 +27,7 @@ def get_valid_claims_list(claims=None):
 
 def test_valid_claims_list_passes(claim_loader):
     data = get_valid_claims_list()
-    res = claim_loader.validate_data(data)
-    assert res.is_valid is True
-    assert len(res.errors) == 0
+    res = claim_loader.deserialize(data)
     assert len(res.claims) == 1
     assert res.claims[0].claim_id == "CLAIM-VT-001"
 
@@ -42,6 +40,4 @@ def test_claim_with_valid_data_passes(claim_loader):
             "timestamp": "2026-01-01T00:00:00Z",
         }
     ]
-    res = claim_loader.validate_data(claims)
-    assert res.is_valid is True
-    assert len(res.errors) == 0
+    res = claim_loader.deserialize(claims)

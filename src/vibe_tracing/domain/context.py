@@ -1,7 +1,7 @@
 """Unified context domain model for vt analyze pipeline."""
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 if TYPE_CHECKING:
     from vibe_tracing.infra.loader.claim_loader import Claim
@@ -31,6 +31,8 @@ class UnifiedContext:
     human_decisions: Optional[dict] = None
     config_prefix: str = "VT"
     is_draft: bool = False
+    governance_whitelist: Set[str] = field(default_factory=set)
+    governance_boundary: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not isinstance(self.config, dict):

@@ -138,6 +138,10 @@ manifest: RawInputManifest          # 加载清单（可选）
 human_decisions: {}                 # 人类决策（可选）
 config_prefix: "VT"                 # 项目前缀
 is_draft: false                     # 是否草稿模式
+governance_whitelist:               # 治理文件白名单路径集合（阶段 1 预计算）
+  - ".vibetracing/config.json"
+  - "docs/prd.md"
+governance_boundary: {}             # 治理边界 include/exclude 模式（阶段 1 预计算）
 ```
 
 ---
@@ -228,6 +232,8 @@ manifest: RawInputManifest          # 原始加载清单
 human_decisions: {}                 # 人类决策数据（可选）
 config_prefix: "VT"                 # 项目前缀
 is_draft: false                     # 是否草稿模式 (prd_res.status == "draft")
+governance_whitelist: [...]         # 治理文件白名单（由 build_governance_whitelist 预计算）
+governance_boundary: {}             # 治理边界（由 load_boundary 预计算）
 ```
 
 ---
@@ -262,7 +268,7 @@ is_draft: false                     # 是否草稿模式 (prd_res.status == "dra
 
 | 事件名 | 级别 | 触发时机 | 附加字段 |
 |--------|------|----------|----------|
-| `run_start` | INFO | logger 初始化完成（阶段 1 末尾） | `is_pre_commit`, `gates_only` |
+| `run_start` | INFO | logger 初始化完成（阶段 1 末尾） | — |
 | `phase_end` | INFO | 阶段 1 完成 | `phase="load_context"`, `duration_ms`, `config_prefix`, `claims_count` |
 
 ### 错误传播

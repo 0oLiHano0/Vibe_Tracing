@@ -147,16 +147,25 @@ def _load_context(
     hd_record = records_dict.get("human_decisions")
     human_decisions_data = hd_record.content if hd_record and hd_record.status == STATUS_OK else None
 
+    # 预计算治理文件白名单（业务逻辑在 claim_coverage.py，此处仅调用）
+    from vibe_tracing.domain.gate.claim_coverage import build_governance_whitelist
+    from vibe_tracing.infra.config.boundary import load_boundary
+    governance_whitelist = build_governance_whitelist(manifest, project_root)
+    constraints_data = constraints_record.content if constraints_record and constraints_record.status == STATUS_OK else None
+    governance_boundary = load_boundary(project_root, constraints_data=constraints_data)
+
     ctx = UnifiedContext(
         config=config,
         prd=prd_res,
-        constraints=constraints_record.content if constraints_record and constraints_record.status == STATUS_OK else None,
+        constraints=constraints_data,
         task_result=task_res,
         claims_list=claims_list,
         manifest=manifest,
         human_decisions=human_decisions_data,
         config_prefix=config_prefix,
         is_draft=(prd_res.status == "draft"),
+        governance_whitelist=governance_whitelist,
+        governance_boundary=governance_boundary,
     )
     return ctx
 
@@ -164,7 +173,6 @@ def _load_context(
 def run_analyze(
     project_root: Path,
     output_dir: Optional[Path] = None,
-    is_pre_commit: bool = False,
     incremental_only: bool = False,
     show_historical_debt: bool = True,
 ) -> int:
@@ -173,14 +181,13 @@ def run_analyze(
     输入：
         project_root: 项目根目录（由 cli/main.py 传入）
         output_dir:   输出目录（可选，默认从 config.json 读取）
-        is_pre_commit: 是否为 Git pre-commit hook 模式
         incremental_only: 是否只检查增量问题（历史债务不阻塞门禁）
         show_historical_debt: 是否在终端显示历史债务详情
     前置条件：
         项目已完成 vt finalize（config.json 存在且有效）
     处理逻辑（8 个阶段）：
         1. _load_context：加载 PRD、Tasks、Claims、Config
-        2. Claim 覆盖前置检查（domain/gate/claim_coverage.py）
+        2. 幽灵代码检测（domain/gate/claim_coverage.py）
         3. _execute_tools：执行 pytest/ruff/bandit/coverage
         4. init_in_memory_db：创建内存数据库
         5. load_prd + load_tasks + load_claims：将数据灌入数据库
@@ -209,8 +216,7 @@ def run_analyze(
             )
         except Exception:
             vt_logger = OperationalLogger.get()
-        vt_logger.info("run_start", "Analysis pipeline started",
-                       is_pre_commit=is_pre_commit)
+        vt_logger.info("run_start", "Analysis pipeline started")
         vt_logger.info("phase_end", "Load context completed",
                        phase="load_context",
                        duration_ms=int((time.perf_counter() - _t_ctx) * 1000),
@@ -222,7 +228,7 @@ def run_analyze(
         if output_dir is None:
             output_dir = resolve_path(project_root, ctx.config, "output_dir")
 
-        # ── 阶段 2：Claim 覆盖前置检查（Gate 2）────────────────────────
+        # ── 阶段 2：幽灵代码检测（Gate 2）────────────────────────────
         _t_gates = time.perf_counter()
 
         # staged_files 获取（一次 subprocess，阶段 2/3/7 共用）
@@ -241,26 +247,24 @@ def run_analyze(
                               "Could not get staged files from git", exc=exc)
             staged_files = set()
 
+        from vibe_tracing.domain.gate.claim_coverage import detect_ghost_code
+        result = detect_ghost_code(ctx, staged_files)
         exit_code = None
-        if is_pre_commit:
-            from vibe_tracing.domain.gate.claim_coverage import check_claim_coverage
-            result = check_claim_coverage(ctx, staged_files, project_root)
-            if not result.is_pass:
-                if result.ghost_files:
-                    files_str = "\n".join(f"  - {f}" for f in sorted(result.ghost_files))
-                    print(
-                        "发现未经报备的幽灵代码！\n"
-                        f"{files_str}\n"
-                        "上述文件在本次提交中没有对应的【活跃发票】（Claim）。\n"
-                        "如果它是合法代码，请在 .vibetracing/claims/ 中创建或更新对应的 Claim 文件，"
-                        "并将其与代码一同提交。",
-                        file=sys.stderr,
-                    )
-                if result.task_coverage_blocked:
-                    print("\n".join(result.task_coverage_blocked), file=sys.stderr)
-                exit_code = 1
-            elif result.ac_freshness_warnings:
-                print("\n".join(result.ac_freshness_warnings), file=sys.stderr)
+        if not result.is_pass:
+            vt_logger.warning("ghost_code_blocked",
+                              "Ghost code detected, commit blocked",
+                              ghost_files=sorted(result.ghost_files),
+                              ghost_count=len(result.ghost_files))
+            files_str = "\n".join(f"  - {f}" for f in sorted(result.ghost_files))
+            print(
+                "发现未经报备的幽灵代码！\n"
+                f"{files_str}\n"
+                "上述文件在本次提交中没有对应的【活跃发票】（Claim）。\n"
+                "如果它是合法代码，请在 .vibetracing/claims/ 中创建或更新对应的 Claim 文件，"
+                "并将其与代码一同提交。",
+                file=sys.stderr,
+            )
+            exit_code = 1
 
         vt_logger.info("phase_end", "Integrity gates completed",
                        phase="integrity_gates",
@@ -350,7 +354,6 @@ def run_analyze(
             ctx, merged_gaps, final_risks, compliance_res,
             output_dir, evidence_meta, claim_res, req_res,
             project_root, staged_files=staged_files,
-            is_pre_commit=is_pre_commit,
             human_decisions=human_decisions,
             conn=conn,
             analysis_details=analysis_details,
@@ -602,8 +605,8 @@ def _run_db_analysis(
 
     # Architecture compliance check
     compliance_res = None
-    constraints_path = resolve_path(project_root, ctx.config, "architecture_constraints")
-    if constraints_path.exists() and ctx.constraints is not None:
+    if ctx.constraints is not None:
+        constraints_path = resolve_path(project_root, ctx.config, "architecture_constraints")
         _constraints_hash = None
         if ctx.manifest:
             for _r in ctx.manifest.inputs_used:
@@ -813,7 +816,6 @@ def _evaluate_and_output(
     req_res: dict,
     project_root: Path,
     staged_files: Optional[Set[str]] = None,
-    is_pre_commit: bool = False,
     human_decisions: Optional[dict] = None,
     conn=None,
     analysis_details: Optional[dict] = None,
@@ -833,7 +835,6 @@ def _evaluate_and_output(
         req_res:          需求分析结果
         project_root:     项目根目录
         staged_files:     暂存区文件集合
-        is_pre_commit:    是否预提交模式
         human_decisions:  人类决策记录
         conn:             数据库连接
         analysis_details: 分析详情（ghost_files, ac_gaps, dangling_claims 等）
@@ -879,7 +880,7 @@ def _evaluate_and_output(
         ctx, gate_res, report_doc, evidence_meta,
         active_gaps, active_risks, merged_gaps, final_risks, compliance_res,
         staged_items, output_dir, project_root,
-        is_pre_commit=is_pre_commit, staged_files=staged_files,
+        staged_files=staged_files,
         conn=conn,
     )
 

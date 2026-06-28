@@ -1378,8 +1378,7 @@ Must
 * 输入：staged 文件
 * 期望输出：
   1. hook 脚本必须包含 `set -e`，防止 Python 不可用时静默通过。
-  2. hook 执行增量分析（`vt analyze --pre-commit --gates-only`），在 Stage 2 (Claim 覆盖检查) 作为前置条件检测 staged 业务文件是否有对应的 Claim 覆盖（即幽灵代码检测），未被覆盖则立即阻断并退出（返回退出码 1）。
-  3. `--gates-only` 模式下，若前置的 Claim 覆盖检查通过，则直接返回退出码 0，无需执行后续昂贵的工具运行及完整分析，从而极大缩短 pre-commit hook 的执行耗时，避免开发卡顿。
+  2. hook 执行分析（`vt analyze`），在阶段 2 作为前置条件检测 staged 业务文件是否有对应的 Claim 覆盖（即幽灵代码检测），未被覆盖则立即阻断并退出（返回退出码 1）。
 * 异常处理：hook 阻断时必须输出具体原因和修复建议。
 * 是否必须有测试：是
 

@@ -7723,6 +7723,445 @@
         "检查 docs/architecture_vision.md、docs/spec_infra_loader.md 等是否引用已删除模块。",
         "pipeline_stage-2-refacting.md 是规划文档，记录的是'计划做什么'，不需要更新为'实际做了什么'。"
       ]
+    },
+    {
+      "task_id": "TASK-VT-140",
+      "title": "删除 is_pre_commit 参数：pipeline.py + output.py + main.py",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "从 run_analyze、_evaluate_and_output、_render_output 中删除 is_pre_commit 参数，从 main.py 删除 --pre-commit CLI 参数，阶段二改为无条件执行幽灵代码检测。",
+      "atomic_scope": "1. pipeline.py run_analyze 签名删除 is_pre_commit 参数；2. pipeline.py run_start 日志删除 is_pre_commit 字段；3. pipeline.py 阶段二逻辑删除 if is_pre_commit 条件，改为无条件执行 detect_ghost_code；4. pipeline.py _evaluate_and_output 签名删除 is_pre_commit 参数；5. output.py _render_output 签名删除 is_pre_commit 参数，_print_empty_claims_hint 改为无条件调用；6. main.py 删除 --pre-commit argparse 定义和传参。",
+      "out_of_scope": [
+        "不修改 claim_coverage.py（已简化）",
+        "不修改 git hook（步骤 14）",
+        "不修改测试（步骤 15）",
+        "不修改文档（步骤 17）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/pipeline.py",
+        "src/vibe_tracing/cli/analyze/output.py",
+        "src/vibe_tracing/cli/main.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-140-01",
+          "description": "pipeline.py run_analyze 签名无 is_pre_commit 参数。"
+        },
+        {
+          "dod_id": "DOD-VT-140-02",
+          "description": "pipeline.py 阶段二无 if is_pre_commit 分支，始终执行 detect_ghost_code。"
+        },
+        {
+          "dod_id": "DOD-VT-140-03",
+          "description": "pipeline.py _evaluate_and_output 签名无 is_pre_commit 参数。"
+        },
+        {
+          "dod_id": "DOD-VT-140-04",
+          "description": "output.py _render_output 签名无 is_pre_commit 参数。"
+        },
+        {
+          "dod_id": "DOD-VT-140-05",
+          "description": "output.py 中 _print_empty_claims_hint 无条件调用。"
+        },
+        {
+          "dod_id": "DOD-VT-140-06",
+          "description": "main.py 无 --pre-commit argparse 定义。"
+        },
+        {
+          "dod_id": "DOD-VT-140-07",
+          "description": "grep -rn is_pre_commit src/ 返回空。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "run_analyze 当前签名：(project_root, output_dir=None, is_pre_commit=False, incremental_only=False, show_historical_debt=True)。",
+        "_evaluate_and_output 当前签名含 is_pre_commit: bool = False。",
+        "_render_output 当前签名含 is_pre_commit: bool = False。",
+        "_print_empty_claims_hint 内部有 guard：if not ctx.claims_list and not staged_files，行为正确。",
+        "main.py line 86-88 定义 --pre-commit，line 311 传参 is_pre_commit=args.pre_commit。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-141",
+      "title": "更新 git hook 和 vt init 安装脚本",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除 git hook 和 vt init 安装脚本中的 --pre-commit 参数。",
+      "atomic_scope": "1. cli/init.py hook_script 删除 --pre-commit；2. .git/hooks/pre-commit 删除 --pre-commit。",
+      "out_of_scope": [
+        "不修改 pipeline.py（步骤 140）",
+        "不修改测试（步骤 142）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-140"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/init.py",
+        ".git/hooks/pre-commit"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-141-01",
+          "description": "init.py hook_script 不含 --pre-commit。"
+        },
+        {
+          "dod_id": "DOD-VT-141-02",
+          "description": ".git/hooks/pre-commit 不含 --pre-commit。"
+        },
+        {
+          "dod_id": "DOD-VT-141-03",
+          "description": "hook 执行 vt analyze（无参数）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "init.py line 166: hook_script = f\"#!/bin/sh\nset -e\n# Vibe Tracing Git Guard\n\"{python_path}\" -m vibe_tracing analyze --pre-commit\n\"。",
+        ".git/hooks/pre-commit 最后一行: \"/Library/Developer/CommandLineTools/usr/bin/python3\" -m vibe_tracing.cli analyze --pre-commit。",
+        "vt init 只在 hook 不存在时安装。直接修改项目自管理的 hook 文件，无需版本管理，无需重新 init。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-142",
+      "title": "更新测试：删除 is_pre_commit 和旧 API 引用",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新测试文件，删除 is_pre_commit 断言，更新 claim_coverage 测试使用新 API。",
+      "atomic_scope": "1. test_timing_instrumentation.py 删除 is_pre_commit 断言；2. test_scaffolding.py 检查是否引用 --pre-commit 并更新；3. test_stage2_claim_coverage.py 更新 import（check_claim_coverage → detect_ghost_code，ClaimCoverageResult → GhostCodeResult），删除 task coverage 和 AC freshness 测试，更新调用签名（删除 project_root 参数）。",
+      "out_of_scope": [
+        "不修改业务代码（步骤 140/141）",
+        "不修改文档（步骤 143）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-140",
+        "TASK-VT-145"
+      ],
+      "expected_deliverables": [
+        "tests/test_timing_instrumentation.py",
+        "tests/test_scaffolding.py",
+        "tests/test_stage2_claim_coverage.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-142-01",
+          "description": "test_timing_instrumentation.py 无 is_pre_commit 断言。"
+        },
+        {
+          "dod_id": "DOD-VT-142-02",
+          "description": "test_stage2_claim_coverage.py 使用 detect_ghost_code + GhostCodeResult。"
+        },
+        {
+          "dod_id": "DOD-VT-142-03",
+          "description": "test_stage2_claim_coverage.py 无 TestTaskCoverage 和 TestACFreshness 类。"
+        },
+        {
+          "dod_id": "DOD-VT-142-04",
+          "description": "pytest tests/ -v 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "detect_ghost_code 新签名为 (ctx, staged_files)，无 project_root 参数。",
+        "test_stage2_claim_coverage.py 中所有 check_claim_coverage(ctx, staged_files, project_root) 调用改为 detect_ghost_code(ctx, staged_files)。",
+        "删除 TestClaimCoverageResult 中的 test_is_fail_when_task_blocked 和 test_is_pass_when_only_ac_warnings。",
+        "删除整个 TestTaskCoverage 类和 TestACFreshness 类。",
+        "TestBoundaryFiltering 中的调用同步更新。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-143",
+      "title": "更新文档：消除 is_pre_commit 和旧 API 引用",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新 4 个文档，消除对 is_pre_commit、--pre-commit、check_claim_coverage、ClaimCoverageResult、task_coverage、ac_freshness 的引用。",
+      "atomic_scope": "1. spec_pipeline_stage_2.md 重写：删除 pre-commit 输入、改为 detect_ghost_code、删除任务覆盖/AC 新鲜度步骤、ClaimCoverageResult → GhostCodeResult；2. refactoring_design.md line 62 和 line 77 check_claim_coverage → detect_ghost_code（无 project_root）；3. spec_pipeline_stage_1.md line 265 删除 is_pre_commit/gates_only 日志字段；4. prd.md line 1381 vt analyze --pre-commit --gates-only → vt analyze。",
+      "out_of_scope": [
+        "不修改业务代码",
+        "不修改测试"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-142"
+      ],
+      "expected_deliverables": [
+        "docs/spec_pipeline_stage_2.md",
+        "docs/refactoring_design.md",
+        "docs/spec_pipeline_stage_1.md",
+        "docs/prd.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-143-01",
+          "description": "spec_pipeline_stage_2.md 反映简化后的架构（仅幽灵代码检测，无 is_pre_commit）。"
+        },
+        {
+          "dod_id": "DOD-VT-143-02",
+          "description": "refactoring_design.md 阶段二描述使用 detect_ghost_code(ctx, staged_files)（无 project_root）。"
+        },
+        {
+          "dod_id": "DOD-VT-143-03",
+          "description": "spec_pipeline_stage_1.md 日志字段无 is_pre_commit/gates_only。"
+        },
+        {
+          "dod_id": "DOD-VT-143-04",
+          "description": "prd.md hook 命令为 vt analyze（无参数）。"
+        },
+        {
+          "dod_id": "DOD-VT-143-05",
+          "description": "grep -rn \"is_pre_commit|check_claim_coverage|ClaimCoverageResult|task_coverage|ac_freshness\" docs/ 返回空（除 pipeline_stage-2-refacting.md）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "spec_pipeline_stage_2.md 需重写大部分章节，参考实际代码。",
+        "refactoring_design.md line 62 和 line 77: check_claim_coverage(ctx, staged_files, project_root) → detect_ghost_code(ctx, staged_files)。",
+        "spec_pipeline_stage_1.md line 265: 删除 is_pre_commit 和 gates_only 字段。",
+        "prd.md line 1381: vt analyze --pre-commit --gates-only → vt analyze。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-144",
+      "title": "全量测试验证与遗留引用检查",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "运行全量测试确认无回归，检查代码和文档中无遗留的 is_pre_commit/--pre-commit 引用。",
+      "atomic_scope": "1. pytest tests/ -v 全量通过；2. grep -rn \"is_pre_commit\\|--pre-commit\" src/ tests/ 返回空；3. grep -rn \"is_pre_commit\\|check_claim_coverage\\|ClaimCoverageResult\\|task_coverage\\|ac_freshness\" docs/ 返回空（除 pipeline_stage-2-refacting.md）。",
+      "out_of_scope": [
+        "不修改业务代码",
+        "不修改文档"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-140",
+        "TASK-VT-141",
+        "TASK-VT-142",
+        "TASK-VT-143",
+        "TASK-VT-145"
+      ],
+      "expected_deliverables": [],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-144-01",
+          "description": "pytest tests/ -v 全量通过（0 failures）。"
+        },
+        {
+          "dod_id": "DOD-VT-144-02",
+          "description": "grep -rn \"is_pre_commit\\|--pre-commit\" src/ tests/ 返回空。"
+        },
+        {
+          "dod_id": "DOD-VT-144-03",
+          "description": "grep -rn \"is_pre_commit\\|check_claim_coverage\\|ClaimCoverageResult\\|task_coverage\\|ac_freshness\" docs/ 返回空（除 pipeline_stage-2-refacting.md）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "先跑测试，再跑 grep 检查。",
+        "如有遗留引用，定位并修复后重新验证。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-145",
+      "title": "预计算治理文件白名单 + 治理边界，消除阶段二重复计算",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "在阶段一 _load_context 中预计算治理文件白名单路径集合和治理边界，存入 UnifiedContext，阶段二直接使用，消除 _build_whitelist 和 load_boundary 的重复调用。",
+      "atomic_scope": "1. domain/context.py UnifiedContext 新增 governance_whitelist: Set[str] 和 governance_boundary: dict 字段；2. claim_coverage.py 将 _build_whitelist 重命名为 build_governance_whitelist 并导出，接受 manifest 和 project_root 参数，基于 manifest.inputs_used 的 file_path 直接构建白名单；3. pipeline.py _load_context 调用 build_governance_whitelist 和 load_boundary 预计算白名单和边界，存入 ctx；4. claim_coverage.py 删除 load_boundary import，_filter_business_files 使用 ctx.governance_whitelist 和 ctx.governance_boundary；5. detect_ghost_code 签名删除 project_root 参数。",
+      "out_of_scope": [
+        "不修改其他文件"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/context.py",
+        "src/vibe_tracing/cli/analyze/pipeline.py",
+        "src/vibe_tracing/domain/gate/claim_coverage.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-145-01",
+          "description": "UnifiedContext 有 governance_whitelist: Set[str] 字段。"
+        },
+        {
+          "dod_id": "DOD-VT-145-02",
+          "description": "UnifiedContext 有 governance_boundary: dict 字段。"
+        },
+        {
+          "dod_id": "DOD-VT-145-03",
+          "description": "claim_coverage.py 导出 build_governance_whitelist(manifest, project_root) 辅助函数。"
+        },
+        {
+          "dod_id": "DOD-VT-145-04",
+          "description": "claim_coverage.py 无原 _build_whitelist 函数（已被 build_governance_whitelist 替代）。"
+        },
+        {
+          "dod_id": "DOD-VT-145-05",
+          "description": "claim_coverage.py 无 load_boundary import，无 resolve_path import（白名单基于 manifest，无需路径解析）。"
+        },
+        {
+          "dod_id": "DOD-VT-145-06",
+          "description": "_filter_business_files 使用 ctx.governance_whitelist 和 ctx.governance_boundary。"
+        },
+        {
+          "dod_id": "DOD-VT-145-07",
+          "description": "detect_ghost_code 签名无 project_root 参数。"
+        },
+        {
+          "dod_id": "DOD-VT-145-08",
+          "description": "pipeline.py _load_context 不内联路径解析代码（resolve_path + relative_to），只调用 build_governance_whitelist(manifest, project_root)。"
+        },
+        {
+          "dod_id": "DOD-VT-145-09",
+          "description": "pytest tests/ -v 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "白名单基于 manifest 实际加载的路径（what was loaded），直接使用 record.file_path 转为相对路径，无需 resolve_path。",
+        "build_governance_whitelist 接受 manifest 和 project_root 参数，避免依赖 ctx（消除循环依赖风险）。",
+        "build_governance_whitelist 遍历 manifest.inputs_used 中 STATUS_OK 的记录，用 Path(record.file_path).relative_to(project_root) 构建白名单。",
+        "pipeline.py 只调用 build_governance_whitelist(manifest, project_root)，不内联路径解析代码。",
+        "load_boundary(project_root, constraints_data=constraints_data) 由 pipeline.py 调用，属于 infra 层数据转换。",
+        "detect_ghost_code 签名从 (ctx, staged_files, project_root) 简化为 (ctx, staged_files)。",
+        "is_in_scope(filepath, boundary) 仍需保留 import，因为它接受 boundary dict 作为参数。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-146",
+      "title": "收尾文档同步：更新设计文档与 spec 反映收敛后架构",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "所有收敛任务（140-145）完成后，同步更新设计文档和 spec 文档，确保文档与最终代码一致。",
+      "atomic_scope": "1. spec_pipeline_stage_1.md UnifiedContext 字段表新增 governance_whitelist: Set[str] 和 governance_boundary: dict；2. refactoring_design.md 阶段二描述更新为仅做幽灵代码检测（detect_ghost_code），删除 is_pre_commit 和任务覆盖/AC 新鲜度引用；3. pipeline_stage-2-refacting.md §6 标记为已完成。；4. spec_pipeline_stage_2.md 阶段二架构描述更新为仅做幽灵代码检测（与 TASK-VT-143 的旧 API 清理互补）。",
+      "out_of_scope": [
+        "不修改业务代码",
+        "不修改测试"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-140",
+        "TASK-VT-141",
+        "TASK-VT-142",
+        "TASK-VT-143",
+        "TASK-VT-144",
+        "TASK-VT-145"
+      ],
+      "expected_deliverables": [
+        "docs/spec_pipeline_stage_1.md",
+        "docs/refactoring_design.md",
+        "docs/pipeline_stage-2-refacting.md",
+        "docs/spec_pipeline_stage_2.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-146-01",
+          "description": "spec_pipeline_stage_1.md UnifiedContext 字段表包含 governance_whitelist 和 governance_boundary。"
+        },
+        {
+          "dod_id": "DOD-VT-146-02",
+          "description": "refactoring_design.md 阶段二描述仅含幽灵代码检测，无 is_pre_commit/任务覆盖/AC 新鲜度引用。"
+        },
+        {
+          "dod_id": "DOD-VT-146-03",
+          "description": "pipeline_stage-2-refacting.md §6 验收标准全部打勾或标记为已完成。"
+        },
+        {
+          "dod_id": "DOD-VT-146-04",
+          "description": "spec_pipeline_stage_2.md 阶段二描述反映简化后架构（仅幽灵代码检测，无 is_pre_commit/任务覆盖/AC 新鲜度）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "spec_pipeline_stage_1.md line 125-140 的 UnifiedContext YAML 字段表需要新增两个字段。",
+        "refactoring_design.md line 60-62 的阶段二描述需要重写，反映简化后的架构。",
+        "pipeline_stage-2-refacting.md §6 的验收标准表需要更新为实际完成状态。"
+      ]
     }
   ]
 }

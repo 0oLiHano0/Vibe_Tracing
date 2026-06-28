@@ -470,3 +470,396 @@ pytest tests/test_merge_gate_engine.py -v -k ghost
 | 17 | `tests/test_git_utils.py` 已删除 | 测试文件不存在 |
 | 18 | 所有现有测试通过 | `pytest tests/ -v` 全绿 |
 | 19 | 阶段 7 的 `check_ghost_code` DB 查询不受影响 | `test_db_query_functions.py` 通过 |
+
+---
+
+## 6. 第二阶段收敛：废除非 git 分支 + 阶段二仅做幽灵代码检测
+
+### 6.1 问题定义
+
+当前阶段二存在两个架构问题：
+
+**问题 1：`is_pre_commit` 分支增加无谓复杂度**
+
+`is_pre_commit` 参数控制阶段二是否执行。但 VT 的治理入口是 git pre-commit hook（`vt init` 安装），每次 `git commit` 都会强制执行 `vt analyze --pre-commit`。不存在"不带 `--pre-commit` 运行 analyze"的业务场景。
+
+保留 `is_pre_commit` 是在为不存在的场景增加分支复杂度。
+
+**问题 2：阶段二混入了不属于自己的检查**
+
+当前阶段二包含三项检查：
+
+| 检查 | 阶段二 | 阶段七（DB 分析） | 重复？ |
+|------|--------|------------------|--------|
+| 幽灵代码检测 | `_detect_ghost_files` (Python set) | `check_ghost_code` (SQL) | 是 |
+| 任务覆盖检查 | `_check_task_coverage` (Python) | `check_requirement_coverage` (SQL) | 是 |
+| AC 新鲜度检查 | `_check_ac_freshness` (Python) | `check_ac_coverage` (SQL) | 是 |
+
+任务覆盖和 AC 新鲜度是全量分析的一部分，属于阶段七的职责。阶段二的唯一业务问题是："本次提交的代码文件是否都被 Claim 覆盖？"
+
+### 6.2 设计目标
+
+1. 删除 `is_pre_commit` 参数，阶段二始终执行
+2. 阶段二仅做幽灵代码检测，删除任务覆盖和 AC 新鲜度检查
+3. 更新 git hook 和 `vt init` 安装脚本
+4. 消除 `output.py` 中的 `is_pre_commit` 分支
+
+### 6.3 实施步骤
+
+#### 步骤 10：简化 `domain/gate/claim_coverage.py`
+
+**文件**：`src/vibe_tracing/domain/gate/claim_coverage.py`
+
+**现状**：已简化为仅做幽灵代码检测（`detect_ghost_code` 函数 + `GhostCodeResult` 数据类）。步骤 10 本身已完成。
+
+**后续联动**：步骤 11 将在此基础上进一步修改——导出 `build_governance_whitelist`、简化 `detect_ghost_code` 签名（删除 `project_root`）、`_filter_business_files` 改用 ctx 预计算数据。
+
+**验收**：文件中无 `_check_task_coverage`、`_check_ac_freshness`、`ClaimCoverageResult`。
+
+---
+
+#### 步骤 11：预计算白名单 + 治理边界 — 消除阶段二重复计算
+
+**问题 1：白名单重复计算**
+
+阶段二的 `_build_whitelist` 从 `ctx.config` 调用 `resolve_path` 构建白名单路径集合，与阶段一加载文件时的路径解析完全重复。
+
+**问题 2：治理边界重复计算**
+
+`load_boundary(ctx.constraints)` 每次调用都从 dict 中提取 `governance_boundary`。结果是固定的（同一份 constraints），应在阶段一预计算。
+
+**调度 vs 业务逻辑分离原则**：
+
+- 白名单**构建逻辑**（路径解析、relative_to）属于业务规则，应保留在 `domain/gate/claim_coverage.py` 中
+- 白名单**调用时机**属于调度逻辑，由 `pipeline.py:_load_context` 决定
+- `pipeline.py` 不应内联路径解析代码，只调用 `claim_coverage.py` 导出的辅助函数
+
+**改动 1：`domain/context.py` — UnifiedContext 新增字段**
+
+新增两个字段：
+
+```python
+@dataclass
+class UnifiedContext:
+    ...
+    governance_whitelist: Set[str] = field(default_factory=set)   # 治理文件路径集合
+    governance_boundary: dict = field(default_factory=dict)        # 治理边界（include/exclude 模式）
+```
+
+**改动 2：`domain/gate/claim_coverage.py` — 导出白名单构建辅助函数**
+
+将 `_build_whitelist` 重命名为 `build_governance_whitelist` 并导出。接受 `manifest` 和 `project_root` 参数（避免依赖 `ctx`，消除循环依赖风险）：
+
+**设计决策**：白名单基于 manifest 实际加载的路径（what was loaded），而非 config 声明的路径（what was configured）。理由：manifest 记录的是 VT 实际消费的文件，白名单的目的是排除这些治理输入文件，直接对应关系最准确。同时避免了重复调用 `resolve_path`，消除 config 与 manifest 路径解析逻辑潜在的不一致风险。
+
+```python
+def build_governance_whitelist(manifest, project_root: Path) -> Set[str]:
+    """从 manifest 记录中构建治理文件白名单路径集合。
+
+    白名单基于 manifest 实际加载的路径（what was loaded），
+    而非 config 声明的路径（what was configured）。
+    record.file_path 是绝对路径，需转换为相对路径。
+
+    由 pipeline.py 在阶段一调用，结果存入 ctx.governance_whitelist。
+    """
+    whitelist = {".vibetracing/config.json"}
+    for record in manifest.inputs_used:
+        if record.status == STATUS_OK:
+            try:
+                rel = Path(record.file_path).relative_to(project_root)
+                whitelist.add(str(rel))
+            except (ValueError, OSError):
+                pass
+    return whitelist
+```
+
+删除原 `_build_whitelist` 函数（被 `build_governance_whitelist` 替代）。删除 `resolve_path` 和 `load_boundary` 的原有 import（`load_boundary` 完全移除，`resolve_path` 仅在 `_filter_business_files` 不再使用后从本文件移除）。
+
+`_filter_business_files` 简化为直接使用 `ctx` 中的预计算数据：
+
+```python
+from vibe_tracing.infra.config.boundary import is_in_scope
+
+def _filter_business_files(staged_files, ctx):
+    """白名单 + 治理边界过滤，使用阶段一预计算的 ctx 数据。"""
+    whitelist_prefixes = (".git/", "output/", ".vibetracing/claims/")
+    business_files = {
+        f for f in staged_files
+        if f not in ctx.governance_whitelist
+        and not any(f.startswith(p) for p in whitelist_prefixes)
+    }
+    return {f for f in business_files if is_in_scope(f, ctx.governance_boundary)}
+```
+
+**改动 3：`domain/gate/claim_coverage.py:detect_ghost_code` — 签名简化**
+
+白名单和边界已预计算到 `ctx` 中，`detect_ghost_code` 不再需要 `project_root` 参数：
+
+```python
+# 旧签名
+def detect_ghost_code(ctx, staged_files, project_root) -> GhostCodeResult:
+
+# 新签名
+def detect_ghost_code(ctx, staged_files) -> GhostCodeResult:
+```
+
+内部调用 `_filter_business_files(staged_files, ctx)` 时不再传 `project_root`。
+
+**改动 4：`pipeline.py:_load_context` — 阶段一预计算（调度层）**
+
+在 `_load_context` 构建 `UnifiedContext` 时，调用 `claim_coverage.py` 导出的辅助函数：
+
+```python
+from vibe_tracing.domain.gate.claim_coverage import build_governance_whitelist
+from vibe_tracing.infra.config.boundary import load_boundary
+
+# 预计算治理文件白名单（业务逻辑在 claim_coverage.py，此处仅调用）
+governance_whitelist = build_governance_whitelist(manifest, project_root)
+
+# 预计算治理边界（load_boundary 是数据转换，属于 infra 层）
+constraints_data = constraints_record.content if constraints_record and constraints_record.status == STATUS_OK else None
+governance_boundary = load_boundary(project_root, constraints_data=constraints_data)
+
+ctx = UnifiedContext(
+    ...
+    governance_whitelist=governance_whitelist,
+    governance_boundary=governance_boundary,
+)
+```
+
+**验收**：
+- `claim_coverage.py` 无 `load_boundary` import
+- `claim_coverage.py` 无 `resolve_path` import（白名单基于 manifest，无需路径解析）
+- `claim_coverage.py` 导出 `build_governance_whitelist` 辅助函数
+- `claim_coverage.py` 无原 `_build_whitelist` 函数（已被 `build_governance_whitelist` 替代）
+- `build_governance_whitelist` 使用 `manifest.inputs_used` 的 `file_path` 构建白名单（非 config + resolve_path）
+- `pipeline.py` 不内联路径解析代码，只调用 `build_governance_whitelist`
+- `detect_ghost_code` 签名无 `project_root` 参数
+- `UnifiedContext` 有 `governance_whitelist` 和 `governance_boundary` 字段
+
+---
+
+#### 步骤 12：更新 `pipeline.py` — 删除 `is_pre_commit`，阶段二始终执行
+
+> 注：原步骤 11，因新增步骤 11（白名单预计算）而顺延。
+
+**文件**：`src/vibe_tracing/cli/analyze/pipeline.py`
+
+**改动 1：`run_analyze` 签名**
+
+删除 `is_pre_commit: bool = False` 参数。更新 docstring。
+
+**改动 2：`run_start` 日志**
+
+删除 `is_pre_commit=is_pre_commit` 字段。
+
+**改动 3：阶段二逻辑**
+
+将当前的条件执行：
+```python
+exit_code = None
+if is_pre_commit:
+    from vibe_tracing.domain.gate.claim_coverage import detect_ghost_code
+    result = detect_ghost_code(ctx, staged_files, project_root)
+    if not result.is_pass:
+        ...
+        exit_code = 1
+```
+
+改为无条件执行（注意：`detect_ghost_code` 签名已在步骤 11 简化，不再需要 `project_root`）：
+```python
+from vibe_tracing.domain.gate.claim_coverage import detect_ghost_code
+result = detect_ghost_code(ctx, staged_files)
+exit_code = None
+if not result.is_pass:
+    files_str = "\n".join(f"  - {f}" for f in sorted(result.ghost_files))
+    print(
+        "发现未经报备的幽灵代码！\n"
+        f"{files_str}\n"
+        "上述文件在本次提交中没有对应的【活跃发票】（Claim）。\n"
+        "如果它是合法代码，请在 .vibetracing/claims/ 中创建或更新对应的 Claim 文件，"
+        "并将其与代码一同提交。",
+        file=sys.stderr,
+    )
+    exit_code = 1
+```
+
+**改动 4：`_evaluate_and_output` 调用**
+
+删除 `is_pre_commit=is_pre_commit` 传参。
+
+---
+
+#### 步骤 13：更新 `_evaluate_and_output` 和 `_render_output` — 删除 `is_pre_commit`
+
+**文件**：
+- `src/vibe_tracing/cli/analyze/pipeline.py`（`_evaluate_and_output`）
+- `src/vibe_tracing/cli/analyze/output.py`（`_render_output`）
+
+**改动 1：`_evaluate_and_output` 签名**
+
+删除 `is_pre_commit: bool = False` 参数。更新 docstring。
+
+**改动 2：`_render_output` 调用**
+
+删除 `is_pre_commit=is_pre_commit` 传参。
+
+**改动 3：`_render_output` 签名和逻辑**
+
+删除 `is_pre_commit: bool = False` 参数。
+
+将当前逻辑：
+```python
+if not is_pre_commit:
+    _print_empty_claims_hint(ctx, staged_files)
+```
+
+改为无条件调用：
+```python
+_print_empty_claims_hint(ctx, staged_files)
+```
+
+**安全性**：`_print_empty_claims_hint` 内部有 guard `if not ctx.claims_list and not staged_files`。在 pre-commit 上下文中（有 staged files），hint 不会触发。在手动运行时（无 staged files），hint 会触发。行为正确。
+
+---
+
+#### 步骤 14：更新 `main.py` — 删除 `--pre-commit` CLI 参数
+
+**文件**：`src/vibe_tracing/cli/main.py`
+
+**改动 1：删除 argparse 定义**
+
+删除：
+```python
+# --pre-commit 模式：仅检查暂存区中的文件，用于 Git pre-commit hook
+analyze_parser.add_argument(
+    "--pre-commit", action="store_true", help="以 Git pre-commit hook 模式运行（启用幽灵代码检测）"
+)
+```
+
+**改动 2：删除传参**
+
+删除：
+```python
+is_pre_commit=args.pre_commit,
+```
+
+---
+
+#### 步骤 15：更新 git hook 和 `vt init`
+
+**文件**：
+- `src/vibe_tracing/cli/init.py`
+- `.git/hooks/pre-commit`
+
+**改动 1：`vt init` 安装脚本**
+
+将：
+```python
+hook_script = f'#!/bin/sh\nset -e\n# Vibe Tracing Git Guard\n"{python_path}" -m vibe_tracing analyze --pre-commit\n'
+```
+
+改为：
+```python
+hook_script = f'#!/bin/sh\nset -e\n# Vibe Tracing Git Guard\n"{python_path}" -m vibe_tracing analyze\n'
+```
+
+**改动 2：直接更新 VT 项目自管理的 hook**
+
+将 `.git/hooks/pre-commit` 中的 `--pre-commit` 删除。直接修改文件，无需版本管理，无需重新 `vt init`。本项目处于开发重构阶段，没有历史债务需要处理，不向后兼容，一切都是为了最终的最优架构服务。
+
+---
+
+#### 步骤 16：更新测试
+
+**改动 1：`tests/test_timing_instrumentation.py:124-126`**
+
+删除 `is_pre_commit` 字段断言：
+```python
+# 删除：
+assert "is_pre_commit" in run_start
+```
+
+**改动 2：`tests/test_scaffolding.py:107`**
+
+检查 `test_run_init_pre_commit_hook_uses_sys_executable` 是否引用 `--pre-commit`。如有，更新为不包含 `--pre-commit`。
+
+**改动 3：`tests/test_stage2_claim_coverage.py`**
+
+- 更新 import：`check_claim_coverage` → `detect_ghost_code`，`ClaimCoverageResult` → `GhostCodeResult`
+- 删除 `TestClaimCoverageResult` 中的 `test_is_fail_when_task_blocked` 和 `test_is_pass_when_only_ac_warnings`
+- 删除整个 `TestTaskCoverage` 类（3 个测试）
+- 删除整个 `TestACFreshness` 类（3 个测试）
+- 更新 `TestGhostCodeDetection` 和 `TestBoundaryFiltering` 中的调用：`check_claim_coverage(ctx, staged_files, project_root)` → `detect_ghost_code(ctx, staged_files)`（删除 `project_root` 参数），`result.is_pass` → `result.is_pass`（不变），`result.ghost_files` 不变
+
+---
+
+#### 步骤 17：全量测试验证
+
+```bash
+pytest tests/ -v
+```
+
+确认所有测试通过，无遗留的 `is_pre_commit` 引用。
+
+---
+
+#### 步骤 18：更新文档
+
+以下文档包含对旧 API 的引用，需要同步更新：
+
+| 文档 | 行号 | 当前内容 | 更新为 |
+|------|------|----------|--------|
+| `docs/spec_pipeline_stage_2.md` | 10 | `pre-commit 标志 \| 命令行参数 --pre-commit` | 删除该行 |
+| `docs/spec_pipeline_stage_2.md` | 65-67 | `check_claim_coverage()` + `is_pre_commit` 条件 | 改为 `detect_ghost_code()`，无条件执行 |
+| `docs/spec_pipeline_stage_2.md` | 99-110 | 任务覆盖检查 + AC 新鲜度检查步骤 | 删除这两个步骤 |
+| `docs/spec_pipeline_stage_2.md` | 119-136 | `ClaimCoverageResult` 输出结构 | 改为 `GhostCodeResult`（仅 `ghost_files` + `is_pass`） |
+| `docs/spec_pipeline_stage_2.md` | 全文 | 整体重写 | 反映简化后的架构（仅幽灵代码检测，无 `is_pre_commit`） |
+| `docs/refactoring_design.md` | 62 | `check_claim_coverage(ctx, staged_files, project_root)` | 改为 `detect_ghost_code(ctx, staged_files)`（无 `project_root`） |
+| `docs/refactoring_design.md` | 77 | `check_claim_coverage(ctx, staged_files, project_root)` | 改为 `detect_ghost_code(ctx, staged_files)`（无 `project_root`） |
+| `docs/spec_pipeline_stage_1.md` | 265 | `is_pre_commit`, `gates_only` | 删除这两个字段 |
+| `docs/prd.md` | 1381 | `vt analyze --pre-commit --gates-only` | 改为 `vt analyze` |
+
+**验收**：`grep -rn "is_pre_commit\|pre_commit\|check_claim_coverage\|ClaimCoverageResult\|task_coverage\|ac_freshness" docs/` 返回空（除 `pipeline_stage-2-refacting.md` 规划文档本身）。
+
+---
+
+### 6.4 验收标准
+
+| # | 检查项 | 判定 |
+|---|--------|------|
+| 1 | `pipeline.py` 无 `is_pre_commit` 参数 | ✅ `run_analyze` 和 `_evaluate_and_output` 签名中不存在 |
+| 2 | `output.py` 无 `is_pre_commit` 参数 | ✅ `_render_output` 签名中不存在 |
+| 3 | `main.py` 无 `--pre-commit` CLI 参数 | ✅ argparse 定义不存在 |
+| 4 | 阶段二无条件执行 | ✅ `pipeline.py` 中无 `if is_pre_commit:` 分支 |
+| 5 | `claim_coverage.py` 仅做幽灵代码检测 | ✅ 无 `_check_task_coverage`、`_check_ac_freshness` |
+| 6 | `detect_ghost_code` 签名无 `project_root` | ✅ 白名单已预计算到 ctx |
+| 7 | `claim_coverage.py` 导出 `build_governance_whitelist` | ✅ 路径解析逻辑在 domain 层，pipeline.py 仅调用 |
+| 8 | `pipeline.py` 不内联路径解析代码 | ✅ 白名单构建通过 `build_governance_whitelist` 调用 |
+| 9 | git hook 无 `--pre-commit` | ✅ `.git/hooks/pre-commit` 内容不含 `--pre-commit` |
+| 10 | `vt init` 安装脚本无 `--pre-commit` | ✅ `init.py` 中 hook_script 不含 `--pre-commit` |
+| 11 | 所有测试通过 | ✅ `pytest tests/ -v` 916 passed |
+| 12 | 代码无遗留引用 | ✅ `grep -rn "is_pre_commit\|--pre-commit" src/ tests/` 返回空 |
+| 13 | 文档无遗留引用 | ✅ docs 中无旧 API 引用（仅剩 DB 查询函数名和 git hook 概念名） |
+
+**说明**：`cli/analyze/__init__.py` 只是 re-export `run_analyze`，签名变化自动生效，无需额外改动。
+
+### 6.5 变更影响范围
+
+| 文件 | 变更类型 | 说明 |
+|------|---------|------|
+| `domain/gate/claim_coverage.py` | 修改 | 导出 `build_governance_whitelist`，`detect_ghost_code` 删除 `project_root` 参数，`_filter_business_files` 使用 ctx 预计算数据 |
+| `domain/context.py` | 修改 | 新增 `governance_whitelist` 和 `governance_boundary` 字段 |
+| `cli/analyze/pipeline.py` | 修改 | 删除 `is_pre_commit`，阶段二无条件执行；`_load_context` 调用 `build_governance_whitelist` 预计算白名单 |
+| `cli/analyze/output.py` | 修改 | 删除 `is_pre_commit`，`_print_empty_claims_hint` 无条件调用 |
+| `cli/analyze/__init__.py` | 无改动 | re-export `run_analyze`，签名变化自动生效 |
+| `cli/main.py` | 修改 | 删除 `--pre-commit` argparse 参数 |
+| `cli/init.py` | 修改 | hook 安装脚本删除 `--pre-commit` |
+| `.git/hooks/pre-commit` | 修改 | 删除 `--pre-commit` |
+| `tests/test_timing_instrumentation.py` | 修改 | 删除 `is_pre_commit` 断言 |
+| `tests/test_scaffolding.py` | 检查 | 确认是否需要更新 |
+| `tests/test_stage2_claim_coverage.py` | 修改 | 删除 task coverage 和 AC freshness 测试，更新 `detect_ghost_code` 调用（无 `project_root`） |
+| `docs/spec_pipeline_stage_2.md` | 重写 | 反映简化后的架构 |
+| `docs/refactoring_design.md` | 修改 | 更新阶段二描述 |
+| `docs/spec_pipeline_stage_1.md` | 修改 | 删除 `is_pre_commit`/`gates_only` 日志字段 |
+| `docs/prd.md` | 修改 | 更新 hook 命令描述 |

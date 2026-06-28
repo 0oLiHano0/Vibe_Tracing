@@ -163,10 +163,10 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
             if not pre_commit_path.exists():
                 _t_step = time.perf_counter()
                 python_path = sys.executable
-                hook_script = f'#!/bin/sh\nset -e\n# Vibe Tracing Git Guard\n"{python_path}" -m vibe_tracing analyze --pre-commit\n'
+                hook_script = f'#!/bin/sh\nset -e\n# Vibe Tracing Git Guard\n"{python_path}" -m vibe_tracing analyze\n'
                 pre_commit_path.write_text(hook_script)
                 pre_commit_path.chmod(0o755)
-                print("Installed Git pre-commit hook (vibe_tracing analyze --pre-commit)")
+                print("Installed Git pre-commit hook (vibe_tracing analyze)")
                 if vt_logger:
                     vt_logger.info("init_step", "Installed git pre-commit hook",
                                    file=".git/hooks/pre-commit",

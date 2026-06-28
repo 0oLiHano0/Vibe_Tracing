@@ -83,10 +83,6 @@ def _build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument(
         "--out", help="输出目录路径（默认：<project-root>/output）"
     )
-    # --pre-commit 模式：仅检查暂存区中的文件，用于 Git pre-commit hook
-    analyze_parser.add_argument(
-        "--pre-commit", action="store_true", help="以 Git pre-commit hook 模式运行（启用幽灵代码检测）"
-    )
     # --incremental-only 模式：只检查增量问题，历史债务不阻塞门禁
     analyze_parser.add_argument(
         "--incremental-only", action="store_true",
@@ -308,7 +304,6 @@ def _dispatch(args, project_root: Path) -> int:
 
         return run_analyze(
             project_root, output_dir,
-            is_pre_commit=args.pre_commit,
             incremental_only=args.incremental_only,
             show_historical_debt=args.show_debt,
         )

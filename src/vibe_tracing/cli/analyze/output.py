@@ -93,7 +93,7 @@ def _print_reflection_prompts(
 ) -> None:
     """Print reflection prompts based on analysis results."""
     from vibe_tracing.infra.report.reflection import render_reflection_prompts
-    from vibe_tracing.infra.config.boundary import load_boundary, partition_by_scope
+    from vibe_tracing.infra.config.boundary import partition_by_scope
 
     claims_list = ctx.claims_list
     manifest = ctx.manifest
@@ -110,8 +110,7 @@ def _print_reflection_prompts(
             if path and path not in affected_files:
                 affected_files.append(path)
 
-    boundary = load_boundary(project_root, constraints_data=ctx.constraints)
-    _scope = partition_by_scope(affected_files, boundary)
+    _scope = partition_by_scope(affected_files, ctx.governance_boundary)
     in_scope_files = _scope["in_scope"]
     out_of_scope_files = _scope["out_of_scope"]
 
@@ -152,15 +151,13 @@ def _render_output(
     staged_items: Optional[Set[str]],
     output_dir,
     project_root,
-    is_pre_commit: bool = False,
     staged_files: Optional[Set[str]] = None,
     conn=None,
 ) -> None:
     """Render dashboard, print gate summary, agent actions, and reflection prompts."""
     _render_dashboard(ctx, report_doc, evidence_meta, output_dir, project_root)
     _print_gate_summary(gate_res, staged_items)
-    if not is_pre_commit:
-        _print_empty_claims_hint(ctx, staged_files)
+    _print_empty_claims_hint(ctx, staged_files)
     _print_agent_actions(
         ctx, gate_res, report_doc, evidence_meta,
         active_gaps, active_risks, merged_gaps, compliance_res,

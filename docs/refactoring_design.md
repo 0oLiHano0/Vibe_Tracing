@@ -57,9 +57,9 @@ run_analyze(project_root, ...)
 │   调用：_load_context(project_root)
 │   输出：ctx: UnifiedContext（不含 tool_evidence）
 │
-├── 阶段 2：Claim 覆盖检查（前置条件）
+├── 阶段 2：幽灵代码检测（前置条件）
 │   调用：staged_files = subprocess.run(["git", "diff", "--cached", ...])
-│         check_claim_coverage(ctx, staged_files, project_root)  # domain/gate/claim_coverage.py
+│         detect_ghost_code(ctx, staged_files)  # domain/gate/claim_coverage.py
 │   输出：exit_code 或 None
 │
 ├── 阶段 3：执行工具

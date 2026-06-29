@@ -6,8 +6,6 @@
 |------|---------|------|
 | **配置文件**（含工具矩阵） | `domain/context.py` | 内存（由阶段 1 加载并存入 `UnifiedContext.config`） |
 | **Claims** | `domain/context.py` | 内存（由阶段 1 加载并存入 `UnifiedContext.claims_list`） |
-| **暂存区文件列表** | `cli/analyze/pipeline.py` | 内存（由 git diff --cached 获取） |
-| **统一上下文** | `domain/context.py` | 内存（由阶段 1 构建） |
 
 ---
 
@@ -73,19 +71,6 @@ timestamp: "2026-06-23T12:00:00Z"   # 时间戳
 
 ---
 
-### staged_files（暂存区文件集合）
-
-**输入位置**：内存（由 `pipeline.py` 通过 git 命令获取）
-**包/模块**：`cli/analyze/pipeline.py:run_analyze()`
-
-```yaml
-# 示例值
-- "src/vibe_tracing/cli/main.py"    # 本次提交暂存的文件路径
-- "tests/test_cli.py"
-```
-
----
-
 ## 3. 处理逻辑
 
 阶段 3 的全部逻辑在 `cli/analyze/tools.py:_execute_tools()` 中完成，分为以下步骤：
@@ -125,17 +110,9 @@ timestamp: "2026-06-23T12:00:00Z"   # 时间戳
 
 提取规则：去掉路径中的 `#anchor` 后缀，检查文件后缀是否属于当前语言的扩展名列表，检查文件是否存在于磁盘，去重。
 
-同时收集非代码文件路径（后缀不在扩展名列表中的），用于后续生成"跳过"状态的证据。
-
 ---
 
-### 步骤 5：过滤暂存区文件
-
-只对 git 暂存区中的文件执行工具。如果暂存区为空或没有匹配的文件，打印提示并返回空列表。
-
----
-
-### 步骤 6：执行工具并收集证据
+### 步骤 5：执行工具并收集证据
 
 调用模块：`infra/tools/executor.py:ToolExecutionEngine.execute_all()`
 
@@ -158,7 +135,7 @@ timestamp: "2026-06-23T12:00:00Z"   # 时间戳
 
 ---
 
-### 步骤 7：覆盖率基线处理
+### 步骤 6：覆盖率基线处理
 
 调用模块：`infra/tools/executor.py:ToolExecutionEngine._measure_source_coverage()`
 
@@ -166,13 +143,7 @@ timestamp: "2026-06-23T12:00:00Z"   # 时间戳
 
 ---
 
-### 步骤 8：非代码文件跳过处理
-
-对步骤 4 中收集的非代码文件路径，生成状态为"skipped"的证据候选项，跳过原因为"非代码文件，工具不适用"。
-
----
-
-### 步骤 9：输出统计信息
+### 步骤 7：输出统计信息
 
 打印执行结果到终端：总证据候选项数、阻断数、跳过数，以及各类错误详情（超时、工具未找到等）。
 

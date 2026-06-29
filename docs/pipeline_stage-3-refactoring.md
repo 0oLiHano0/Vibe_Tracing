@@ -370,3 +370,110 @@ config_validation_tools = list(ltm.keys())
 | 4 | `ArchitectureComplianceChecker` 不受影响 | 阶段 7 正常运行 |
 | 5 | `pytest tests/test_finalize.py -v` | 3 个变更测试全量通过 |
 | 6 | `pytest tests/test_tool_execution.py tests/test_cli_analyze.py -v` | 无回归 |
+
+---
+
+## 重构 D：删除暂存区过滤和死代码
+
+**日期**：2026-06-29
+**状态**：已完成
+**范围**：`cli/analyze/tools.py` + `cli/analyze/pipeline.py`
+
+### 问题定义
+
+`_execute_tools()` 中有两个需要删除的代码块：
+
+1. **暂存区文件过滤**：用 `staged_files` 缩小 Claim 文件列表——安全漏洞，Agent 可以通过部分提交绕过测试验证
+2. **非代码文件 skipped 证据生成**：对非代码文件构造 `status="skipped"` 的证据候选项——生成的数据无人消费，是死代码
+
+### 设计决策
+
+**只删代码，不加代码。**
+
+删除暂存区过滤的理由：
+1. **安全漏洞**：Agent 可以通过部分提交绕过测试验证
+2. **阶段 2 已覆盖**：幽灵代码检测保证了 staged 文件都有 Claim
+
+删除非代码文件 skip 逻辑的理由：
+1. **死代码**：`skipped_evidence` 字段在 `EvidenceMergeResult` 中定义，但 `apply()`、`persist()`、门禁引擎、报告、Dashboard 均不读取该字段。生成即丢弃。
+2. **不值得移动**：之前设计的"下沉到 EvidenceBuilder"方案是把死代码搬到另一个地方——目标位置也是死代码。
+
+不改 EvidenceBuilder 的理由：
+- `skipped_evidence` 无人消费，改 `merge()` 签名没有业务价值
+- 如果未来需要非代码文件的 skipped 证据，到时再设计完整链路（从门禁引擎到 Dashboard 的消费方）
+
+### 变更步骤
+
+#### 变更 D-1：`_execute_tools` 删除暂存区过滤和非代码文件 skip 逻辑
+
+**修改文件**：`src/vibe_tracing/cli/analyze/tools.py`
+
+**删除项**（从 `_execute_tools()` 函数中）：
+
+1. `staged_files` 参数（函数签名和 docstring）
+2. 非代码文件收集逻辑：`non_code_refs` 的构建
+3. 暂存区过滤逻辑：`staged_files` 过滤 `test_paths`/`source_paths`
+4. 非代码文件 skipped 证据生成：构造 skipped `ToolEvidenceCandidate` 并 append
+5. staged_files 过滤后的空路径检查和提示信息：删除 staged_files 过滤后，此检查变为不可达代码（L93-94 已拦截空路径），一并删除。提示信息合并到 L93-94 的空路径检查中。
+
+**保留项**：
+
+1. 工具配置读取
+2. 预检
+3. 引擎创建
+4. 代码文件路径收集：从 Claim 的 `test_refs`/`code_refs` 提取
+5. 空路径检查（L93-94）：新增提示信息 `"no code files found in claims"`
+6. 工具执行：`engine.execute_all()`
+7. 错误输出与统计
+
+**修改后的函数签名**：
+
+```python
+def _execute_tools(
+    ctx: UnifiedContext,
+    project_root: Path,
+) -> List:
+```
+
+#### 变更 D-2：pipeline.py 删除 staged_files 参数
+
+**修改文件**：`src/vibe_tracing/cli/analyze/pipeline.py`
+
+`_execute_tools` 调用处删除 `staged_files=staged_files` 参数。
+
+`staged_files` 变量在 pipeline.py 中仍保留——阶段 2（`detect_ghost_code`）和阶段 7（`_run_db_analysis`）仍需要它。
+
+#### 变更 D-3：更新 spec 文档
+
+**修改文件**：`docs/spec_pipeline_stage_3.md`
+
+1. §1 输入来源：删除 staged_files 行
+2. §3 处理逻辑：删除步骤 5（过滤暂存区文件）和步骤 8（非代码文件跳过处理）
+
+### 变更依赖关系
+
+```
+变更 D-1 (_execute_tools 删除代码)
+  └── 变更 D-2 (pipeline.py 删除参数)
+        └── 变更 D-3 (更新 spec)
+```
+
+**执行顺序**：D-1 → D-2 → D-3（同一任务内完成）
+
+### 测试文件变更
+
+| 测试文件 | 影响 | 说明 |
+|----------|------|------|
+| `test_tool_execution.py` | **不需要改** | 直接测试引擎，不经过 `_execute_tools` |
+| `test_cli_analyze.py` | **需要检查** | 如有测试传入 `staged_files` 参数，需删除 |
+
+### 验证标准
+
+| # | 验证项 | 预期结果 |
+|---|--------|----------|
+| 1 | `_execute_tools` 无 `staged_files` 参数 | 函数签名简化 |
+| 2 | `_execute_tools` 无 `non_code_refs` 逻辑 | 不生成死数据 |
+| 3 | Claim 引用的所有代码文件都被工具验证 | 不再有"未暂存文件跳过验证"的情况 |
+| 4 | 阶段 2 幽灵代码检测不受影响 | `staged_files` 仍传递给 `detect_ghost_code` |
+| 5 | 阶段 7 不受影响 | `staged_files` 仍传递给 `_run_db_analysis` |
+| 6 | 全量测试通过 | 无回归 |

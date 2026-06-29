@@ -8665,6 +8665,90 @@
         "spec §7 步骤 1 的代码示例需要更新 ltm 的读取来源。",
         "spec §11 阶段间传递表中删除 ctx.constraints → 阶段 3 的传递行。"
       ]
+    },
+    {
+      "task_id": "TASK-VT-155",
+      "title": "删除暂存区过滤和非代码文件 skipped 死代码",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "_execute_tools() 中暂存区文件过滤是安全漏洞（Agent 可通过部分提交绕过验证），非代码文件 skipped 证据生成是死代码（skipped_evidence 无人消费）。只删代码，不加代码。",
+      "atomic_scope": "修改 cli/analyze/tools.py：删除 staged_files 参数、暂存区过滤逻辑、非代码文件收集和 skipped 证据生成。修改 cli/analyze/pipeline.py：调用处删除 staged_files 参数。",
+      "out_of_scope": [
+        "不修改 ToolExecutionEngine（executor.py）",
+        "不修改阶段 2 的幽灵代码检测（仍使用 staged_files）",
+        "不修改阶段 7 的分析逻辑（仍使用 staged_files）",
+        "不修改 finalize.py"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-018",
+        "SEC-VT-004"
+      ],
+      "depends_on": [
+        "TASK-VT-153"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/tools.py",
+        "src/vibe_tracing/cli/analyze/pipeline.py",
+        "docs/spec_pipeline_stage_3.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-155-01",
+          "description": "_execute_tools() 函数签名中无 staged_files 参数。"
+        },
+        {
+          "dod_id": "DOD-VT-155-02",
+          "description": "_execute_tools() 中无 staged_files 过滤逻辑。"
+        },
+        {
+          "dod_id": "DOD-VT-155-03",
+          "description": "_execute_tools() 中无 non_code_refs 收集和 skipped 证据生成逻辑。"
+        },
+        {
+          "dod_id": "DOD-VT-155-04",
+          "description": "pipeline.py 调用 _execute_tools 时不传 staged_files。"
+        },
+        {
+          "dod_id": "DOD-VT-155-05",
+          "description": "阶段 2 的 detect_ghost_code 仍接收 staged_files 参数，功能不受影响。"
+        },
+        {
+          "dod_id": "DOD-VT-155-06",
+          "description": "阶段 7 的 _run_db_analysis 仍接收 staged_files 参数，功能不受影响。"
+        },
+        {
+          "dod_id": "DOD-VT-155-08",
+          "description": "spec_pipeline_stage_3.md §1 输入来源中无 staged_files 行，§3 处理逻辑中无步骤 5（过滤暂存区文件）和步骤 8（非代码文件跳过处理）。"
+        },
+        {
+          "dod_id": "DOD-VT-155-07",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "tools.py 中 non_code_refs 收集逻辑需要删除。",
+        "tools.py 中 staged_files 过滤逻辑需要删除。",
+        "tools.py 中非代码文件 skipped 证据生成逻辑需要删除。",
+        "tools.py 函数签名中的 staged_files 参数需要删除。",
+        "tools.py 空路径检查保留，提示信息改为 'no code files found in claims'。",
+        "pipeline.py 调用 _execute_tools 时删除 staged_files=staged_files 参数。",
+        "staged_files 变量在 pipeline.py 中仍保留——阶段 2 和阶段 7 仍需要它。",
+        "不修改 EvidenceBuilder（skipped_evidence 是死数据，无人消费）。",
+        "不修改 EvidenceMergeResult。",
+        "spec_pipeline_stage_3.md §1 输入来源中 staged_files 行删除，§3 步骤 5 和步骤 8 删除。",
+        "删除 staged_files 过滤后，L101-104（'no staged files match claim references'）变为不可达代码，需一并删除。提示信息合并到 L93-94 的空路径检查中（新增 print 'no code files found in claims'）。"
+      ]
     }
   ]
 }

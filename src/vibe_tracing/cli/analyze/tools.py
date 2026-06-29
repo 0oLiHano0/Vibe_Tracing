@@ -1,10 +1,10 @@
 """
-Tool execution and staged-file checks.
+Tool execution for validation tools.
 """
 
 import sys
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import List
 
 from vibe_tracing.domain.context import UnifiedContext
 
@@ -12,7 +12,6 @@ from vibe_tracing.domain.context import UnifiedContext
 def _execute_tools(
     ctx: UnifiedContext,
     project_root: Path,
-    staged_files: Optional[Set[str]] = None,
 ) -> List:
     """Execute validation tools and return tool evidence candidates.
 
@@ -28,7 +27,7 @@ def _execute_tools(
     lang_tools = ltm.get(config_language, {})
     config_validation_tools = [k for k, v in lang_tools.items() if isinstance(v, dict)]
 
-    from vibe_tracing.infra.tools.executor import ToolExecutionEngine, ToolEvidenceCandidate
+    from vibe_tracing.infra.tools.executor import ToolExecutionEngine
     from vibe_tracing.infra.tools.resolver import ToolResolver
 
     # Pre-flight dependency check
@@ -68,15 +67,7 @@ def _execute_tools(
         return []
     test_paths: List[str] = []
     source_paths: List[str] = []
-    seen_paths: Set[str] = set()
-
-    # Collect non-code file references for skipped evidence
-    non_code_refs: Set[str] = set()
-    for claim in claims_list:
-        for ref in list(claim.test_refs or []) + list(claim.code_refs or []):
-            path_only = ref.split("#")[0]
-            if path_only and Path(path_only).suffix and Path(path_only).suffix not in code_extensions:
-                non_code_refs.add(path_only)
+    seen_paths = set()
 
     for claim in claims_list:
         for ref in claim.test_refs:
@@ -91,36 +82,13 @@ def _execute_tools(
                 seen_paths.add(path_only)
 
     if not test_paths and not source_paths:
+        print("Skipping tool execution: no code files found in claims.", file=sys.stderr)
         return []
-
-    # Filter to only staged files (EVO-TASK-016)
-    if staged_files is not None:
-        test_paths = [p for p in test_paths if p in staged_files]
-        source_paths = [p for p in source_paths if p in staged_files]
 
     total_paths = len(test_paths) + len(source_paths)
-    if total_paths == 0:
-        print("Skipping tool execution: no staged files match claim references.", file=sys.stderr)
-        return []
-
-    print(f"Executing validation tools for {total_paths} staged path(s)...")
+    print(f"Executing validation tools for {total_paths} path(s)...")
     typed_paths = {"test": test_paths, "source": source_paths}
     tool_evidence_candidates = engine.execute_all(typed_paths)
-
-    # Generate skipped evidence for non-code files
-    for ref_path in non_code_refs:
-        tool_evidence_candidates.append(
-            ToolEvidenceCandidate(
-                source_type="tool",
-                source_path=ref_path,
-                covers=[],
-                status="skipped",
-                command="",
-                exit_code=0,
-                stderr="",
-                details={"skip_reason": "non-code file, tools not applicable"},
-            )
-        )
 
     executed_count = len(tool_evidence_candidates)
     blocked_count = sum(1 for c in tool_evidence_candidates if c.error_code is not None)

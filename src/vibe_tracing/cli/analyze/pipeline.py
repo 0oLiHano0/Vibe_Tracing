@@ -269,7 +269,7 @@ def run_analyze(
 
         # ── 阶段 3：执行验证工具 ──────────────────────────────────
         _t_tools = time.perf_counter()
-        tool_evidence = _execute_tools(ctx, project_root, staged_files=staged_files)
+        tool_evidence = _execute_tools(ctx, project_root)
         # tool_evidence is a pipeline-local variable, NOT stored in ctx
         vt_logger.info("phase_end", "Tool execution completed",
                        phase="execute_tools",

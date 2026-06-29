@@ -18,8 +18,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode
-from vibe_tracing.infra.tools.executor import ToolEvidenceCandidate, ToolExecutionEngine
+from vibe_tracing.domain.evidence.candidate import ToolEvidenceCandidate
+from vibe_tracing.infra.tools.executor import ToolExecutionEngine
 from vibe_tracing.infra.tools.parsers import parse_pytest_json, parse_coverage_json_output
+
+
+def _make_claim(code_refs=None, test_refs=None):
+    """Helper to create a mock Claim with given refs."""
+    claim = MagicMock()
+    claim.code_refs = code_refs or []
+    claim.test_refs = test_refs or []
+    return claim
 
 
 # ---------------------------------------------------------------------------
@@ -32,6 +41,12 @@ def project_root(tmp_path: Path) -> Path:
     (tmp_path / "tests").mkdir()
     (tmp_path / "src").mkdir()
     (tmp_path / ".vibetracing").mkdir()
+    # Create files referenced by test claims so path.exists() checks pass
+    (tmp_path / "src" / "vibe_tracing").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "src" / "vibe_tracing" / "foo.py").write_text("pass\n")
+    (tmp_path / "src" / "foo.py").write_text("pass\n")
+    (tmp_path / "src" / "module.py").write_text("pass\n")
+    (tmp_path / "tests" / "test_foo.py").write_text("def test_ok(): pass\n")
     return tmp_path
 
 
@@ -692,112 +707,121 @@ class TestMypyOutputParsing:
 # Test: execute_all
 # ---------------------------------------------------------------------------
 
-class TestExecuteAll:
-    """Verify execute_all runs all whitelisted tools for all paths."""
+class TestExecuteFromClaims:
+    """Verify execute_from_claims runs all whitelisted tools for claim paths."""
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_runs_all_tools(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    def test_execute_from_claims_runs_all_tools(
+        self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine
     ) -> None:
         """covers: AC-VT-008-01"""
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="[]", stderr=""
-        )
-
-        # Only use "lint" for a simpler test
-        engine._tool_configs = {
-            "lint": engine._tool_configs["lint"]
-        }
-
-        candidates = engine.execute_all({"source": ["src/vibe_tracing/foo.py"]})
-        assert len(candidates) >= 1
-        # Should have run at least once
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        engine._tool_configs = {"lint": engine._tool_configs["lint"]}
+        claims = [_make_claim(code_refs=["src/vibe_tracing/foo.py"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        assert len(result.candidates) >= 1
+        assert not result.skipped
         mock_run.assert_called()
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_skips_non_python_for_lint(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    def test_execute_from_claims_skips_non_python_for_lint(
+        self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine
     ) -> None:
         """covers: AC-VT-015a — .md files are skipped by lint tool."""
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="[]", stderr=""
-        )
-
-        engine._tool_configs = {
-            "lint": engine._tool_configs["lint"]
-        }
-
-        candidates = engine.execute_all({"source": ["docs/README.md"]})
-        assert len(candidates) == 0
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        engine._tool_configs = {"lint": engine._tool_configs["lint"]}
+        claims = [_make_claim(code_refs=["docs/README.md"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        # .md is not in code_extensions, so no paths collected → skipped
+        assert result.skipped
+        assert result.skip_reason == "no_code_files"
         mock_run.assert_not_called()
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_skips_non_python_for_test(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    def test_execute_from_claims_skips_non_python_for_test(
+        self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine
     ) -> None:
         """covers: AC-VT-015a — .md files are skipped by test tool."""
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="[]", stderr=""
-        )
-
-        engine._tool_configs = {
-            "test": engine._tool_configs["test"]
-        }
-
-        candidates = engine.execute_all({"test": ["docs/README.md"]})
-        assert len(candidates) == 0
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        engine._tool_configs = {"test": engine._tool_configs["test"]}
+        claims = [_make_claim(test_refs=["docs/README.md"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        assert result.skipped
+        assert result.skip_reason == "no_code_files"
         mock_run.assert_not_called()
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_skips_non_python_for_all_categories(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    def test_execute_from_claims_skips_non_python_for_all_categories(
+        self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine
     ) -> None:
         """covers: AC-VT-015a — .json file skipped by all python-only tools."""
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="[]", stderr=""
-        )
-
-        # Keep all tool configs
-        candidates = engine.execute_all({"source": ["config/settings.json"]})
-        assert len(candidates) == 0
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        claims = [_make_claim(code_refs=["config/settings.json"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        assert result.skipped
+        assert result.skip_reason == "no_code_files"
         mock_run.assert_not_called()
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_runs_python_files_for_all_categories(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    def test_execute_from_claims_runs_python_files_for_all_categories(
+        self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine
     ) -> None:
         """covers: AC-VT-015a — .py files run on all tool categories."""
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="[]", stderr=""
-        )
-
-        candidates = engine.execute_all({"source": ["src/module.py"]})
-        # 3 subprocess-based tool categories execute on source paths (lint,
-        # type_check, security).  test is skipped for source paths.
-        # Coverage is measured from baseline, not via subprocess.
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        claims = [_make_claim(code_refs=["src/module.py"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        # 3 subprocess-based tool categories execute on source paths
         assert mock_run.call_count == 3
-        # Each category produces at least one candidate (lint,
-        # type_check, security return 1 each; test returns 0 from empty parse)
-        assert len(candidates) >= 3
+        assert len(result.candidates) >= 3
+        assert not result.skipped
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_mixed_paths_filters_correctly(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine
+    def test_execute_from_claims_mixed_paths_filters_correctly(
+        self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine
     ) -> None:
         """covers: AC-VT-015a — mixed .py and .md paths filter per category."""
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="[]", stderr=""
-        )
-
-        # Only lint is active
-        engine._tool_configs = {
-            "lint": engine._tool_configs["lint"]
-        }
-
-        candidates = engine.execute_all({"source": ["src/module.py", "docs/README.md"]})
-        # Only the .py path should be linted
-        assert len(candidates) == 1
+        mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
+        engine._tool_configs = {"lint": engine._tool_configs["lint"]}
+        claims = [_make_claim(code_refs=["src/module.py", "docs/README.md"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        # Only the .py path should be linted (.md filtered by extension)
+        assert len(result.candidates) == 1
         assert mock_run.call_count == 1
+
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=False)
+    def test_execute_from_claims_precheck_failed(
+        self, mock_avail: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: precheck failure → skipped=True, skip_reason='precheck_failed'."""
+        engine._tool_configs = {"lint": {"tool": "ruff", "default_command": "ruff {source_path}", "output_format": "ruff_json"}}
+        claims = [_make_claim(code_refs=["src/module.py"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        assert result.skipped
+        assert result.skip_reason == "precheck_failed"
+        assert "ruff" in result.missing_tools
+        assert result.candidates == []
+
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
+    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
+    def test_execute_from_claims_execution_error(
+        self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine
+    ) -> None:
+        """covers: tool execution error → candidates with error_code set."""
+        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="error output")
+        engine._tool_configs = {"lint": engine._tool_configs["lint"]}
+        claims = [_make_claim(code_refs=["src/module.py"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        assert not result.skipped
+        assert len(result.candidates) >= 1
+        # At least one candidate should have an error_code or non-zero exit_code
+        error_candidates = [c for c in result.candidates if c.exit_code != 0 or c.error_code is not None]
+        assert len(error_candidates) >= 1
 
 
 
@@ -1384,41 +1408,49 @@ class TestMeasureSourceCoverageEdgeCases:
 # Test: execute_all with typed paths (dict)
 # ---------------------------------------------------------------------------
 
-class TestExecuteAllTypedPaths:
-    """Verify execute_all with dict-style typed paths."""
+class TestExecuteFromClaimsRouting:
+    """Verify execute_from_claims routes test/source paths correctly."""
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_dict_paths_test_type(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
-        """covers: execute_all dict paths branch (lines 913-924)"""
+    def test_test_refs_route_to_test_category(self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: test_refs produce test-type paths, only 'test' category runs."""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
         engine._tool_configs = {"test": engine._tool_configs["test"]}
-        candidates = engine.execute_all({"test": ["tests/test_foo.py"]})
+        claims = [_make_claim(test_refs=["tests/test_foo.py"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
         assert mock_run.call_count == 1
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_dict_paths_source_type(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
-        """covers: execute_all dict paths source type (lines 913-924)"""
+    def test_code_refs_route_to_source_category(self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: code_refs produce source-type paths, non-test categories run."""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
         engine._tool_configs = {"lint": engine._tool_configs["lint"]}
-        candidates = engine.execute_all({"source": ["src/module.py"]})
+        claims = [_make_claim(code_refs=["src/module.py"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
         assert mock_run.call_count == 1
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_dict_paths_unknown_type_skipped(self, mock_run: MagicMock, engine: ToolExecutionEngine) -> None:
-        """covers: execute_all dict paths unknown type (line 919-920)"""
+    def test_empty_claims_returns_no_code_files(self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: claims with no refs → skipped."""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
-        candidates = engine.execute_all({"unknown_type": ["src/module.py"]})
+        claims = [_make_claim()]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        assert result.skipped
+        assert result.skip_reason == "no_code_files"
         assert mock_run.call_count == 0
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_dict_paths_category_not_in_config_skipped(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine
-    ) -> None:
-        """covers: execute_all dict paths category not in config (line 923)"""
+    def test_category_not_in_config_skipped(self, mock_run: MagicMock, mock_avail: MagicMock, engine: ToolExecutionEngine) -> None:
+        """covers: 'test' category not in _tool_configs — should be skipped for test paths."""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
-        # "test" category not in _tool_configs — should be skipped
         engine._tool_configs = {"lint": engine._tool_configs["lint"]}
-        candidates = engine.execute_all({"test": ["tests/test_foo.py"]})
+        claims = [_make_claim(test_refs=["tests/test_foo.py"])]
+        result = engine.execute_from_claims(claims, engine.project_root)
+        # test_refs produce "test" type paths, but only "lint" is configured → 0 subprocess calls
         assert mock_run.call_count == 0
 
 
@@ -1596,73 +1628,61 @@ class TestAutoGenerateOutputPath:
 # ---------------------------------------------------------------------------
 
 class TestCoverageBaselineIntegration:
-    """Verify coverage baseline is connected to execute_all via coverage_baseline_path."""
+    """Verify coverage baseline is connected to execute_from_claims via coverage_baseline_path."""
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_connects_coverage_baseline(
-        self, mock_run: MagicMock, project_root: Path, python_matrix: dict
+    def test_execute_from_claims_connects_coverage_baseline(
+        self, mock_run: MagicMock, mock_avail: MagicMock, project_root: Path, python_matrix: dict
     ) -> None:
-        """covers: execute_all passes baseline_path to _measure_source_coverage."""
+        """covers: execute_from_claims passes baseline_path to _measure_source_coverage."""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
-
-        baseline = {
-            "files": {
-                "src/foo.py": {"percent_covered": 90.0, "num_statements": 40},
-            }
-        }
+        baseline = {"files": {"src/foo.py": {"percent_covered": 90.0, "num_statements": 40}}}
         baseline_path = project_root / "coverage.json"
         baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
-
         engine = ToolExecutionEngine(
-            language_tool_matrix=python_matrix,
-            language="python",
-            validation_tools=["lint"],
-            project_root=project_root,
+            language_tool_matrix=python_matrix, language="python",
+            validation_tools=["lint"], project_root=project_root,
             coverage_baseline_path=str(baseline_path),
         )
-
-        candidates = engine.execute_all({"source": ["src/foo.py"]})
-        # Should have lint evidence from subprocess + coverage evidence from baseline
-        coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
+        claims = [_make_claim(code_refs=["src/foo.py"])]
+        result = engine.execute_from_claims(claims, project_root)
+        coverage_candidates = [c for c in result.candidates if c.tool_category == "coverage"]
         assert len(coverage_candidates) == 1
         assert coverage_candidates[0].source_path == "src/foo.py"
         assert coverage_candidates[0].details["percent_covered"] == 90.0
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_no_baseline_returns_empty_coverage(
-        self, mock_run: MagicMock, project_root: Path, python_matrix: dict
+    def test_execute_from_claims_no_baseline_returns_empty_coverage(
+        self, mock_run: MagicMock, mock_avail: MagicMock, project_root: Path, python_matrix: dict
     ) -> None:
-        """covers: execute_all with no coverage_baseline_path returns no coverage evidence."""
+        """covers: execute_from_claims with no coverage_baseline_path returns no coverage evidence."""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
-
         engine = ToolExecutionEngine(
-            language_tool_matrix=python_matrix,
-            language="python",
-            validation_tools=["lint"],
-            project_root=project_root,
+            language_tool_matrix=python_matrix, language="python",
+            validation_tools=["lint"], project_root=project_root,
         )
-
-        candidates = engine.execute_all({"source": ["src/foo.py"]})
-        coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
+        claims = [_make_claim(code_refs=["src/foo.py"])]
+        result = engine.execute_from_claims(claims, project_root)
+        coverage_candidates = [c for c in result.candidates if c.tool_category == "coverage"]
         assert len(coverage_candidates) == 0
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_missing_baseline_file_returns_empty(
-        self, mock_run: MagicMock, project_root: Path, python_matrix: dict
+    def test_execute_from_claims_missing_baseline_file_returns_empty(
+        self, mock_run: MagicMock, mock_avail: MagicMock, project_root: Path, python_matrix: dict
     ) -> None:
-        """covers: execute_all with non-existent baseline file returns no coverage evidence."""
+        """covers: execute_from_claims with non-existent baseline file returns no coverage evidence."""
         mock_run.return_value = MagicMock(returncode=0, stdout="[]", stderr="")
-
         engine = ToolExecutionEngine(
-            language_tool_matrix=python_matrix,
-            language="python",
-            validation_tools=["lint"],
-            project_root=project_root,
+            language_tool_matrix=python_matrix, language="python",
+            validation_tools=["lint"], project_root=project_root,
             coverage_baseline_path=str(project_root / "nonexistent.json"),
         )
-
-        candidates = engine.execute_all({"source": ["src/foo.py"]})
-        coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
+        claims = [_make_claim(code_refs=["src/foo.py"])]
+        result = engine.execute_from_claims(claims, project_root)
+        coverage_candidates = [c for c in result.candidates if c.tool_category == "coverage"]
         assert len(coverage_candidates) == 0
 
 

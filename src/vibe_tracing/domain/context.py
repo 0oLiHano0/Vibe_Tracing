@@ -19,7 +19,7 @@ class UnifiedContext:
     never re-read or re-parse files from disk.
 
     Note: tool_evidence is NOT stored here. It's a pipeline-local variable
-    returned by _execute_tools() and passed directly to EvidenceBuilder.merge().
+    from ToolExecutionEngine.execute_from_claims() and passed directly to EvidenceBuilder.merge().
     """
 
     config: Dict[str, Any]

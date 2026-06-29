@@ -73,7 +73,7 @@ timestamp: "2026-06-23T12:00:00Z"   # 时间戳
 
 ## 3. 处理逻辑
 
-阶段 3 的全部逻辑在 `cli/analyze/tools.py:_execute_tools()` 中完成，分为以下步骤：
+阶段 3 的全部逻辑在 `infra/tools/executor.py:ToolExecutionEngine.execute_from_claims()` 中完成，分为以下步骤：
 
 ### 步骤 1：读取工具配置
 
@@ -114,7 +114,7 @@ timestamp: "2026-06-23T12:00:00Z"   # 时间戳
 
 ### 步骤 5：执行工具并收集证据
 
-调用模块：`infra/tools/executor.py:ToolExecutionEngine.execute_all()`
+调用模块：`infra/tools/executor.py:ToolExecutionEngine.execute_from_claims()`
 
 对每个文件路径，根据路径类型（测试/源码）选择要执行的工具类别：
 
@@ -156,7 +156,7 @@ timestamp: "2026-06-23T12:00:00Z"   # 时间戳
 
 ### ToolEvidenceCandidate（工具证据候选项）
 
-**包/模块**：`infra/tools/candidate.py:ToolEvidenceCandidate`
+**包/模块**：`domain/evidence/candidate.py:ToolEvidenceCandidate`
 
 ```yaml
 source_type: "test"                 # 证据来源类型："test"（pytest）| "tool"（其他工具）
@@ -231,7 +231,7 @@ details:                            # 附加详情
 
 ### 日志事件
 
-`cli/analyze/tools.py` 记录：
+`infra/tools/executor.py` 的 `execute_from_claims()` 记录（全部 7 个事件归 executor，pipeline.py 无日志事件）：
 
 | 事件名 | 级别 | 触发时机 | 附加字段 |
 |--------|------|----------|----------|

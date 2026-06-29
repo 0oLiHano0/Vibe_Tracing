@@ -8872,6 +8872,492 @@
         "spec §5 日志事件表需要补充 tools.py 的日志事件：tool_precheck_failed、no_code_files、tool_execution_start、tool_execution_error、tool_execution_complete。",
         "pipeline_stage-3-refactoring.md 重构 E 状态从 '待执行' 改为 '已完成'。"
       ]
+    },
+    {
+      "task_id": "TASK-VT-159",
+      "title": "candidate.py 移至 domain/evidence/ + 新增 ToolExecutionResult",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 ToolEvidenceCandidate 从 infra/tools/ 移到 domain/evidence/，修正隐式依赖方向，获得类型安全。同时新增 ToolExecutionResult 结构化返回值。",
+      "atomic_scope": "1) 移动 infra/tools/candidate.py → domain/evidence/candidate.py。2) 在同文件新增 ToolExecutionResult dataclass（candidates, skipped, skip_reason, missing_tools）。3) 更新 infra/tools/executor.py、infra/tools/parsers.py 的导入路径。4) 更新 infra/tools/__init__.py 移除 candidate 导出。5) 更新 domain/evidence/__init__.py 新增 candidate + ToolExecutionResult 导出。",
+      "out_of_scope": [
+        "不修改 builder.py（步骤 TASK-VT-160）",
+        "不修改 tools.py（步骤 TASK-VT-164 删除它）",
+        "不修改测试文件（步骤 TASK-VT-165）",
+        "不修改 pipeline.py"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012",
+        "MOD-VT-005"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/evidence/candidate.py",
+        "src/vibe_tracing/domain/evidence/__init__.py",
+        "src/vibe_tracing/infra/tools/__init__.py",
+        "src/vibe_tracing/infra/tools/executor.py",
+        "src/vibe_tracing/infra/tools/parsers.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-159-01",
+          "description": "infra/tools/candidate.py 已删除，domain/evidence/candidate.py 存在且包含 ToolEvidenceCandidate + ToolExecutionResult。"
+        },
+        {
+          "dod_id": "DOD-VT-159-02",
+          "description": "infra/tools/executor.py 和 parsers.py 的导入路径指向 domain.evidence.candidate，import 成功无报错。"
+        },
+        {
+          "dod_id": "DOD-VT-159-03",
+          "description": "domain/evidence/__init__.py 导出 ToolEvidenceCandidate 和 ToolExecutionResult。"
+        },
+        {
+          "dod_id": "DOD-VT-159-04",
+          "description": "python -c 'from vibe_tracing.domain.evidence.candidate import ToolEvidenceCandidate, ToolExecutionResult' 成功。"
+        },
+        {
+          "dod_id": "DOD-VT-159-05",
+          "description": "python -c 'from vibe_tracing.infra.tools.executor import ToolExecutionEngine' 成功。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "candidate.py 是纯 dataclass 文件（23 行），直接移动即可。",
+        "ToolExecutionResult 定义在同一个文件，字段：candidates: List[ToolEvidenceCandidate], skipped: bool = False, skip_reason: str = '', missing_tools: List[str] = field(default_factory=list)。",
+        "executor.py 第 26 行和 parsers.py 第 14 行的导入路径需要更新。",
+        "infra/tools/__init__.py 移除 ToolEvidenceCandidate 导出，保留 ToolResolver 和 ToolExecutionEngine。",
+        "移动后运行 pytest tests/test_tool_execution.py 确认无回归（预期会因导入路径失败，这是 TASK-VT-165 修复范围）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-160",
+      "title": "根源修复 builder.py 类型不安全：getattr → 属性访问",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "builder.py 的 merge() 方法用 List[Any] + getattr() 鸭子类型访问 ToolEvidenceCandidate 字段，改为精确类型注解 + 直接属性访问。",
+      "atomic_scope": "1) builder.py 的 merge() 方法签名 List[Any] → List[ToolEvidenceCandidate]。2) 新增 from vibe_tracing.domain.evidence.candidate import ToolEvidenceCandidate。3) 所有 getattr(ev, 'field', default) 替换为 ev.field（6 处）。4) getattr(ev, 'details', {}) or {} 替换为 ev.details。",
+      "out_of_scope": [
+        "不修改 executor.py",
+        "不修改 pipeline.py",
+        "不修改测试文件"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-005"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-159"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/evidence/builder.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-160-01",
+          "description": "builder.py 的 merge() 签名为 def merge(self, tool_evidence: List[ToolEvidenceCandidate]) -> EvidenceMergeResult。"
+        },
+        {
+          "dod_id": "DOD-VT-160-02",
+          "description": "builder.py 中无 getattr() 调用，所有字段通过 ev.source_type、ev.status 等直接访问。"
+        },
+        {
+          "dod_id": "DOD-VT-160-03",
+          "description": "python -c 'from vibe_tracing.domain.evidence.builder import EvidenceBuilder' 成功。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "builder.py merge() 方法中 6 处 getattr 替换：source_type、tool_category、status、exit_code、command、details。",
+        "details 字段的 getattr(ev, 'details', {}) or {} 替换为 ev.details（dataclass 默认值已保证非 None）。",
+        "source_type == 'coverage' 的分支中 details.get('percent_covered', 0) 不需要改——那是 dict 访问，不是 getattr。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-161",
+      "title": "executor 新增 execute_from_claims() 唯一入口 + 删除 execute_all()",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 ToolExecutionEngine 中新增 execute_from_claims() 方法，内聚预检 + 路径收集 + 执行 + 统计全部逻辑，作为工具执行的唯一入口。删除 execute_all()。",
+      "atomic_scope": "1) 新增 execute_from_claims(claims_list, project_root) → ToolExecutionResult 方法。2) 内部逻辑：预检（ToolResolver.is_available）→ 从 claims 收集路径（按 test/source 分类）→ 逐个调用 execute_tool() → 附加 coverage baseline → 返回 ToolExecutionResult。3) 删除 execute_all(typed_paths) 方法。4) 日志事件在此步骤仅添加占位（步骤 TASK-VT-162 补全）。",
+      "out_of_scope": [
+        "不修改 pipeline.py（步骤 TASK-VT-163）",
+        "不删除 tools.py（步骤 TASK-VT-164）",
+        "不修改测试文件（步骤 TASK-VT-165）",
+        "日志事件的完整迁移由 TASK-VT-162 完成"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006",
+        "TECH-VT-002"
+      ],
+      "depends_on": [
+        "TASK-VT-159"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/tools/executor.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-161-01",
+          "description": "ToolExecutionEngine 有 execute_from_claims() 方法，返回 ToolExecutionResult。"
+        },
+        {
+          "dod_id": "DOD-VT-161-02",
+          "description": "execute_from_claims() 内部完成预检、路径收集、工具执行、coverage baseline 附加。"
+        },
+        {
+          "dod_id": "DOD-VT-161-03",
+          "description": "execute_all() 方法已删除，executor.py 中无此方法定义。"
+        },
+        {
+          "dod_id": "DOD-VT-161-04",
+          "description": "python -c 'from vibe_tracing.infra.tools.executor import ToolExecutionEngine' 成功。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "execute_from_claims() 的路径收集逻辑从 tools.py L66-87 迁移：遍历 claims_list，从 test_refs 和 code_refs 提取路径，按扩展名过滤，按 test/source 分类。",
+        "预检逻辑从 tools.py L36-54 迁移：收集 required_binaries → ToolResolver.is_available 检查 → 失败返回 ToolExecutionResult(skipped=True, skip_reason='precheck_failed', missing_tools=missing)。",
+        "路径分类后逐个调用 self.execute_tool()，不经过 execute_all()（避免二次扩展名过滤）。",
+        "coverage baseline 附加逻辑从 execute_all() L639-641 迁移：self._measure_source_coverage()。",
+        "execute_all() 的 L608-636（路径分类 + 逐个执行）逻辑融入 execute_from_claims()，execute_all() 整体删除。",
+        "此步骤的 execute_from_claims() 仅做 vt_logger.info/warning 占位，完整日志迁移由 TASK-VT-162 完成。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-162",
+      "title": "迁移全部 7 个日志事件到 executor 的 execute_from_claims()",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 tools.py 中的 7 个日志事件全部迁移到 executor.py 的 execute_from_claims() 方法中，executor 只用 vt_logger，不 print。",
+      "atomic_scope": "1) tool_precheck_failed → vt_logger.warning，在预检失败分支。2) no_code_extensions → vt_logger.warning，在无扩展名分支。3) no_code_files → vt_logger.warning，在无代码文件分支。4) tool_execution_start → vt_logger.info，在执行开始前。5) tool_files_skipped → vt_logger.info，在执行完成后检查 skipped_count。6) tool_execution_error → vt_logger.warning，在遍历 candidates 检查 error_code。7) tool_execution_complete → vt_logger.info，在返回前。",
+      "out_of_scope": [
+        "不在 executor.py 中 print 到 stderr",
+        "不修改 pipeline.py",
+        "不修改 tools.py"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "LOG-VT-011"
+      ],
+      "depends_on": [
+        "TASK-VT-161"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/tools/executor.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-162-01",
+          "description": "execute_from_claims() 中包含全部 7 个日志事件（tool_precheck_failed、no_code_extensions、no_code_files、tool_execution_start、tool_files_skipped、tool_execution_error、tool_execution_complete）。"
+        },
+        {
+          "dod_id": "DOD-VT-162-02",
+          "description": "executor.py 中 execute_from_claims() 内无 print() 调用，所有输出通过 vt_logger。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "7 个事件的参数和消息文本从 tools.py 原样迁移，不改变事件名。",
+        "tool_execution_error 的触发条件：遍历 candidates，c.error_code is not None。details = c.details or {}; error_type = details.get('error_type', 'unknown')。",
+        "tool_files_skipped 的触发条件：skipped_count = sum(1 for c in candidates if c.status == 'skipped')。",
+        "tool_execution_complete 的参数：executed_count=len(candidates), blocked_count=sum(error_code), skipped_count=sum(skipped)。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-163",
+      "title": "pipeline.py 改为纯调度：一行调用 + 按 ToolExecutionResult print",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "pipeline.py 阶段 3 改为纯调度：构造 ToolExecutionEngine → 调用 execute_from_claims() → 按返回值 ToolExecutionResult 决定是否 print Agent 修复指南。",
+      "atomic_scope": "1) 删除 from vibe_tracing.cli.analyze.tools import _execute_tools。2) 新增 from vibe_tracing.infra.tools.executor import ToolExecutionEngine。3) config 提取（language, ltm, validation_tools）保留（构造 engine 需要）。4) 调用 engine.execute_from_claims() 替代 _execute_tools()。5) 按 result.skipped / result.skip_reason / result.candidates 中的 error_code print Agent 修复指南。6) 不重复预检逻辑。",
+      "out_of_scope": [
+        "不删除 tools.py（步骤 TASK-VT-164）",
+        "不修改测试文件",
+        "不在 pipeline.py 中做日志记录（日志在 executor 内部完成）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-161",
+        "TASK-VT-162"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/pipeline.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-163-01",
+          "description": "pipeline.py 不再 import _execute_tools 或 tools 模块。"
+        },
+        {
+          "dod_id": "DOD-VT-163-02",
+          "description": "pipeline.py 阶段 3 代码为：构造 engine → execute_from_claims() → 按 result print，无预检逻辑重复。"
+        },
+        {
+          "dod_id": "DOD-VT-163-03",
+          "description": "pipeline.py 中无 vt_logger.warning/info 调用（日志在 executor 内部），仅保留 print Agent 修复指南。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "pipeline.py L272 的 _execute_tools(ctx, project_root) 替换为 engine.execute_from_claims(ctx.claims_list, project_root)。",
+        "config 提取逻辑（language, ltm, validation_tools）保留——构造 engine 需要这些参数。",
+        "预检逻辑（ToolResolver.is_available）不在 pipeline.py 中出现——executor 内部处理，通过 result.skipped 返回。",
+        "print 逻辑参考 refactoring_tools_layer.md 步骤 3 的代码示例。",
+        "pipeline.py 阶段 2 的 vt_logger 调用保持不变——阶段 2 的日志不受此次重构影响。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-164",
+      "title": "删除 cli/analyze/tools.py",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除 cli/analyze/tools.py 文件，其全部逻辑已融入 executor 的 execute_from_claims()。",
+      "atomic_scope": "1) 删除 src/vibe_tracing/cli/analyze/tools.py。2) 确认 pipeline.py 中无残留 import。3) 确认无其他文件 import _execute_tools。",
+      "out_of_scope": [
+        "不修改其他文件"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "T-1"
+      ],
+      "depends_on": [
+        "TASK-VT-163"
+      ],
+      "expected_deliverables": [],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-164-01",
+          "description": "src/vibe_tracing/cli/analyze/tools.py 文件不存在。"
+        },
+        {
+          "dod_id": "DOD-VT-164-02",
+          "description": "grep -r 'from vibe_tracing.cli.analyze.tools' src/ 返回空结果。"
+        },
+        {
+          "dod_id": "DOD-VT-164-03",
+          "description": "grep -r '_execute_tools' src/ 返回空结果。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "TASK-VT-163 完成后 pipeline.py 不再 import tools.py，此步骤只需删除文件。",
+        "删除后运行 grep 确认无残留引用。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-165",
+      "title": "更新测试：导入路径 + execute_all → execute_from_claims",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新所有测试文件的 ToolEvidenceCandidate 导入路径，将 execute_all 测试用例迁移为 execute_from_claims 测试用例。",
+      "atomic_scope": "1) test_tool_execution.py：ToolEvidenceCandidate 导入从 infra.tools.executor 改为 domain.evidence.candidate。2) test_evidence_builder.py：同上。3) test_integration_v3.py：execute_all 测试用例改为测试 execute_from_claims。4) 新增 execute_from_claims 的 ToolExecutionResult 返回值测试（预检失败、无文件、正常执行、执行错误 4 个场景）。5) 删除 execute_all 相关测试用例。",
+      "out_of_scope": [
+        "不修改生产代码",
+        "不修改 test_timing_instrumentation.py（它测 _run_subprocess，不涉及 candidate 导入）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "X-1"
+      ],
+      "depends_on": [
+        "TASK-VT-161",
+        "TASK-VT-163",
+        "TASK-VT-164"
+      ],
+      "expected_deliverables": [
+        "tests/test_tool_execution.py",
+        "tests/test_evidence_builder.py",
+        "tests/test_integration_v3.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-165-01",
+          "description": "test_tool_execution.py 和 test_evidence_builder.py 中 ToolEvidenceCandidate 从 domain.evidence.candidate 导入。"
+        },
+        {
+          "dod_id": "DOD-VT-165-02",
+          "description": "test_integration_v3.py 中无 execute_all 测试用例，有 execute_from_claims 测试用例。"
+        },
+        {
+          "dod_id": "DOD-VT-165-03",
+          "description": "execute_from_claims 的 4 个场景测试通过：预检失败、无代码文件、正常执行、执行错误。"
+        },
+        {
+          "dod_id": "DOD-VT-165-04",
+          "description": "pytest tests/test_tool_execution.py tests/test_evidence_builder.py tests/test_integration_v3.py 全部通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "test_evidence_builder.py 中 ToolEvidenceCandidate 用于构造测试数据，导入路径改为 from vibe_tracing.domain.evidence.candidate import ToolEvidenceCandidate。",
+        "test_tool_execution.py 同上。",
+        "test_integration_v3.py 的 TestExecuteAllLanguageFilter 类重命名为 TestExecuteFromClaimsLanguageFilter，调用 engine.execute_from_claims() 替代 engine.execute_all()。",
+        "execute_from_claims 需要 claims_list 参数——构造 mock claim 对象（含 test_refs 和 code_refs 属性）。",
+        "ToolExecutionResult 的 skipped 场景测试：mock ToolResolver.is_available 返回 False → 验证 result.skipped=True, result.skip_reason='precheck_failed'。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-166",
+      "title": "文档收尾：更新 5 个文档反映 tools 层重构",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "同步更新所有相关文档，反映 tools 层重构后的架构变更：candidate.py 移动、tools.py 删除、execute_from_claims 唯一入口、ToolExecutionResult 返回值。",
+      "atomic_scope": "1) docs/refactoring_design.md：更新 §2 决策 5（函数名+返回类型）、§3 目标流水线阶段 3（调用方式）、§3 Gate 3 #8（函数名）、§4.1 domain/evidence/（新增 candidate.py）、§4.2 infra/tools/（移除 candidate.py）、§4.3 cli/analyze/（移除 tools.py + 更新设计说明）、§5 接口定义（新增 ToolExecutionResult）。2) docs/spec_infra_loader.md：如有对 candidate.py 或 tools.py 的引用则更新。3) docs/spec_pipeline_stage_1.md：如有对 tools.py 的引用则更新。4) docs/spec_pipeline_stage_2.md：如有对 tools.py 的引用则更新。5) docs/spec_pipeline_stage_3.md：更新 §2 代码模块结构（移除 tools.py、更新 executor.py 描述）、更新 §5 日志事件表（全部事件归 executor）。6) docs/pipeline_stage-3-refactoring.md：新增重构 F 章节。",
+      "out_of_scope": [
+        "不修改代码文件",
+        "不修改 task_list.json"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "D-1"
+      ],
+      "depends_on": [
+        "TASK-VT-165"
+      ],
+      "expected_deliverables": [
+        "docs/refactoring_design.md",
+        "docs/spec_infra_loader.md",
+        "docs/spec_pipeline_stage_1.md",
+        "docs/spec_pipeline_stage_2.md",
+        "docs/spec_pipeline_stage_3.md",
+        "docs/pipeline_stage-3-refactoring.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-166-01",
+          "description": "refactoring_design.md §2 决策 5：_execute_tools() → execute_from_claims()，返回类型 List[ToolEvidenceCandidate] → ToolExecutionResult。"
+        },
+        {
+          "dod_id": "DOD-VT-166-02",
+          "description": "refactoring_design.md §3 目标流水线阶段 3：调用方式从 _execute_tools(ctx) 改为 engine.execute_from_claims(ctx.claims_list, project_root)，输出从 List[ToolEvidenceCandidate] 改为 ToolExecutionResult（取 .candidates）。"
+        },
+        {
+          "dod_id": "DOD-VT-166-03",
+          "description": "refactoring_design.md §3 Gate 3 #8：工具结果行的 db 函数列从 _execute_tools() 改为 execute_from_claims()。"
+        },
+        {
+          "dod_id": "DOD-VT-166-04",
+          "description": "refactoring_design.md §4.1 domain/evidence/ 新增 candidate.py 行（ToolEvidenceCandidate、ToolExecutionResult）。"
+        },
+        {
+          "dod_id": "DOD-VT-166-05",
+          "description": "refactoring_design.md §4.2 infra/tools/ 移除 candidate.py 行。"
+        },
+        {
+          "dod_id": "DOD-VT-166-06",
+          "description": "refactoring_design.md §4.3 cli/analyze/ 移除 tools.py 行；设计说明中移除 'exceptions.py 避免 pipeline.py ↔ tools.py 循环导入' 的描述。"
+        },
+        {
+          "dod_id": "DOD-VT-166-07",
+          "description": "refactoring_design.md §5 新增 ToolExecutionResult 接口定义（candidates: List[ToolEvidenceCandidate], skipped: bool, skip_reason: str, missing_tools: List[str]）。"
+        },
+        {
+          "dod_id": "DOD-VT-166-08",
+          "description": "spec_pipeline_stage_3.md §2 代码模块结构中无 tools.py，executor.py 描述包含 execute_from_claims + 预检 + 路径收集。"
+        },
+        {
+          "dod_id": "DOD-VT-166-09",
+          "description": "spec_pipeline_stage_3.md §5 日志事件表中全部 7 个事件归属 executor，pipeline.py 无日志事件。"
+        },
+        {
+          "dod_id": "DOD-VT-166-10",
+          "description": "pipeline_stage-3-refactoring.md 新增重构 F 章节，状态为已完成。"
+        },
+        {
+          "dod_id": "DOD-VT-166-11",
+          "description": "spec_infra_loader.md、spec_pipeline_stage_1.md、spec_pipeline_stage_2.md 中无对 tools.py 或旧 infra/tools/candidate.py 路径的引用。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "refactoring_design.md 具体修改清单：",
+        "§2 决策 5（L43-44）：'_execute_tools() 返回 List[ToolEvidenceCandidate]' → 'execute_from_claims() 返回 ToolExecutionResult'。tool_evidence 仍作为 pipeline 局部变量传递，不存入 UnifiedContext——取 result.candidates。",
+        "§3 目标流水线阶段 3（L64-66）：调用从 tool_evidence = _execute_tools(ctx) 改为 result = engine.execute_from_claims(ctx.claims_list, project_root) + tool_evidence = result.candidates。输出描述从 'List[ToolEvidenceCandidate]（局部变量）' 改为 'ToolExecutionResult，取 .candidates 作为局部变量'。",
+        "§3 Gate 3 表格（L128）：第 8 行 '工具结果' 列的 '_execute_tools()' → 'execute_from_claims()'。",
+        "§4.1 Domain 包结构（L147-148）：evidence/ 下新增 '│   ├── candidate.py                  # ToolEvidenceCandidate, ToolExecutionResult'。",
+        "§4.2 Infra 包结构（L204）：移除 '│   ├── candidate.py                     # ToolEvidenceCandidate（数据模型）' 行。",
+        "§4.3 CLI 包结构（L221）：移除 '│   ├── tools.py                    # 工具执行' 行。设计说明（L229）：'避免 pipeline.py ↔ reports.py/tools.py 的循环导入' → '避免 pipeline.py ↔ reports.py 的循环导入'。",
+        "§5 接口定义：在 §5.1 前新增 §5.0 ToolExecutionResult 接口定义，字段：candidates: List[ToolEvidenceCandidate], skipped: bool = False, skip_reason: str = '', missing_tools: List[str] = field(default_factory=list)。§5.1 EvidenceBuilder.merge 签名已是 List[ToolEvidenceCandidate]（设计文档正确，不需改——代码向设计对齐即可）。",
+        "spec_pipeline_stage_3.md：§2 代码模块结构移除 tools.py 描述，executor.py 描述改为 '工具执行引擎（预检 → 路径收集 → 执行 → 统计 → 日志）'。§5 日志事件表列出全部 7 个事件，归属 executor.py。",
+        "搜索单词 'tools.py'、'_execute_tools'、'execute_all'、'infra/tools/candidate' 确认 6 个文档中无残留引用。"
+      ]
     }
   ]
 }

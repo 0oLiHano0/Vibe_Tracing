@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode
-from vibe_tracing.infra.tools.candidate import ToolEvidenceCandidate
+from vibe_tracing.domain.evidence.candidate import ToolEvidenceCandidate
 
 
 def parse_pytest_output(

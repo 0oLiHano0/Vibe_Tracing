@@ -2,7 +2,7 @@
 Integration tests for Vibe Tracing v3 features.
 
 Covers:
-- ToolExecutionEngine.execute_all: Language-based file filtering
+- ToolExecutionEngine.execute_from_claims: Language-based file filtering
 """
 
 from pathlib import Path
@@ -13,15 +13,23 @@ import pytest
 from vibe_tracing.infra.tools.executor import ToolExecutionEngine
 
 
-class TestExecuteAllLanguageFilter:
-    """Integration test for execute_all filtering by file extension."""
+def _make_claim(code_refs=None, test_refs=None):
+    """Helper to create a mock Claim with given refs."""
+    claim = MagicMock()
+    claim.code_refs = code_refs or []
+    claim.test_refs = test_refs or []
+    return claim
 
+
+class TestExecuteFromClaimsLanguageFilter:
+    """Integration test for execute_from_claims filtering by file extension."""
+
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_filters_by_language(
-        self, mock_run: MagicMock, tmp_path: Path
+    def test_execute_from_claims_filters_by_language(
+        self, mock_run: MagicMock, mock_avail: MagicMock, tmp_path: Path
     ) -> None:
         """Only .py files should be executed; .md files should be skipped."""
-        # Arrange
         py_file = tmp_path / "src" / "module.py"
         py_file.parent.mkdir(parents=True, exist_ok=True)
         py_file.write_text("x = 1\n", encoding="utf-8")
@@ -49,7 +57,8 @@ class TestExecuteAllLanguageFilter:
             project_root=tmp_path,
         )
 
-        candidates = engine.execute_all({"source": ["src/module.py", "docs/readme.md"]})
+        claims = [_make_claim(code_refs=["src/module.py", "docs/readme.md"])]
+        result = engine.execute_from_claims(claims, tmp_path)
 
         # .py file should have been processed (subprocess called once for lint)
         assert mock_run.call_count == 1
@@ -57,12 +66,13 @@ class TestExecuteAllLanguageFilter:
         assert "module.py" in called_cmd
 
         # .md file should not appear in any candidate
-        source_paths = [c.source_path for c in candidates]
+        source_paths = [c.source_path for c in result.candidates]
         assert "docs/readme.md" not in source_paths
 
+    @patch("vibe_tracing.infra.tools.executor.ToolResolver.is_available", return_value=True)
     @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_execute_all_skips_all_non_matching(
-        self, mock_run: MagicMock, tmp_path: Path
+    def test_execute_from_claims_skips_all_non_matching(
+        self, mock_run: MagicMock, mock_avail: MagicMock, tmp_path: Path
     ) -> None:
         """Only .py files are configured; .json and .md files produce no candidates."""
         engine = ToolExecutionEngine(
@@ -82,6 +92,8 @@ class TestExecuteAllLanguageFilter:
             project_root=tmp_path,
         )
 
-        candidates = engine.execute_all({"source": ["docs/notes.md", "config.json"]})
-        assert candidates == []
+        claims = [_make_claim(code_refs=["docs/notes.md", "config.json"])]
+        result = engine.execute_from_claims(claims, tmp_path)
+        assert result.skipped
+        assert result.skip_reason == "no_code_files"
         mock_run.assert_not_called()

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from vibe_tracing.domain.evidence.merge_result import EvidenceMergeResult
+from vibe_tracing.domain.evidence.candidate import ToolEvidenceCandidate
 
 
 class EvidenceBuilder:
@@ -27,7 +28,7 @@ class EvidenceBuilder:
         """
         self.project_root = project_root
 
-    def merge(self, tool_evidence: List[Any]) -> EvidenceMergeResult:
+    def merge(self, tool_evidence: List[ToolEvidenceCandidate]) -> EvidenceMergeResult:
         """Merge tool evidence into structured upsert/purge operations.
 
         This is a pure data processing step with no DB dependency.
@@ -39,35 +40,31 @@ class EvidenceBuilder:
         skipped: List[Dict[str, Any]] = []
 
         for ev in (tool_evidence or []):
-            source_type = getattr(ev, "source_type", None)
-            tool_category = getattr(ev, "tool_category", "")
-
-            if source_type == "test":
+            if ev.source_type == "test":
                 # Extract bare file path from pytest nodeid
                 file_path = ev.source_path.split("::")[0]
                 if file_path:
                     files_to_purge.append(file_path)
                 test_results.append({
                     "nodeid": ev.source_path,
-                    "outcome": getattr(ev, "status", "unknown"),
-                    "exit_code": getattr(ev, "exit_code", 0),
-                    "command": getattr(ev, "command", ""),
+                    "outcome": ev.status,
+                    "exit_code": ev.exit_code,
+                    "command": ev.command,
                     "carried_over": False,
                 })
-            elif source_type == "coverage" or (source_type == "tool" and tool_category == "coverage"):
-                details = getattr(ev, "details", {}) or {}
+            elif ev.source_type == "coverage" or (ev.source_type == "tool" and ev.tool_category == "coverage"):
                 coverage_reports.append({
                     "source_path": ev.source_path,
-                    "percent_covered": details.get("percent_covered", 0),
-                    "num_statements": details.get("num_statements", 0),
-                    "status": getattr(ev, "status", "violated"),
+                    "percent_covered": ev.details.get("percent_covered", 0),
+                    "num_statements": ev.details.get("num_statements", 0),
+                    "status": ev.status,
                     "carried_over": False,
                 })
             else:
                 skipped.append({
                     "source_path": ev.source_path,
-                    "source_type": source_type,
-                    "reason": f"Unknown source_type: {source_type}",
+                    "source_type": ev.source_type,
+                    "reason": f"Unknown source_type: {ev.source_type}",
                 })
 
         return EvidenceMergeResult(

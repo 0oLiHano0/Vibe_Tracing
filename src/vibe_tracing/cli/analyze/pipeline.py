@@ -8,7 +8,7 @@ VT 分析流水线编排模块
 核心设计（与 refactoring_design.md §3 对齐）：
   1. 加载输入 (_load_context)
   2. Claim 覆盖前置检查（domain/gate/claim_coverage.py）
-  3. 执行工具 (_execute_tools)
+  3. 执行工具 (ToolExecutionEngine.execute_from_claims)
   4. 创建数据库 (init_in_memory_db)
   5. 灌入基础数据 (load_prd + load_tasks + load_claims)
   6. 构建证据 (EvidenceBuilder.merge/apply/persist)
@@ -42,7 +42,7 @@ from vibe_tracing.infra.loader.task_loader import TaskLoader
 from vibe_tracing.infra.loader.claim_loader import ClaimLoader
 from vibe_tracing.domain.gate.staleness import determine_affected_items as _determine_affected_items
 
-from vibe_tracing.cli.analyze.tools import _execute_tools
+from vibe_tracing.infra.tools.executor import ToolExecutionEngine
 from vibe_tracing.cli.analyze.reports import _build_report_document
 from vibe_tracing.cli.analyze.output import _render_output
 
@@ -179,7 +179,7 @@ def run_analyze(
     处理逻辑（8 个阶段）：
         1. _load_context：加载 PRD、Tasks、Claims、Config
         2. 幽灵代码检测（domain/gate/claim_coverage.py）
-        3. _execute_tools：执行 pytest/ruff/bandit/coverage
+        3. execute_from_claims：执行 pytest/ruff/bandit/coverage
         4. init_in_memory_db：创建内存数据库
         5. load_prd + load_tasks + load_claims：将数据灌入数据库
         6. EvidenceBuilder.merge/apply/persist：构建证据
@@ -269,7 +269,42 @@ def run_analyze(
 
         # ── 阶段 3：执行验证工具 ──────────────────────────────────
         _t_tools = time.perf_counter()
-        tool_evidence = _execute_tools(ctx, project_root)
+        config_data = ctx.config
+        config_language = config_data["language"]
+        ltm = config_data["language_tool_matrix"]
+        config_validation_tools = [
+            k for k, v in ltm.get(config_language, {}).items() if isinstance(v, dict)
+        ]
+        engine = ToolExecutionEngine(
+            language_tool_matrix=ltm,
+            language=config_language,
+            validation_tools=config_validation_tools,
+            project_root=project_root,
+            coverage_baseline_path=str(project_root / "coverage.json"),
+        )
+        result = engine.execute_from_claims(ctx.claims_list, project_root)
+        tool_evidence = result.candidates
+
+        # Agent repair guide (CLI layer: user-facing output only)
+        if result.skipped:
+            if result.skip_reason == "precheck_failed":
+                print("\n[AI Agent Repair Guide]", file=sys.stderr)
+                print(f"VT depends on tools that are missing: {', '.join(result.missing_tools)}", file=sys.stderr)
+                print(f"Action Required: pip install {' '.join(result.missing_tools)}", file=sys.stderr)
+            elif result.skip_reason in ("no_code_files", "no_extensions"):
+                print(f"Skipping tool execution: {result.skip_reason}.", file=sys.stderr)
+        else:
+            for c in tool_evidence:
+                if c.error_code is not None:
+                    details = c.details or {}
+                    error_type = details.get("error_type", "unknown")
+                    if error_type == "timeout":
+                        print(f"Error: {c.source_path} timed out after {details.get('timeout_seconds', '?')}s.", file=sys.stderr)
+                    elif error_type == "tool_not_found":
+                        print(f"Error: tool not found for {c.source_path}.", file=sys.stderr)
+                    else:
+                        print(f"Error: {c.source_path} failed (exit code {c.exit_code}). {c.stderr}", file=sys.stderr)
+
         # tool_evidence is a pipeline-local variable, NOT stored in ctx
         vt_logger.info("phase_end", "Tool execution completed",
                        phase="execute_tools",

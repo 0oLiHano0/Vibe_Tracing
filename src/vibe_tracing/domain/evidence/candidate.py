@@ -1,6 +1,7 @@
-"""Tool evidence candidate data model.
+"""Evidence data models for tool execution.
 
-Represents a normalized evidence candidate parsed from a tool execution report.
+ToolEvidenceCandidate: normalized evidence candidate parsed from a tool execution report.
+ToolExecutionResult: structured return value from execute_from_claims().
 """
 
 from dataclasses import dataclass, field
@@ -21,3 +22,17 @@ class ToolEvidenceCandidate:
     stderr: str = ""
     error_code: Optional[str] = None  # ErrorCode value (e.g., tool_execution_failed)
     details: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ToolExecutionResult:
+    """Structured return value from ToolExecutionEngine.execute_from_claims().
+
+    Contains evidence candidates plus execution metadata, so callers can
+    distinguish "no files found" from "precheck failed" from "success".
+    """
+
+    candidates: List[ToolEvidenceCandidate]
+    skipped: bool = False          # True = precheck failed or no code files, not executed
+    skip_reason: str = ""          # "precheck_failed" | "no_code_files" | "no_extensions"
+    missing_tools: List[str] = field(default_factory=list)

@@ -146,5 +146,5 @@ is_pass: true                       # 属性：ghost_files 为空时为 True
 
 | 下游模块 | 目标包 | 说明 |
 |----------|--------|------|
-| **阶段 3** | `cli/analyze/tools.py` | 门禁通过后，接收 `staged_files` 参数，执行 pytest/ruff/bandit/coverage |
+| **阶段 3** | `infra/tools/executor.py` | 门禁通过后，`execute_from_claims()` 执行 pytest/ruff/bandit/coverage |
 | **阶段 7** | `cli/analyze/pipeline.py` | `staged_files` 传递给 `_run_db_analysis()`，用于债务感知判定 |

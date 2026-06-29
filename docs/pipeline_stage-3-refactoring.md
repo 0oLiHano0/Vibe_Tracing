@@ -529,3 +529,47 @@ def _execute_tools(
 | 4 | 执行完成时日志文件有 `tool_execution_complete` 事件 | 含 executed_count、blocked_count 统计 |
 | 5 | 无 `print(stderr)` 缺少对应 logger | 每处 print 都有日志事件 |
 | 6 | 全量测试通过 | 无回归 |
+
+---
+
+## 重构 F：消除 tools.py 编排层
+
+**状态**：已完成
+
+### 问题定义
+
+1. **三层编排过度设计**：pipeline.py → cli/analyze/tools.py → infra/tools/executor.py，tools.py 是约 140 行的薄代理层
+2. **candidate.py 位置错误**：ToolEvidenceCandidate 定义在 infra/tools/，被 domain/evidence/builder.py 通过 List[Any] + getattr() 鸭子类型消费（隐式依赖 + 类型不安全）
+3. **execute_all() 向后兼容**：tools.py 删除后无外部调用方
+
+### 设计决策
+
+1. candidate.py 移至 domain/evidence/，新增 ToolExecutionResult 结构化返回值
+2. builder.py 的 getattr() 全部替换为直接属性访问，List[Any] → List[ToolEvidenceCandidate]
+3. execute_from_claims() 作为唯一入口，内聚预检 + 路径收集 + 执行 + 统计
+4. 删除 execute_all()（无外部调用方）
+5. 预检 + 日志全部归 executor，pipeline.py 只做纯调度 + 按返回值 print Agent 修复指南
+
+### 变更步骤
+
+| 步骤 | 任务 | 变更文件 |
+|------|------|----------|
+| 0 | candidate.py 移动 + ToolExecutionResult | domain/evidence/candidate.py, executor.py, parsers.py, __init__.py |
+| 1 | builder.py 类型修复 | domain/evidence/builder.py |
+| 2 | execute_from_claims() + 删除 execute_all() | infra/tools/executor.py |
+| 3 | 日志事件全归 executor | infra/tools/executor.py |
+| 4 | pipeline.py 纯调度 | cli/analyze/pipeline.py |
+| 5 | 删除 tools.py | cli/analyze/tools.py |
+| 6 | 更新测试 | test_tool_execution.py, test_evidence_builder.py, test_integration_v3.py |
+| 7 | 更新文档 | refactoring_design.md, spec_pipeline_stage_3.md 等 |
+
+### 验证标准
+
+| # | 验证项 | 预期结果 |
+|---|--------|----------|
+| 1 | `domain/evidence/candidate.py` 存在 | 包含 ToolEvidenceCandidate + ToolExecutionResult |
+| 2 | `infra/tools/candidate.py` 不存在 | 已删除 |
+| 3 | `cli/analyze/tools.py` 不存在 | 已删除 |
+| 4 | `executor.py` 有 execute_from_claims，无 execute_all | 唯一入口 |
+| 5 | `builder.py` 无 getattr() | 类型安全 |
+| 6 | 全量测试通过 | 914 passed |

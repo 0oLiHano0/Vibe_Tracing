@@ -23,7 +23,7 @@ from vibe_tracing.infra.config.enums import CoverageStatus, ErrorCode
 from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
 from vibe_tracing.infra.logging.logger import OperationalLogger
 from vibe_tracing.infra.tools.resolver import ToolResolver
-from vibe_tracing.infra.tools.candidate import ToolEvidenceCandidate
+from vibe_tracing.domain.evidence.candidate import ToolEvidenceCandidate, ToolExecutionResult
 from vibe_tracing.infra.tools.parsers import (
     parse_pytest_output,
     parse_pytest_json,
@@ -576,56 +576,93 @@ class ToolExecutionEngine:
 
         return candidates
 
-    def execute_all(
+    def execute_from_claims(
         self,
-        paths: Dict[str, List[str]],
-    ) -> List[ToolEvidenceCandidate]:
-        """
-        Execute all whitelisted tools for the given typed paths.
+        claims_list: List[Any],
+        project_root: Path,
+    ) -> ToolExecutionResult:
+        """Execute tools from claims: precheck → path collection → execution → stats.
+
+        This is the sole entry point for tool execution. All logic is internal:
+        precheck, path collection, per-file execution, coverage baseline, logging.
+        No print() calls — only vt_logger. Callers use the structured result
+        to decide what to print.
 
         Args:
-            paths: ``Dict[str, List[str]]`` mapping path types ("test" or
-                "source") to path lists.  Path type is used to route tools:
-                "test" paths run only the ``test`` category;
-                "source" paths run everything else.
+            claims_list: List of Claim objects with test_refs and code_refs.
+            project_root: Project root directory.
 
         Returns:
-            Flat list of all ToolEvidenceCandidate objects.
+            ToolExecutionResult with candidates and metadata.
         """
-        all_candidates: List[ToolEvidenceCandidate] = []
+        vt_logger = OperationalLogger.get()
 
-        # Get language extensions from language_tool_matrix.
+        # --- 1. Precheck: verify required tool binaries are available ---
         lang_config = self.language_tool_matrix.get(self.language, {})
-        lang_extensions = set(lang_config.get("extensions", [".py"]))
+        code_extensions = set(lang_config.get("extensions", [".py"]))
+        if not code_extensions:
+            vt_logger.warning("no_code_extensions", "No code extensions defined in language_tool_matrix")
+            return ToolExecutionResult(candidates=[], skipped=True, skip_reason="no_extensions")
 
-        # Flatten typed paths: (path, path_type).
-        typed_paths: List[Tuple[str, str]] = []
-        for path_type, path_list in paths.items():
-            if isinstance(path_list, list):
-                for path in path_list:
-                    typed_paths.append((path, path_type))
+        required_binaries: set = set()
+        for category in self.validation_tools:
+            tool_cfg = self._tool_configs.get(category, {})
+            tool_name = tool_cfg.get("tool")
+            if tool_name:
+                required_binaries.add(tool_name)
+
+        missing = sorted(t for t in required_binaries if not ToolResolver.is_available(t))
+        if missing:
+            vt_logger.warning("tool_precheck_failed", "Tool dependency pre-check failed",
+                              missing_tools=missing)
+            return ToolExecutionResult(candidates=[], skipped=True,
+                                      skip_reason="precheck_failed", missing_tools=missing)
+
+        # --- 2. Collect paths from claims (test vs source) ---
+        test_paths: List[str] = []
+        source_paths: List[str] = []
+        seen_paths: set = set()
+
+        for claim in claims_list:
+            for ref in claim.test_refs:
+                path_only = ref.split("#")[0]
+                if (path_only and Path(path_only).suffix in code_extensions
+                        and path_only not in seen_paths
+                        and (project_root / path_only).exists()):
+                    test_paths.append(path_only)
+                    seen_paths.add(path_only)
+            for ref in claim.code_refs:
+                path_only = ref.split("#")[0]
+                if (path_only and Path(path_only).suffix in code_extensions
+                        and path_only not in seen_paths
+                        and (project_root / path_only).exists()):
+                    source_paths.append(path_only)
+                    seen_paths.add(path_only)
+
+        if not test_paths and not source_paths:
+            vt_logger.warning("no_code_files", "No code files found in claims")
+            return ToolExecutionResult(candidates=[], skipped=True, skip_reason="no_code_files")
+
+        total_paths = len(test_paths) + len(source_paths)
+        vt_logger.info("tool_execution_start", "Starting tool execution",
+                       total_paths=total_paths,
+                       test_paths=len(test_paths),
+                       source_paths=len(source_paths))
+
+        # --- 3. Execute tools per path, route by test/source ---
+        all_candidates: List[ToolEvidenceCandidate] = []
+        typed_paths = [(p, "test") for p in test_paths] + [(p, "source") for p in source_paths]
 
         for path, path_type in typed_paths:
-            # Only process files matching the project language extensions.
-            if Path(path).suffix not in lang_extensions:
-                continue
-
             for category in self.validation_tools:
-                # Coverage is a batch tool handled separately by
-                # _measure_source_coverage() — skip per-file execution.
                 if category == "coverage":
-                    continue
-
+                    continue  # batch tool, handled below
                 config = self._tool_configs.get(category)
                 if config is None:
                     continue
-
-                # Route by path type.
                 if path_type == "test" and category != "test":
                     continue
                 if path_type == "source" and category == "test":
-                    continue
-                if path_type not in ("test", "source"):
                     continue
 
                 candidates = self.execute_tool(
@@ -635,12 +672,35 @@ class ToolExecutionEngine:
                 )
                 all_candidates.extend(candidates)
 
-        # Append per-source-file coverage evidence from the baseline.
+        # --- 4. Append per-source-file coverage evidence from baseline ---
         all_candidates.extend(self._measure_source_coverage(
             baseline_path=self.coverage_baseline_path,
         ))
 
-        return all_candidates
+        # --- 5. Log statistics ---
+        executed_count = len(all_candidates)
+        blocked_count = sum(1 for c in all_candidates if c.error_code is not None)
+        skipped_count = sum(1 for c in all_candidates if c.status == "skipped")
+
+        if skipped_count > 0:
+            vt_logger.info("tool_files_skipped", "Some files skipped by tool engine",
+                           skipped_count=skipped_count)
+
+        for c in all_candidates:
+            if c.error_code is not None:
+                details = c.details or {}
+                error_type = details.get("error_type", "unknown")
+                vt_logger.warning("tool_execution_error", "Tool execution error",
+                                  source_path=c.source_path,
+                                  error_type=error_type,
+                                  exit_code=c.exit_code)
+
+        vt_logger.info("tool_execution_complete", "Tool execution completed",
+                       executed_count=executed_count,
+                       blocked_count=blocked_count,
+                       skipped_count=skipped_count)
+
+        return ToolExecutionResult(candidates=all_candidates)
 
     # ------------------------------------------------------------------
     # Docstring / covers extraction

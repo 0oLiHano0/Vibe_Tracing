@@ -41,7 +41,7 @@ analyzers 查询 SQLite，不消费 Python dict。
 
 ### 决策 5：tool_evidence 作为独立返回值
 
-- `_execute_tools()` 返回 `List[ToolEvidenceCandidate]`
+- `execute_from_claims()` 返回 `ToolExecutionResult`（含 `candidates: List[ToolEvidenceCandidate]`）
 - tool_evidence 作为 pipeline 局部变量传递，不存入 UnifiedContext
 
 ---
@@ -63,8 +63,9 @@ run_analyze(project_root, ...)
 │   输出：exit_code 或 None
 │
 ├── 阶段 3：执行工具
-│   调用：tool_evidence = _execute_tools(ctx)
-│   输出：List[ToolEvidenceCandidate]（局部变量）
+│   调用：result = engine.execute_from_claims(ctx.claims_list, project_root)
+│         tool_evidence = result.candidates
+│   输出：ToolExecutionResult → .candidates 作为局部变量
 │
 ├── 阶段 4：创建数据库
 │   调用：init_in_memory_db() → conn
@@ -126,7 +127,7 @@ run_analyze(project_root, ...)
 | 5 | AC 测试覆盖 | `check_ac_coverage()` | MUST AC 无测试 → blocked |
 | 6 | coverage 达标 | `check_coverage_violations()` | 低于阈值 → blocked |
 | 7 | 架构合规 | `ArchitectureComplianceChecker` | MUST 违规 → blocked |
-| 8 | 工具结果 | `_execute_tools()` | 严重问题 → blocked |
+| 8 | 工具结果 | `execute_from_claims()` | 严重问题 → blocked |
 
 #### 判定结果分级
 
@@ -146,6 +147,7 @@ run_analyze(project_root, ...)
 domain/
 ├── evidence/                            # 证据构建与合并（纯内存操作）
 │   ├── builder.py                       # EvidenceBuilder
+│   ├── candidate.py                     # ToolEvidenceCandidate, ToolExecutionResult
 │   └── merge_result.py                  # EvidenceMergeResult
 │
 ├── gate/                                # 门禁判定引擎（纯规则）
@@ -201,9 +203,8 @@ infra/
 │   └── loader.py                        # get_python_imports, find_python_files, find_dashboard_files, read_dashboard_content, check_file_exists
 └── tools/                               # 工具执行
     ├── resolver.py                      # ToolResolver（工具可用性检测）
-    ├── candidate.py                     # ToolEvidenceCandidate（数据模型）
     ├── parsers.py                       # 输出解析器（6个纯函数：parse_pytest_output, parse_pytest_json, parse_ruff_output, parse_mypy_output, parse_bandit_output, parse_coverage_json_output）
-    └── executor.py                      # ToolExecutionEngine（工具执行引擎，调用 parsers.py）
+    └── executor.py                      # ToolExecutionEngine（工具执行引擎，唯一入口 execute_from_claims，调用 parsers.py）
 ```
 
 ### 4.3 CLI 包（命令层）
@@ -218,7 +219,6 @@ cli/
 └── analyze/
     ├── exceptions.py               # CLI 层共享异常（_GateBlocked）
     ├── pipeline.py                 # 主流水线编排（调度层，含 _load_context + 阶段 2 内联）
-    ├── tools.py                    # 工具执行
     ├── reports.py                  # 报告生成（含 _rel_path_str）
     ├── actions.py                  # 行动建议收集 + 辅助查询（DB 查询委托 queries.py）
     ├── formatting.py               # 行动建议格式化
@@ -226,7 +226,7 @@ cli/
 ```
 
 设计说明：
-- `exceptions.py` 独立存在，避免 `pipeline.py` ↔ `reports.py`/`tools.py` 的循环导入
+- `exceptions.py` 独立存在，避免 `pipeline.py` ↔ `reports.py` 的循环导入
 - `_load_context()` 定义在 `pipeline.py`，是阶段 1 的唯一入口
 - `_rel_path_str()` 仅 `reports.py` 使用，内联定义
 - `actions.py` 包含 hint 解析和 AC/需求描述查询函数（`_hint_title`、`_get_ac_description` 等）
@@ -250,6 +250,20 @@ context          → infra/loader/, gate/, compliance/, risk/
 ---
 
 ## 5. 接口定义
+
+### 5.0 ToolExecutionResult
+
+位置：`domain/evidence/candidate.py`
+
+```python
+@dataclass
+class ToolExecutionResult:
+    """Structured return value from execute_from_claims()."""
+    candidates: List[ToolEvidenceCandidate]
+    skipped: bool = False          # True = precheck failed or no code files
+    skip_reason: str = ""          # "precheck_failed" | "no_code_files" | "no_extensions"
+    missing_tools: List[str] = field(default_factory=list)
+```
 
 ### 5.1 EvidenceBuilder
 

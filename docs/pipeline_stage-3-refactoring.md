@@ -220,3 +220,153 @@ if prd_res.status != "draft":
 | 4 | `_execute_tools` 代码行数 | 从 174 行缩减至约 150 行 | ✅ 已完成 |
 | 5 | `UnifiedContext.is_draft` 字段 | 已删除，无任何引用 | ✅ 已完成 |
 | 6 | 现有测试全部通过 | 无回归 | ✅ 已完成 |
+
+---
+
+## 重构 C：工具列表数据源收敛
+
+**日期**：2026-06-29
+**状态**：已完成
+**范围**：`vt finalize` + `cli/analyze/tools.py` + `docs/spec_pipeline_stage_3.md`
+
+### 问题定义
+
+阶段 3 的工具列表来自两个文件，通过拼接得到：
+
+```
+config.json → validation_tools = ["test", "lint", ...]     （类别名列表）
+architecture_constraints.json → language_tool_matrix         （类别→工具定义）
+```
+
+`vt finalize` 从 constraints 读出 `language` 和 `language_tool_matrix`，但只把 `language` 写进 config，把 `language_tool_matrix` 留在 constraints 里。然后 `vt analyze` 再把两个文件拼起来用。
+
+这是一个**半快照**：finalize 有能力也有职责做完整快照，但它只快照了一半。
+
+### 设计决策
+
+**收敛到 `config.json`。**
+
+理由：
+
+1. `FLOW-VT-009` 定义 config.json 为 analyze 阶段的完整运行时快照。当前的半快照违反了这个设计意图。
+2. `language_tool_matrix` 是运行时配置（"用什么工具、怎么跑"），不是架构约束（模块边界、依赖规则）。它的消费者是阶段 3 的工具执行，不是 `ArchitectureComplianceChecker`。
+3. `ArchitectureComplianceChecker`（阶段 7）检查的是 module_boundaries、dependency_rules 等，不检查 tool matrix。从 constraints 里去掉 tool matrix 不影响阶段 7。
+4. 半快照比不快照更糟——得维护两个文件的同步，但又没有获得单一来源的好处。
+
+**收敛后的职责划分：**
+
+| 文件 | 职责 | analyze 阶段消费者 |
+|------|------|-------------------|
+| `config.json` | 完整运行时快照（language + language_tool_matrix） | 阶段 3（`_execute_tools`） |
+| `architecture_constraints.json` | 架构设计基线（module_boundaries、dependency_rules 等）。tool matrix 仍在此文件中作为设计参考，`vt finalize` 读取它生成 config，但 `vt analyze` 不消费它 | 阶段 7（`ArchitectureComplianceChecker`） |
+
+### 变更步骤
+
+#### 变更 C-1：`vt finalize` 写入完整 tool matrix 子集
+
+**修改文件**：`src/vibe_tracing/cli/finalize.py`
+
+**当前行为**：
+- finalize 从 constraints 读取 `language`（line 185）和 `language_tool_matrix`（line 191）
+- 计算 `tool_categories`（line 198）：`[k for k, v in ltm[language].items() if isinstance(v, dict)]`
+- 只把 `language` 和 `tool_categories`（作为 `validation_tools`）写入 config.json
+- `language_tool_matrix` 留在 constraints 中，不写入 config
+
+**写入 config 的两条路径**：
+- 路径 A（首次 finalize）：line 382-386，`config_data["validation_tools"] = tool_categories`
+- 路径 B（re-finalize，tools 变更）：line 313，`config_data["validation_tools"] = tool_categories`
+- 比较逻辑（line 275）：`existing_tools = sorted(config_data.get("validation_tools", []))`
+- 提示信息（line 363）：`"Updated validation_tools: {existing_tools} → {current_tools}"`
+
+**修改步骤**：
+
+1. 在两条写入路径中，将 `config_data["validation_tools"] = tool_categories` 替换为 `config_data["language_tool_matrix"] = {language: ltm[language]}`
+2. 更新比较逻辑（line 275）：从 `language_tool_matrix` 提取 key 列表代替 `validation_tools`
+3. 更新提示信息（line 363）：`"Updated validation_tools"` → `"Updated language_tool_matrix"`
+
+**写入后的 config.json 结构变化**：
+
+```json
+{
+  "language": "python",
+  "language_tool_matrix": {
+    "python": {
+      "extensions": [".py"],
+      "test": { "tool": "pytest", "default_command": "...", "output_format": "pytest_json", ... },
+      "coverage": { ... },
+      "lint": { ... },
+      "type_check": { ... },
+      "security": { ... }
+    }
+  }
+}
+```
+
+`validation_tools` 字段删除，由 `language_tool_matrix[language].keys()` 动态获取。
+
+#### 变更 C-2：`_execute_tools` 只读 config
+
+**修改文件**：`src/vibe_tracing/cli/analyze/tools.py`
+
+**当前行为**（tools.py:26-28）：
+
+```python
+config_language = config_data["language"]
+config_validation_tools = config_data.get("validation_tools", [])
+ltm = ctx.constraints.get("language_tool_matrix", {})
+```
+
+**修改为**：
+
+```python
+config_language = config_data["language"]
+ltm = config_data["language_tool_matrix"]
+config_validation_tools = list(ltm.keys())
+```
+
+**变更点**：
+- `ltm` 从 `ctx.constraints` 改为 `ctx.config`，直接访问（不 `.get()`，不 fallback）
+- `config_validation_tools` 从 config 字段改为 `ltm.keys()` 动态获取
+- 删除对 `ctx.constraints` 的依赖
+- 不接受向后兼容——旧 config 需要 re-finalize（T-1/T-2/T-3）
+
+#### 变更 C-3：更新 spec 文档
+
+**修改文件**：`docs/spec_pipeline_stage_3.md`
+
+更新 §6（工具白名单机制）和 §7（详细处理流程）中关于数据源的描述，将"从两个文件读取"改为"从 config.json 读取"。
+
+### 变更依赖关系
+
+```
+变更 C-1 (finalize 写入完整 tool matrix)
+  └── 变更 C-2 (_execute_tools 只读 config)
+        └── 变更 C-3 (更新 spec)
+```
+
+**执行顺序**：C-1 → C-2 → C-3
+
+### 测试文件变更
+
+| 测试文件 | 影响 | 说明 |
+|----------|------|------|
+| `test_finalize.py` | **需要改** | 3 个测试断言 `config["validation_tools"]`，需改为断言 `config["language_tool_matrix"]` |
+| `test_cli_analyze.py` | **不需要改** | `language_tool_matrix: {}` 在 constraints 中的用例都是 `run_finalize` 测试（输入不变） |
+| `test_tool_execution.py` | **不需要改** | 直接测试 `ToolExecutionEngine`，不经过 `_execute_tools` 编排层 |
+
+`test_finalize.py` 需要变更的 3 个测试函数：
+
+1. `test_finalize_happy_path`（L79-92）：断言 `config["language_tool_matrix"]["python"]` 包含预期类别 key
+2. `test_finalize_already_finalized_same_language`（L95-114）：同上
+3. `test_finalize_updates_tools_when_matrix_changes`（L117-155）：断言 re-finalize 后 `config["language_tool_matrix"]["python"]` 包含新增类别，提示信息从 `"Updated validation_tools"` 改为 `"Updated language_tool_matrix"`
+
+### 验证标准
+
+| # | 验证项 | 预期结果 |
+|---|--------|----------|
+| 1 | 运行 `vt finalize` 后检查 config.json | 包含 `language_tool_matrix` 字段，值为当前语言的工具矩阵子集 |
+| 2 | `vt analyze` 阶段 3 正常执行 | 工具列表来自 config.json，结果与修改前一致 |
+| 3 | `tools.py` 不再引用 `ctx.constraints` | `_execute_tools` 内部无 constraints 依赖 |
+| 4 | `ArchitectureComplianceChecker` 不受影响 | 阶段 7 正常运行 |
+| 5 | `pytest tests/test_finalize.py -v` | 3 个变更测试全量通过 |
+| 6 | `pytest tests/test_tool_execution.py tests/test_cli_analyze.py -v` | 无回归 |

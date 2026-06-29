@@ -77,7 +77,7 @@ def _init_git_repo(base: Path) -> str:
 
 
 def test_finalize_happy_path(tmp_path, capsys):
-    """Happy path: finalize writes language and validation_tools to config.json."""
+    """Happy path: finalize writes language and language_tool_matrix to config.json."""
     _setup_project(tmp_path)
     _init_git_repo(tmp_path)
 
@@ -89,7 +89,10 @@ def test_finalize_happy_path(tmp_path, capsys):
 
     config = json.loads((tmp_path / ".vibetracing" / "config.json").read_text(encoding="utf-8"))
     assert config["language"] == "python"
-    assert config["validation_tools"] == ["test", "coverage", "lint", "type_check", "security"]
+    assert "language_tool_matrix" in config
+    assert "python" in config["language_tool_matrix"]
+    ltm_keys = sorted(k for k, v in config["language_tool_matrix"]["python"].items() if isinstance(v, dict))
+    assert ltm_keys == ["coverage", "lint", "security", "test", "type_check"]
 
 
 def test_finalize_already_finalized_same_language(tmp_path, capsys):
@@ -111,11 +114,12 @@ def test_finalize_already_finalized_same_language(tmp_path, capsys):
     # Config should be unchanged
     config = json.loads((tmp_path / ".vibetracing" / "config.json").read_text(encoding="utf-8"))
     assert config["language"] == "python"
-    assert config["validation_tools"] == ["test", "coverage", "lint", "type_check", "security"]
+    ltm_keys = sorted(k for k, v in config["language_tool_matrix"]["python"].items() if isinstance(v, dict))
+    assert ltm_keys == ["coverage", "lint", "security", "test", "type_check"]
 
 
 def test_finalize_updates_tools_when_matrix_changes(tmp_path, capsys):
-    """When language_tool_matrix gains a new tool category, re-finalize updates validation_tools."""
+    """When language_tool_matrix gains a new tool category, re-finalize updates config."""
     _setup_project(tmp_path)
     _init_git_repo(tmp_path)
 
@@ -148,11 +152,12 @@ def test_finalize_updates_tools_when_matrix_changes(tmp_path, capsys):
     assert exit_code == 0
 
     captured = capsys.readouterr()
-    assert "Updated validation_tools" in captured.out
+    assert "Updated language_tool_matrix" in captured.out
 
     config = json.loads((tmp_path / ".vibetracing" / "config.json").read_text(encoding="utf-8"))
-    assert "formatter" in config["validation_tools"]
-    assert len(config["validation_tools"]) == 6
+    assert "formatter" in config["language_tool_matrix"]["python"]
+    ltm_keys = [k for k, v in config["language_tool_matrix"]["python"].items() if isinstance(v, dict)]
+    assert len(ltm_keys) == 6
 
 
 def test_finalize_conflict_language(tmp_path, capsys):
@@ -868,7 +873,7 @@ def test_finalize_tools_and_content_both_changed_with_changelog(tmp_path, capsys
     assert exit_code == 0
 
     captured = capsys.readouterr()
-    assert "Updated validation_tools" in captured.out
+    assert "Updated language_tool_matrix" in captured.out
 
     second_config = json.loads(
         (tmp_path / ".vibetracing" / "config.json").read_text(encoding="utf-8")
@@ -876,7 +881,7 @@ def test_finalize_tools_and_content_both_changed_with_changelog(tmp_path, capsys
     # Hash should have been updated
     assert second_config["architecture_constraints_hash"] != first_config["architecture_constraints_hash"]
     # Tools should include the new formatter
-    assert "formatter" in second_config["validation_tools"]
+    assert "formatter" in second_config["language_tool_matrix"]["python"]
 
 
 # ── L1 Bug fix: git commit failure should return 1 ─────────────────────────

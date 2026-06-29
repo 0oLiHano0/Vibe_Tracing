@@ -74,7 +74,16 @@ def test_dynamic_prefix_init_and_validation(tmp_path):
     with config_path.open("r", encoding="utf-8") as f:
         config_data = json.load(f)
     config_data["language"] = "python"
-    config_data["validation_tools"] = ["test"]
+    config_data["language_tool_matrix"] = {
+        "python": {
+            "test": {
+                "tool": "pytest",
+                "default_command": "pytest {test_path} --tb=short -q --json-report --json-report-file={output_path}",
+                "output_format": "pytest_json",
+                "pass_condition": "exit_code == 0",
+            }
+        }
+    }
     config_data["architecture_constraints_hash"] = hashlib.sha256(
         constraints_path.read_bytes()
     ).hexdigest()

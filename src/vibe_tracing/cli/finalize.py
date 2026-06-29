@@ -272,7 +272,8 @@ def run_finalize(project_root: Path) -> int:
                                 config_language=existing_language, constraints_language=language)
                 print(f"Error: config.json language \"{existing_language}\" conflicts with architecture_constraints language \"{language}\". Manual intervention required.", file=sys.stderr)
                 return 1
-            existing_tools = sorted(config_data.get("validation_tools", []))
+            existing_matrix = config_data.get("language_tool_matrix", {})
+            existing_tools = sorted(k for k, v in existing_matrix.get(language, {}).items() if isinstance(v, dict))
             current_tools = sorted(tool_categories)
             stored_hash = config_data.get("architecture_constraints_hash")
             stored_prd_hash = config_data.get("prd_hash", "")
@@ -310,7 +311,7 @@ def run_finalize(project_root: Path) -> int:
 
             # Tools changed -> update config
             if tools_changed:
-                config_data["validation_tools"] = tool_categories
+                config_data["language_tool_matrix"] = {language: ltm[language]}
 
             # Write config and commit if anything was updated
             with config_path.open("w", encoding="utf-8") as f:
@@ -360,7 +361,7 @@ def run_finalize(project_root: Path) -> int:
             if hash_changed:
                 parts.append(f"Constraints checkpoint updated (hash={computed_hash[:12]}...). {message}")
             if tools_changed:
-                parts.append(f"Updated validation_tools: {existing_tools} → {current_tools}")
+                parts.append(f"Updated language_tool_matrix: {existing_tools} → {current_tools}")
             print(" ".join(parts) if parts else "No changes detected.")
             _print_post_finalize_guidance(project_root)
             vt_logger.info("run_end", "vt finalize completed (re-finalize)",
@@ -380,7 +381,7 @@ def run_finalize(project_root: Path) -> int:
             return 1
 
         config_data["language"] = language
-        config_data["validation_tools"] = tool_categories
+        config_data["language_tool_matrix"] = {language: ltm[language]}
         config_data["architecture_constraints_hash"] = computed_hash
         config_data["finalize_constraints_path"] = str(constraints_path.relative_to(project_root))
         config_data["prd_hash"] = prd_hash

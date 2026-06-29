@@ -16,23 +16,23 @@ def _execute_tools(
 ) -> List:
     """Execute validation tools and return tool evidence candidates.
 
-    Pre-conditions guaranteed by finalize + Stage 1:
+    Pre-conditions guaranteed by finalize:
         - config["language"] exists and is non-empty
-        - ctx.constraints is non-empty (constraints file is required)
+        - config["language_tool_matrix"] exists and has language key
     """
     config_data = ctx.config
     claims_list = ctx.claims_list
 
     config_language = config_data["language"]
-    config_validation_tools = config_data.get("validation_tools", [])
-    ltm = ctx.constraints.get("language_tool_matrix", {})
+    ltm = config_data["language_tool_matrix"]
+    lang_tools = ltm.get(config_language, {})
+    config_validation_tools = [k for k, v in lang_tools.items() if isinstance(v, dict)]
 
     from vibe_tracing.infra.tools.executor import ToolExecutionEngine, ToolEvidenceCandidate
     from vibe_tracing.infra.tools.resolver import ToolResolver
 
     # Pre-flight dependency check
     required_binaries = set()
-    lang_tools = ltm.get(config_language, {})
     for category in config_validation_tools:
         tool_cfg = lang_tools.get(category, {})
         tool_name = tool_cfg.get("tool")

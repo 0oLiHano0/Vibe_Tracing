@@ -9,13 +9,41 @@
     "output_dir": "output"
   },
   "language": "python",
-  "validation_tools": [
-    "test",
-    "coverage",
-    "lint",
-    "type_check",
-    "security"
-  ],
+  "language_tool_matrix": {
+    "python": {
+      "extensions": [".py"],
+      "test": {
+        "tool": "pytest",
+        "default_command": "pytest {test_path} --tb=short -q --json-report --json-report-file={output_path}",
+        "output_format": "pytest_json",
+        "pass_condition": "exit_code == 0"
+      },
+      "coverage": {
+        "tool": "coverage",
+        "default_command": "coverage run -m pytest {test_path} ; coverage json -o {output_path}",
+        "output_format": "coverage_json",
+        "pass_condition": "percent_covered >= 80"
+      },
+      "lint": {
+        "tool": "ruff",
+        "default_command": "ruff check {source_path} --output-format=json",
+        "output_format": "ruff_json",
+        "pass_condition": "violations == 0"
+      },
+      "type_check": {
+        "tool": "mypy",
+        "default_command": "mypy {source_path}",
+        "output_format": "mypy_json",
+        "pass_condition": "exit_code == 0"
+      },
+      "security": {
+        "tool": "bandit",
+        "default_command": "bandit -r {source_path} -f json -o {output_path}",
+        "output_format": "bandit_json",
+        "pass_condition": "results == 0"
+      }
+    }
+  },
   "architecture_constraints_hash": "b20cf2c32aed49e200c6f48410226058b6321f9d2840b2b4aa486b82b7af662d",
   "finalize_git_commit": "1304bfb1d48a06d14d8087887b592b3960da19d4",
   "finalize_constraints_path": "docs/architecture_constraints.json",

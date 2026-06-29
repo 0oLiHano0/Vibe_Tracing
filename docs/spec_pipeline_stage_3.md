@@ -1,84 +1,52 @@
-# 阶段 3 模块详解
+# 阶段 3 模块详解：执行验证工具
 
 ## 1. 输入来源
 
 | 来源 | 包/模块 | 文件 |
 |------|---------|------|
-| **统一上下文** | `cli/analyze/pipeline.py:_load_context()` | 内存（阶段 1 构建） |
-| **暂存区文件集合** | `cli/analyze/pipeline.py:run_analyze()` | 内存（阶段 2 通过 `git diff --cached` 获取） |
-| **架构约束（含 language_tool_matrix）** | `infra/loader/raw_input.py`（读盘）→ `pipeline.py:_load_context()`（组装） | 内存（Stage 1 加载，Stage 3 从 `ctx.constraints` 读取） |
-| **Claims 列表** | `infra/loader/raw_input.py`（读盘）→ `claim_loader.py`（反序列化）→ `pipeline.py:_load_context()`（组装） | 内存（Stage 1 加载，Stage 3 从 `ctx.claims_list` 读取） |
-| **配置文件** | `infra/loader/config.py`（加载）→ `pipeline.py:_load_context()`（组装） | 内存（Stage 1 加载，Stage 3 从 `ctx.config` 读取） |
+| **配置文件**（含工具矩阵） | `domain/context.py` | 内存（由阶段 1 加载并存入 `UnifiedContext.config`） |
+| **Claims** | `domain/context.py` | 内存（由阶段 1 加载并存入 `UnifiedContext.claims_list`） |
+| **暂存区文件列表** | `cli/analyze/pipeline.py` | 内存（由 git diff --cached 获取） |
+| **统一上下文** | `domain/context.py` | 内存（由阶段 1 构建） |
 
 ---
 
 ## 2. 输入结构
 
-### UnifiedContext（统一上下文）
+### config.json 中的工具配置
 
-**输入位置**：内存（由阶段 1 `_load_context()` 构建）
-**包/模块**：`domain/context.py:UnifiedContext`
-
-阶段 3 仅使用以下字段：
+**输入位置**：内存（由阶段 1 从 `.vibetracing/config.json` 加载，存入 `UnifiedContext.config`）
+**包/模块**：`domain/context.py:UnifiedContext.config`
 
 ```yaml
-config:                             # 配置文件内容（Dict[str, Any]）
-  language: "python"                # 项目语言（必需，缺失则阻断）
-  validation_tools:                 # 要执行的验证工具类别列表
-    - "test"                        # 可选值："test" | "coverage" | "lint" | "type_check" | "security"
-constraints: {}                     # 架构约束（Dict[str, Any]，Stage 1 必需文件，由 finalize 保证存在）
-claims_list:                        # Claims 列表
-  - claim_id: "CLAIM-VT-001"       # Claim ID
-    related_task: "TASK-VT-001"     # 关联的任务 ID
-    code_refs:                      # 代码文件引用列表
-      - "src/vibe_tracing/cli/main.py"
-    test_refs:                      # 测试文件引用列表
-      - "tests/test_cli.py"
-task_result: null                   # 任务列表解析结果（可选，阶段 3 不使用）
-```
-
-### staged_files（暂存区文件集合）
-
-**输入位置**：内存（阶段 2 通过 `git diff --cached --name-only` 获取）
-**包/模块**：`cli/analyze/pipeline.py:run_analyze()` 内联逻辑
-
-```yaml
-staged_files:                       # Set[str]，暂存区中的文件路径
-  - "src/vibe_tracing/cli/main.py"
-  - "tests/test_cli.py"
-```
-
-### language_tool_matrix（工具矩阵）
-
-**输入位置**：内存（由阶段 1 `RawInputLoader.load()` 从 `docs/architecture_constraints.json` 加载，通过 `ctx.constraints` 传入）
-**包/模块**：`infra/loader/raw_input.py:RawInputLoader`（加载）→ `infra/tools/executor.py:ToolExecutionEngine`（消费）
-
-```yaml
-language_tool_matrix:               # 工具矩阵（Dict[str, Dict[str, Any]]）
-  python:                           # 语言名作为 key
+language: "python"                  # 项目编程语言（由 vt finalize 锁定）
+language_tool_matrix:               # 工具矩阵（由 vt finalize 从架构约束生成）
+  python:                           # 当前语言的工具配置
     extensions:                     # 该语言的文件扩展名列表
       - ".py"
-    test:                           # 工具类别名作为 key
-      tool: "pytest"                # 工具二进制名称
+    test:                           # 测试工具配置
+      tool: "pytest"                # 工具二进制名
       default_command: "pytest {test_path} --tb=short -q --json-report --json-report-file={output_path}"
-      output_format: "pytest_json"  # 输出格式标识，决定解析器选择
-      pass_condition: "exit_code == 0"  # 人工可读的通过条件
-    coverage:
+                                    # 命令模板（含占位符：{test_path}、{source_path}、{output_path}）
+      output_format: "pytest_json"  # 输出格式标识（决定使用哪个解析器）
+      pass_condition: "exit_code == 0"
+                                    # 通过条件（文档性质，代码不直接使用）
+    coverage:                       # 覆盖率工具配置
       tool: "coverage"
       default_command: "coverage run -m pytest {test_path} ; coverage json -o {output_path}"
       output_format: "coverage_json"
       pass_condition: "percent_covered >= 80"
-    lint:
+    lint:                           # 代码风格检查工具配置
       tool: "ruff"
       default_command: "ruff check {source_path} --output-format=json"
       output_format: "ruff_json"
       pass_condition: "violations == 0"
-    type_check:
+    type_check:                     # 类型检查工具配置
       tool: "mypy"
       default_command: "mypy {source_path}"
       output_format: "mypy_json"
       pass_condition: "exit_code == 0"
-    security:
+    security:                       # 安全扫描工具配置
       tool: "bandit"
       default_command: "bandit -r {source_path} -f json -o {output_path}"
       output_format: "bandit_json"
@@ -87,188 +55,208 @@ language_tool_matrix:               # 工具矩阵（Dict[str, Dict[str, Any]]�
 
 ---
 
-## 3. 前置契约
+### Claim（Claim 数据）
 
-Stage 3 **不执行**前置条件检查。以下契约由 `finalize` + Stage 1 保证，Stage 3 直接信任上游：
+**输入位置**：内存（由阶段 1 从 `.vibetracing/claims/CLAIM-*.json` 加载，存入 `UnifiedContext.claims_list`）
+**包/模块**：`domain/context.py:UnifiedContext.claims_list`
 
-| 契约项 | 保证方 | 说明 |
-|--------|--------|------|
-| `constraints` 非空 | finalize + Stage 1 `is_required=True` | finalize 保证文件存在，Stage 1 作为必需文件加载 |
-| `config["language"]` 非空 | finalize + Stage 1 schema 校验 | finalize 写入 language，Stage 1 校验 config schema |
-| PRD 非 draft 状态 | finalize 拦截 | draft PRD 不允许通过 finalize |
-| `language_tool_matrix` 有对应语言配置 | finalize | finalize 校验语言在工具矩阵中有配置 |
-
-Stage 3 直接使用 `ctx.constraints`、`ctx.config["language"]` 等字段，不做空值防御。
+```yaml
+claim_id: "CLAIM-VT-001"           # Claim ID
+related_task: "TASK-VT-001"        # 关联的任务 ID
+code_refs:                          # 代码文件引用列表（阶段 3 用此收集源码路径）
+  - "src/vibe_tracing/cli/main.py"
+test_refs:                          # 测试文件引用列表（阶段 3 用此收集测试路径）
+  - "tests/test_cli.py"
+notes: "实现了 CLI 入口"             # 备注
+timestamp: "2026-06-23T12:00:00Z"   # 时间戳
+```
 
 ---
 
-## 4. 处理逻辑
+### staged_files（暂存区文件集合）
 
-### 步骤 1：工具依赖预检
+**输入位置**：内存（由 `pipeline.py` 通过 git 命令获取）
+**包/模块**：`cli/analyze/pipeline.py:run_analyze()`
+
+```yaml
+# 示例值
+- "src/vibe_tracing/cli/main.py"    # 本次提交暂存的文件路径
+- "tests/test_cli.py"
+```
+
+---
+
+## 3. 处理逻辑
+
+阶段 3 的全部逻辑在 `cli/analyze/tools.py:_execute_tools()` 中完成，分为以下步骤：
+
+### 步骤 1：读取工具配置
+
+从 config.json 中读取编程语言和工具矩阵，确定本次要执行的工具类别列表。
+
+判定逻辑：工具类别从工具矩阵的 key 中动态获取（排除非字典类型的 key，如 `extensions`）。
+
+---
+
+### 步骤 2：工具依赖预检
 
 调用模块：`infra/tools/resolver.py:ToolResolver.is_available()`
 
-从 `ctx.config["validation_tools"]` 获取工具类别列表（见 §2 UnifiedContext），遍历每个类别在 `language_tool_matrix[language]` 中对应的 `tool` 字段值，检查工具二进制是否在 PATH 中可用。如果工具不可用，尝试通过 `python3 -m <tool>` 检测。
+遍历所有要执行的工具类别，检查每个工具的二进制文件是否可用。检查方式为：先在系统 PATH 中查找，找不到则尝试以 Python 模块方式调用。
 
-判定逻辑：有缺失工具 → 打印修复指南（`[AI Agent Repair Guide]`）→ 返回空列表 `[]`，不阻断流水线。
-
----
-
-### 步骤 2：收集目标路径
-
-调用模块：`cli/analyze/tools.py:_execute_tools()` 内联逻辑
-
-从 `ctx.claims_list`（阶段 1 已加载的 Claim 对象列表）中提取并过滤文件路径：
-
-1. 遍历所有 Claim 的 `test_refs` 和 `code_refs`，去掉 `#fragment` 后缀，收集原始路径
-2. 仅保留扩展名匹配 `language_tool_matrix[language].extensions` 的路径
-3. 仅保留文件实际存在于磁盘上的路径（`(project_root / path).exists()`）
-4. 按来源分类：`test_refs` → `test_paths`，`code_refs` → `source_paths`
-5. 同时收集非代码文件引用（扩展名不在语言配置中），用于步骤 6 生成跳过证据
-
-路径分类：
-- `test_paths`：测试文件路径列表，仅执行 `test` 类别工具
-- `source_paths`：源码文件路径列表，执行 `test` 以外的所有类别工具（`lint`、`type_check`、`security`）
+判定逻辑：如果有任何工具不可用，打印修复建议（"AI Agent Repair Guide"）到终端，返回空列表，整个阶段 3 跳过。流水线继续进入阶段 4，不会阻断。
 
 ---
 
-### 步骤 3：过滤暂存区文件
+### 步骤 3：创建执行引擎
 
-调用模块：`cli/analyze/tools.py:_execute_tools()` 内联逻辑
+调用模块：`infra/tools/executor.py:ToolExecutionEngine`
 
-如果 `staged_files` 不为 None，则将 `test_paths` 和 `source_paths` 过滤为仅保留暂存区中的文件。
-
-判定逻辑：过滤后无任何路径 → 打印 "no staged files match claim references" → 返回空列表 `[]`。
+将工具矩阵、编程语言、工具类别列表传入执行引擎。引擎在初始化时构建内部白名单映射（类别→工具配置），后续所有工具执行都通过白名单校验。
 
 ---
 
-### 步骤 4：执行验证工具
+### 步骤 4：收集执行路径
+
+从所有 Claim 文件中提取文件路径，按用途分为两组：
+
+- **测试路径**：来自 Claim 的 `test_refs` 字段
+- **源码路径**：来自 Claim 的 `code_refs` 字段
+
+提取规则：去掉路径中的 `#anchor` 后缀，检查文件后缀是否属于当前语言的扩展名列表，检查文件是否存在于磁盘，去重。
+
+同时收集非代码文件路径（后缀不在扩展名列表中的），用于后续生成"跳过"状态的证据。
+
+---
+
+### 步骤 5：过滤暂存区文件
+
+只对 git 暂存区中的文件执行工具。如果暂存区为空或没有匹配的文件，打印提示并返回空列表。
+
+---
+
+### 步骤 6：执行工具并收集证据
 
 调用模块：`infra/tools/executor.py:ToolExecutionEngine.execute_all()`
 
-将 `Dict[str, List[str]]` 格式的路径（key 为 `"test"` 或 `"source"`，value 为路径列表）传入执行引擎。执行引擎对每个路径执行以下逻辑：
+对每个文件路径，根据路径类型（测试/源码）选择要执行的工具类别：
 
-1. 遍历 `validation_tools` 列表中的每个工具类别
-2. 跳过 `coverage` 类别（覆盖率是批量工具，由 `_measure_source_coverage()` 在 `execute_all()` 末尾单独处理）
-3. 根据路径类型路由：`test` 路径仅执行 `test` 类别，`source` 路径执行其余类别
-4. 对每个 (路径, 类别) 组合调用 `execute_tool()`
+- **测试路径**：只执行"test"类别（pytest）
+- **源码路径**：执行除"test"外的所有类别（lint、type_check、security）
 
-`execute_tool()` 内部逻辑：
-- 白名单检查：工具类别必须在 `_tool_configs` 中
-- 路径安全校验：路径必须在项目根目录内（防止路径越权）
-- 命令模板替换：将 `{test_path}`、`{source_path}`、`{output_path}` 替换为实际路径，路径值经过 shell 注入防护（正则校验 + `shlex.quote()`）
-- 子进程执行：以 `shell=True` 执行命令，默认超时 120 秒
-- 输出解析：根据 `output_format` 选择对应的解析器（`parse_pytest_output`、`parse_ruff_output`、`parse_mypy_output`、`parse_bandit_output`、`parse_coverage_json_output`）
+覆盖率（coverage）不按文件逐个执行，而是作为批量工具单独处理（步骤 7）。
 
----
-
-### 步骤 5：解析工具输出
-
-调用模块：`infra/tools/parsers.py` 中的各解析函数
-
-根据 `output_format` 选择解析器，将工具的 stdout/stderr 转换为标准化的 `ToolEvidenceCandidate` 列表：
-
-| 解析器 | 适用工具 | 解析逻辑 |
-|--------|----------|----------|
-| `parse_pytest_output` | pytest | 解析 JSON 报告，每个测试用例生成一个候选证据，从 docstring 提取 covers 标注 |
-| `parse_ruff_output` | ruff | 解析 JSON 输出，无违规 = `compliant`，有违规 = `violated` |
-| `parse_mypy_output` | mypy | 统计 stdout 中的错误行数，无错误 = `compliant` |
-| `parse_bandit_output` | bandit | 解析 JSON 输出，无安全问题 = `compliant` |
-| `parse_coverage_json_output` | coverage | 解析 `coverage.json`，每个源文件生成一个候选证据 |
-
-退出码分类规则：
-- 退出码 0：成功 → `compliant` 或 `covered`
-- 退出码 1：发现问题（如测试失败、违规）→ `violated`
-- pytest 退出码 2/5、mypy 退出码 2：工具无法处理该文件 → `skipped`，产生一条 `skipped` 状态的候选证据（含 `error_code`），不计入有效证据
-- 其他退出码：工具执行异常 → `blocked`，记录 `error_code`
+对每个工具的执行过程（`execute_tool()`）：
+1. 白名单校验——确认类别在允许列表中
+2. 路径安全校验——确认路径在项目根目录内
+3. 命令生成——从模板替换占位符，生成实际命令
+4. 安全过滤——拒绝包含 shell 特殊字符的路径
+5. 命令回退——如果工具不在 PATH 中，回退到 python -m 方式
+6. 执行子进程——运行命令，捕获输出
+7. 解析输出——根据输出格式标识调用对应的解析器
+8. 标记类别——在证据候选项上标记工具类别
 
 ---
 
-### 步骤 6：生成跳过证据
+### 步骤 7：覆盖率基线处理
 
-调用模块：`cli/analyze/tools.py:_execute_tools()` 内联逻辑
+调用模块：`infra/tools/executor.py:ToolExecutionEngine._measure_source_coverage()`
 
-为非代码文件引用（如 `.json`、`.md` 等）生成 `skipped` 状态的候选证据，记录跳过原因为 "non-code file, tools not applicable"。
+从 `coverage.json` 基线文件读取每个源文件的覆盖率数据（百分比和语句数），生成"coverage"类别的证据候选项。不执行 coverage 命令本身——覆盖率数据来自之前运行的缓存。
 
 ---
 
-## 5. 输出结构
+### 步骤 8：非代码文件跳过处理
+
+对步骤 4 中收集的非代码文件路径，生成状态为"skipped"的证据候选项，跳过原因为"非代码文件，工具不适用"。
+
+---
+
+### 步骤 9：输出统计信息
+
+打印执行结果到终端：总证据候选项数、阻断数、跳过数，以及各类错误详情（超时、工具未找到等）。
+
+---
+
+## 4. 输出结构
 
 **输出类型**：`List[ToolEvidenceCandidate]`
-**输出位置**：内存（通过 pipeline 局部变量 `tool_evidence` 传递，不落盘）
+**输出位置**：内存（通过 pipeline 局部变量传递给阶段 6，不落盘）
 
-### ToolEvidenceCandidate（工具证据候选）
+### ToolEvidenceCandidate（工具证据候选项）
 
 **包/模块**：`infra/tools/candidate.py:ToolEvidenceCandidate`
 
 ```yaml
-source_type: "test"                 # 来源类型："test"（pytest 测试用例）| "tool"（其他工具）
-source_path: "tests/test_cli.py"    # 来源路径：测试文件 nodeid 或源码文件路径
-covers:                             # 该证据覆盖的 AC/REQ ID 列表
-  - "AC-VT-001-01"                  # 从测试 docstring 中提取
-status: "covered"                   # 覆盖状态（CoverageStatus 枚举值）
-                                    # "covered" | "compliant" | "violated" | "skipped" | "blocked"
-tool_category: "test"               # 工具类别
-                                    # "test" | "coverage" | "lint" | "type_check" | "security"
-command: "pytest tests/test_cli.py --tb=short -q --json-report --json-report-file=.vibetracing/tmp/vt_test_abc123.json"
-                                    # 实际执行的命令字符串
-exit_code: 0                        # 工具退出码（0=成功，非0=有问题）
-stderr: ""                          # 工具 stderr 输出
-error_code: null                    # 错误码（ErrorCode 枚举值，仅执行失败时非空）
-                                    # "tool_execution_failed" | "tool_no_tests_collected" | "tool_usage_error"
-details: {}                         # 附加详情（Dict[str, Any]，因工具类型而异）
+source_type: "test"                 # 证据来源类型："test"（pytest）| "tool"（其他工具）
+source_path: "tests/test_cli.py::test_help"
+                                    # 文件路径或测试用例标识（nodeid）
+covers:                             # 关联的验收标准/需求 ID 列表
+  - "AC-VT-001-01"                  # 从测试函数的 docstring 中自动提取
+status: "covered"                   # 覆盖状态：
+                                    #   "covered"    — 测试通过
+                                    #   "violated"   — 测试失败或发现违规
+                                    #   "compliant"  — lint/类型检查/安全扫描通过
+                                    #   "skipped"    — 工具不适用（如非代码文件）
+                                    #   "blocked"    — 工具执行失败
+                                    #   "unclear"    — 无法判定
+tool_category: "test"               # 工具类别：
+                                    #   "test"       — pytest（测试）
+                                    #   "coverage"   — coverage（覆盖率）
+                                    #   "lint"       — ruff（代码风格）
+                                    #   "type_check" — mypy（类型检查）
+                                    #   "security"   — bandit（安全扫描）
+command: "pytest tests/test_cli.py --tb=short -q ..."
+                                    # 实际执行的命令
+exit_code: 0                        # 进程退出码
+stderr: ""                          # 标准错误输出
+error_code: null                    # 错误码（仅失败时有值）：
+                                    #   "tool_execution_failed"     — 工具执行失败
+                                    #   "tool_no_tests_collected"   — pytest 未收集到测试
+                                    #   "tool_usage_error"          — 工具用法错误
+details:                            # 附加详情
+  outcome: "passed"                 # 测试结果详情
+  violations_count: 0               # 违规数量（lint/安全扫描）
+  percent_covered: 85.0             # 覆盖率百分比（coverage）
+  num_statements: 120               # 语句数（coverage）
 ```
 
-**details 字段的工具类型差异**：
-
-```yaml
-# pytest 类型
-details:
-  nodeid: "tests/test_cli.py::test_help"  # 测试用例 ID
-  outcome: "passed"                        # 测试结果："passed" | "failed" | "error"
-
-# ruff 类型
-details:
-  violations_count: 0                      # 违规数量
-
-# mypy 类型
-details:
-  errors_count: 0                          # 类型错误数量
-
-# bandit 类型
-details:
-  results_count: 0                         # 安全问题数量
-
-# coverage 类型
-details:
-  percent_covered: 85.0                    # 覆盖百分比
-  num_statements: 100                      # 语句总数
-
-# 跳过类型
-details:
-  skip_reason: "non-code file, tools not applicable"  # 跳过原因
-
-# 超时类型
-details:
-  error_type: "timeout"                    # 错误子类型
-  timeout_seconds: 120                     # 超时秒数
-```
-
-**用途**：`tool_evidence` 列表在阶段 6 传递给 `EvidenceBuilder.merge()`，与历史缓存合并后写入数据库，成为阶段 7 查询分析的原始数据。
+**用途**：传递给阶段 6 的 `EvidenceBuilder.merge()`，与历史证据合并后写入内存数据库和 JSON 文件，供阶段 7 分析和阶段 8 门禁判定使用。
 
 ---
 
-## 6. 异常捕获与日志
+## 5. 异常捕获与日志
 
 ### 异常情况
 
 | 异常类型 | 退出码 | 触发条件 |
 |----------|--------|----------|
+| 工具二进制缺失 | 0（不阻断） | 预检阶段发现工具不在 PATH 中，返回空列表，阶段 3 整体跳过 |
+| 子进程超时 | 0（不阻断） | 工具执行超过 120 秒，返回 blocked 状态的证据候选项 |
+| 二进制不存在 | 0（不阻断） | 执行时工具被删除或不可达，返回 blocked 状态的证据候选项 |
+| 权限拒绝 | 0（不阻断） | 无执行权限，返回 blocked 状态的证据候选项 |
+| 路径越权 | 0（不阻断） | 路径解析后超出项目根目录，返回 blocked 状态的证据候选项 |
+| 命令注入 | 0（不阻断） | 路径包含 shell 特殊字符，返回 blocked 状态的证据候选项 |
+| 类别不在白名单 | 0（不阻断） | 工具类别未在工具矩阵中定义，返回 blocked 状态的证据候选项 |
+| 输出格式不支持 | 0（不阻断） | 工具输出格式标识未匹配任何解析器，返回 blocked 状态的证据候选项 |
 
-> Stage 3 不再抛出 `_GateBlocked` 异常。`language` 缺失等前置条件由 `finalize` + Stage 1 保证，Stage 3 直接信任上游。
+> 阶段 3 的所有异常均为"不阻断"——工具执行失败不会阻止流水线继续运行。失败的工具会生成 blocked 状态的证据候选项，由阶段 8 的门禁引擎统一判定是否阻断合并。
 
-> [!NOTE]
-> 工具依赖缺失、工具执行超时、工具执行失败等情况均不抛出异常，而是返回 `blocked` 或 `skipped` 状态的候选证据，由下游阶段处理。
+### 工具退出码分类
+
+| 工具 | 退出码 | 含义 | 处理方式 |
+|------|--------|------|----------|
+| pytest | 0 | 全部通过 | 解析报告，生成 covered 状态证据 |
+| pytest | 1 | 有测试失败 | 解析报告，生成 violated 状态证据 |
+| pytest | 2 | 用法错误 | 生成 skipped 状态证据（非真实失败） |
+| pytest | 5 | 无测试收集 | 生成 skipped 状态证据（非真实失败） |
+| ruff | 0 | 无违规 | 生成 compliant 状态证据 |
+| ruff | 1 | 有违规 | 生成 violated 状态证据 |
+| mypy | 0 | 无类型错误 | 生成 compliant 状态证据 |
+| mypy | 1 | 有类型错误 | 生成 violated 状态证据 |
+| mypy | 2 | 用法错误 | 生成 skipped 状态证据 |
+| bandit | 0 | 无安全问题 | 生成 compliant 状态证据 |
+| bandit | 1 | 有安全问题 | 生成 violated 状态证据 |
 
 ### 日志事件
 
@@ -276,27 +264,26 @@ details:
 
 | 事件名 | 级别 | 触发时机 | 附加字段 |
 |--------|------|----------|----------|
-| `phase_end` | INFO | 阶段 3 完成 | `phase="execute_tools"`, `duration_ms`, `tools_executed`（候选证据总数） |
+| `phase_end` | INFO | 阶段 3 完成 | `phase="execute_tools"`, `duration_ms`, `tools_executed` |
 
-工具执行引擎内部记录的日志事件（由 `infra/tools/executor.py` 记录）：
+此外，每个工具子进程执行完成后，`executor.py` 记录：
 
 | 事件名 | 级别 | 触发时机 | 附加字段 |
 |--------|------|----------|----------|
-| `subprocess_exec` | INFO | 每个子进程执行完成 | `command`, `duration_ms`, `exit_code`, `stdout_size`, `stderr_size` |
-| `subprocess_output` | DEBUG | 子进程输出详情 | `command`, `stdout_preview`（前500字符）, `stderr_preview`（前500字符） |
+| `subprocess_exec` | INFO | 子进程完成 | `command`, `duration_ms`, `exit_code`, `stdout_size`, `stderr_size` |
+| `subprocess_output` | DEBUG | 子进程完成 | `command`, `stdout_preview`, `stderr_preview` |
 
 ### 错误传播
 
-阶段 3 不再抛出 `_GateBlocked` 异常。前置条件校验已由 `finalize` + Stage 1 完成，Stage 3 直接信任上游契约。
-
-工具执行层面的错误（超时、二进制缺失、OS 错误等）不传播异常，而是被 `ToolExecutionEngine._run_subprocess()` 内部捕获，转换为 `error_code` 写入 `ToolEvidenceCandidate`，由阶段 6 的 `EvidenceBuilder` 和阶段 8 的门禁引擎判定是否阻断。
+阶段 3 不抛出异常。所有工具执行失败都被捕获并转化为 blocked 状态的证据候选项。预检失败返回空列表。错误信息打印到终端（stderr），由 Agent 或人类阅读后决定下一步行动。
 
 ---
 
-## 7. 下游依赖
+## 6. 下游依赖
 
 | 下游模块 | 目标包 | 说明 |
 |----------|--------|------|
-| **阶段 6：构建证据** | `domain/evidence/builder.py:EvidenceBuilder` | 接收 `tool_evidence` 列表，与历史缓存合并后写入数据库，为阶段 7 的 SQL 查询提供原始数据 |
-| **阶段 7：运行分析** | `infra/db/queries.py` | 间接依赖——通过数据库中的证据数据执行覆盖率、合规性等查询 |
-| **阶段 8：门禁判定** | `domain/gate/engine.py:MergeGateEngine` | 间接依赖——基于分析结果判定门禁通过或阻断 |
+| **阶段 4-5** | `infra/db/init.py` | 阶段 3 的输出不直接传递给阶段 4-5，而是先经过阶段 6 |
+| **阶段 6：EvidenceBuilder** | `domain/evidence/builder.py` | 接收 `List[ToolEvidenceCandidate]`，与历史证据合并后写入内存数据库和 JSON 文件 |
+| **阶段 7：分析查询** | `infra/db/queries.py` | 从数据库查询工具证据，用于覆盖率违规检测（`check_coverage_violations`） |
+| **阶段 8：门禁判定** | `domain/gate/engine.py` | 基于工具证据状态（covered/violated/blocked）判定是否阻断合并 |

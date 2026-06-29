@@ -8460,6 +8460,211 @@
         "UnifiedContext 输入结构中的 is_draft 字段需要删除。",
         "pipeline_stage-3-refactoring.md 的验证标准表需要更新为实际完成状态。"
       ]
+    },
+    {
+      "task_id": "TASK-VT-152",
+      "title": "finalize 写入完整 language_tool_matrix 到 config.json",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "vt finalize 从 constraints 读取 language_tool_matrix 但只把 language 写入 config，导致 analyze 阶段需要跨两个文件拼接工具配置。将 tool matrix 子集写入 config.json，使 config 成为完整运行时快照。",
+      "atomic_scope": "修改 cli/finalize.py：在写入 config.json 时新增 language_tool_matrix 字段（当前语言子集），删除冗余的 validation_tools 字段。",
+      "out_of_scope": [
+        "不修改 _execute_tools（tools.py）—— 由 TASK-VT-153 处理",
+        "不修改 ToolExecutionEngine（executor.py）",
+        "不修改 architecture_constraints.json 的内容",
+        "不修改 ArchitectureComplianceChecker"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-013"
+      ],
+      "related_architecture_constraints": [
+        "TECH-VT-007",
+        "FLOW-VT-009"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/finalize.py",
+        "tests/test_finalize.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-152-01",
+          "description": "运行 vt finalize 后，config.json 包含 language_tool_matrix 字段，值为当前语言的工具矩阵子集（含 extensions、test、coverage、lint、type_check、security 配置）。"
+        },
+        {
+          "dod_id": "DOD-VT-152-02",
+          "description": "config.json 中不再包含 validation_tools 字段（由 language_tool_matrix 的 key 动态获取）。"
+        },
+        {
+          "dod_id": "DOD-VT-152-03",
+          "description": "config.json 中 language 字段保持不变。"
+        },
+        {
+          "dod_id": "DOD-VT-152-04",
+          "description": "architecture_constraints.json 的 language_tool_matrix 内容不受影响。"
+        },
+        {
+          "dod_id": "DOD-VT-152-05",
+          "description": "vt analyze 使用新 config 运行，阶段 3 工具执行结果与修改前一致。"
+        },
+        {
+          "dod_id": "DOD-VT-152-06",
+          "description": "test_finalize_happy_path 断言 config['language_tool_matrix'] 存在且包含预期类别，不再断言 validation_tools。"
+        },
+        {
+          "dod_id": "DOD-VT-152-07",
+          "description": "test_finalize_already_finalized_same_language 断言 config['language_tool_matrix'] 不变。"
+        },
+        {
+          "dod_id": "DOD-VT-152-08",
+          "description": "test_finalize_updates_tools_when_matrix_changes 断言 re-finalize 后 config['language_tool_matrix'] 包含新增类别。"
+        },
+        {
+          "dod_id": "DOD-VT-152-09",
+          "description": "pytest tests/test_finalize.py -v 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "finalize.py 有两条写入 config 的路径：",
+        "  路径 A（首次 finalize）：line 382-386，直接构建 config_data 并写入。",
+        "  路径 B（re-finalize，tools 变更）：line 313，更新 config_data['validation_tools']。",
+        "两条路径都需要将 config_data['validation_tools'] = tool_categories 改为 config_data['language_tool_matrix'] = {language: ltm[language]}。",
+        "line 275 的 existing_tools 比较逻辑也需要更新：从 config_data.get('validation_tools', []) 改为从 config_data.get('language_tool_matrix', {}) 提取 key 列表。",
+        "line 292 的 'Already finalized' 提示信息中 tools=current_tools 可以保留（它是从 ltm 动态计算的）。",
+        "line 363 的 'Updated validation_tools' 提示信息需要改为 'Updated language_tool_matrix'。",
+        "test_finalize.py L92: config['validation_tools'] == [...] → 'test' in config['language_tool_matrix']['python']。",
+        "test_finalize.py L114: 同上。",
+        "test_finalize.py L151-155: 'Updated validation_tools' → 'Updated language_tool_matrix'，'formatter' in config['validation_tools'] → 'formatter' in config['language_tool_matrix']['python']。",
+        "test_cli_analyze.py 和 test_tool_execution.py 不需要改。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-153",
+      "title": "_execute_tools 从 config.json 读取 tool matrix",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "当前 _execute_tools 从 config.json 读 validation_tools 类别列表，从 constraints 读 language_tool_matrix 完整定义，两者拼接得到工具配置。改为从 config.json 读取完整 tool matrix，消除对 ctx.constraints 的依赖。不接受向后兼容——旧 config 需要 re-finalize。",
+      "atomic_scope": "修改 cli/analyze/tools.py 的 _execute_tools()：ltm 从 config 读取，validation_tools 从 ltm.keys() 动态获取，删除对 ctx.constraints 的依赖。",
+      "out_of_scope": [
+        "不修改 finalize.py —— 由 TASK-VT-152 处理",
+        "不修改 ToolExecutionEngine（executor.py）",
+        "不修改 parsers.py",
+        "不修改路径收集和 staged_files 过滤逻辑",
+        "不修改 ToolResolver"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "TECH-VT-007",
+        "FLOW-VT-009"
+      ],
+      "depends_on": [
+        "TASK-VT-152"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/tools.py",
+        "tests/test_tool_execution.py",
+        "tests/test_cli_analyze.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-153-01",
+          "description": "_execute_tools() 中 ltm 从 config_data['language_tool_matrix'] 直接访问，不再从 ctx.constraints 读取。"
+        },
+        {
+          "dod_id": "DOD-VT-153-02",
+          "description": "validation_tools 从 ltm.keys() 动态获取，不再从 config_data['validation_tools'] 读取。"
+        },
+        {
+          "dod_id": "DOD-VT-153-03",
+          "description": "无任何 fallback/兼容逻辑——config 缺少 language_tool_matrix 时直接报错。"
+        },
+        {
+          "dod_id": "DOD-VT-153-04",
+          "description": "ArchitectureComplianceChecker（阶段 7）不受影响。"
+        },
+        {
+          "dod_id": "DOD-VT-153-05",
+          "description": "pytest tests/test_tool_execution.py tests/test_cli_analyze.py -v 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "tools.py line 26-28 是当前的配置读取位置，需要修改。",
+        "ltm = config_data['language_tool_matrix']（直接访问，不 fallback，不 .get()）。",
+        "config_validation_tools = list(ltm.keys())。",
+        "删除 config_data.get('validation_tools', []) 的读取。",
+        "删除对 ctx.constraints 的任何引用。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-154",
+      "title": "文档同步：更新 spec_pipeline_stage_3.md 的工具列表数据源描述",
+      "phase_id": "PHASE-VT-010",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "TASK-VT-152 和 TASK-VT-153 将工具列表数据源从两个文件收敛到 config.json，spec 文档需要同步更新。",
+      "atomic_scope": "修改 docs/spec_pipeline_stage_3.md：更新 §6（工具白名单机制）和 §7（详细处理流程）中关于数据源的描述。修改 docs/pipeline_stage-3-refactoring.md 中重构 C 的状态。",
+      "out_of_scope": [
+        "不修改代码文件",
+        "不修改 architecture_constraints.json"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-152",
+        "TASK-VT-153"
+      ],
+      "expected_deliverables": [
+        "docs/spec_pipeline_stage_3.md",
+        "docs/pipeline_stage-3-refactoring.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-154-01",
+          "description": "spec_pipeline_stage_3.md §6 中工具白名单的数据源描述为 config.json（单一来源），不再提及从 constraints 读取。"
+        },
+        {
+          "dod_id": "DOD-VT-154-02",
+          "description": "spec_pipeline_stage_3.md §7 步骤 1 的代码示例从 config_data 读取 ltm，不再从 ctx.constraints 读取。"
+        },
+        {
+          "dod_id": "DOD-VT-154-03",
+          "description": "pipeline_stage-3-refactoring.md 中重构 C 的状态更新为已完成。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "spec §6.2 的白名单过滤流程图需要更新：config.json → language_tool_matrix → _tool_configs，删除 constraints 的参与。",
+        "spec §7 步骤 1 的代码示例需要更新 ltm 的读取来源。",
+        "spec §11 阶段间传递表中删除 ctx.constraints → 阶段 3 的传递行。"
+      ]
     }
   ]
 }

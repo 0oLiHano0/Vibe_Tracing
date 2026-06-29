@@ -8749,6 +8749,129 @@
         "spec_pipeline_stage_3.md §1 输入来源中 staged_files 行删除，§3 步骤 5 和步骤 8 删除。",
         "删除 staged_files 过滤后，L101-104（'no staged files match claim references'）变为不可达代码，需一并删除。提示信息合并到 L93-94 的空路径检查中（新增 print 'no code files found in claims'）。"
       ]
+    },
+    {
+      "task_id": "TASK-VT-157",
+      "title": "tools.py 补全日志：添加 OperationalLogger 双通道输出",
+      "phase_id": "PHASE-VT-010",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "_execute_tools() 有 6 处 print(stderr) 但无 OperationalLogger 调用。预检失败、空路径、执行错误等场景只输出到终端，日志文件中无痕迹。补全日志实现双通道输出。",
+      "atomic_scope": "修改 cli/analyze/tools.py：添加 OperationalLogger.get()，在 print(stderr) 处同时记录日志事件。",
+      "out_of_scope": [
+        "不修改 ToolExecutionEngine（executor.py）—— 已有日志",
+        "不修改 parsers.py、resolver.py、candidate.py —— 纯函数无需日志",
+        "不修改 pipeline.py"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "LOG-VT-011",
+        "LOG-VT-010"
+      ],
+      "depends_on": [
+        "TASK-VT-155"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/tools.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-157-01",
+          "description": "tools.py 使用 OperationalLogger.get() 获取日志实例，不自行 init。"
+        },
+        {
+          "dod_id": "DOD-VT-157-02",
+          "description": "预检失败时日志文件有 tool_precheck_failed 事件（WARNING 级别）。"
+        },
+        {
+          "dod_id": "DOD-VT-157-03",
+          "description": "空路径时日志文件有 no_code_files 事件（WARNING 级别）。"
+        },
+        {
+          "dod_id": "DOD-VT-157-04",
+          "description": "执行完成时日志文件有 tool_execution_complete 事件（INFO 级别，含 executed_count 和 blocked_count）。"
+        },
+        {
+          "dod_id": "DOD-VT-157-05",
+          "description": "每处 print(stderr) 都有对应的日志事件。"
+        },
+        {
+          "dod_id": "DOD-VT-157-06",
+          "description": "全量测试通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "tools.py 函数开头添加：vt_logger = OperationalLogger.get()。",
+        "导入路径：from vibe_tracing.infra.logging.logger import OperationalLogger。",
+        "预检失败处（print AI Agent Repair Guide）添加 vt_logger.warning('tool_precheck_failed', ...)。",
+        "空路径处（print no code files found）添加 vt_logger.warning('no_code_files', ...)。",
+        "执行开始处（print Executing validation tools）添加 vt_logger.info('tool_execution_start', ..., total_paths=total_paths)。",
+        "执行完成处（print Tool execution complete）添加 vt_logger.info('tool_execution_complete', ..., executed_count=executed_count, blocked_count=blocked_count)。",
+        "错误详情处（print Error: ...）添加 vt_logger.warning('tool_execution_error', ..., source_path=c.source_path, error_type=error_type)。",
+        "logger 调用不需要 try/except 守卫——OperationalLogger.get() 在未初始化时返回 _NullLogger，不会抛异常。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-158",
+      "title": "文档收尾：更新 refactoring_design.md 和 spec_pipeline_stage_3.md",
+      "phase_id": "PHASE-VT-010",
+      "priority": "should",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "TASK-VT-157 完成后，同步更新重构设计文档和阶段 3 规格文档，反映日志补全变更。",
+      "atomic_scope": "更新 docs/refactoring_design.md 和 docs/spec_pipeline_stage_3.md。更新 docs/pipeline_stage-3-refactoring.md 中重构 E 的状态。",
+      "out_of_scope": [
+        "不修改代码文件"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "LOG-VT-011",
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-157"
+      ],
+      "expected_deliverables": [
+        "docs/refactoring_design.md",
+        "docs/spec_pipeline_stage_3.md",
+        "docs/pipeline_stage-3-refactoring.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-158-01",
+          "description": "refactoring_design.md 中阶段 3 相关章节反映当前代码状态（无 staged_files 过滤、无非代码文件 skip、有日志双通道）。"
+        },
+        {
+          "dod_id": "DOD-VT-158-02",
+          "description": "spec_pipeline_stage_3.md §5（异常捕获与日志）中 tools.py 的日志事件表完整。"
+        },
+        {
+          "dod_id": "DOD-VT-158-03",
+          "description": "pipeline_stage-3-refactoring.md 中重构 E 的状态更新为已完成。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "refactoring_design.md 搜索 staged_files、non_code_refs、validation_tools 等已删除概念，更新为当前实现。",
+        "spec §5 日志事件表需要补充 tools.py 的日志事件：tool_precheck_failed、no_code_files、tool_execution_start、tool_execution_error、tool_execution_complete。",
+        "pipeline_stage-3-refactoring.md 重构 E 状态从 '待执行' 改为 '已完成'。"
+      ]
     }
   ]
 }

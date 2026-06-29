@@ -231,22 +231,38 @@ details:                            # 附加详情
 
 ### 日志事件
 
-阶段 3 运行完成后，由 `pipeline.py:run_analyze()` 记录：
+`cli/analyze/tools.py` 记录：
 
 | 事件名 | 级别 | 触发时机 | 附加字段 |
 |--------|------|----------|----------|
-| `phase_end` | INFO | 阶段 3 完成 | `phase="execute_tools"`, `duration_ms`, `tools_executed` |
+| `tool_precheck_failed` | WARNING | 工具依赖预检失败（工具缺失） | `missing_tools` |
+| `no_code_extensions` | WARNING | 语言配置无代码扩展名 | — |
+| `no_code_files` | WARNING | Claim 中无代码文件 | — |
+| `tool_execution_start` | INFO | 工具执行开始 | `total_paths`, `test_paths`, `source_paths` |
+| `tool_files_skipped` | INFO | 工具引擎跳过部分文件 | `skipped_count` |
+| `tool_execution_error` | WARNING | 单个工具执行失败 | `source_path`, `error_type`, `exit_code` |
+| `tool_execution_complete` | INFO | 工具执行完成 | `executed_count`, `blocked_count`, `skipped_count` |
 
-此外，每个工具子进程执行完成后，`executor.py` 记录：
+`infra/tools/executor.py` 记录：
 
 | 事件名 | 级别 | 触发时机 | 附加字段 |
 |--------|------|----------|----------|
 | `subprocess_exec` | INFO | 子进程完成 | `command`, `duration_ms`, `exit_code`, `stdout_size`, `stderr_size` |
 | `subprocess_output` | DEBUG | 子进程完成 | `command`, `stdout_preview`, `stderr_preview` |
 
+`cli/analyze/pipeline.py` 记录：
+
+| 事件名 | 级别 | 触发时机 | 附加字段 |
+|--------|------|----------|----------|
+| `phase_end` | INFO | 阶段 3 完成 | `phase="execute_tools"`, `duration_ms`, `tools_executed` |
+
 ### 错误传播
 
-阶段 3 不抛出异常。所有工具执行失败都被捕获并转化为 blocked 状态的证据候选项。预检失败返回空列表。错误信息打印到终端（stderr），由 Agent 或人类阅读后决定下一步行动。
+阶段 3 不抛出异常。所有工具执行失败都被捕获并转化为 blocked 状态的证据候选项。预检失败返回空列表。
+
+错误信息使用双通道输出：
+- `OperationalLogger` 记录技术详情到日志文件（供开发者排查）
+- `print(stderr)` 输出简短提示到终端（供 Agent 或人类阅读后决定下一步行动）
 
 ---
 

@@ -477,3 +477,55 @@ def _execute_tools(
 | 4 | 阶段 2 幽灵代码检测不受影响 | `staged_files` 仍传递给 `detect_ghost_code` |
 | 5 | 阶段 7 不受影响 | `staged_files` 仍传递给 `_run_db_analysis` |
 | 6 | 全量测试通过 | 无回归 |
+
+---
+
+## 重构 E：tools.py 补全日志
+
+**日期**：2026-06-29
+**状态**：已完成
+**范围**：`cli/analyze/tools.py`
+
+### 问题定义
+
+`_execute_tools()` 有 6 处 `print(stderr)` 但无任何 `OperationalLogger` 调用。预检失败、空路径、执行错误等场景只输出到终端，日志文件中无痕迹，无法事后排查。
+
+### 设计决策
+
+**在 `print(stderr)` 处同时记录日志事件。**
+
+依据：输出通道分层原则（LOG-VT-011）——CLI 层异常处理使用双通道：`logger` 记录技术详情到日志文件，`print` 输出简短提示到终端。
+
+### 变更步骤
+
+#### 变更 E-1：`_execute_tools` 添加 logger
+
+**修改文件**：`src/vibe_tracing/cli/analyze/tools.py`
+
+**修改内容**：
+
+1. 函数开头获取 logger 实例：`vt_logger = OperationalLogger.get()`
+2. 在以下 `print(stderr)` 处同时记录日志事件：
+
+| 位置 | print 内容 | 日志事件名 | 级别 |
+|------|-----------|-----------|------|
+| 预检失败 | `[AI Agent Repair Guide]` | `tool_precheck_failed` | WARNING |
+| 无扩展名 | `no file extensions defined` | `no_code_extensions` | WARNING |
+| 空路径 | `no code files found in claims` | `no_code_files` | WARNING |
+| 执行开始 | `Executing validation tools for N path(s)` | `tool_execution_start` | INFO |
+| 跳过文件 | `files skipped` | `tool_files_skipped` | INFO |
+| 错误详情 | 各类工具错误 | `tool_execution_error` | WARNING |
+| 完成统计 | `Tool execution complete` | `tool_execution_complete` | INFO |
+
+3. 导入 `OperationalLogger`：`from vibe_tracing.infra.logging.logger import OperationalLogger`
+
+### 验证标准
+
+| # | 验证项 | 预期结果 |
+|---|--------|----------|
+| 1 | `tools.py` 使用 `OperationalLogger.get()` | 不自行 init，遵循内部模块规范 |
+| 2 | 预检失败时日志文件有 `tool_precheck_failed` 事件 | 双通道：print 终端 + logger 日志文件 |
+| 3 | 空路径时日志文件有 `no_code_files` 事件 | 同上 |
+| 4 | 执行完成时日志文件有 `tool_execution_complete` 事件 | 含 executed_count、blocked_count 统计 |
+| 5 | 无 `print(stderr)` 缺少对应 logger | 每处 print 都有日志事件 |
+| 6 | 全量测试通过 | 无回归 |

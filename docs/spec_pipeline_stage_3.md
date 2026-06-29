@@ -6,9 +6,9 @@
 |------|---------|------|
 | **统一上下文** | `cli/analyze/pipeline.py:_load_context()` | 内存（阶段 1 构建） |
 | **暂存区文件集合** | `cli/analyze/pipeline.py:run_analyze()` | 内存（阶段 2 通过 `git diff --cached` 获取） |
-| **架构约束** | `infra/loader/raw_input.py` | `docs/architecture_constraints.json` |
-| **Claims 列表** | `infra/loader/claim_loader.py` | `.vibetracing/claims/CLAIM-*.json` |
-| **配置文件** | `infra/loader/config.py` | `.vibetracing/config.json` |
+| **架构约束（含 language_tool_matrix）** | `infra/loader/raw_input.py`（读盘）→ `pipeline.py:_load_context()`（组装） | 内存（Stage 1 加载，Stage 3 从 `ctx.constraints` 读取） |
+| **Claims 列表** | `infra/loader/raw_input.py`（读盘）→ `claim_loader.py`（反序列化）→ `pipeline.py:_load_context()`（组装） | 内存（Stage 1 加载，Stage 3 从 `ctx.claims_list` 读取） |
+| **配置文件** | `infra/loader/config.py`（加载）→ `pipeline.py:_load_context()`（组装） | 内存（Stage 1 加载，Stage 3 从 `ctx.config` 读取） |
 
 ---
 
@@ -50,8 +50,8 @@ staged_files:                       # Set[str]，暂存区中的文件路径
 
 ### language_tool_matrix（工具矩阵）
 
-**输入位置**：硬盘文件（`docs/architecture_constraints.json`，通过 `constraints` 字段传入）
-**包/模块**：`infra/tools/executor.py:ToolExecutionEngine`
+**输入位置**：内存（由阶段 1 `RawInputLoader.load()` 从 `docs/architecture_constraints.json` 加载，通过 `ctx.constraints` 传入）
+**包/模块**：`infra/loader/raw_input.py:RawInputLoader`（加载）→ `infra/tools/executor.py:ToolExecutionEngine`（消费）
 
 ```yaml
 language_tool_matrix:               # 工具矩阵（Dict[str, Dict[str, Any]]）
@@ -108,7 +108,7 @@ Stage 3 直接使用 `ctx.constraints`、`ctx.config["language"]` 等字段，�
 
 调用模块：`infra/tools/resolver.py:ToolResolver.is_available()`
 
-遍历 `validation_tools` 列表中每个类别对应的 `tool` 字段值，检查工具二进制是否在 PATH 中可用。如果工具不可用，尝试通过 `python3 -m <tool>` 检测。
+从 `ctx.config["validation_tools"]` 获取工具类别列表（见 §2 UnifiedContext），遍历每个类别在 `language_tool_matrix[language]` 中对应的 `tool` 字段值，检查工具二进制是否在 PATH 中可用。如果工具不可用，尝试通过 `python3 -m <tool>` 检测。
 
 判定逻辑：有缺失工具 → 打印修复指南（`[AI Agent Repair Guide]`）→ 返回空列表 `[]`，不阻断流水线。
 
@@ -118,13 +118,13 @@ Stage 3 直接使用 `ctx.constraints`、`ctx.config["language"]` 等字段，�
 
 调用模块：`cli/analyze/tools.py:_execute_tools()` 内联逻辑
 
-从 Claims 列表中提取所有代码文件和测试文件的引用路径：
+从 `ctx.claims_list`（阶段 1 已加载的 Claim 对象列表）中提取并过滤文件路径：
 
-1. 遍历所有 Claim 的 `test_refs`，收集测试路径（加入 `test_paths`）
-2. 遍历所有 Claim 的 `code_refs`，收集源码路径（加入 `source_paths`）
-3. 仅保留扩展名匹配 `language_tool_matrix` 中定义的文件扩展名的路径
-4. 仅保留文件实际存在于磁盘上的路径
-5. 收集非代码文件引用（扩展名不在语言配置中），用于生成跳过证据
+1. 遍历所有 Claim 的 `test_refs` 和 `code_refs`，去掉 `#fragment` 后缀，收集原始路径
+2. 仅保留扩展名匹配 `language_tool_matrix[language].extensions` 的路径
+3. 仅保留文件实际存在于磁盘上的路径（`(project_root / path).exists()`）
+4. 按来源分类：`test_refs` → `test_paths`，`code_refs` → `source_paths`
+5. 同时收集非代码文件引用（扩展名不在语言配置中），用于步骤 6 生成跳过证据
 
 路径分类：
 - `test_paths`：测试文件路径列表，仅执行 `test` 类别工具
@@ -146,10 +146,10 @@ Stage 3 直接使用 `ctx.constraints`、`ctx.config["language"]` 等字段，�
 
 调用模块：`infra/tools/executor.py:ToolExecutionEngine.execute_all()`
 
-将路径按类型（`test` / `source`）传入执行引擎。执行引擎对每个路径执行以下逻辑：
+将 `Dict[str, List[str]]` 格式的路径（key 为 `"test"` 或 `"source"`，value 为路径列表）传入执行引擎。执行引擎对每个路径执行以下逻辑：
 
 1. 遍历 `validation_tools` 列表中的每个工具类别
-2. 跳过 `coverage` 类别（覆盖率是批量工具，由 `_measure_source_coverage()` 单独处理）
+2. 跳过 `coverage` 类别（覆盖率是批量工具，由 `_measure_source_coverage()` 在 `execute_all()` 末尾单独处理）
 3. 根据路径类型路由：`test` 路径仅执行 `test` 类别，`source` 路径执行其余类别
 4. 对每个 (路径, 类别) 组合调用 `execute_tool()`
 
@@ -158,7 +158,7 @@ Stage 3 直接使用 `ctx.constraints`、`ctx.config["language"]` 等字段，�
 - 路径安全校验：路径必须在项目根目录内（防止路径越权）
 - 命令模板替换：将 `{test_path}`、`{source_path}`、`{output_path}` 替换为实际路径，路径值经过 shell 注入防护（正则校验 + `shlex.quote()`）
 - 子进程执行：以 `shell=True` 执行命令，默认超时 120 秒
-- 输出解析：根据 `output_format` 选择对应的解析器（`pytest_json`、`ruff_json`、`mypy_json`、`bandit_json`、`coverage_json`）
+- 输出解析：根据 `output_format` 选择对应的解析器（`parse_pytest_output`、`parse_ruff_output`、`parse_mypy_output`、`parse_bandit_output`、`parse_coverage_json_output`）
 
 ---
 
@@ -172,14 +172,14 @@ Stage 3 直接使用 `ctx.constraints`、`ctx.config["language"]` 等字段，�
 |--------|----------|----------|
 | `parse_pytest_output` | pytest | 解析 JSON 报告，每个测试用例生成一个候选证据，从 docstring 提取 covers 标注 |
 | `parse_ruff_output` | ruff | 解析 JSON 输出，无违规 = `compliant`，有违规 = `violated` |
-| `parse_mypy_output` | mypy | 解析 JSON 报告或 stdout 中的错误行数，无错误 = `compliant` |
+| `parse_mypy_output` | mypy | 统计 stdout 中的错误行数，无错误 = `compliant` |
 | `parse_bandit_output` | bandit | 解析 JSON 输出，无安全问题 = `compliant` |
 | `parse_coverage_json_output` | coverage | 解析 `coverage.json`，每个源文件生成一个候选证据 |
 
 退出码分类规则：
 - 退出码 0：成功 → `compliant` 或 `covered`
 - 退出码 1：发现问题（如测试失败、违规）→ `violated`
-- pytest 退出码 2/5、mypy 退出码 2：工具无法处理该文件 → `skipped`，不产生证据
+- pytest 退出码 2/5、mypy 退出码 2：工具无法处理该文件 → `skipped`，产生一条 `skipped` 状态的候选证据（含 `error_code`），不计入有效证据
 - 其他退出码：工具执行异常 → `blocked`，记录 `error_code`
 
 ---

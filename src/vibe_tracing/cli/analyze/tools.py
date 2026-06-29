@@ -22,7 +22,6 @@ def _execute_tools(
     """
     config_data = ctx.config
     claims_list = ctx.claims_list
-    task_res = ctx.task_result
 
     config_language = config_data["language"]
     config_validation_tools = config_data.get("validation_tools", [])
@@ -90,10 +89,6 @@ def _execute_tools(
             if path_only and Path(path_only).suffix in code_extensions and path_only not in seen_paths and (project_root / path_only).exists():
                 source_paths.append(path_only)
                 seen_paths.add(path_only)
-
-    if task_res:
-        for task in task_res.tasks:
-            pass  # Task model has no evidence_refs; source paths come from claims
 
     if not test_paths and not source_paths:
         return []

@@ -709,7 +709,7 @@ class TestExecuteAll:
             "lint": engine._tool_configs["lint"]
         }
 
-        candidates = engine.execute_all(["src/vibe_tracing/foo.py"])
+        candidates = engine.execute_all({"source": ["src/vibe_tracing/foo.py"]})
         assert len(candidates) >= 1
         # Should have run at least once
         mock_run.assert_called()
@@ -727,7 +727,7 @@ class TestExecuteAll:
             "lint": engine._tool_configs["lint"]
         }
 
-        candidates = engine.execute_all(["docs/README.md"])
+        candidates = engine.execute_all({"source": ["docs/README.md"]})
         assert len(candidates) == 0
         mock_run.assert_not_called()
 
@@ -744,7 +744,7 @@ class TestExecuteAll:
             "test": engine._tool_configs["test"]
         }
 
-        candidates = engine.execute_all(["docs/README.md"])
+        candidates = engine.execute_all({"test": ["docs/README.md"]})
         assert len(candidates) == 0
         mock_run.assert_not_called()
 
@@ -758,7 +758,7 @@ class TestExecuteAll:
         )
 
         # Keep all tool configs
-        candidates = engine.execute_all(["config/settings.json"])
+        candidates = engine.execute_all({"source": ["config/settings.json"]})
         assert len(candidates) == 0
         mock_run.assert_not_called()
 
@@ -771,10 +771,11 @@ class TestExecuteAll:
             returncode=0, stdout="[]", stderr=""
         )
 
-        candidates = engine.execute_all(["src/module.py"])
-        # 4 subprocess-based tool categories execute (test, lint, type_check,
-        # security).  Coverage is measured from baseline, not via subprocess.
-        assert mock_run.call_count == 4
+        candidates = engine.execute_all({"source": ["src/module.py"]})
+        # 3 subprocess-based tool categories execute on source paths (lint,
+        # type_check, security).  test is skipped for source paths.
+        # Coverage is measured from baseline, not via subprocess.
+        assert mock_run.call_count == 3
         # Each category produces at least one candidate (lint,
         # type_check, security return 1 each; test returns 0 from empty parse)
         assert len(candidates) >= 3
@@ -793,7 +794,7 @@ class TestExecuteAll:
             "lint": engine._tool_configs["lint"]
         }
 
-        candidates = engine.execute_all(["src/module.py", "docs/README.md"])
+        candidates = engine.execute_all({"source": ["src/module.py", "docs/README.md"]})
         # Only the .py path should be linted
         assert len(candidates) == 1
         assert mock_run.call_count == 1
@@ -1170,50 +1171,6 @@ class TestMypyEdgeCases:
         assert len(candidates) == 1
         assert candidates[0].status == CoverageStatus.BLOCKED.value
         assert candidates[0].error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
-
-    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_mypy_json_report_file(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
-    ) -> None:
-        """covers: mypy JSON report file reading (lines 513-525)"""
-        report = {"summary": {"error_count": 3}}
-        report_path = project_root / "mypy_report.json"
-        report_path.write_text(json.dumps(report), encoding="utf-8")
-
-        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="")
-        engine._tool_configs["type_check"] = {
-            "tool": "mypy",
-            "default_command": f"mypy {{source_path}} --json-report {report_path}",
-            "output_format": "mypy_json",
-            "pass_condition": "exit_code == 0",
-        }
-        candidates = engine.execute_tool(tool_category="type_check", path="src/")
-        assert len(candidates) == 1
-        assert candidates[0].status == CoverageStatus.VIOLATED.value
-        assert candidates[0].details["errors_count"] == 3
-
-    @patch("vibe_tracing.infra.tools.executor.subprocess.run")
-    def test_mypy_json_report_bad_json_falls_back(
-        self, mock_run: MagicMock, engine: ToolExecutionEngine, project_root: Path
-    ) -> None:
-        """covers: mypy JSON report JSONDecodeError fallback (line 524-525)"""
-        report_path = project_root / "bad_mypy.json"
-        report_path.write_text("NOT JSON", encoding="utf-8")
-
-        mock_run.return_value = MagicMock(
-            returncode=1,
-            stdout="src/foo.py:10: error: Something wrong",
-            stderr="",
-        )
-        engine._tool_configs["type_check"] = {
-            "tool": "mypy",
-            "default_command": f"mypy {{source_path}} --json-report {report_path}",
-            "output_format": "mypy_json",
-            "pass_condition": "exit_code == 0",
-        }
-        candidates = engine.execute_tool(tool_category="type_check", path="src/")
-        assert len(candidates) == 1
-        assert candidates[0].details["errors_count"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -1664,7 +1621,7 @@ class TestCoverageBaselineIntegration:
             coverage_baseline_path=str(baseline_path),
         )
 
-        candidates = engine.execute_all(["src/foo.py"])
+        candidates = engine.execute_all({"source": ["src/foo.py"]})
         # Should have lint evidence from subprocess + coverage evidence from baseline
         coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
         assert len(coverage_candidates) == 1
@@ -1685,7 +1642,7 @@ class TestCoverageBaselineIntegration:
             project_root=project_root,
         )
 
-        candidates = engine.execute_all(["src/foo.py"])
+        candidates = engine.execute_all({"source": ["src/foo.py"]})
         coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
         assert len(coverage_candidates) == 0
 
@@ -1704,7 +1661,7 @@ class TestCoverageBaselineIntegration:
             coverage_baseline_path=str(project_root / "nonexistent.json"),
         )
 
-        candidates = engine.execute_all(["src/foo.py"])
+        candidates = engine.execute_all({"source": ["src/foo.py"]})
         coverage_candidates = [c for c in candidates if c.tool_category == "coverage"]
         assert len(coverage_candidates) == 0
 

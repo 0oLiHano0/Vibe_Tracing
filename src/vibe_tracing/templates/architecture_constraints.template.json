@@ -56,7 +56,7 @@
       },
       "type_check": {
         "tool": "mypy",
-        "default_command": "mypy {source_path} --json-report {output_path}",
+        "default_command": "mypy {source_path}",
         "output_format": "mypy_json",
         "pass_condition": "exit_code == 0"
       },

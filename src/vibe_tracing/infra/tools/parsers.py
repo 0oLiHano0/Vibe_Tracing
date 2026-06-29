@@ -225,7 +225,6 @@ def parse_mypy_output(
     exit_code: int,
     command: str,
     path: str,
-    project_root: Path,
     skip_exit_codes: set,
 ) -> List[ToolEvidenceCandidate]:
     """Parse mypy output.
@@ -267,23 +266,8 @@ def parse_mypy_output(
         ]
 
     errors_count = 0
-    # Try JSON report
-    json_match = re.search(r"--json-report\s+(\S+)", command)
-    if json_match:
-        report_path = Path(json_match.group(1))
-        if not report_path.is_absolute():
-            report_path = project_root / report_path
-        if report_path.exists():
-            try:
-                with report_path.open("r", encoding="utf-8") as f:
-                    data = json.load(f)
-                if isinstance(data, dict):
-                    errors_count = data.get("summary", {}).get("error_count", 0)
-            except (json.JSONDecodeError, OSError):
-                pass
-
-    # Fallback: count error lines in stdout
-    if errors_count == 0 and exit_code == 1:
+    # Count error lines in stdout
+    if exit_code == 1:
         for line in stdout.splitlines():
             if ": error:" in line:
                 errors_count += 1

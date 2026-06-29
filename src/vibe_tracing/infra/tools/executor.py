@@ -432,7 +432,7 @@ class ToolExecutionEngine:
         elif output_format == "mypy_json":
             candidates = parse_mypy_output(
                 stdout, stderr, exit_code, command, path,
-                self.project_root, self.MYPY_SKIP_EXIT_CODES,
+                self.MYPY_SKIP_EXIT_CODES,
             )
         elif output_format == "bandit_json":
             candidates = parse_bandit_output(
@@ -578,19 +578,16 @@ class ToolExecutionEngine:
 
     def execute_all(
         self,
-        paths,
+        paths: Dict[str, List[str]],
     ) -> List[ToolEvidenceCandidate]:
         """
-        Execute all whitelisted tools for the given paths.
+        Execute all whitelisted tools for the given typed paths.
 
         Args:
-            paths: Either:
-                - A flat ``List[str]`` of paths.  All configured tools run on
-                  every file whose extension matches the project language.
-                - A ``Dict[str, List[str]]`` mapping path types ("test" or
-                  "source") to path lists.  Path type is used to route tools:
-                  "test" paths run only the ``test`` category;
-                  "source" paths run everything else.
+            paths: ``Dict[str, List[str]]`` mapping path types ("test" or
+                "source") to path lists.  Path type is used to route tools:
+                "test" paths run only the ``test`` category;
+                "source" paths run everything else.
 
         Returns:
             Flat list of all ToolEvidenceCandidate objects.
@@ -601,15 +598,12 @@ class ToolExecutionEngine:
         lang_config = self.language_tool_matrix.get(self.language, {})
         lang_extensions = set(lang_config.get("extensions", [".py"]))
 
-        # Normalise to typed path pairs: (path, path_type_or_None).
-        if isinstance(paths, dict):
-            typed_paths: List[Tuple[str, Optional[str]]] = []
-            for path_type, path_list in paths.items():
-                if isinstance(path_list, list):
-                    for path in path_list:
-                        typed_paths.append((path, path_type))
-        else:
-            typed_paths = [(p, None) for p in paths]
+        # Flatten typed paths: (path, path_type).
+        typed_paths: List[Tuple[str, str]] = []
+        for path_type, path_list in paths.items():
+            if isinstance(path_list, list):
+                for path in path_list:
+                    typed_paths.append((path, path_type))
 
         for path, path_type in typed_paths:
             # Only process files matching the project language extensions.
@@ -626,15 +620,13 @@ class ToolExecutionEngine:
                 if config is None:
                     continue
 
-                # When a path type is explicitly provided, route by type.
-                if path_type is not None:
-                    if path_type == "test" and category != "test":
-                        continue
-                    if path_type == "source" and category == "test":
-                        continue
-                    if path_type not in ("test", "source"):
-                        # Unknown path type -- skip entirely.
-                        continue
+                # Route by path type.
+                if path_type == "test" and category != "test":
+                    continue
+                if path_type == "source" and category == "test":
+                    continue
+                if path_type not in ("test", "source"):
+                    continue
 
                 candidates = self.execute_tool(
                     tool_category=category,

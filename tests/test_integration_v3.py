@@ -49,7 +49,7 @@ class TestExecuteAllLanguageFilter:
             project_root=tmp_path,
         )
 
-        candidates = engine.execute_all(["src/module.py", "docs/readme.md"])
+        candidates = engine.execute_all({"source": ["src/module.py", "docs/readme.md"]})
 
         # .py file should have been processed (subprocess called once for lint)
         assert mock_run.call_count == 1
@@ -82,6 +82,6 @@ class TestExecuteAllLanguageFilter:
             project_root=tmp_path,
         )
 
-        candidates = engine.execute_all(["docs/notes.md", "config.json"])
+        candidates = engine.execute_all({"source": ["docs/notes.md", "config.json"]})
         assert candidates == []
         mock_run.assert_not_called()

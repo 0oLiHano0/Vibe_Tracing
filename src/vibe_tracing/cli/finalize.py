@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path
 
 from vibe_tracing.infra.loader.config import load_config, resolve_path
+from vibe_tracing.infra.loader.prd_parser import PrdParser
 from vibe_tracing.infra.logging.logger import OperationalLogger
 
 
@@ -202,6 +203,37 @@ def run_finalize(project_root: Path) -> int:
         project_prefix = config_data.get("project_prefix", "VT")
         from vibe_tracing.infra import validation as ids
         ids.set_project_prefix(project_prefix)
+
+        # 5.1. PRD draft status check — reject finalize if PRD is still draft
+        _t = time.perf_counter()
+        prd_path = resolve_path(project_root, config_data, "prd")
+        if prd_path.exists():
+            try:
+                prd_content = prd_path.read_text(encoding="utf-8")
+                prd_parser = PrdParser()
+                prd_res = prd_parser.parse_text(prd_content)
+            except Exception as exc:
+                vt_logger.warning("prd_parse_failed", "PRD parse failed, skipping draft check",
+                                  error=str(exc))
+                prd_res = None
+
+            if prd_res is not None:
+                if not prd_res.is_valid:
+                    vt_logger.error("prd_invalid", "PRD validation failed",
+                                    errors=prd_res.errors)
+                    print(f"Error: PRD 解析失败: {'; '.join(prd_res.errors)}", file=sys.stderr)
+                    return 1
+                if prd_res.status == "draft":
+                    vt_logger.error("prd_is_draft", "PRD status is draft, finalize rejected")
+                    print(
+                        "Error: PRD 状态为 draft，不允许 finalize。"
+                        "请将 PRD 中的 status 改为 active 后重新运行 vt finalize。",
+                        file=sys.stderr,
+                    )
+                    return 1
+        vt_logger.debug("prd_draft_check_completed", "PRD draft status check passed",
+                        prd_exists=prd_path.exists(),
+                        duration_ms=int((time.perf_counter() - _t) * 1000))
 
         # 5.5. PRD <-> Architecture mapping validation (left-shift)
         _t = time.perf_counter()

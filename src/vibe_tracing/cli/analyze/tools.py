@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 from vibe_tracing.domain.context import UnifiedContext
-from vibe_tracing.cli.analyze.exceptions import _GateBlocked
 
 
 def _execute_tools(
@@ -17,32 +16,17 @@ def _execute_tools(
 ) -> List:
     """Execute validation tools and return tool evidence candidates.
 
-    Skips if project is in draft status or has no constraints.
+    Pre-conditions guaranteed by finalize + Stage 1:
+        - config["language"] exists and is non-empty
+        - ctx.constraints is non-empty (constraints file is required)
     """
-    constraints_record_content = ctx.constraints
     config_data = ctx.config
     claims_list = ctx.claims_list
     task_res = ctx.task_result
 
-    config_language = config_data.get("language")
+    config_language = config_data["language"]
     config_validation_tools = config_data.get("validation_tools", [])
-
-    if not constraints_record_content:
-        return []
-
-    if not config_language:
-        print(
-            "Error: Project not finalized. Run 'vibe-tracing finalize' first.",
-            file=sys.stderr,
-        )
-        raise _GateBlocked(1)
-
-    ltm = constraints_record_content.get("language_tool_matrix", {})
-    if ctx.is_draft:
-        print("Skipping tool execution: project is in draft status (no tasks or claims).", file=sys.stderr)
-        return []
-    if not (config_language and ltm):
-        return []
+    ltm = ctx.constraints.get("language_tool_matrix", {})
 
     from vibe_tracing.infra.tools.executor import ToolExecutionEngine, ToolEvidenceCandidate
     from vibe_tracing.infra.tools.resolver import ToolResolver

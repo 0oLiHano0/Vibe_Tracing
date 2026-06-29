@@ -111,22 +111,14 @@ def _load_context(
         print(f"PRD parsing error: {'; '.join(prd_res.errors)}", file=sys.stderr)
         raise _GateBlocked(1)
 
-    # Verify required files exist if not draft
-    if prd_res.status != "draft":
-        if not task_list_record or task_list_record.status != STATUS_OK:
-            task_list_path = resolve_path(project_root, config, "task_list")
-            print(
-                f"Error loading required file task_list ({task_list_path}): File not found",
-                file=sys.stderr,
-            )
-            raise _GateBlocked(1)
-        if not constraints_record or constraints_record.status != STATUS_OK:
-            constraints_path = resolve_path(project_root, config, "architecture_constraints")
-            print(
-                f"Error loading required file architecture_constraints ({constraints_path}): File not found",
-                file=sys.stderr,
-            )
-            raise _GateBlocked(1)
+    # Verify required files exist (draft PRD already rejected by finalize)
+    if not task_list_record or task_list_record.status != STATUS_OK:
+        task_list_path = resolve_path(project_root, config, "task_list")
+        print(
+            f"Error loading required file task_list ({task_list_path}): File not found",
+            file=sys.stderr,
+        )
+        raise _GateBlocked(1)
 
     # Load tasks
     task_res = None
@@ -151,7 +143,7 @@ def _load_context(
     from vibe_tracing.domain.gate.claim_coverage import build_governance_whitelist
     from vibe_tracing.infra.config.boundary import load_boundary
     governance_whitelist = build_governance_whitelist(manifest, project_root)
-    constraints_data = constraints_record.content if constraints_record and constraints_record.status == STATUS_OK else None
+    constraints_data = constraints_record.content
     governance_boundary = load_boundary(project_root, constraints_data=constraints_data)
 
     ctx = UnifiedContext(
@@ -163,7 +155,6 @@ def _load_context(
         manifest=manifest,
         human_decisions=human_decisions_data,
         config_prefix=config_prefix,
-        is_draft=(prd_res.status == "draft"),
         governance_whitelist=governance_whitelist,
         governance_boundary=governance_boundary,
     )

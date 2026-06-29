@@ -8162,6 +8162,304 @@
         "refactoring_design.md line 60-62 的阶段二描述需要重写，反映简化后的架构。",
         "pipeline_stage-2-refacting.md §6 的验收标准表需要更新为实际完成状态。"
       ]
+    },
+    {
+      "task_id": "TASK-VT-147",
+      "title": "finalize 拦截 draft PRD：补全设计→开发关卡的 PRD 状态校验",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "finalize 作为设计阶段到开发阶段的唯一关卡，应拒绝 draft 状态的 PRD 通过，确保通过 finalize 的项目处于确定状态。",
+      "atomic_scope": "在 cli/finalize.py 的 run_finalize() 中，language 提取（步骤 5）之后、PRD-Architecture 映射校验（步骤 5.5）之前，插入 PRD 解析和状态校验：调用 PrdParser().parse_text() 解析 PRD 内容，如果 prd_res.status == draft 则打印提示并 return 1。",
+      "out_of_scope": [
+        "不修改 Stage 1 或 Stage 3 代码（由后续任务处理）",
+        "不修改 PRD 文件本身",
+        "不修改 finalize 的其他校验逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/finalize.py",
+        "tests/test_finalize.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-147-01",
+          "description": "finalize.py 在步骤 5 之后调用 PrdParser 解析 PRD 内容。"
+        },
+        {
+          "dod_id": "DOD-VT-147-02",
+          "description": "PRD status 为 draft 时，finalize 拒绝执行，退出码 1，输出明确提示信息。"
+        },
+        {
+          "dod_id": "DOD-VT-147-03",
+          "description": "PRD status 为 active 时，finalize 正常继续执行，不受影响。"
+        },
+        {
+          "dod_id": "DOD-VT-147-04",
+          "description": "test_finalize.py 新增测试用例：draft PRD 被 finalize 拒绝。"
+        },
+        {
+          "dod_id": "DOD-VT-147-05",
+          "description": "pytest tests/test_finalize.py -v 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "PrdParser 已在 infra/loader/prd_parser.py 中实现，直接 import 使用。",
+        "finalize.py line ~200（language 提取之后）是插入点。",
+        "提示信息应说明：draft PRD 不允许 finalize，需将 PRD 改为 active 后重新运行。",
+        "已 finalize 过的项目不受影响（finalize 有幂等检查，line 256 直接返回 0）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-148",
+      "title": "Stage 1 提升 architecture_constraints 为必需文件",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "既然 finalize 保证 architecture_constraints 存在，Stage 1 的 is_required=False 是错误的契约声明，应提升为必需文件。",
+      "atomic_scope": "1. 修改 infra/loader/raw_input.py 中 RawInputLoader.load() 将 architecture_constraints 从非必需分支移至必需分支；2. 修改 cli/analyze/pipeline.py 的 _load_context() 删除对 constraints_record 的 None 防御性检查。",
+      "out_of_scope": [
+        "不修改 finalize 代码",
+        "不修改 Stage 3 代码（由 TASK-VT-150 处理）",
+        "不修改 domain 层代码"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/loader/raw_input.py",
+        "src/vibe_tracing/cli/analyze/pipeline.py",
+        "tests/test_raw_input.py",
+        "tests/test_cli_analyze.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-148-01",
+          "description": "raw_input.py 中 architecture_constraints 在必需分支加载（is_required=True）。"
+        },
+        {
+          "dod_id": "DOD-VT-148-02",
+          "description": "pipeline.py _load_context() 中无 constraints_record 的 None 防御性判断。"
+        },
+        {
+          "dod_id": "DOD-VT-148-03",
+          "description": "缺失 architecture_constraints.json 时，Stage 1 阻断并退出码 1（而非 Stage 3 静默跳过）。"
+        },
+        {
+          "dod_id": "DOD-VT-148-04",
+          "description": "pytest tests/test_raw_input.py tests/test_cli_analyze.py -v 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "raw_input.py line 86-93 是当前非必需文件加载分支，需要将 architecture_constraints 从这里移除。",
+        "raw_input.py line 78-81 是必需文件加载分支，需要在此处添加 architecture_constraints。",
+        "pipeline.py line 114-129 的 if prd_res.status != draft 条件分支中对 constraints 的检查需要同步调整。",
+        "pipeline.py line 154 的 constraints_record and constraints_record.status == STATUS_OK 判断应简化。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-149",
+      "title": "删除 is_draft 字段：清理 UnifiedContext 及所有引用",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "finalize 拦截 draft PRD 后，is_draft 成为永远为 false 的死状态字段，应从 UnifiedContext 和所有引用处删除。",
+      "atomic_scope": "1. 删除 domain/context.py 中 UnifiedContext 的 is_draft 字段；2. 删除 cli/analyze/pipeline.py 中 is_draft 的计算和传入；3. 删除 cli/analyze/tools.py 中 is_draft 的前置条件检查；4. 搜索并清理所有其他对 is_draft 的引用。",
+      "out_of_scope": [
+        "不修改 finalize 代码（由 TASK-VT-147 处理）",
+        "不修改 Stage 3 的其他前置条件检查（由 TASK-VT-150 处理）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-147"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/context.py",
+        "src/vibe_tracing/cli/analyze/pipeline.py",
+        "src/vibe_tracing/cli/analyze/tools.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-149-01",
+          "description": "UnifiedContext dataclass 中无 is_draft 字段。"
+        },
+        {
+          "dod_id": "DOD-VT-149-02",
+          "description": "pipeline.py _load_context() 中无 is_draft 计算和传入。"
+        },
+        {
+          "dod_id": "DOD-VT-149-03",
+          "description": "grep -rn is_draft src/ 无业务代码引用（仅允许注释或文档中的历史说明）。"
+        },
+        {
+          "dod_id": "DOD-VT-149-04",
+          "description": "pytest tests/ -v 全量通过，无 is_draft 相关断言失败。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "先搜索 grep -rn is_draft src/ 确认所有引用点，再逐一删除。",
+        "domain/context.py 的 UnifiedContext dataclass 是 is_draft 的定义位置。",
+        "pipeline.py line 168 是 is_draft 的计算位置。",
+        "tools.py line 41 是 is_draft 的检查位置。",
+        "删除后需确认 ctx.is_draft 的所有下游引用均已清理。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-150",
+      "title": "Stage 3 删除冗余前置条件检查：信任 finalize 契约",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "finalize 已保证 constraints、language、ltm 存在，TASK-VT-147 已拦截 draft PRD，Stage 3 的 4 项前置条件检查全部冗余，应删除。",
+      "atomic_scope": "修改 cli/analyze/tools.py 的 _execute_tools()：删除 constraints 缺失检查、language 缺失检查、is_draft 检查、ltm 空检查，直接信任上游契约访问 config[language] 和 constraints[language_tool_matrix]。",
+      "out_of_scope": [
+        "不修改 finalize 代码",
+        "不修改 Stage 1 代码",
+        "不修改工具执行引擎（executor.py）",
+        "不修改路径收集和 staged_files 过滤逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-148",
+        "TASK-VT-149"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/tools.py",
+        "tests/test_tool_execution.py",
+        "tests/test_cli_analyze.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-150-01",
+          "description": "_execute_tools() 中无 constraints、language、is_draft、ltm 的前置条件判断分支。"
+        },
+        {
+          "dod_id": "DOD-VT-150-02",
+          "description": "_execute_tools() 直接访问 config_data[language]（非 .get()）和 ctx.constraints.get(language_tool_matrix)。"
+        },
+        {
+          "dod_id": "DOD-VT-150-03",
+          "description": "_execute_tools() 代码行数从约 174 行缩减至约 150 行。"
+        },
+        {
+          "dod_id": "DOD-VT-150-04",
+          "description": "正常项目运行 vt analyze，Stage 3 无前置条件检查，直接进入工具执行。"
+        },
+        {
+          "dod_id": "DOD-VT-150-05",
+          "description": "pytest tests/test_tool_execution.py tests/test_cli_analyze.py -v 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "tools.py line 28-45 是 4 项前置条件检查的位置，需要全部删除。",
+        "删除后 config_language = config_data[language]（直接访问，不再 .get()）。",
+        "删除后 ltm = ctx.constraints.get(language_tool_matrix, {})（constraints 非空已由 Stage 1 保证）。",
+        "保留 line 80-124 的路径收集和 staged_files 过滤逻辑——这些是 Stage 3 的核心业务逻辑。",
+        "docstring 中应注明前置契约由 finalize + Stage 1 保证。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-151",
+      "title": "文档同步：更新 spec_pipeline_stage_3.md 和 pipeline_stage-3-refactoring.md",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "所有 Stage 3 重构任务（147-150）完成后，同步更新 spec 文档和重构方案文档，确保文档与最终代码一致。",
+      "atomic_scope": "1. 更新 docs/spec_pipeline_stage_3.md：删除步骤 1 中的 4 项前置条件检查描述，更新输入结构中 UnifiedContext 的 is_draft 字段说明，更新异常捕获表；2. 更新 docs/pipeline_stage-3-refactoring.md：将所有验收标准标记为已完成。",
+      "out_of_scope": [
+        "不修改业务代码",
+        "不修改测试"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-002"
+      ],
+      "related_architecture_constraints": [
+        "PRINCIPLE-VT-006"
+      ],
+      "depends_on": [
+        "TASK-VT-147",
+        "TASK-VT-148",
+        "TASK-VT-149",
+        "TASK-VT-150"
+      ],
+      "expected_deliverables": [
+        "docs/spec_pipeline_stage_3.md",
+        "docs/pipeline_stage-3-refactoring.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-151-01",
+          "description": "spec_pipeline_stage_3.md 步骤 1 描述反映重构后架构（无 4 项前置条件检查）。"
+        },
+        {
+          "dod_id": "DOD-VT-151-02",
+          "description": "spec_pipeline_stage_3.md 输入结构中无 is_draft 字段。"
+        },
+        {
+          "dod_id": "DOD-VT-151-03",
+          "description": "pipeline_stage-3-refactoring.md 验收标准全部标记为已完成。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "spec_pipeline_stage_3.md 的步骤 1 需要重写，说明前置契约由 finalize + Stage 1 保证。",
+        "UnifiedContext 输入结构中的 is_draft 字段需要删除。",
+        "pipeline_stage-3-refactoring.md 的验证标准表需要更新为实际完成状态。"
+      ]
     }
   ]
 }

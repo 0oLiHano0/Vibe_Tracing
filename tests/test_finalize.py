@@ -449,8 +449,8 @@ def test_finalize_re_finalize_rule_change_with_change_log(tmp_path, capsys):
 def _create_prd_file(base: Path, reqs: list[dict]) -> None:
     """Helper to create a minimal PRD with given requirements.
 
-    Each req dict: {"id": "REQ-TEST-001", "title": "...", "priority": "must"}
-    The PRD parser expects `#### 优先级` as a level-4 heading before the priority value.
+    Each req dict: {"id": "REQ-TEST-001", "title": "...", "priority": "must", "category": "functional"}
+    The PRD parser expects `#### 优先级` and `#### 类别` as level-4 headings.
     """
     lines = [
         "---",
@@ -467,6 +467,10 @@ def _create_prd_file(base: Path, reqs: list[dict]) -> None:
         lines.append("#### 优先级")
         lines.append("")
         lines.append(req["priority"])
+        lines.append("")
+        lines.append("#### 类别")
+        lines.append("")
+        lines.append(req.get("category", "functional"))
         lines.append("")
     (base / "docs" / "prd.md").write_text("\n".join(lines), encoding="utf-8")
 

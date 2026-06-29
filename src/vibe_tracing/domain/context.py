@@ -30,7 +30,6 @@ class UnifiedContext:
     manifest: Optional["RawInputManifest"] = None
     human_decisions: Optional[dict] = None
     config_prefix: str = "VT"
-    is_draft: bool = False
     governance_whitelist: Set[str] = field(default_factory=set)
     governance_boundary: Dict[str, Any] = field(default_factory=dict)
 

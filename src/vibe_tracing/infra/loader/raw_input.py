@@ -83,7 +83,6 @@ class RawInputLoader:
 
         # 加载可选文件
         optional_keys = [
-            "architecture_constraints",
             "task_list",
             "agent_claims",
             "human_decisions",

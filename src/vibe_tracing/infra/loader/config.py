@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 # 必需文件定义（RawInputLoader.load() 从此驱动）
-REQUIRED_FILES = ("prd",)
+REQUIRED_FILES = ("prd", "architecture_constraints")
 
 
 def load_config(project_root: Path) -> Dict[str, Any]:

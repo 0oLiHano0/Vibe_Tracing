@@ -7,7 +7,6 @@ from vibe_tracing.infra.db import (
     load_staged_files,
     check_dangling_claims,
     check_ghost_code,
-    check_test_dead_links,
     upsert_test_result,
 )
 
@@ -82,40 +81,6 @@ class TestLayer2RelationValidation:
         )
         assert "src/legitimate.py" not in ghost, (
             f"src/legitimate.py should not be ghost code, got: {ghost}"
-        )
-
-        conn.close()
-
-    def test_test_dead_link_detected(self):
-        conn = init_in_memory_db()
-        # Insert a claim with a test_ref whose nodeid has no corresponding test_result
-        load_claims(conn, [
-            {
-                "claim_id": "CLAIM-VT-020",
-                "related_task": "TASK-VT-020",
-                "code_refs": [],
-                "test_refs": ["tests/test_dead.py::test_gone"],
-            },
-        ])
-
-        dead_links = check_test_dead_links(conn)
-        assert len(dead_links) == 1
-        assert dead_links[0]["claim_id"] == "CLAIM-VT-020"
-        assert dead_links[0]["test_nodeid"] == "tests/test_dead.py::test_gone"
-
-        # Now add a passed test_result for that nodeid — dead link should vanish
-        upsert_test_result(
-            conn,
-            "tests/test_dead.py::test_gone",
-            "passed",
-            0,
-            "pytest tests/test_dead.py",
-            False,
-        )
-
-        dead_links_after = check_test_dead_links(conn)
-        assert len(dead_links_after) == 0, (
-            f"After adding a passed result, expected 0 dead links, got: {dead_links_after}"
         )
 
         conn.close()

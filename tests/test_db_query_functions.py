@@ -33,7 +33,6 @@ if not USING_REAL_IMPL:
         check_ac_coverage,
         check_ghost_code,
         check_dangling_claims,
-        check_test_dead_links,
     )
 
     # Wrapped init_in_memory_db to ensure fallback tables are created
@@ -198,7 +197,6 @@ else:
         check_ac_coverage,
         check_ghost_code,
         check_dangling_claims,
-        check_test_dead_links,
         check_invalid_task_requirements,
         check_invalid_task_acs,
         check_invalid_task_modules,
@@ -525,57 +523,6 @@ def test_tier1_f6_coverage_5_empty_database():
     conn.close()
 
 
-# ── Feature 7: Test Dead Links Check (F7) ───────────────────────────────────
-
-def test_tier1_f7_coverage_1_no_dead_links():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]}])
-    upsert_test_result(conn, "test_1", "passed", 0, "pytest", False)
-    res = check_test_dead_links(conn)
-    assert len(res) == 0
-    conn.close()
-
-def test_tier1_f7_coverage_2_dead_link_test_not_run():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]}])
-    res = check_test_dead_links(conn)
-    assert len(res) == 1
-    assert res[0]["claim_id"] == "CLAIM-1"
-    assert res[0]["test_nodeid"] == "test_1"
-    conn.close()
-
-def test_tier1_f7_coverage_3_dead_link_test_failed():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]}])
-    upsert_test_result(conn, "test_1", "failed", 1, "pytest", False)
-    res = check_test_dead_links(conn)
-    assert len(res) == 1
-    assert res[0]["claim_id"] == "CLAIM-1"
-    assert res[0]["test_nodeid"] == "test_1"
-    conn.close()
-
-def test_tier1_f7_coverage_4_dead_link_test_skipped():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]}])
-    upsert_test_result(conn, "test_1", "skipped", 0, "pytest", False)
-    res = check_test_dead_links(conn)
-    assert len(res) == 1
-    assert res[0]["claim_id"] == "CLAIM-1"
-    assert res[0]["test_nodeid"] == "test_1"
-    conn.close()
-
-def test_tier1_f7_coverage_5_mixed_dead_links():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1", "test_2"]}])
-    upsert_test_result(conn, "test_1", "passed", 0, "pytest", False)
-    upsert_test_result(conn, "test_2", "failed", 1, "pytest", False)
-    res = check_test_dead_links(conn)
-    assert len(res) == 1
-    assert res[0]["claim_id"] == "CLAIM-1"
-    assert res[0]["test_nodeid"] == "test_2"
-    conn.close()
-
-
 # ──────────────────────────────────────────────────────────────────────────────
 # TIER 2: BOUNDARY & CORNER CASES (5 tests per feature * 7 features = 35 tests)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -879,48 +826,6 @@ def test_tier2_f6_boundary_5_bulk_dangling_claims():
     conn.close()
 
 
-# ── Feature 7: Test Dead Links Check (F7) ───────────────────────────────────
-
-def test_tier2_f7_boundary_1_parametrized_nodeids():
-    conn = init_in_memory_db()
-    nodeid = "tests/test_foo.py::TestClass::test_method[param-value]"
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": [nodeid]}])
-    upsert_test_result(conn, nodeid, "passed", 0, "pytest", False)
-    res = check_test_dead_links(conn)
-    assert len(res) == 0
-    conn.close()
-
-def test_tier2_f7_boundary_2_multiple_claims_same_dead_link():
-    conn = init_in_memory_db()
-    load_claims(conn, [
-        {"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]},
-        {"claim_id": "CLAIM-2", "related_task": "TASK-2", "test_refs": ["test_1"]}
-    ])
-    res = check_test_dead_links(conn)
-    assert len(res) == 2
-    assert {r["claim_id"] for r in res} == {"CLAIM-1", "CLAIM-2"}
-    conn.close()
-
-def test_tier2_f7_boundary_3_non_zero_exit_code_passed_outcome():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]}])
-    upsert_test_result(conn, "test_1", "passed", 1, "pytest", False)
-    res = check_test_dead_links(conn)
-    assert len(res) == 0
-    conn.close()
-
-def test_tier2_f7_boundary_4_empty_nodeid_reference():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": [""]}])
-    res = check_test_dead_links(conn)
-    assert len(res) == 0
-    conn.close()
-
-def test_tier2_f7_boundary_5_empty_database():
-    conn = init_in_memory_db()
-    res = check_test_dead_links(conn)
-    assert len(res) == 0
-    conn.close()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -942,9 +847,6 @@ def test_tier3_combo_2_overlapping_dangling_and_dead_links():
     res_f6 = check_dangling_claims(conn)
     assert len(res_f6) == 1
     assert res_f6[0]["claim_id"] == "CLAIM-1"
-    res_f7 = check_test_dead_links(conn)
-    assert len(res_f7) == 1
-    assert res_f7[0]["claim_id"] == "CLAIM-1"
     conn.close()
 
 def test_tier3_combo_3_cascading_test_failure():
@@ -995,22 +897,7 @@ def test_tier3_combo_5_large_scale_sync():
     assert len(check_claim_evidence(conn)) == 0
     assert len(check_ghost_code(conn)) == 0
     assert len(check_dangling_claims(conn)) == 0
-    assert len(check_test_dead_links(conn)) == 0
     assert len(get_full_chain(conn)) == 1
-    conn.close()
-
-def test_tier3_combo_6_cache_purging_dead_links():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["tests/test_foo.py::test_1"]}])
-    conn.execute("INSERT INTO test_results (nodeid, outcome, exit_code, command, carried_over) VALUES (?, ?, ?, ?, ?)", ("tests/test_foo.py::test_1", "passed", 0, "pytest", 1))
-    conn.commit()
-
-    assert len(check_test_dead_links(conn)) == 0
-    purge_stale_cache(conn, ["tests/test_foo.py"])
-
-    res = check_test_dead_links(conn)
-    assert len(res) == 1
-    assert res[0]["claim_id"] == "CLAIM-1"
     conn.close()
 
 def test_tier3_combo_7_soft_integrity_violations():
@@ -1021,7 +908,6 @@ def test_tier3_combo_7_soft_integrity_violations():
         {"claim_id": "CLAIM-2", "related_task": "TASK-MISSING", "test_refs": ["test_dead_2"]}
     ])
     assert len(check_dangling_claims(conn)) == 2
-    assert len(check_test_dead_links(conn)) == 2
     assert len(check_ghost_code(conn)) == 2
     conn.close()
 
@@ -1045,22 +931,6 @@ def test_tier4_scenario_1_new_feature_development():
     assert res_f5[0] == "src/auth.py"
     conn.close()
 
-def test_tier4_scenario_2_refactoring_renaming_tests():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["tests/test_auth.py::test_login_old"]}])
-    conn.execute("INSERT INTO test_results (nodeid, outcome, exit_code, command, carried_over) VALUES (?, ?, ?, ?, ?)", ("tests/test_auth.py::test_login_old", "passed", 0, "pytest", 1))
-    conn.commit()
-
-    assert len(check_test_dead_links(conn)) == 0
-
-    purge_stale_cache(conn, ["tests/test_auth.py"])
-    upsert_test_result(conn, "tests/test_auth.py::test_login_new", "passed", 0, "pytest", False)
-
-    res = check_test_dead_links(conn)
-    assert len(res) == 1
-    assert res[0]["test_nodeid"] == "tests/test_auth.py::test_login_old"
-    conn.close()
-
 def test_tier4_scenario_3_feature_complete_verification():
     conn = init_in_memory_db()
     load_prd(conn, [MockRequirement("REQ-1", "Auth Feature", "must", "functional", [MockAcceptanceCriteria("AC-1-1", "Login validation", True)])])
@@ -1075,7 +945,6 @@ def test_tier4_scenario_3_feature_complete_verification():
     assert len(check_claim_evidence(conn)) == 0
     assert len(check_ghost_code(conn)) == 0
     assert len(check_dangling_claims(conn)) == 0
-    assert len(check_test_dead_links(conn)) == 0
 
     chain = get_full_chain(conn)
     assert len(chain) == 1
@@ -1239,43 +1108,6 @@ def test_adversarial_sql_injection_mitigated():
     row = cursor.fetchone()
     assert row is not None
     assert row[0] == injection_id
-    conn.close()
-
-
-def test_adversarial_check_active_task_coverage_states():
-    """
-    Test check_active_task_coverage with various task statuses and coverage scenarios.
-    """
-    conn = init_in_memory_db()
-    # 1. in_progress task with coverage report (violated status) -> should be returned
-    load_tasks(conn, [{"task_id": "TASK-ACT-1", "priority": "must", "status": "in_progress"}])
-    load_claims(conn, [{"claim_id": "CLAIM-ACT-1", "related_task": "TASK-ACT-1", "code_refs": ["src/violated.py"]}])
-    upsert_coverage_report(conn, "src/violated.py", 45.0, 10, "violated", False)
-
-    # 2. in_progress task with coverage report (compliant status) -> should NOT be returned
-    load_tasks(conn, [{"task_id": "TASK-ACT-2", "priority": "must", "status": "in_progress"}])
-    load_claims(conn, [{"claim_id": "CLAIM-ACT-2", "related_task": "TASK-ACT-2", "code_refs": ["src/compliant.py"]}])
-    upsert_coverage_report(conn, "src/compliant.py", 95.0, 10, "compliant", False)
-
-    # 3. in_progress task with missing coverage report -> should be returned
-    load_tasks(conn, [{"task_id": "TASK-ACT-3", "priority": "must", "status": "in_progress"}])
-    load_claims(conn, [{"claim_id": "CLAIM-ACT-3", "related_task": "TASK-ACT-3", "code_refs": ["src/missing.py"]}])
-
-    # 4. done task with violated coverage report -> should NOT be returned
-    load_tasks(conn, [{"task_id": "TASK-ACT-4", "priority": "must", "status": "done"}])
-    load_claims(conn, [{"claim_id": "CLAIM-ACT-4", "related_task": "TASK-ACT-4", "code_refs": ["src/violated_done.py"]}])
-    upsert_coverage_report(conn, "src/violated_done.py", 30.0, 10, "violated", False)
-
-    from vibe_tracing.infra.db.queries import check_active_task_coverage
-    res = check_active_task_coverage(conn)
-
-    # We expect src/violated.py (case 1) and src/missing.py (case 3) to be returned.
-    code_paths = {r["code_path"] for r in res}
-    assert "src/violated.py" in code_paths
-    assert "src/missing.py" in code_paths
-    assert "src/compliant.py" not in code_paths
-    assert "src/violated_done.py" not in code_paths
-    assert len(code_paths) == 2
     conn.close()
 
 

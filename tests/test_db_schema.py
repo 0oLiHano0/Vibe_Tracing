@@ -6,8 +6,6 @@ from vibe_tracing.infra.db import (
     upsert_test_result,
     upsert_coverage_report,
     purge_stale_cache,
-    _export_test_results,
-    _export_coverage_reports,
 )
 
 
@@ -258,78 +256,3 @@ class TestPurgeStaleCache:
         conn.close()
 
 
-# ── Export ─────────────────────────────────────────────────────────────────────
-
-
-class TestExport:
-    def test__export_test_results_flat(self):
-        conn = init_in_memory_db()
-
-        conn.execute(
-            "INSERT OR REPLACE INTO test_results "
-            "(nodeid, outcome, exit_code, command, carried_over) "
-            "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_a.py::test_one", "passed", 0, "pytest tests/test_a.py", 0),
-        )
-        conn.execute(
-            "INSERT OR REPLACE INTO test_results "
-            "(nodeid, outcome, exit_code, command, carried_over) "
-            "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_a.py::test_two", "failed", 1, "pytest tests/test_a.py", 0),
-        )
-        conn.commit()
-
-        exported = _export_test_results(conn)
-        assert isinstance(exported, list)
-        assert len(exported) == 2
-
-        # Verify dict structure
-        for row in exported:
-            assert isinstance(row, dict)
-            assert "nodeid" in row
-            assert "outcome" in row
-            assert "exit_code" in row
-            assert "command" in row
-            assert "carried_over" in row
-
-        # Spot-check data
-        nodeids = {r["nodeid"] for r in exported}
-        assert "tests/test_a.py::test_one" in nodeids
-        assert "tests/test_a.py::test_two" in nodeids
-
-        conn.close()
-
-    def test__export_coverage_reports_flat(self):
-        conn = init_in_memory_db()
-
-        conn.execute(
-            "INSERT OR REPLACE INTO coverage_reports "
-            "(source_path, percent_covered, num_statements, status, carried_over) "
-            "VALUES (?, ?, ?, ?, ?)",
-            ("src/foo.py", 90.0, 50, "compliant", 0),
-        )
-        conn.execute(
-            "INSERT OR REPLACE INTO coverage_reports "
-            "(source_path, percent_covered, num_statements, status, carried_over) "
-            "VALUES (?, ?, ?, ?, ?)",
-            ("src/bar.py", 30.5, 100, "violated", 1),
-        )
-        conn.commit()
-
-        exported = _export_coverage_reports(conn)
-        assert isinstance(exported, list)
-        assert len(exported) == 2
-
-        for row in exported:
-            assert isinstance(row, dict)
-            assert "source_path" in row
-            assert "percent_covered" in row
-            assert "num_statements" in row
-            assert "status" in row
-            assert "carried_over" in row
-
-        paths = {r["source_path"] for r in exported}
-        assert "src/foo.py" in paths
-        assert "src/bar.py" in paths
-
-        conn.close()

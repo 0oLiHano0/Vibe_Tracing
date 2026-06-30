@@ -36,33 +36,6 @@ def check_dangling_claims(conn: sqlite3.Connection) -> list:
     return [{"claim_id": r[0], "related_task": r[1]} for r in rows]
 
 
-def check_test_dead_links(conn: sqlite3.Connection) -> list:
-    """检查测试死链：返回 Claim 引用但不存在或未通过的测试。"""
-    rows = conn.execute("""
-        SELECT ctr.claim_id, ctr.test_nodeid FROM claim_test_refs ctr
-        LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
-        WHERE tr.nodeid IS NULL OR tr.outcome != 'passed'
-    """).fetchall()
-    return [{"claim_id": r[0], "test_nodeid": r[1]} for r in rows]
-
-
-def check_active_task_coverage(conn: sqlite3.Connection) -> list:
-    """检查活跃任务的覆盖率：返回 in_progress 任务中未达标或缺失的代码文件。"""
-    rows = conn.execute("""
-        SELECT ccr.code_path, cr.percent_covered, cr.status
-        FROM claim_code_refs ccr
-        JOIN claims c ON ccr.claim_id = c.claim_id
-        JOIN tasks t ON c.related_task = t.task_id
-        LEFT JOIN coverage_reports cr ON ccr.code_path = cr.source_path
-        WHERE t.status = 'in_progress'
-          AND (cr.source_path IS NULL OR cr.status = 'violated')
-    """).fetchall()
-    return [
-        {"code_path": r[0], "percent_covered": r[1], "status": r[2]}
-        for r in rows
-    ]
-
-
 def check_ac_coverage(conn: sqlite3.Connection) -> list:
     """检查 MUST 优先级任务/验收标准的覆盖情况。"""
     rows = conn.execute("""

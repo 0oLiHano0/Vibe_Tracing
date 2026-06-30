@@ -1,10 +1,8 @@
 """
-VT 内存数据库数据导出与持久化模块
+VT 内存数据库数据操作模块（UPSERT、缓存清理）
 """
 
-import json
 import sqlite3
-from pathlib import Path
 
 
 def upsert_test_result(
@@ -59,29 +57,3 @@ def purge_stale_cache(conn: sqlite3.Connection, target_files: list) -> None:
     conn.commit()
 
 
-def _export_test_results(conn: sqlite3.Connection) -> list:
-    """内部函数：将 test_results 表全部记录导出为字典列表。"""
-    rows = conn.execute("SELECT * FROM test_results").fetchall()
-    columns = [d[1] for d in conn.execute("PRAGMA table_info(test_results)").fetchall()]
-    return [dict(zip(columns, row)) for row in rows]
-
-
-def _export_coverage_reports(conn: sqlite3.Connection) -> list:
-    """内部函数：将 coverage_reports 表全部记录导出为字典列表。"""
-    rows = conn.execute("SELECT * FROM coverage_reports").fetchall()
-    columns = [d[1] for d in conn.execute("PRAGMA table_info(coverage_reports)").fetchall()]
-    return [dict(zip(columns, row)) for row in rows]
-
-
-def persist_evidences(conn: sqlite3.Connection, output_dir: str) -> None:
-    """将数据库中的测试和覆盖率数据导出为 JSON 文件。"""
-    out = Path(output_dir)
-    out.mkdir(parents=True, exist_ok=True)
-
-    test_data = _export_test_results(conn)
-    with open(str(out / "test_results.json"), "w") as fh:
-        json.dump(test_data, fh, indent=2, ensure_ascii=False)
-
-    cov_data = _export_coverage_reports(conn)
-    with open(str(out / "coverage_reports.json"), "w") as fh:
-        json.dump(cov_data, fh, indent=2, ensure_ascii=False)

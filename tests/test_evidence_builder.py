@@ -13,7 +13,7 @@ import pytest
 from pathlib import Path
 from vibe_tracing.domain.evidence.builder import EvidenceBuilder
 from vibe_tracing.domain.evidence.merge_result import EvidenceMergeResult
-from vibe_tracing.infra.db import init_in_memory_db, _export_test_results, _export_coverage_reports
+from vibe_tracing.infra.db import init_in_memory_db
 
 
 @pytest.fixture
@@ -154,11 +154,11 @@ class TestEvidenceBuilderApply:
         builder = EvidenceBuilder(tmp_path)
         builder.apply(conn, merge_result)
 
-        rows = _export_test_results(conn)
+        rows = conn.execute("SELECT nodeid, outcome, carried_over FROM test_results").fetchall()
         assert len(rows) == 1
-        assert rows[0]["nodeid"] == "tests/test_example.py::test_foo"
-        assert rows[0]["outcome"] == "passed"
-        assert rows[0]["carried_over"] == 0
+        assert rows[0][0] == "tests/test_example.py::test_foo"
+        assert rows[0][1] == "passed"
+        assert rows[0][2] == 0
 
     def test_apply_upserts_coverage_reports(self, tmp_path, conn):
         """apply() upserts coverage reports into SQLite."""
@@ -175,10 +175,10 @@ class TestEvidenceBuilderApply:
         builder = EvidenceBuilder(tmp_path)
         builder.apply(conn, merge_result)
 
-        rows = _export_coverage_reports(conn)
+        rows = conn.execute("SELECT source_path, percent_covered FROM coverage_reports").fetchall()
         assert len(rows) == 1
-        assert rows[0]["source_path"] == "src/vibe_tracing/core/ids.py"
-        assert rows[0]["percent_covered"] == 85.5
+        assert rows[0][0] == "src/vibe_tracing/core/ids.py"
+        assert rows[0][1] == 85.5
 
 
 class TestEvidenceBuilderPersist:
@@ -266,8 +266,8 @@ class TestEvidenceBuilderFullPipeline:
 
         # Phase 2: apply
         builder.apply(conn, merge_result)
-        test_rows = _export_test_results(conn)
-        cov_rows = _export_coverage_reports(conn)
+        test_rows = conn.execute("SELECT nodeid FROM test_results").fetchall()
+        cov_rows = conn.execute("SELECT source_path FROM coverage_reports").fetchall()
         assert len(test_rows) == 1
         assert len(cov_rows) == 1
 
@@ -291,9 +291,9 @@ class TestEvidenceBuilderFullPipeline:
         (evidences_dir / "test_results.json").write_text(json.dumps(cached_test))
         load_initial_cache(conn, evidences_dir)
 
-        rows = _export_test_results(conn)
+        rows = conn.execute("SELECT carried_over FROM test_results").fetchall()
         assert len(rows) == 1
-        assert rows[0]["carried_over"] == 1
+        assert rows[0][0] == 1
 
         # Run full pipeline with new test
         new_test_ev = ToolEvidenceCandidate(
@@ -310,7 +310,7 @@ class TestEvidenceBuilderFullPipeline:
         builder.apply(conn, merge_result)
 
         # Old carried_over entry should be purged
-        rows = _export_test_results(conn)
-        nodeids = {r["nodeid"] for r in rows}
+        rows = conn.execute("SELECT nodeid FROM test_results").fetchall()
+        nodeids = {r[0] for r in rows}
         assert "tests/test_target.py::test_old" not in nodeids
         assert "tests/test_target.py::test_new" in nodeids

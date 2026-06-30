@@ -6,9 +6,15 @@ import sqlite3
 
 
 def init_in_memory_db() -> sqlite3.Connection:
-    """创建内存 SQLite 数据库并建表。
+    """创建内存 SQLite 数据库并建 15 张表。
 
-    包括 8 张原始表和 2 张新增需求/验收标准关联表。
+    分组：
+      任务域：tasks, task_requirements, task_acs
+      Claim 域：claims, claim_code_refs, claim_test_refs
+      测试与覆盖率：test_results, coverage_reports
+      Git 暂存区：staged_files
+      PRD 域：requirements, acceptance_criteria
+      架构域：arch_modules, arch_constraints, task_modules, task_constraints
     """
     conn = sqlite3.connect(":memory:")
     conn.execute("PRAGMA journal_mode=OFF")

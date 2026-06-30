@@ -135,8 +135,11 @@ def load_initial_cache(conn: sqlite3.Connection, cache_dir: str) -> None:
     # 加载测试结果缓存
     test_file = cache_path / "test_results.json"
     if test_file.is_file():
-        with open(str(test_file), "r") as fh:
-            records = json.load(fh)
+        try:
+            with open(str(test_file), "r") as fh:
+                records = json.load(fh)
+        except (json.JSONDecodeError, OSError) as exc:
+            raise ValueError(f"Corrupted or unreadable cache file: {test_file}") from exc
         for rec in records:
             nodeid = rec.get("nodeid", "")
             outcome = rec.get("outcome", "failed")
@@ -153,8 +156,11 @@ def load_initial_cache(conn: sqlite3.Connection, cache_dir: str) -> None:
     # 加载覆盖率缓存（跳过源文件已删除的记录）
     cov_file = cache_path / "coverage_reports.json"
     if cov_file.is_file():
-        with open(str(cov_file), "r") as fh:
-            records = json.load(fh)
+        try:
+            with open(str(cov_file), "r") as fh:
+                records = json.load(fh)
+        except (json.JSONDecodeError, OSError) as exc:
+            raise ValueError(f"Corrupted or unreadable cache file: {cov_file}") from exc
         for rec in records:
             source_path = rec.get("source_path", "")
             # 跳过源文件已不存在的缓存记录（防止幽灵覆盖率数据残留）

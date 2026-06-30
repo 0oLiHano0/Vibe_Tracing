@@ -192,7 +192,7 @@ def run_analyze(
     try:
         # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
         from vibe_tracing.infra.logging.logger import OperationalLogger
-        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_prd, load_architecture_constraints
+        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_prd, load_architecture_constraints, load_staged_files
         _run_start_t = time.perf_counter()
 
         # ── 阶段 1：加载输入 ──────────────────────────────────────────────
@@ -313,6 +313,7 @@ def run_analyze(
                        )
 
         # ── 阶段 4：创建内存数据库 ──────────────────────────────────
+        _t_db = time.perf_counter()
         conn = init_in_memory_db()
 
         # ── 阶段 5：灌入基础数据（load_prd 必须先于 load_tasks/load_claims）──
@@ -325,6 +326,15 @@ def run_analyze(
             load_claims(conn, [c.__dict__ for c in ctx.claims_list])
         if ctx.constraints:
             load_architecture_constraints(conn, ctx.constraints)
+        if staged_files:
+            load_staged_files(conn, staged_files)
+        vt_logger.info("phase_end", "Database init and data load completed",
+                       phase="init_database",
+                       duration_ms=int((time.perf_counter() - _t_db) * 1000),
+                       tasks_count=len(ctx.task_result.tasks) if ctx.task_result and ctx.task_result.tasks else 0,
+                       claims_count=len(ctx.claims_list),
+                       staged_files_count=len(staged_files),
+                       )
 
         # ── 阶段 6：构建证据（EvidenceBuilder）────────────────────────────
         _t_build = time.perf_counter()

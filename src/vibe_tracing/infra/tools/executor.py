@@ -1,9 +1,23 @@
 """
-Tool Execution Engine for Vibe Tracing.
+Vibe Tracing 的工具执行引擎，负责按照 validation_tools 和 language_tool_matrix
+配置，执行白名单中的验证工具并将输出标准化为证据候选结构。
 
-Executes validation tools (pytest, coverage, ruff, mypy, bandit) based on the
-language_tool_matrix from architecture_constraints.json and converts their outputs
-into normalized evidence candidate structures.
+职责：
+- 解析 language_tool_matrix 配置，构建白名单工具配置表 _tool_configs
+- 替换命令模板中的路径占位符，构造可安全执行的命令
+- 通过子进程执行工具并捕获 stdout/stderr/exit_code
+- 调用 parsers.py 解析函数将工具输出转为 ToolEvidenceCandidate
+- 从 coverage baseline JSON 文件提取每文件覆盖数据
+- 收集工具执行统计数据，返回 ToolExecutionResult
+
+依赖：
+- infra/tools/parsers.py：工具输出解析函数
+- infra/tools/resolver.py：工具可用性检测和 python3 -m 命令回退
+- domain/evidence/candidate.py：ToolEvidenceCandidate 和 ToolExecutionResult 数据模型
+
+被依赖：
+- cli/analyze/pipeline.py：分析流水线通过 execute_from_claims() 调用
+- infra/tools/__init__.py：包导出 ToolExecutionEngine
 
 MOD-VT-012: Tool Execution Engine - executes validation tools from whitelist only.
 """
@@ -15,7 +29,6 @@ import shlex
 import subprocess
 import time
 import uuid
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -26,7 +39,6 @@ from vibe_tracing.infra.tools.resolver import ToolResolver
 from vibe_tracing.domain.evidence.candidate import ToolEvidenceCandidate, ToolExecutionResult
 from vibe_tracing.infra.tools.parsers import (
     parse_pytest_output,
-    parse_pytest_json,
     parse_ruff_output,
     parse_mypy_output,
     parse_bandit_output,
@@ -35,7 +47,7 @@ from vibe_tracing.infra.tools.parsers import (
 
 
 def _safe_format(template: str, **kwargs: Any) -> str:
-    """Replace only known placeholders, leaving other {token} literals intact."""
+    """仅替换已知的占位符，保留其他 {token} 字面量不变。"""
     result = template
     for key, value in kwargs.items():
         result = result.replace("{" + key + "}", str(value))
@@ -45,18 +57,23 @@ def _safe_format(template: str, **kwargs: Any) -> str:
 _tool_hints = load_hints("tool")
 
 
-# Allowed placeholder tokens for command template substitution.
-# SEC-VT-001 / DEP-VT-008: only path placeholders may be substituted.
+# 命令模板中允许替换的占位符集合。
+# SEC-VT-001 / DEP-VT-008：仅允许替换路径占位符。
 _ALLOWED_PLACEHOLDERS = {"{test_path}", "{source_path}", "{output_path}"}
 
 
 class ToolExecutionEngine:
     """
-    Executes validation tools based on language_tool_matrix configuration.
+    根据 language_tool_matrix 配置执行白名单中的验证工具。
 
-    Only tools listed in the whitelist (language_tool_matrix) are permitted.
-    Command templates are populated via placeholder substitution; arbitrary
-    commands are rejected.
+    仅允许白名单中的工具，命令模板通过占位符替换填充，拒绝任意命令。
+
+    职责：
+    - 构建白名单工具配置：初始化时将 validation_tools 转为 _tool_configs 字典
+    - 执行单个工具：execute_tool() 处理命令构建→执行→解析→候选生成完整流程
+    - 批量执行：execute_from_claims() 从 claims 收集路径并逐文件执行所有配置工具
+    - 覆盖率基线：从 coverage baseline JSON 文件读取每文件覆盖数据
+    - 解析测试 docstring：使用 AST 提取测试函数文档中的覆盖声明
     """
 
     DEFAULT_TIMEOUT = 120  # seconds
@@ -72,12 +89,12 @@ class ToolExecutionEngine:
     ) -> None:
         """
         Args:
-            language_tool_matrix: Full matrix from architecture_constraints.json.
-            language: Active language key (e.g., "python").
-            validation_tools: List of tool categories to run (e.g., ["test", "lint"]).
-            project_root: Absolute path to project workspace root.
-            timeout: Subprocess timeout in seconds.
-            coverage_baseline_path: Optional path to a coverage.json baseline file.
+            language_tool_matrix: 来自 architecture_constraints.json 的完整工具矩阵。
+            language: 当前激活的语言键（如 "python"）。
+            validation_tools: 需要运行的工具类别列表（如 ["test", "lint"]）。
+            project_root: 项目工作区根目录的绝对路径。
+            timeout: 子进程超时时间（秒）。
+            coverage_baseline_path: coverage baseline JSON 文件的可选路径。
         """
         self.language_tool_matrix = language_tool_matrix
         self.language = language
@@ -86,7 +103,7 @@ class ToolExecutionEngine:
         self.timeout = timeout
         self.coverage_baseline_path = coverage_baseline_path
 
-        # Build the active tool config map: {category -> tool_config_dict}
+        # 构建白名单工具配置映射：{category -> tool_config_dict}
         lang_matrix = self.language_tool_matrix.get(self.language, {})
         self._tool_configs: Dict[str, Dict[str, Any]] = {}
         for category in self.validation_tools:
@@ -94,7 +111,7 @@ class ToolExecutionEngine:
                 self._tool_configs[category] = lang_matrix[category]
 
     # ------------------------------------------------------------------
-    # Command template substitution
+    # 命令模板替换
     # ------------------------------------------------------------------
 
     def _build_command(
@@ -104,11 +121,13 @@ class ToolExecutionEngine:
         source_path: str = "",
         output_path: str = "",
     ) -> str:
-        """Substitute placeholders in a command template.
+        """替换命令模板中的占位符，构造最终执行命令。
 
-        Only {test_path}, {source_path}, {output_path} are replaced.
-        Path values are quoted via shlex.quote() for defense-in-depth.
-        Any remaining unresolved placeholders cause a ValueError.
+        仅允许替换 {test_path}、{source_path}、{output_path} 三个占位符。
+        路径值使用 shlex.quote() 引用以防止 shell 注入。
+        如果模板中仍有未识别的占位符（如 {unknown}），直接抛 ValueError 阻断执行。
+
+        SEC-VT-001 / DEP-VT-008：仅允许替换路径占位符。
         """
         cmd = template
         cmd = cmd.replace("{test_path}", shlex.quote(test_path) if test_path else "")
@@ -125,17 +144,23 @@ class ToolExecutionEngine:
         return cmd
 
     # ------------------------------------------------------------------
-    # Subprocess execution
+    # 子进程执行
     # ------------------------------------------------------------------
 
     def _run_subprocess(
         self, command: str
     ) -> Tuple[int, str, str, Optional[str]]:
         """
-        Execute a command string via subprocess.
+        通过子进程执行工具命令字符串。
 
-        Uses shell=True with strict template-based validation (no arbitrary
-        commands reach this point).
+        使用 shell=True，但仅接收经过 _build_command 模板验证的命令，
+        不会接受任意命令。记录子进程耗时和输出预览，日志失败不阻断执行。
+
+        异常映射：
+          TimeoutExpired  → "timeout"   (error_type)
+          FileNotFound    → "not_found" (error_type) — 通常由 resolver 处理
+          PermissionError → "permission" (error_type)
+          OSError         → "os_error"  (error_type) — 操作系统级错误兜底
 
         Returns:
             (exit_code, stdout, stderr, error_message_or_none)
@@ -188,20 +213,20 @@ class ToolExecutionEngine:
             return -1, "", msg, "os_error"
 
     # ------------------------------------------------------------------
-    # Public execution API
+    # 公开执行 API
     # ------------------------------------------------------------------
 
-    # Exit codes that indicate "tool cannot handle this file" rather than real
-    # failures.  When one of these is returned we produce no evidence at all.
-    PYTEST_SKIP_EXIT_CODES = {2, 5}  # 2 = usage error, 5 = no tests collected
-    MYPY_SKIP_EXIT_CODES = {2}  # 2 = usage error
+    # 表示"工具无法处理该文件"的退出码，而非真正的失败。
+    # 当返回这些退出码时，不生成任何证据。
+    PYTEST_SKIP_EXIT_CODES = {2, 5}  # 2 = 使用错误, 5 = 未收集到测试
+    MYPY_SKIP_EXIT_CODES = {2}  # 2 = 使用错误
 
     def _blocked_candidate(
         self, path: str, tool_category: str, *,
         command: str = "", exit_code: int = -1,
         stderr: str = "", details: dict = None,
     ) -> ToolEvidenceCandidate:
-        """Create a BLOCKED candidate with tool_category pre-set."""
+        """创建已预置 tool_category 的 BLOCKED 候选。"""
         c = ToolEvidenceCandidate(
             source_type="tool", source_path=path, covers=[],
             status=CoverageStatus.BLOCKED.value,
@@ -217,7 +242,7 @@ class ToolExecutionEngine:
         stdout: str, stderr: str, exit_code: int,
         command: str, path: str,
     ) -> List[ToolEvidenceCandidate]:
-        """Dispatch to the appropriate parser based on output_format."""
+        """根据 output_format 将输出分派给对应的解析器。"""
         parsers = {
             "pytest_json": lambda: parse_pytest_output(
                 stdout, stderr, exit_code, command, path,
@@ -241,23 +266,29 @@ class ToolExecutionEngine:
         tool_category: str,
         path: str,
     ) -> List[ToolEvidenceCandidate]:
-        """Execute a single tool for a given path and return evidence candidates.
+        """对给定路径执行单个工具并返回证据候选列表。
 
-        Pre-conditions (guaranteed by execute_from_claims):
-            - tool_category is in self._tool_configs (whitelist)
-            - path is a relative path inside project_root (claims validation)
+        流程：命令模板 → 占位符替换 → 命令解析（python3 -m 回退）→
+              子进程执行 → 输出解析 → 标记 tool_category → 返回候选列表
+
+        前置条件（由 execute_from_claims 保证）：
+            - tool_category 在白名单 self._tool_configs 中
+            - path 是 project_root 内的相对路径
+
+        工具执行错误（超时、未找到、权限、OS 错误）以 blocked candidate 返回，
+        不会向上抛异常。
         """
         tool_config = self._tool_configs[tool_category]
         template = tool_config.get("default_command", "")
 
-        # Generate output_path only if template needs it
+        # 仅在模板需要时生成 output_path
         effective_output = ""
         if "{output_path}" in template:
             tmp_dir = self.project_root / ".vibetracing" / "tmp"
             tmp_dir.mkdir(parents=True, exist_ok=True)
             effective_output = str(tmp_dir / f"vt_{tool_category}_{uuid.uuid4().hex}.json")
 
-        # Build command from template
+        # 从模板构建命令
         try:
             command = self._build_command(
                 template, test_path=path, source_path=path, output_path=effective_output,
@@ -265,10 +296,10 @@ class ToolExecutionEngine:
         except ValueError as exc:
             return [self._blocked_candidate(path, tool_category, stderr=str(exc))]
 
-        # python3 -m fallback: if tool binary not on PATH, try python3 -m <tool>
+        # python3 -m 回退：如果二进制文件不在 PATH 中，尝试 python3 -m <tool>
         command = ToolResolver.resolve_command(command)
 
-        # Execute
+        # 执行工具
         exit_code, stdout, stderr, exec_error = self._run_subprocess(command)
 
         if exec_error:
@@ -280,7 +311,7 @@ class ToolExecutionEngine:
                 exit_code=-1, stderr=stderr, details=details,
             )]
 
-        # Parse output + stamp category
+        # 解析输出 + 标记 category
         output_format = tool_config.get("output_format", "")
         candidates = self._parse_output(output_format, stdout, stderr, exit_code, command, path)
         for c in candidates:
@@ -291,66 +322,23 @@ class ToolExecutionEngine:
         self,
         baseline_path: Optional[str] = None,
         pass_threshold: float = 80.0,
-        evidence_index: Optional[Dict[str, Any]] = None,
     ) -> List[ToolEvidenceCandidate]:
-        """Measure per-source-file coverage from a pre-built baseline.
+        """从预构建的 baseline 文件测量逐文件源码覆盖率。
 
-        Reads per-file coverage data and emits one ``ToolEvidenceCandidate``
-        per source file.  The primary data source is the ``coverage_baseline``
-        field in the evidence index (if provided).  An explicit
-        ``baseline_path`` can also point to a JSON file with per-file data.
+        读取 coverage baseline JSON 文件中的每文件覆盖数据，
+        为每个源文件生成一个 ToolEvidenceCandidate，标记为 COMPLIANT 或 VIOLATED。
+
+        JSON 文件格式约定：{"files": {"<file_path>": {"percent_covered": 85.5, "num_statements": 42}}}
 
         Args:
-            baseline_path: Optional path to a coverage baseline JSON file.
-                Only used when ``evidence_index`` has no ``coverage_baseline``.
-            pass_threshold: Minimum percent_covered to be considered
-                ``compliant``.  Files below this threshold are ``violated``.
-            evidence_index: Pre-loaded evidence index dict.  If it contains
-                a ``coverage_baseline`` key, that data is used directly.
+            baseline_path: 可选参数，指向 coverage baseline JSON 文件路径。
+                为 None 时返回空列表。
+            pass_threshold: 覆盖率阈值，高于此值为 COMPLIANT，低于为 VIOLATED（默认 80%）。
 
         Returns:
-            List of ToolEvidenceCandidate objects, one per source file.
-            Returns an empty list if no baseline data is available.
+            每源文件对应一个 ToolEvidenceCandidate。无 baseline 数据时返回空列表。
         """
-        # Try evidence_index first (primary path)
-        if evidence_index and isinstance(evidence_index.get("coverage_baseline"), dict):
-            files = evidence_index["coverage_baseline"]
-            candidates: List[ToolEvidenceCandidate] = []
-            for source_path, file_data in files.items():
-                if not isinstance(file_data, dict):
-                    continue
-
-                percent = file_data.get("percent_covered")
-                num_stmts = file_data.get("num_statements", 0)
-                if percent is None:
-                    continue
-
-                percent_f = float(percent)
-                status = (
-                    CoverageStatus.COMPLIANT.value
-                    if percent_f >= pass_threshold
-                    else CoverageStatus.VIOLATED.value
-                )
-
-                candidates.append(
-                    ToolEvidenceCandidate(
-                        source_type="tool",
-                        source_path=source_path,
-                        covers=[],
-                        status=status,
-                        tool_category="coverage",
-                        details={
-                            "percent_covered": percent_f,
-                            "num_statements": int(num_stmts),
-                            "measurement": "baseline",
-                        },
-                    )
-                )
-
-            return candidates
-
-        # Fallback: read from explicit file path only.
-        # No default path — if baseline_path is None, no data is available.
+        # 未配置 baseline 路径，无数据可用
         if baseline_path is None:
             return []
 
@@ -370,6 +358,24 @@ class ToolExecutionEngine:
         if not isinstance(files, dict):
             return []
 
+        return self._build_coverage_candidates(files, pass_threshold)
+
+
+    def _build_coverage_candidates(
+        self, files: dict, pass_threshold: float,
+    ) -> list:
+        """从 coverage 文件字典构建 ToolEvidenceCandidate 列表。
+
+        遍历 files 字典中的每文件覆盖数据，校验每个条目，
+        根据阈值计算 COMPLIANT/VIOLATED 状态，每个有效源文件返回一个候选。
+
+        Args:
+            files: {source_path: {"percent_covered": float, "num_statements": int, ...}} 格式的文件数据。
+            pass_threshold: 合规覆盖率阈值，高于此值为 COMPLIANT。
+
+        Returns:
+            tool_category="coverage" 的 ToolEvidenceCandidate 列表。
+        """
         candidates = []
         for source_path, file_data in files.items():
             if not isinstance(file_data, dict):
@@ -409,23 +415,27 @@ class ToolExecutionEngine:
         claims_list: List[Any],
         project_root: Path,
     ) -> ToolExecutionResult:
-        """Execute tools from claims: precheck → path collection → execution → stats.
+        """从 claims 执行白名单工具，这是工具执行的唯一个人口。
 
-        This is the sole entry point for tool execution. All logic is internal:
-        precheck, path collection, per-file execution, coverage baseline, logging.
-        No print() calls — only vt_logger. Callers use the structured result
-        to decide what to print.
+        这是 cli/analyze/pipeline.py 调用的唯一个人口方法。
+        内部包含 5 个阶段：
+          1. 预检查：验证 _tool_configs 不为空
+          2. 路径收集：从 claims 的 test_refs 和 code_refs 收集文件路径
+          3. 逐文件执行：按工具分类对每个路径调用 execute_tool()
+          4. 覆盖率：追加从 coverage baseline 提取的 per-file 证据
+          5. 统计：记录已执行数、阻塞数、跳过数
+        全程使用 vt_logger 记录，无 print() 调用。
 
         Args:
-            claims_list: List of Claim objects with test_refs and code_refs.
-            project_root: Project root directory.
+            claims_list: 包含 test_refs 和 code_refs 的 Claim 对象列表。
+            project_root: 项目根目录。
 
         Returns:
-            ToolExecutionResult with candidates and metadata.
+            包含 candidates 和元数据的 ToolExecutionResult。
         """
         vt_logger = OperationalLogger.get()
 
-        # --- 1. Precheck: verify required tool binaries are available ---
+        # --- 1. 预检查：验证所需工具二进制文件是否可用 ---
         lang_config = self.language_tool_matrix.get(self.language, {})
         code_extensions = set(lang_config.get("extensions", [".py"]))
         if not code_extensions:
@@ -446,7 +456,7 @@ class ToolExecutionEngine:
             return ToolExecutionResult(candidates=[], skipped=True,
                                       skip_reason="precheck_failed", missing_tools=missing)
 
-        # --- 2. Collect paths from claims (test vs source) ---
+        # --- 2. 从 claims 收集路径（测试 vs 源文件） ---
         test_paths: List[str] = []
         source_paths: List[str] = []
         seen_paths: set = set()
@@ -477,7 +487,7 @@ class ToolExecutionEngine:
                        test_paths=len(test_paths),
                        source_paths=len(source_paths))
 
-        # --- 3. Execute tools per path, route by test/source ---
+        # --- 3. 按路径执行工具，根据 test/source 类型路由 ---
         all_candidates: List[ToolEvidenceCandidate] = []
         typed_paths = [(p, "test") for p in test_paths] + [(p, "source") for p in source_paths]
 
@@ -499,12 +509,12 @@ class ToolExecutionEngine:
                 )
                 all_candidates.extend(candidates)
 
-        # --- 4. Append per-source-file coverage evidence from baseline ---
+        # --- 4. 追加来自 baseline 的每文件覆盖率证据 ---
         all_candidates.extend(self._measure_source_coverage(
             baseline_path=self.coverage_baseline_path,
         ))
 
-        # --- 5. Log statistics ---
+        # --- 5. 统计日志 ---
         executed_count = len(all_candidates)
         blocked_count = sum(1 for c in all_candidates if c.error_code is not None)
         skipped_count = sum(1 for c in all_candidates if c.status == "skipped")
@@ -530,11 +540,11 @@ class ToolExecutionEngine:
         return ToolExecutionResult(candidates=all_candidates)
 
     # ------------------------------------------------------------------
-    # Docstring / covers extraction
+    # 测试 docstring / covers 提取
     # ------------------------------------------------------------------
 
     def _get_test_docstring(self, nodeid: str) -> Optional[str]:
-        """Extract docstring of a test function/method from Python source file using AST."""
+        """使用 AST 从 Python 源文件中提取测试函数/方法的 docstring。"""
         try:
             parts = nodeid.split("::")
             file_rel_path = parts[0]
@@ -571,7 +581,7 @@ class ToolExecutionEngine:
         return None
 
     def _extract_covers_from_docstring(self, docstring: Optional[str]) -> List[str]:
-        """Extract covers AC or REQ IDs from docstring lines containing 'covers'."""
+        """从包含 'covers' 的 docstring 行中提取 AC 或 REQ ID。"""
         if not docstring:
             return []
         covers_ids = []

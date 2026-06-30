@@ -5,7 +5,7 @@ can operate on a well-defined structure rather than ad-hoc dicts.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 @dataclass
@@ -30,11 +30,3 @@ class EvidenceMergeResult:
         "skipped_count": 0,
         "purge_count": 0,
     })
-
-    def is_empty(self) -> bool:
-        """Check if there's nothing to apply."""
-        return (
-            len(self.test_results_to_upsert) == 0
-            and len(self.coverage_reports_to_upsert) == 0
-            and len(self.files_to_purge) == 0
-        )

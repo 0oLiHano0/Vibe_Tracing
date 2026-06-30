@@ -1,209 +1,24 @@
 import sqlite3
 import pytest
 
-# ── Fallback Mechanism ────────────────────────────────────────────────────────
-# Check if load_prd and check_requirement_coverage already exist in vibe_tracing.infra.db.
-# If they don't, set USING_REAL_IMPL = False and define fallback implementations.
-USING_REAL_IMPL = False
-try:
-    import vibe_tracing.infra.db as real_db
-    if all(hasattr(real_db, name) for name in ["load_prd", "check_requirement_coverage", "check_claim_evidence", "get_full_chain", "check_isolated_tasks"]):
-        from vibe_tracing.infra.db import (
-            load_prd,
-            check_requirement_coverage,
-            check_claim_evidence,
-            get_full_chain,
-            init_in_memory_db,
-            load_tasks,
-            check_isolated_tasks,
-        )
-        USING_REAL_IMPL = True
-except ImportError:
-    pass
+from vibe_tracing.infra.config.enums import CoverageStatus
+from vibe_tracing.infra.db import (
+    init_in_memory_db, load_tasks, load_prd, load_claims, load_staged_files,
+    check_ac_coverage, check_requirement_coverage, check_claim_evidence,
+    check_ghost_code, check_dangling_claims, check_coverage_violations,
+    get_full_chain, check_isolated_tasks, check_invalid_task_requirements,
+    check_invalid_task_acs, check_invalid_task_modules, check_invalid_task_constraints,
+    check_invalid_ac_parent,
+    upsert_test_result, upsert_coverage_report, purge_stale_cache,
+    load_initial_cache, load_architecture_constraints,
+)
 
-if not USING_REAL_IMPL:
-    import vibe_tracing.infra.db as real_db
-    from vibe_tracing.infra.db import (
-        load_claims,
-        load_staged_files,
-        load_initial_cache,
-        upsert_test_result,
-        upsert_coverage_report,
-        purge_stale_cache,
-        check_ac_coverage,
-        check_ghost_code,
-        check_dangling_claims,
-    )
 
-    # Wrapped init_in_memory_db to ensure fallback tables are created
-    def init_in_memory_db() -> sqlite3.Connection:
-        conn = real_db.init_in_memory_db()
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS requirements (req_id TEXT PRIMARY KEY, title TEXT, priority TEXT, category TEXT)"
-        )
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS acceptance_criteria (ac_id TEXT PRIMARY KEY, req_id TEXT, title TEXT, is_testing_required INTEGER)"
-        )
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS task_requirements (task_id TEXT, req_id TEXT, PRIMARY KEY(task_id, req_id))"
-        )
-        conn.commit()
-        return conn
-
-    # Fallback load_tasks that also populates task_requirements
-    def load_tasks(conn: sqlite3.Connection, tasks: list) -> None:
-        real_db.load_tasks(conn, tasks)
-        for task in tasks:
-            task_id = task.get("task_id")
-            related_reqs = task.get("related_requirements", [])
-            for req_id in related_reqs:
-                conn.execute(
-                    "INSERT OR REPLACE INTO task_requirements (task_id, req_id) VALUES (?, ?)",
-                    (task_id, req_id)
-                )
-        conn.commit()
-
-    # Fallback load_prd
-    def load_prd(conn: sqlite3.Connection, requirements: list) -> None:
-        for req in requirements:
-            if hasattr(req, "req_id"):
-                req_id = req.req_id
-                title = req.title
-                priority = req.priority
-                category = req.category
-                ac_list = req.acceptance_criteria
-            else:
-                req_id = req.get("req_id")
-                title = req.get("title")
-                priority = req.get("priority")
-                category = req.get("category")
-                ac_list = req.get("acceptance_criteria", [])
-
-            conn.execute(
-                "INSERT OR REPLACE INTO requirements (req_id, title, priority, category) VALUES (?, ?, ?, ?)",
-                (req_id, title, priority, category)
-            )
-            for ac in ac_list:
-                if hasattr(ac, "ac_id"):
-                    ac_id = ac.ac_id
-                    ac_title = ac.title
-                    is_testing = ac.is_testing_required
-                else:
-                    ac_id = ac.get("ac_id")
-                    ac_title = ac.get("title")
-                    is_testing = ac.get("is_testing_required", False)
-
-                conn.execute(
-                    "INSERT OR REPLACE INTO acceptance_criteria (ac_id, req_id, title, is_testing_required) VALUES (?, ?, ?, ?)",
-                    (ac_id, req_id, ac_title, int(is_testing))
-                )
-        conn.commit()
-
-    # Fallback check_requirement_coverage
-    def check_requirement_coverage(conn: sqlite3.Connection) -> list:
-        rows = conn.execute("""
-            SELECT r.req_id,
-              CASE
-                WHEN trq.task_id IS NULL THEN 'no_task_for_requirement'
-                WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
-                WHEN ctr.test_nodeid IS NULL THEN 'no_tests_declared'
-                WHEN tr.nodeid IS NULL THEN 'test_not_run'
-                WHEN SUM(tr.outcome = 'passed') = 0 THEN 'test_failed'
-                WHEN SUM(tr.outcome != 'passed') > 0 THEN 'test_failed'
-                ELSE 'covered'
-              END as coverage_status
-            FROM requirements r
-            LEFT JOIN task_requirements trq ON r.req_id = trq.req_id
-            LEFT JOIN tasks t ON trq.task_id = t.task_id
-            LEFT JOIN claims c ON t.task_id = c.related_task
-            LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
-            LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
-            GROUP BY r.req_id
-            HAVING coverage_status != 'covered'
-        """).fetchall()
-        return [{"req_id": r[0], "coverage_status": r[1]} for r in rows]
-
-    # Fallback check_claim_evidence
-    def check_claim_evidence(conn: sqlite3.Connection) -> list:
-        rows = conn.execute("""
-            SELECT c.claim_id,
-              CASE
-                WHEN t.task_id IS NULL THEN 'task_missing'
-                WHEN t.status != 'done' THEN 'task_not_done'
-                WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests'
-                WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_missing'
-                WHEN SUM(CASE WHEN tr.outcome = 'passed' THEN 1 ELSE 0 END) < COUNT(ctr.test_nodeid) THEN 'test_failed'
-                ELSE 'verified'
-              END as verification_status
-            FROM claims c
-            LEFT JOIN tasks t ON c.related_task = t.task_id
-            LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
-            LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
-            GROUP BY c.claim_id
-            HAVING verification_status != 'verified'
-        """).fetchall()
-        return [{"claim_id": r[0], "verification_status": r[1]} for r in rows]
-
-    # Fallback get_full_chain
-    def get_full_chain(conn: sqlite3.Connection) -> list:
-        rows = conn.execute("""
-            SELECT 
-                r.req_id, r.title, r.priority, r.category,
-                ac.ac_id, ac.title, ac.is_testing_required,
-                t.task_id, t.priority, t.status,
-                c.claim_id,
-                ctr.test_nodeid, tr.outcome,
-                ccr.code_path, cov.percent_covered
-            FROM requirements r
-            LEFT JOIN acceptance_criteria ac ON r.req_id = ac.req_id
-            LEFT JOIN task_requirements trq ON r.req_id = trq.req_id
-            LEFT JOIN tasks t ON trq.task_id = t.task_id
-            LEFT JOIN claims c ON t.task_id = c.related_task
-            LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
-            LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
-            LEFT JOIN claim_code_refs ccr ON c.claim_id = ccr.claim_id
-            LEFT JOIN coverage_reports cov ON ccr.code_path = cov.source_path
-        """).fetchall()
-        
-        return [
-            {
-                "req_id": r[0],
-                "req_title": r[1],
-                "req_priority": r[2],
-                "req_category": r[3],
-                "ac_id": r[4],
-                "ac_title": r[5],
-                "is_testing_required": bool(r[6]) if r[6] is not None else None,
-                "task_id": r[7],
-                "task_priority": r[8],
-                "task_status": r[9],
-                "claim_id": r[10],
-                "test_nodeid": r[11],
-                "test_outcome": r[12],
-                "code_path": r[13],
-                "percent_covered": r[14]
-            }
-            for r in rows
-        ]
-else:
-    # If using real implementation, import other functions from db.py
-    from vibe_tracing.infra.db import (
-        load_claims,
-        load_staged_files,
-        load_initial_cache,
-        upsert_test_result,
-        upsert_coverage_report,
-        purge_stale_cache,
-        check_ac_coverage,
-        check_ghost_code,
-        check_dangling_claims,
-        check_invalid_task_requirements,
-        check_invalid_task_acs,
-        check_invalid_task_modules,
-        check_invalid_task_constraints,
-        check_invalid_ac_parent,
-        load_architecture_constraints,
-    )
+@pytest.fixture
+def conn():
+    c = init_in_memory_db()
+    yield c
+    c.close()
 
 
 # ── Mock Classes for Object-Style Inputs ──────────────────────────────────────
@@ -233,7 +48,7 @@ def test_tier1_f1_coverage_1_covered():
     load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_node_1"]}])
-    upsert_test_result(conn, "test_node_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_node_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     res = check_ac_coverage(conn)
     assert len(res) == 0, f"Expected 0 uncovered AC, got: {res}"
     conn.close()
@@ -272,7 +87,7 @@ def test_tier1_f1_coverage_5_test_failed():
     load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_node_1"]}])
-    upsert_test_result(conn, "test_node_1", "failed", 1, "pytest", False)
+    upsert_test_result(conn, "test_node_1", CoverageStatus.VIOLATED.value, 1, "pytest", False)
     res = check_ac_coverage(conn)
     assert len(res) == 1
     assert res[0]["coverage_status"] == "test_failed"
@@ -286,7 +101,7 @@ def test_tier1_f2_coverage_1_covered():
     load_prd(conn, [{"req_id": "REQ-1", "title": "Req 1", "priority": "must", "category": "functional", "acceptance_criteria": []}])
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_requirements": ["REQ-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_node_1"]}])
-    upsert_test_result(conn, "test_node_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_node_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     res = check_requirement_coverage(conn)
     assert len(res) == 0
     conn.close()
@@ -335,7 +150,7 @@ def test_tier1_f3_coverage_1_verified():
     conn = init_in_memory_db()
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done"}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_node_1"]}])
-    upsert_test_result(conn, "test_node_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_node_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     res = check_claim_evidence(conn)
     assert len(res) == 0
     conn.close()
@@ -343,7 +158,7 @@ def test_tier1_f3_coverage_1_verified():
 def test_tier1_f3_coverage_2_task_missing():
     conn = init_in_memory_db()
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_node_1"]}])
-    upsert_test_result(conn, "test_node_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_node_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     res = check_claim_evidence(conn)
     assert len(res) == 1
     assert res[0]["verification_status"] == "task_missing"
@@ -353,7 +168,7 @@ def test_tier1_f3_coverage_3_task_not_done():
     conn = init_in_memory_db()
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "in_progress"}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_node_1"]}])
-    upsert_test_result(conn, "test_node_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_node_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     res = check_claim_evidence(conn)
     assert len(res) == 1
     assert res[0]["verification_status"] == "task_not_done"
@@ -385,7 +200,7 @@ def test_tier1_f4_coverage_1_complete_chain():
     load_prd(conn, [{"req_id": "REQ-1", "title": "Req 1", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC 1", "is_testing_required": True}]}])
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_requirements": ["REQ-1"], "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/foo.py"], "test_refs": ["test_node_1"]}])
-    upsert_test_result(conn, "test_node_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_node_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     upsert_coverage_report(conn, "src/foo.py", 90.0, 10, "compliant", False)
     res = get_full_chain(conn)
     assert len(res) == 1
@@ -516,11 +331,12 @@ def test_tier1_f6_coverage_4_priority_status_independence():
     assert len(res) == 0
     conn.close()
 
-def test_tier1_f6_coverage_5_empty_database():
-    conn = init_in_memory_db()
-    res = check_dangling_claims(conn)
-    assert len(res) == 0
-    conn.close()
+@pytest.mark.parametrize("check_fn", [
+    check_ac_coverage, check_requirement_coverage, check_claim_evidence,
+    check_ghost_code, check_dangling_claims,
+])
+def test_empty_database_returns_empty(check_fn, conn):
+    assert check_fn(conn) == []
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -554,24 +370,6 @@ def test_tier2_f1_boundary_3_duplicate_loads():
     assert len(res) == 1
     conn.close()
 
-def test_tier2_f1_boundary_4_multiple_tests_one_passes():
-    conn = init_in_memory_db()
-    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
-    load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1", "test_2"]}])
-    upsert_test_result(conn, "test_1", "passed", 0, "pytest", False)
-    upsert_test_result(conn, "test_2", "failed", 1, "pytest", False)
-    res = check_ac_coverage(conn)
-    assert len(res) == 1
-    assert res[0]["coverage_status"] == "test_failed"
-    conn.close()
-
-def test_tier2_f1_boundary_5_empty_database():
-    conn = init_in_memory_db()
-    res = check_ac_coverage(conn)
-    assert len(res) == 0
-    conn.close()
-
 
 # ── Feature 2: Requirement Coverage Check (F2) ──────────────────────────────
 
@@ -596,7 +394,7 @@ def test_tier2_f2_boundary_2_multiple_tasks_one_covered():
         {"task_id": "TASK-2", "priority": "must", "status": "done", "related_requirements": ["REQ-1"]}
     ])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]}])
-    upsert_test_result(conn, "test_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     res = check_requirement_coverage(conn)
     assert len(res) in (0, 1)
     conn.close()
@@ -611,12 +409,6 @@ def test_tier2_f2_boundary_3_single_task_multiple_reqs():
     res = check_requirement_coverage(conn)
     assert len(res) == 2
     assert {r["req_id"] for r in res} == {"REQ-1", "REQ-2"}
-    conn.close()
-
-def test_tier2_f2_boundary_4_empty_prd():
-    conn = init_in_memory_db()
-    res = check_requirement_coverage(conn)
-    assert len(res) == 0
     conn.close()
 
 def test_tier2_f2_boundary_5_category_variations():
@@ -636,7 +428,7 @@ def test_tier2_f3_boundary_1_test_failed():
     conn = init_in_memory_db()
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done"}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]}])
-    upsert_test_result(conn, "test_1", "failed", 1, "pytest", False)
+    upsert_test_result(conn, "test_1", CoverageStatus.VIOLATED.value, 1, "pytest", False)
     res = check_claim_evidence(conn)
     assert len(res) == 1
     assert res[0]["verification_status"] == "test_failed"
@@ -649,7 +441,7 @@ def test_tier2_f3_boundary_2_multiple_claims_for_task():
         {"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]},
         {"claim_id": "CLAIM-2", "related_task": "TASK-1", "test_refs": ["test_2"]}
     ])
-    upsert_test_result(conn, "test_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     res = check_claim_evidence(conn)
     assert len(res) == 1
     assert res[0]["claim_id"] == "CLAIM-2"
@@ -659,7 +451,7 @@ def test_tier2_f3_boundary_3_multiple_tests_one_missing():
     conn = init_in_memory_db()
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done"}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1", "test_2"]}])
-    upsert_test_result(conn, "test_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     res = check_claim_evidence(conn)
     assert len(res) == 1
     assert res[0]["verification_status"] == "test_missing"
@@ -669,17 +461,11 @@ def test_tier2_f3_boundary_4_multiple_tests_one_failed():
     conn = init_in_memory_db()
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done"}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1", "test_2"]}])
-    upsert_test_result(conn, "test_1", "passed", 0, "pytest", False)
-    upsert_test_result(conn, "test_2", "failed", 1, "pytest", False)
+    upsert_test_result(conn, "test_1", CoverageStatus.COVERED.value, 0, "pytest", False)
+    upsert_test_result(conn, "test_2", CoverageStatus.VIOLATED.value, 1, "pytest", False)
     res = check_claim_evidence(conn)
     assert len(res) == 1
     assert res[0]["verification_status"] == "test_failed"
-    conn.close()
-
-def test_tier2_f3_boundary_5_empty_database():
-    conn = init_in_memory_db()
-    res = check_claim_evidence(conn)
-    assert len(res) == 0
     conn.close()
 
 
@@ -772,12 +558,6 @@ def test_tier2_f5_boundary_4_non_standard_filenames():
     assert res[0] == filename
     conn.close()
 
-def test_tier2_f5_boundary_5_empty_database():
-    conn = init_in_memory_db()
-    res = check_ghost_code(conn)
-    assert len(res) == 0
-    conn.close()
-
 
 # ── Feature 6: Dangling Claims Check (F6) ───────────────────────────────────
 
@@ -854,7 +634,7 @@ def test_tier3_combo_3_cascading_test_failure():
     load_prd(conn, [{"req_id": "REQ-1", "title": "Req 1", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC 1"}]}])
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_requirements": ["REQ-1"], "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]}])
-    upsert_test_result(conn, "test_1", "failed", 1, "pytest", False)
+    upsert_test_result(conn, "test_1", CoverageStatus.VIOLATED.value, 1, "pytest", False)
 
     res_f1 = check_ac_coverage(conn)
     assert len(res_f1) == 1
@@ -877,7 +657,6 @@ def test_tier3_combo_4_staged_violated_coverage():
 
     assert len(check_ghost_code(conn)) == 0
 
-    from vibe_tracing.infra.db import check_coverage_violations
     res_cov = check_coverage_violations(conn)
     assert len(res_cov) == 1
     assert res_cov[0]["source_path"] == "src/foo.py"
@@ -889,7 +668,7 @@ def test_tier3_combo_5_large_scale_sync():
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_requirements": ["REQ-1"], "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/foo.py"], "test_refs": ["test_1"]}])
     load_staged_files(conn, {"src/foo.py"})
-    upsert_test_result(conn, "test_1", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     upsert_coverage_report(conn, "src/foo.py", 95.0, 100, "compliant", False)
 
     assert len(check_ac_coverage(conn)) == 0
@@ -937,7 +716,7 @@ def test_tier4_scenario_3_feature_complete_verification():
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_requirements": ["REQ-1"], "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/login.py"], "test_refs": ["tests/test_login.py::test_valid"]}])
     load_staged_files(conn, {"src/login.py"})
-    upsert_test_result(conn, "tests/test_login.py::test_valid", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "tests/test_login.py::test_valid", CoverageStatus.COVERED.value, 0, "pytest", False)
     upsert_coverage_report(conn, "src/login.py", 90.0, 50, "compliant", False)
 
     assert len(check_ac_coverage(conn)) == 0
@@ -961,7 +740,7 @@ def test_tier4_scenario_4_critical_bug_hotfix():
     load_prd(conn, {"requirements": [{"req_id": "REQ-911", "title": "Hotfix Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-911-1", "title": "Hotfix AC", "is_testing_required": True}]}]})
     load_tasks(conn, [{"task_id": "TASK-911", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-911-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-911", "related_task": "TASK-911", "test_refs": ["tests/test_hotfix.py::test_bug"]}])
-    upsert_test_result(conn, "tests/test_hotfix.py::test_bug", "failed", 1, "pytest", False)
+    upsert_test_result(conn, "tests/test_hotfix.py::test_bug", CoverageStatus.VIOLATED.value, 1, "pytest", False)
 
     res_f1 = check_ac_coverage(conn)
     assert len(res_f1) == 1
@@ -974,7 +753,7 @@ def test_tier4_scenario_5_quality_evolution_requirement():
     load_prd(conn, [{"req_id": "REQ-Q-1", "title": "Optimize performance", "priority": "should", "category": "quality_evolution", "acceptance_criteria": []}])
     load_tasks(conn, [{"task_id": "TASK-Q-1", "priority": "should", "status": "done", "related_requirements": ["REQ-Q-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-Q-1", "related_task": "TASK-Q-1", "test_refs": ["tests/test_perf.py::test_speed"]}])
-    upsert_test_result(conn, "tests/test_perf.py::test_speed", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "tests/test_perf.py::test_speed", CoverageStatus.COVERED.value, 0, "pytest", False)
 
     assert len(check_requirement_coverage(conn)) == 0
 
@@ -983,7 +762,7 @@ def test_tier4_scenario_5_quality_evolution_requirement():
     assert chain[0]["req_id"] == "REQ-Q-1"
     assert chain[0]["req_category"] == "quality_evolution"
     assert chain[0]["task_id"] == "TASK-Q-1"
-    assert chain[0]["test_outcome"] == "passed"
+    assert chain[0]["test_outcome"] == CoverageStatus.COVERED.value
     conn.close()
 
 
@@ -1002,8 +781,8 @@ def test_adversarial_ac_coverage_mixed_outcomes_bug():
     load_claims(conn, [
         {"claim_id": "CLAIM-AD-1", "related_task": "TASK-AD-1", "test_refs": ["test_pass", "test_fail"]}
     ])
-    upsert_test_result(conn, "test_pass", "passed", 0, "pytest", False)
-    upsert_test_result(conn, "test_fail", "failed", 1, "pytest", False)
+    upsert_test_result(conn, "test_pass", CoverageStatus.COVERED.value, 0, "pytest", False)
+    upsert_test_result(conn, "test_fail", CoverageStatus.VIOLATED.value, 1, "pytest", False)
 
     res = check_ac_coverage(conn)
     assert len(res) == 1, f"Expected 1 uncovered AC due to failed test, got: {res}"
@@ -1023,7 +802,7 @@ def test_adversarial_ac_coverage_missing_test_bug():
     load_claims(conn, [
         {"claim_id": "CLAIM-AD-2", "related_task": "TASK-AD-2", "test_refs": ["test_pass", "test_missing"]}
     ])
-    upsert_test_result(conn, "test_pass", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_pass", CoverageStatus.COVERED.value, 0, "pytest", False)
 
     res = check_ac_coverage(conn)
     assert len(res) == 1, f"Expected 1 uncovered AC due to missing test execution, got: {res}"
@@ -1039,7 +818,7 @@ def test_adversarial_requirement_coverage_missing_test_bug():
     load_prd(conn, [{"req_id": "REQ-AD-3", "title": "Req AD 3", "priority": "must", "category": "functional", "acceptance_criteria": []}])
     load_tasks(conn, [{"task_id": "TASK-AD-3", "priority": "must", "status": "done", "related_requirements": ["REQ-AD-3"]}])
     load_claims(conn, [{"claim_id": "CLAIM-AD-3", "related_task": "TASK-AD-3", "test_refs": ["test_pass", "test_missing"]}])
-    upsert_test_result(conn, "test_pass", "passed", 0, "pytest", False)
+    upsert_test_result(conn, "test_pass", CoverageStatus.COVERED.value, 0, "pytest", False)
     
     res = check_requirement_coverage(conn)
     assert len(res) == 1, f"Expected 1 uncovered requirement due to missing test execution, got: {res}"
@@ -1093,7 +872,7 @@ def test_adversarial_load_initial_cache_invalid_json(tmp_path):
     cache_dir.mkdir()
     (cache_dir / "test_results.json").write_text("invalid json {")
     with pytest.raises(Exception):
-        load_initial_cache(conn, str(cache_dir))
+        load_initial_cache(conn, cache_dir, tmp_path)
     conn.close()
 
 def test_adversarial_sql_injection_mitigated():
@@ -1120,7 +899,6 @@ def test_adversarial_check_coverage_violations_multiple():
     upsert_coverage_report(conn, "src/compliant.py", 90.0, 20, "compliant", False)
     upsert_coverage_report(conn, "src/violated_2.py", 50.0, 8, "violated", False)
 
-    from vibe_tracing.infra.db.queries import check_coverage_violations
     res = check_coverage_violations(conn)
     paths = {r["source_path"] for r in res}
     assert paths == {"src/violated_1.py", "src/violated_2.py"}
@@ -1134,8 +912,8 @@ def test_adversarial_purge_stale_cache_wildcard_delete():
     """
     conn = init_in_memory_db()
     # Insert carried_over results for two files
-    upsert_test_result(conn, "tests/test_a.py::test_1", "passed", 0, "pytest", True)
-    upsert_test_result(conn, "tests/test_b.py::test_2", "passed", 0, "pytest", True)
+    upsert_test_result(conn, "tests/test_a.py::test_1", CoverageStatus.COVERED.value, 0, "pytest", True)
+    upsert_test_result(conn, "tests/test_b.py::test_2", CoverageStatus.COVERED.value, 0, "pytest", True)
 
     # Purge stale cache with a wildcard pattern
     purge_stale_cache(conn, ["tests/test_%.py"])
@@ -1148,23 +926,33 @@ def test_adversarial_purge_stale_cache_wildcard_delete():
 
 def test_adversarial_load_initial_cache_missing_source_path(tmp_path):
     """
-    Edge case: load_initial_cache skips coverage reports where source_path is not a file relative to cache_path.parent.
+    Edge case: load_initial_cache resolves source_path relative to project_root.
+    When source file exists at that level the record is loaded; when absent it is skipped.
     """
     import json
     conn = init_in_memory_db()
-    cache_dir = tmp_path / "cache"
-    cache_dir.mkdir()
-    
-    # We write a coverage_reports.json with a source_path 'src/some_file.py'
-    cov_data = [{"source_path": "src/some_file.py", "percent_covered": 80.0, "num_statements": 10, "status": "compliant"}]
+    cache_dir = tmp_path / "output" / "evidences"
+    cache_dir.mkdir(parents=True)
+
+    # Create a source file that DOES exist at parent.parent level
+    source_dir = tmp_path / "src"
+    source_dir.mkdir()
+    existing_file = source_dir / "existing_file.py"
+    existing_file.write_text("# test")
+
+    # Write coverage_reports.json with both existing and missing source paths
+    cov_data = [
+        {"source_path": "src/existing_file.py", "percent_covered": 80.0, "num_statements": 10, "status": "compliant"},
+        {"source_path": "src/missing_file.py", "percent_covered": 50.0, "num_statements": 5, "status": "violated"},
+    ]
     (cache_dir / "coverage_reports.json").write_text(json.dumps(cov_data))
-    
-    # The file 'src/some_file.py' does NOT exist under cache_dir.parent (which is tmp_path)
-    # Therefore, load_initial_cache should skip this record
-    load_initial_cache(conn, str(cache_dir))
-    
-    rows = conn.execute("SELECT source_path FROM coverage_reports").fetchall()
-    assert len(rows) == 0, "Coverage report was loaded despite file not existing relative to cache_path.parent"
+
+    load_initial_cache(conn, cache_dir, tmp_path)
+
+    rows = conn.execute("SELECT source_path FROM coverage_reports ORDER BY source_path").fetchall()
+    # Only the existing file should be loaded; missing file is skipped
+    assert len(rows) == 1, f"Expected 1 coverage report, got: {rows}"
+    assert rows[0][0] == "src/existing_file.py"
     conn.close()
 
 

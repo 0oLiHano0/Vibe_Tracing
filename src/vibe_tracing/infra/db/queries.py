@@ -4,12 +4,14 @@ VT 内存数据库查询与校验模块
 
 import sqlite3
 
+from vibe_tracing.infra.config.enums import CoverageStatus
+
 
 def check_coverage_violations(conn: sqlite3.Connection) -> list:
     """检查覆盖率违规：返回所有 status='violated' 的覆盖率记录。"""
     rows = conn.execute(
-        "SELECT source_path, percent_covered FROM coverage_reports "
-        "WHERE status = 'violated'"
+        f"SELECT source_path, percent_covered FROM coverage_reports "
+        f"WHERE status = '{CoverageStatus.VIOLATED.value}'"
     ).fetchall()
     return [{"source_path": r[0], "percent_covered": r[1]} for r in rows]
 
@@ -38,15 +40,15 @@ def check_dangling_claims(conn: sqlite3.Connection) -> list:
 
 def check_ac_coverage(conn: sqlite3.Connection) -> list:
     """检查 MUST 优先级任务/验收标准的覆盖情况。"""
-    rows = conn.execute("""
+    rows = conn.execute(f"""
         SELECT ta.task_id, ac.ac_id,
           CASE
             WHEN ta.task_id IS NULL THEN 'no_task_for_ac'
             WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
             WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
             WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'
-            WHEN SUM(CASE WHEN tr.outcome != 'passed' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
-            ELSE 'covered'
+            WHEN SUM(CASE WHEN tr.outcome != '{CoverageStatus.COVERED.value}' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
+            ELSE '{CoverageStatus.COVERED.value}'
           END as coverage_status
         FROM acceptance_criteria ac
         LEFT JOIN requirements r ON ac.req_id = r.req_id
@@ -57,7 +59,7 @@ def check_ac_coverage(conn: sqlite3.Connection) -> list:
         LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
         WHERE t.priority = 'must' OR (r.priority = 'must' AND ac.is_testing_required = 1)
         GROUP BY ta.task_id, ac.ac_id
-        HAVING coverage_status != 'covered'
+        HAVING coverage_status != '{CoverageStatus.COVERED.value}'
     """).fetchall()
 
     return [
@@ -68,15 +70,15 @@ def check_ac_coverage(conn: sqlite3.Connection) -> list:
 
 def check_requirement_coverage(conn: sqlite3.Connection) -> list:
     """检查需求覆盖率。"""
-    rows = conn.execute("""
+    rows = conn.execute(f"""
         SELECT r.req_id,
           CASE
             WHEN trq.task_id IS NULL THEN 'no_task_for_requirement'
             WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
             WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
             WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'
-            WHEN SUM(CASE WHEN tr.outcome != 'passed' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
-            ELSE 'covered'
+            WHEN SUM(CASE WHEN tr.outcome != '{CoverageStatus.COVERED.value}' THEN 1 ELSE 0 END) > 0 THEN 'test_failed'
+            ELSE '{CoverageStatus.COVERED.value}'
           END as coverage_status
         FROM requirements r
         LEFT JOIN task_requirements trq ON r.req_id = trq.req_id
@@ -85,29 +87,29 @@ def check_requirement_coverage(conn: sqlite3.Connection) -> list:
         LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
         LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
         GROUP BY r.req_id
-        HAVING coverage_status != 'covered'
+        HAVING coverage_status != '{CoverageStatus.COVERED.value}'
     """).fetchall()
     return [{"req_id": r[0], "coverage_status": r[1]} for r in rows]
 
 
 def check_claim_evidence(conn: sqlite3.Connection) -> list:
     """检查 Claim 证据覆盖状态。"""
-    rows = conn.execute("""
+    rows = conn.execute(f"""
         SELECT c.claim_id,
           CASE
             WHEN t.task_id IS NULL THEN 'task_missing'
             WHEN t.status != 'done' THEN 'task_not_done'
             WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests'
             WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_missing'
-            WHEN SUM(CASE WHEN tr.outcome = 'passed' THEN 1 ELSE 0 END) < COUNT(ctr.test_nodeid) THEN 'test_failed'
-            ELSE 'verified'
+            WHEN SUM(CASE WHEN tr.outcome = '{CoverageStatus.COVERED.value}' THEN 1 ELSE 0 END) < COUNT(ctr.test_nodeid) THEN 'test_failed'
+            ELSE '{CoverageStatus.COVERED.value}'
           END as verification_status
         FROM claims c
         LEFT JOIN tasks t ON c.related_task = t.task_id
         LEFT JOIN claim_test_refs ctr ON c.claim_id = ctr.claim_id
         LEFT JOIN test_results tr ON ctr.test_nodeid = tr.nodeid
         GROUP BY c.claim_id
-        HAVING verification_status != 'verified'
+        HAVING verification_status != '{CoverageStatus.COVERED.value}'
     """).fetchall()
     return [{"claim_id": r[0], "verification_status": r[1]} for r in rows]
 

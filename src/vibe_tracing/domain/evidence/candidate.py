@@ -7,6 +7,10 @@ ToolExecutionResult: structured return value from execute_from_claims().
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from vibe_tracing.infra.config.enums import CoverageStatus
+
+_VALID_STATUSES: frozenset = frozenset(v.value for v in CoverageStatus)
+
 
 @dataclass
 class ToolEvidenceCandidate:
@@ -22,6 +26,12 @@ class ToolEvidenceCandidate:
     stderr: str = ""
     error_code: Optional[str] = None  # ErrorCode value (e.g., tool_execution_failed)
     details: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.status not in _VALID_STATUSES:
+            raise ValueError(
+                f"status must be a CoverageStatus value, got {self.status!r}"
+            )
 
 
 @dataclass

@@ -1,6 +1,7 @@
 """Tests for infra/db.py — DDL correctness, UPSERT, cache cleanup, export."""
 
 import sqlite3
+from vibe_tracing.infra.config.enums import CoverageStatus
 from vibe_tracing.infra.db import (
     init_in_memory_db,
     upsert_test_result,
@@ -58,16 +59,16 @@ class TestUpsert:
         nodeid = "tests/test_x.py::test_foo"
 
         # Insert with outcome='failed'
-        upsert_test_result(conn, nodeid, "failed", 1, "pytest tests/test_x.py", False)
+        upsert_test_result(conn, nodeid, CoverageStatus.VIOLATED.value, 1, "pytest tests/test_x.py", False)
         rows = conn.execute("SELECT nodeid, outcome FROM test_results").fetchall()
         assert len(rows) == 1
-        assert rows[0][1] == "failed"
+        assert rows[0][1] == CoverageStatus.VIOLATED.value
 
         # Upsert same nodeid with outcome='passed'
-        upsert_test_result(conn, nodeid, "passed", 0, "pytest tests/test_x.py", False)
+        upsert_test_result(conn, nodeid, CoverageStatus.COVERED.value, 0, "pytest tests/test_x.py", False)
         rows = conn.execute("SELECT nodeid, outcome FROM test_results").fetchall()
         assert len(rows) == 1, "UPSERT should have replaced, not duplicated"
-        assert rows[0][1] == "passed"
+        assert rows[0][1] == CoverageStatus.COVERED.value
 
         conn.close()
 
@@ -106,13 +107,13 @@ class TestPurgeStaleCache:
             "INSERT OR REPLACE INTO test_results "
             "(nodeid, outcome, exit_code, command, carried_over) "
             "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_y.py::test_old", "failed", 1, "", 1),
+            ("tests/test_y.py::test_old", CoverageStatus.VIOLATED.value, 1, "", 1),
         )
         conn.execute(
             "INSERT OR REPLACE INTO test_results "
             "(nodeid, outcome, exit_code, command, carried_over) "
             "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_y.py::test_new", "passed", 0, "", 0),
+            ("tests/test_y.py::test_new", CoverageStatus.COVERED.value, 0, "", 0),
         )
         conn.commit()
 
@@ -139,13 +140,13 @@ class TestPurgeStaleCache:
             "INSERT OR REPLACE INTO test_results "
             "(nodeid, outcome, exit_code, command, carried_over) "
             "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_y.py::test_old", "failed", 1, "", 1),
+            ("tests/test_y.py::test_old", CoverageStatus.VIOLATED.value, 1, "", 1),
         )
         conn.execute(
             "INSERT OR REPLACE INTO test_results "
             "(nodeid, outcome, exit_code, command, carried_over) "
             "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_z.py::test_only", "passed", 0, "", 1),
+            ("tests/test_z.py::test_only", CoverageStatus.COVERED.value, 0, "", 1),
         )
         conn.commit()
 
@@ -179,7 +180,7 @@ class TestPurgeStaleCache:
                 "INSERT OR REPLACE INTO test_results "
                 "(nodeid, outcome, exit_code, command, carried_over) "
                 "VALUES (?, ?, ?, ?, ?)",
-                (nodeid, "passed", 0, "", 1),
+                (nodeid, CoverageStatus.COVERED.value, 0, "", 1),
             )
         conn.commit()
 
@@ -199,13 +200,13 @@ class TestPurgeStaleCache:
             "INSERT OR REPLACE INTO test_results "
             "(nodeid, outcome, exit_code, command, carried_over) "
             "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_y.py::test_old", "failed", 1, "", 1),
+            ("tests/test_y.py::test_old", CoverageStatus.VIOLATED.value, 1, "", 1),
         )
         conn.execute(
             "INSERT OR REPLACE INTO test_results "
             "(nodeid, outcome, exit_code, command, carried_over) "
             "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_y.py::test_new", "passed", 0, "", 0),
+            ("tests/test_y.py::test_new", CoverageStatus.COVERED.value, 0, "", 0),
         )
         conn.commit()
 
@@ -231,13 +232,13 @@ class TestPurgeStaleCache:
             "INSERT OR REPLACE INTO test_results "
             "(nodeid, outcome, exit_code, command, carried_over) "
             "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_a.py::test_x", "passed", 0, "", 1),
+            ("tests/test_a.py::test_x", CoverageStatus.COVERED.value, 0, "", 1),
         )
         conn.execute(
             "INSERT OR REPLACE INTO test_results "
             "(nodeid, outcome, exit_code, command, carried_over) "
             "VALUES (?, ?, ?, ?, ?)",
-            ("tests/test_b.py::test_y", "passed", 0, "", 1),
+            ("tests/test_b.py::test_y", CoverageStatus.COVERED.value, 0, "", 1),
         )
         conn.commit()
 

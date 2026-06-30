@@ -429,6 +429,8 @@ CREATE TABLE acceptance_criteria (
 
 所有 check_* 的 SQL CASE WHEN 必须引用 `CoverageStatus` 枚举，禁止硬编码字符串。
 
+> **当前实现状态（2026-06-30，已更新）**：`infra/db/queries.py` 中所有 `check_*` 函数的 SQL 字符串已改为 f-string 格式，通过 `{CoverageStatus.XXX.value}` 嵌入枚举引用（如 `{CoverageStatus.COVERED.value}`、`{CoverageStatus.VIOLATED.value}`）。此修改在阶段 6 Category 2 修复中完成，共 10 处（含 CASE WHEN 分支、ELSE 标签、HAVING 子句和 WHERE 条件）。详见 `docs/refactoring_pipeline_stage_6_Plan.md` C2-1。
+
 ```python
 class CoverageStatus(Enum):
     COVERED = "covered"

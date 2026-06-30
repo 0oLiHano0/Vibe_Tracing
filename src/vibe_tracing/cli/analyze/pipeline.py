@@ -22,13 +22,12 @@ VT 分析流水线编排模块
   domain/gate（门禁判定 + claim_coverage）、infra/db（数据库）
 """
 
-import json
 import subprocess
 import sys
 import time
 import uuid
 from pathlib import Path
-from typing import Optional, Set, Tuple
+from typing import Optional, Set
 
 from vibe_tracing.domain.gate.engine import MergeGateEngine
 from vibe_tracing.domain.evidence.builder import EvidenceBuilder
@@ -342,22 +341,18 @@ def run_analyze(
             # EvidenceBuilder：合并历史缓存 + 本次结果，导出拆分 JSON
             evidence_builder = EvidenceBuilder(project_root)
             merge_result = evidence_builder.merge(tool_evidence)
-            evidence_builder.apply(conn, merge_result)
+            evidence_builder.apply(conn, merge_result, output_dir / "evidences")
             evidence_builder.persist(output_dir / "evidences", merge_result)
 
-            # 从数据库获取全链路数据作为证据元数据（替代 evidence_dicts 中间层）
-            from vibe_tracing.infra.db.queries import get_full_chain
-            full_chain = get_full_chain(conn)
-
-            # 证据元数据（供报告使用）
-            evidence_meta = {
-                "run_id": f"RUN-{uuid.uuid4()}",
-                "project_id": f"PROJECT-{ctx.config_prefix}",
-                "scan_time": "",
-                "full_chain": full_chain,
-            }
+            evidence_meta = evidence_builder.build_evidence_meta(conn, ctx.config_prefix)
         except Exception as exc:
             print(f"Error building evidence: {exc}", file=sys.stderr)
+            try:
+                vt_logger.exception("evidence_build_failed",
+                                   "Error building evidence in stage 6",
+                                   exc=exc)
+            except Exception:
+                pass  # logger 自身异常不应影响退出码
             return 1
         vt_logger.info("phase_end", "Evidence built",
                        phase="build_evidence",
@@ -374,8 +369,6 @@ def run_analyze(
             staged_files=staged_files,
             human_decisions=human_decisions,
         )
-        claim_res = {}  # Legacy format, kept for report compatibility
-        req_res = {}    # Legacy format, kept for report compatibility
         vt_logger.info("phase_end", "Analysis completed (db.check_*)",
                        phase="run_analyzers",
                        duration_ms=int((time.perf_counter() - _t_analyzers) * 1000),
@@ -388,7 +381,7 @@ def run_analyze(
         _t_eval = time.perf_counter()
         exit_code = _evaluate_and_output(
             ctx, merged_gaps, final_risks, compliance_res,
-            output_dir, evidence_meta, claim_res, req_res,
+            output_dir, evidence_meta,
             project_root, staged_files=staged_files,
             human_decisions=human_decisions,
             conn=conn,
@@ -416,10 +409,37 @@ def run_analyze(
         return exc.exit_code
     except Exception as exc:
         print(f"Unexpected error running analyze command: {exc}", file=sys.stderr)
+        try:
+            vt_logger.exception("run_analyze_failed",
+                               "Unexpected error in analyze pipeline",
+                               exc=exc)
+        except Exception:
+            pass  # logger 自身异常不应影响退出码
         return 1
     finally:
         if conn is not None:
             conn.close()
+
+
+# ── _db_result_to_gaps 消息模板表 ──────────────────────────────────────────
+# 映射 (item_type, status) → 消息模板。模板中 {item_id} 必含，{task_id} 可选。
+_GAP_MESSAGES = {
+    ("requirement", "no_task_for_requirement"): "Requirement {item_id} has no task coverage.",
+    ("requirement", "no_claim_for_task"):       "Requirement {item_id} tasks have no claims.",
+    ("requirement", "no_tests_declared"):        "Requirement {item_id} claims declare no tests.",
+    ("requirement", "test_not_run"):             "Requirement {item_id} has tests that were not run.",
+    ("requirement", "test_failed"):              "Requirement {item_id} has failed tests.",
+    ("ac",         "no_task_for_ac"):            "AC {item_id} has no task coverage.",
+    ("ac",         "no_claim_for_task"):         "AC {item_id} (task {task_id}) has no claims.",
+    ("ac",         "no_tests_declared"):         "AC {item_id} (task {task_id}) declares no tests.",
+    ("ac",         "test_not_run"):              "AC {item_id} (task {task_id}) has tests that were not run.",
+    ("ac",         "test_failed"):               "AC {item_id} (task {task_id}) has failed tests.",
+    ("claim",      "task_missing"):              "Claim {item_id} references missing task.",
+    ("claim",      "task_not_done"):             "Claim {item_id} task is not done.",
+    ("claim",      "no_tests"):                  "Claim {item_id} declares no tests.",
+    ("claim",      "test_missing"):              "Claim {item_id} has missing tests.",
+    ("claim",      "test_failed"):               "Claim {item_id} has failed tests.",
+}
 
 
 def _db_result_to_gaps(
@@ -436,121 +456,43 @@ def _db_result_to_gaps(
     前置条件：
         三个参数均为数据库查询的原始结果，格式为 list[dict]
     处理逻辑：
-        1. 遍历 req_coverage，根据 coverage_status 转换为需求缺口
-        2. 遍历 ac_coverage，根据 coverage_status 转换为 AC 缺口
-        3. 遍历 claim_evidence，根据 verification_status 转换为 Claim 缺口
+        查表法：_GAP_MESSAGES 映射 (item_type, status) → 消息模板，
+        辅助函数 _gap() 负责格式化。未知状态（如 "covered"）被静默跳过。
     输出：
         返回缺口列表，每个缺口包含 item_id、item_type、reason 三个字段
     """
     gaps = []
 
-    # Requirement coverage gaps
     for row in req_coverage:
-        req_id = row["req_id"]
-        status = row["coverage_status"]
-        if status == "no_task_for_requirement":
-            gaps.append({
-                "item_id": req_id,
-                "item_type": "requirement",
-                "reason": f"Requirement {req_id} has no task coverage.",
-            })
-        elif status == "no_claim_for_task":
-            gaps.append({
-                "item_id": req_id,
-                "item_type": "requirement",
-                "reason": f"Requirement {req_id} tasks have no claims.",
-            })
-        elif status == "no_tests_declared":
-            gaps.append({
-                "item_id": req_id,
-                "item_type": "requirement",
-                "reason": f"Requirement {req_id} claims declare no tests.",
-            })
-        elif status == "test_not_run":
-            gaps.append({
-                "item_id": req_id,
-                "item_type": "requirement",
-                "reason": f"Requirement {req_id} has tests that were not run.",
-            })
-        elif status == "test_failed":
-            gaps.append({
-                "item_id": req_id,
-                "item_type": "requirement",
-                "reason": f"Requirement {req_id} has failed tests.",
-            })
+        g = _gap(row["req_id"], "requirement", row["coverage_status"])
+        if g: gaps.append(g)
 
-    # AC coverage gaps
     for row in ac_coverage:
-        ac_id = row["ac_id"]
-        task_id = row.get("task_id", "unknown")
-        status = row["coverage_status"]
-        if status == "no_task_for_ac":
-            gaps.append({
-                "item_id": ac_id,
-                "item_type": "ac",
-                "reason": f"AC {ac_id} has no task coverage.",
-            })
-        elif status == "no_claim_for_task":
-            gaps.append({
-                "item_id": ac_id,
-                "item_type": "ac",
-                "reason": f"AC {ac_id} (task {task_id}) has no claims.",
-            })
-        elif status == "no_tests_declared":
-            gaps.append({
-                "item_id": ac_id,
-                "item_type": "ac",
-                "reason": f"AC {ac_id} (task {task_id}) declares no tests.",
-            })
-        elif status == "test_not_run":
-            gaps.append({
-                "item_id": ac_id,
-                "item_type": "ac",
-                "reason": f"AC {ac_id} (task {task_id}) has tests that were not run.",
-            })
-        elif status == "test_failed":
-            gaps.append({
-                "item_id": ac_id,
-                "item_type": "ac",
-                "reason": f"AC {ac_id} (task {task_id}) has failed tests.",
-            })
+        g = _gap(row["ac_id"], "ac", row["coverage_status"],
+                 task_id=row.get("task_id", "unknown"))
+        if g: gaps.append(g)
 
-    # Claim evidence gaps
     for row in claim_evidence:
-        claim_id = row["claim_id"]
-        status = row["verification_status"]
-        if status == "task_missing":
-            gaps.append({
-                "item_id": claim_id,
-                "item_type": "claim",
-                "reason": f"Claim {claim_id} references missing task.",
-            })
-        elif status == "task_not_done":
-            gaps.append({
-                "item_id": claim_id,
-                "item_type": "claim",
-                "reason": f"Claim {claim_id} task is not done.",
-            })
-        elif status == "no_tests":
-            gaps.append({
-                "item_id": claim_id,
-                "item_type": "claim",
-                "reason": f"Claim {claim_id} declares no tests.",
-            })
-        elif status == "test_missing":
-            gaps.append({
-                "item_id": claim_id,
-                "item_type": "claim",
-                "reason": f"Claim {claim_id} has missing tests.",
-            })
-        elif status == "test_failed":
-            gaps.append({
-                "item_id": claim_id,
-                "item_type": "claim",
-                "reason": f"Claim {claim_id} has failed tests.",
-            })
+        g = _gap(row["claim_id"], "claim", row["verification_status"])
+        if g: gaps.append(g)
 
     return gaps
+
+
+def _gap(item_id: str, item_type: str, status: str, **kwargs) -> Optional[dict]:
+    """Build a gap dict from the message template lookup table.
+
+    返回 None 表示该 status 不需要生成缺口（如 "covered" 等正常状态），
+    调用方应跳过 None。
+    """
+    template = _GAP_MESSAGES.get((item_type, status))
+    if template is None:
+        return None
+    return {
+        "item_id": item_id,
+        "item_type": item_type,
+        "reason": template.format(item_id=item_id, **kwargs),
+    }
 
 
 def _run_db_analysis(
@@ -848,8 +790,6 @@ def _evaluate_and_output(
     compliance_res: Optional[dict],
     output_dir: Path,
     evidence_meta: dict,
-    claim_res: dict,
-    req_res: dict,
     project_root: Path,
     staged_files: Optional[Set[str]] = None,
     human_decisions: Optional[dict] = None,
@@ -867,8 +807,6 @@ def _evaluate_and_output(
         compliance_res:   架构合规检查结果
         output_dir:       输出目录
         evidence_meta:    证据元数据
-        claim_res:        Claim 分析结果
-        req_res:          需求分析结果
         project_root:     项目根目录
         staged_files:     暂存区文件集合
         human_decisions:  人类决策记录
@@ -907,7 +845,7 @@ def _evaluate_and_output(
     # 阶段 3：生成追溯报告
     report_doc = _build_report_document(
         ctx, gate_res, evidence_meta, merged_gaps, final_risks,
-        compliance_res, req_res, output_dir, project_root,
+        compliance_res, output_dir, project_root,
         isolated_tasks=analysis_details.get("isolated_tasks"),
     )
 

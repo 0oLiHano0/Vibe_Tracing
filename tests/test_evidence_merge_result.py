@@ -18,30 +18,6 @@ class TestEvidenceMergeResult:
         assert result.stats["skipped_count"] == 0
         assert result.stats["purge_count"] == 0
 
-    def test_is_empty_true(self):
-        """is_empty() returns True when all lists are empty."""
-        result = EvidenceMergeResult()
-        assert result.is_empty() is True
-
-    def test_is_empty_false_with_test_results(self):
-        """is_empty() returns False when test_results has entries."""
-        result = EvidenceMergeResult(
-            test_results_to_upsert=[{"nodeid": "test_foo"}]
-        )
-        assert result.is_empty() is False
-
-    def test_is_empty_false_with_coverage(self):
-        """is_empty() returns False when coverage_reports has entries."""
-        result = EvidenceMergeResult(
-            coverage_reports_to_upsert=[{"source_path": "src/foo.py"}]
-        )
-        assert result.is_empty() is False
-
-    def test_is_empty_false_with_purge(self):
-        """is_empty() returns False when files_to_purge has entries."""
-        result = EvidenceMergeResult(files_to_purge=["src/old.py"])
-        assert result.is_empty() is False
-
     def test_custom_stats(self):
         """Custom stats can be provided."""
         result = EvidenceMergeResult(

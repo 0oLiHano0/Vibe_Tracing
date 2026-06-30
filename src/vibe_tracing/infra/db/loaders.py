@@ -6,6 +6,8 @@ import json
 import sqlite3
 from pathlib import Path
 
+from vibe_tracing.infra.config.enums import CoverageStatus
+
 
 def _coerce_strlist(val) -> list:
     """将任意值规范化为字符串列表。"""
@@ -128,7 +130,7 @@ def load_architecture_constraints(conn: sqlite3.Connection, constraints: dict) -
     conn.commit()
 
 
-def load_initial_cache(conn: sqlite3.Connection, cache_dir: str) -> None:
+def load_initial_cache(conn: sqlite3.Connection, cache_dir: Path, project_root: Path) -> None:
     """从历史缓存文件加载测试和覆盖率数据。"""
     cache_path = Path(cache_dir)
 
@@ -142,7 +144,7 @@ def load_initial_cache(conn: sqlite3.Connection, cache_dir: str) -> None:
             raise ValueError(f"Corrupted or unreadable cache file: {test_file}") from exc
         for rec in records:
             nodeid = rec.get("nodeid", "")
-            outcome = rec.get("outcome", "failed")
+            outcome = rec.get("outcome", CoverageStatus.VIOLATED.value)
             exit_code = rec.get("exit_code", -1)
             command = rec.get("command")
             conn.execute(
@@ -164,11 +166,11 @@ def load_initial_cache(conn: sqlite3.Connection, cache_dir: str) -> None:
         for rec in records:
             source_path = rec.get("source_path", "")
             # 跳过源文件已不存在的缓存记录（防止幽灵覆盖率数据残留）
-            if source_path and not (cache_path.parent / source_path).is_file():
+            if source_path and not (project_root / source_path).is_file():
                 continue
             percent_covered = rec.get("percent_covered", 0.0)
             num_statements = rec.get("num_statements")
-            status = rec.get("status", "violated")
+            status = rec.get("status", CoverageStatus.VIOLATED.value)
             conn.execute(
                 "INSERT OR REPLACE INTO coverage_reports "
                 "(source_path, percent_covered, num_statements, status, carried_over) "

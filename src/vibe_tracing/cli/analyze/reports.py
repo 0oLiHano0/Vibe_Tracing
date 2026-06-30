@@ -28,7 +28,6 @@ def _build_report_document(
     merged_gaps: list,
     final_risks: list,
     compliance_res: Optional[dict],
-    req_res: dict,
     output_dir: Path,
     project_root: Path,
     isolated_tasks: Optional[list] = None,
@@ -43,7 +42,7 @@ def _build_report_document(
         "project_id": evidence_meta.get("project_id"),
         "scan_time": evidence_meta.get("scan_time"),
         "gate_decision": gate_decision,
-        "requirement_coverage": req_res.get("requirement_coverage", []),
+        "requirement_coverage": [],
         "gaps": merged_gaps,
         "risks": final_risks,
         "architecture_compliance_status": compliance_res.get(
@@ -221,7 +220,7 @@ def _render_dashboard(
                 }
             )
         # Load split evidence data
-        evidences_dir = project_root / "output" / "evidences"
+        evidences_dir = output_dir / "evidences"
         test_results_data = []
         coverage_reports_data = []
         tr_path = evidences_dir / "test_results.json"

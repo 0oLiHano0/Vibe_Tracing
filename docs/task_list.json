@@ -72,6 +72,11 @@
       "phase_id": "PHASE-VT-011",
       "name": "架构层次修正：I/O 模块下沉至 infra",
       "goal": "将 loader 和 report 等 I/O 密集型模块从 domain 层移至 infra 层，确保 domain 层只包含纯业务逻辑。"
+    },
+    {
+      "phase_id": "PHASE-VT-012",
+      "name": "阶段6 Bug 修复与测试清理",
+      "goal": "修复阶段 6 两条数据流断裂 bug（覆盖率缓存路径 + SQL outcome 字面量），清理测试文件中的值域不一致和架构残留，统一测试数据到 CoverageStatus 值域。"
     }
   ],
   "tasks": [
@@ -9642,6 +9647,433 @@
         "refactoring_tools_layer.md 重构 G 的状态行从待规划改为已完成。",
         "pipeline_stage-3-refactoring.md 新增重构 G 章节，参考重构 F 的格式（问题定义 + 设计决策 + 变更步骤 + 验证标准）。",
         "搜索 _validate_path、_sanitize_path_value、is_allowed_tool、get_tool_config、_stamp_category 确认文档中无残留。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-172",
+      "title": "修复 load_initial_cache() 覆盖率缓存路径拼接错误",
+      "phase_id": "PHASE-VT-012",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "loaders.py:167 中 cache_path.parent 往上走一层到 output/ 而非 project_root/，与 source_path 拼接后路径错误（output/src/... 永不命中），所有历史覆盖率缓存被静默丢弃。修复为 cache_path.parent.parent。",
+      "atomic_scope": "1) loaders.py:167：cache_path.parent / source_path -> cache_path.parent.parent / source_path。",
+      "out_of_scope": [
+        "不修改其他 load_initial_cache 逻辑",
+        "不修改测试文件（后续任务处理）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-003"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/db/loaders.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-172-01",
+          "description": "loaders.py:167 使用 cache_path.parent.parent 而非 cache_path.parent。"
+        },
+        {
+          "dod_id": "DOD-VT-172-02",
+          "description": "import 验证：from vibe_tracing.infra.db.loaders import load_initial_cache 成功。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "cache_path = Path(cache_dir)，cache_dir 由 EvidenceBuilder.apply() 传入，值为 project_root/output/evidences。",
+        "cache_path.parent = project_root/output，cache_path.parent.parent = project_root。",
+        "source_path（如 src/domain/gate/engine.py）是相对于 project_root 的路径，应与 project_root 拼接。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-173",
+      "title": "修复 queries.py 三处 SQL outcome 字面量 passed -> covered",
+      "phase_id": "PHASE-VT-012",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "queries.py:48,78,102 三处 SQL CASE WHEN 比较 tr.outcome 与硬编码字面量 passed，但 test_results.outcome 列存储的是 CoverageStatus 枚举值（covered/violated 等）。passed 永不匹配，导致测试失败判定逻辑全部错乱。替换为 covered（CoverageStatus.COVERED.value）。",
+      "atomic_scope": "1) queries.py:48 check_ac_coverage：tr.outcome != 'passed' -> tr.outcome != 'covered'。2) queries.py:78 check_requirement_coverage：tr.outcome != 'passed' -> tr.outcome != 'covered'。3) queries.py:102 check_claim_evidence：tr.outcome = 'passed' -> tr.outcome = 'covered'。",
+      "out_of_scope": [
+        "不统一引入 CoverageStatus 枚举常量到 SQL（后续优化项）",
+        "不修改其他 check_* 函数",
+        "不修改测试文件（后续任务处理）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-003"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/db/queries.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-173-01",
+          "description": "queries.py 中不含对 tr.outcome 与字面量 passed 的比较。"
+        },
+        {
+          "dod_id": "DOD-VT-173-02",
+          "description": "queries.py:48：tr.outcome != 'covered'。"
+        },
+        {
+          "dod_id": "DOD-VT-173-03",
+          "description": "queries.py:78：tr.outcome != 'covered'。"
+        },
+        {
+          "dod_id": "DOD-VT-173-04",
+          "description": "queries.py:102：tr.outcome = 'covered'。"
+        },
+        {
+          "dod_id": "DOD-VT-173-05",
+          "description": "import 验证：from vibe_tracing.infra.db.queries import check_ac_coverage, check_requirement_coverage, check_claim_evidence 成功。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "pytest outcome passed 经 parsers.py:146 映射为 CoverageStatus.COVERED.value = 'covered'。",
+        "pytest outcome failed/error 经 parsers.py:148 映射为 CoverageStatus.VIOLATED.value = 'violated'。",
+        "builder.py:50 将 ev.status 写入 test_results.outcome，即 CoverageStatus 值。",
+        "tr.outcome != 'passed' 恒为 true -> 所有有测试的 AC 被误判为 test_failed。",
+        "tr.outcome = 'passed' 恒为 false -> 所有有测试的 Claim 被误判为 test_failed。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-174",
+      "title": "修正 test_evidence_builder.py 测试数据使用 CoverageStatus 值",
+      "phase_id": "PHASE-VT-012",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "test_evidence_builder.py 中 12 处 ToolEvidenceCandidate 构造和断言使用 passed/failed 而非 CoverageStatus 枚举值，绕过真实数据流。替换为 covered/violated（CoverageStatus.COVERED.value / CoverageStatus.VIOLATED.value），使测试数据与生产数据值域一致。",
+      "atomic_scope": "1) 所有 status='passed' -> status=CoverageStatus.COVERED.value。2) 所有 status='failed' -> status=CoverageStatus.VIOLATED.value。3) outcome 断言同步更新：passed -> covered，failed -> violated。4) 导入 CoverageStatus。5) pytest 确认 12 个测试全部通过。",
+      "out_of_scope": [
+        "不修改 EvidenceBuilder 生产代码",
+        "不修改其他测试文件"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-007"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-003"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "tests/test_evidence_builder.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-174-01",
+          "description": "test_evidence_builder.py 中无 passed/failed 字面量作为 status/outcome 值。"
+        },
+        {
+          "dod_id": "DOD-VT-174-02",
+          "description": "所有 ToolEvidenceCandidate 构造使用 CoverageStatus 枚举值。"
+        },
+        {
+          "dod_id": "DOD-VT-174-03",
+          "description": "pytest tests/test_evidence_builder.py -v 全部通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "受影响的测试方法：test_merge_test_results、test_merge_coverage_reports、test_apply_upserts_test_results、test_full_pipeline_test_and_coverage、test_full_pipeline_purges_stale_cache 等。",
+        "导入 CoverageStatus：from vibe_tracing.infra.config.enums import CoverageStatus。",
+        "注意 cached_test 字典中的 outcome 值也需替换（行 290）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-175",
+      "title": "修正 test_db_schema.py 测试数据使用 CoverageStatus 值",
+      "phase_id": "PHASE-VT-012",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "test_db_schema.py 中 14 处 upsert_test_result 调用和断言使用 passed/failed，替换为 covered/violated（CoverageStatus 值），使 upsert 和 purge 测试与生产数据流对齐。",
+      "atomic_scope": "1) 所有 outcome='passed' -> outcome=CoverageStatus.COVERED.value。2) 所有 outcome='failed' -> outcome=CoverageStatus.VIOLATED.value。3) 断言中的 passed/failed 同步替换。4) 导入 CoverageStatus。5) pytest 确认 9 个测试全部通过。",
+      "out_of_scope": [
+        "不修改 upsert_test_result/upsert_coverage_report/purge_stale_cache 生产代码"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-003"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "tests/test_db_schema.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-175-01",
+          "description": "test_db_schema.py 中 upsert_test_result 调用的 outcome 参数使用 CoverageStatus 枚举值，无 passed/failed 字面量。"
+        },
+        {
+          "dod_id": "DOD-VT-175-02",
+          "description": "pytest tests/test_db_schema.py -v 全部通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "受影响的类：TestUpsert（2 个测试）和 TestPurgeStaleCache（5 个测试）。",
+        "INSERT OR REPLACE 语义对任何 outcome 值均等——替换后测试不应有行为差异。",
+        "导入 CoverageStatus：from vibe_tracing.infra.config.enums import CoverageStatus。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-176",
+      "title": "重构 test_db_query_functions.py：删除 fallback + 修正值域 + 修正路径测试 + 精简",
+      "phase_id": "PHASE-VT-012",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "test_db_query_functions.py（~1200 行，50+ 测试）存在 6 类问题：(1) USING_REAL_IMPL fallback 机制是过渡期残留，SQL 语法与真实 queries.py 不同步；(2) 30+ 处 upsert_test_result 使用 passed/failed；(3) load_initial_cache 路径测试验证了错误的 parent 逻辑；(4) Tier 1-4 分层框架（72 测试）过度工程化；(5) adversarial 测试与 Tier 2 边界测试高度重复；(6) fallback 实现中同样有 passed 硬编码。整体清理。",
+      "atomic_scope": "1) 删除 USING_REAL_IMPL 门控及所有 fallback 实现（行 1-207），改为直接 import。2) 全局替换 upsert_test_result outcome：passed->covered，failed->violated，断言同步更新。3) 修正 load_initial_cache 测试：cache_dir 设为 tmp_path/output/evidences，源文件建在 tmp_path/src/file.py，新增文件存在时记录被加载的断言。4) 将同模式变体合并为参数化测试。5) 合并重复：adversarial 与 Tier 2 去重，独有断言保留。6) 导入 CoverageStatus 枚举。",
+      "out_of_scope": [
+        "不修改 queries.py/loaders.py/exports.py 生产代码（已由 TASK-VT-172/173 完成）",
+        "不删除 Tier 框架中有独立价值的测试逻辑",
+        "不修改 test_db_schema.py（TASK-VT-175）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "C-1",
+        "X-1",
+        "T-1",
+        "FLOW-VT-003"
+      ],
+      "depends_on": [
+        "TASK-VT-175"
+      ],
+      "expected_deliverables": [
+        "tests/test_db_query_functions.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-176-01",
+          "description": "USING_REAL_IMPL 变量及所有 if not USING_REAL_IMPL 分支（fallback 实现）已删除。"
+        },
+        {
+          "dod_id": "DOD-VT-176-02",
+          "description": "文件中无 passed/failed 字面量作为 outcome 值（所有 upsert_test_result 调用使用 CoverageStatus 值）。"
+        },
+        {
+          "dod_id": "DOD-VT-176-03",
+          "description": "load_initial_cache 测试使用正确的父级路径，验证文件存在时加载、不存在时跳过。"
+        },
+        {
+          "dod_id": "DOD-VT-176-04",
+          "description": "重复的空数据库/单一状态测试已合并为参数化测试。"
+        },
+        {
+          "dod_id": "DOD-VT-176-05",
+          "description": "adversarial 测试与 Tier 2 测试去重，无相同逻辑的冗余副本。"
+        },
+        {
+          "dod_id": "DOD-VT-176-06",
+          "description": "pytest tests/test_db_query_functions.py -v 全部通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "fallback 实现中 check_requirement_coverage（行 103-124）和 check_claim_evidence（行 127-145）的 SQL 与真实 queries.py 的 CASE WHEN 语义相同但格式不同，删除后由真实实现替代。",
+        "load_initial_cache 测试修正：创建 tmp_path/output/evidences/coverage_reports.json，源文件建在 tmp_path/src/some_file.py，断言源文件存在时覆盖率记录被加载，不存在时被跳过。",
+        "参数化示例：@pytest.mark.parametrize('check_fn', [...]) def test_empty_database(check_fn, conn): ... 替代 5 个独立测试。",
+        "adversarial 去重：逐一对比 setup 和断言，若与 Tier 2 对应测试仅在断言描述上不同，保留 adversarial 额外断言并删除重复的 Tier 2 测试。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-177",
+      "title": "删除 test_db_import.py（架构残留）",
+      "phase_id": "PHASE-VT-012",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "test_db_import.py 是旧架构残留：类名/注释使用 Layer 1/Layer 2（代码库中已不存在此组织方式），仅 3 个测试均为非阶段 6 函数且逻辑已被 test_db_query_functions.py 覆盖，导入了 upsert_test_result 但未使用。直接删除。",
+      "atomic_scope": "1) 确认 3 个测试的逻辑已被 test_db_query_functions.py 覆盖。2) 删除 tests/test_db_import.py。3) 运行全量测试确认无引用。",
+      "out_of_scope": [
+        "不修改其他文件中对 test_db_import 的引用（不存在）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "C-1",
+        "X-1"
+      ],
+      "depends_on": [
+        "TASK-VT-176"
+      ],
+      "expected_deliverables": [
+        "tests/test_db_import.py（删除）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-177-01",
+          "description": "tests/test_db_import.py 文件不存在。"
+        },
+        {
+          "dod_id": "DOD-VT-177-02",
+          "description": "pytest tests/ 全量通过（无 import 错误或缺失文件）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "覆盖关系：test_load_tasks -> test_db_query_functions.py 中 load_tasks 测试覆盖；test_dangling_claim -> test_tier1_f6_coverage_* 覆盖；test_ghost_code -> test_tier1_f5_coverage_* 覆盖。",
+        "运行 grep -r 'test_db_import' tests/ 确认无其他文件引用。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-178",
+      "title": "全量测试与端到端验证",
+      "phase_id": "PHASE-VT-012",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "运行全量测试套件确认无回归，手工验证端到端流程确认 Bug 2 修复后 test_failed 判定正确。",
+      "atomic_scope": "1) pytest tests/ 全量通过。2) 手工执行 vt analyze，检查阶段 7 gaps 输出中 test_failed 仅针对实际失败测试。3) 验证覆盖率缓存文件在第二次 vt analyze 时被正确继承。",
+      "out_of_scope": [
+        "不在此任务中修改代码"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01",
+        "AC-VT-010-02"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "FLOW-VT-003"
+      ],
+      "depends_on": [
+        "TASK-VT-172",
+        "TASK-VT-173",
+        "TASK-VT-174",
+        "TASK-VT-175",
+        "TASK-VT-176",
+        "TASK-VT-177"
+      ],
+      "expected_deliverables": [
+        "测试输出（pytest 全量通过）",
+        "vt analyze 端到端验证记录"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-178-01",
+          "description": "pytest tests/ 全量通过，零失败、零错误。"
+        },
+        {
+          "dod_id": "DOD-VT-178-02",
+          "description": "端到端验证：有通过测试的 Claim/AC/需求在 gaps 中不出现 test_failed 状态。"
+        },
+        {
+          "dod_id": "DOD-VT-178-03",
+          "description": "覆盖率缓存验证：第二次 vt analyze 时 output/evidences/ 的 JSON 被正确加载（DB 查询确认 carried_over=1 记录存在）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "端到端验证：提交一个有通过测试的 Claim，运行 vt analyze，确认输出中无 test_failed 误报。",
+        "覆盖率缓存验证：运行两次 vt analyze，第二次后检查 output/evidences/test_results.json 和 coverage_reports.json 存在且内容完整。",
+        "如果项目中无现成的可验证 Claim，可构造最小测试用例。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-179",
+      "title": "文档收尾：更新阶段 6 相关文档反映修复",
+      "phase_id": "PHASE-VT-012",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "同步更新所有相关文档：(1) 按需更新 spec_pipeline_stage_6.md；(2) 必须更新 refactoring_pipeline_stage_6_Plan.md 标记完成情况；(3) 按需更新 refactoring_design.md。",
+      "atomic_scope": "1) 检查 spec_pipeline_stage_6.md 中值域描述是否与修复后代码一致。2) 更新 refactoring_pipeline_stage_6_Plan.md：在每个步骤标题旁标记完成状态。3) 检查 refactoring_design.md 是否需要更新（如 SQL 硬编码修复后的说明）。",
+      "out_of_scope": [
+        "不创建新的 spec 文档",
+        "不修改 task_list.json"
+      ],
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "D-1",
+        "D-2"
+      ],
+      "depends_on": [
+        "TASK-VT-178"
+      ],
+      "expected_deliverables": [
+        "docs/spec_pipeline_stage_6.md（如需更新）",
+        "docs/refactoring_pipeline_stage_6_Plan.md（必须更新）",
+        "docs/refactoring_design.md（如需更新）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-179-01",
+          "description": "refactoring_pipeline_stage_6_Plan.md 中步骤 1-4 均标注完成状态和实际执行摘要。"
+        },
+        {
+          "dod_id": "DOD-VT-179-02",
+          "description": "spec_pipeline_stage_6.md 中无与修复后代码不一致的描述（已逐项检查）。"
+        },
+        {
+          "dod_id": "DOD-VT-179-03",
+          "description": "queries.py 中 tr.outcome = 'covered' 确认与 refactoring_design.md 6.3 要求对齐（最低修复已实施）。"
+        },
+        {
+          "dod_id": "DOD-VT-179-04",
+          "description": "如有新增发现，已同步写入 refactoring_design.md。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "Plan.md 更新格式：每个步骤标题后添加状态标记和 1-2 句实际执行结果。",
+        "spec_pipeline_stage_6.md：§2 中 test_results.json outcome 和 coverage_reports.json status 枚举值已在上轮修正，确认无需再改。",
+        "refactoring_design.md：§6.3 中禁止硬编码字符串的要求是否需要补充说明当前为最低修复（字面量 covered 而非引用枚举）。"
       ]
     }
   ]

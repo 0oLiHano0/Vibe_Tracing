@@ -11,6 +11,8 @@ Refactored into three phases:
 """
 
 import json
+import uuid
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -80,12 +82,14 @@ class EvidenceBuilder:
             },
         )
 
-    def apply(self, conn: Any, merge_result: EvidenceMergeResult) -> None:
+    def apply(self, conn: Any, merge_result: EvidenceMergeResult,
+              evidences_dir: "Path") -> None:
         """Apply merge result to SQLite: purge stale cache + upsert new data.
 
         Args:
             conn: SQLite connection.
             merge_result: Result from merge().
+            evidences_dir: Directory path for split JSON evidence files.
         """
         from vibe_tracing.infra.db import (
             load_initial_cache,
@@ -95,8 +99,7 @@ class EvidenceBuilder:
         )
 
         # Load historical cache
-        evidences_dir = self.project_root / "output" / "evidences"
-        load_initial_cache(conn, evidences_dir)
+        load_initial_cache(conn, evidences_dir, self.project_root)
 
         # Purge stale cache for files being updated
         if merge_result.files_to_purge:
@@ -153,4 +156,29 @@ class EvidenceBuilder:
             "evidences_dir": str(output_dir),
             "test_results_file": str(test_file),
             "coverage_reports_file": str(cov_file),
+        }
+
+    def build_evidence_meta(self, conn: Any, config_prefix: str) -> Dict[str, Any]:
+        """Build evidence metadata for reports.
+
+        Encapsulates domain knowledge: run/project ID formats, scan timestamp,
+        and full-chain traceability query. Keeps orchestration layer free of
+        format decisions.
+
+        Args:
+            conn: SQLite connection.
+            config_prefix: Project config prefix (e.g. "myproject").
+
+        Returns:
+            Dict with run_id, project_id, scan_time, full_chain.
+        """
+        from vibe_tracing.infra.db.queries import get_full_chain
+
+        full_chain = get_full_chain(conn)
+        BEIJING = timezone(timedelta(hours=8))
+        return {
+            "run_id": f"RUN-{uuid.uuid4()}",
+            "project_id": f"PROJECT-{config_prefix}",
+            "scan_time": datetime.now(BEIJING).isoformat(),
+            "full_chain": full_chain,
         }

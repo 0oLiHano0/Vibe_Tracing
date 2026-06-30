@@ -13,6 +13,7 @@ import pytest
 from pathlib import Path
 from vibe_tracing.domain.evidence.builder import EvidenceBuilder
 from vibe_tracing.domain.evidence.merge_result import EvidenceMergeResult
+from vibe_tracing.infra.config.enums import CoverageStatus
 from vibe_tracing.infra.db import init_in_memory_db
 
 
@@ -54,7 +55,7 @@ class TestEvidenceBuilderMerge:
             source_type="test",
             source_path="tests/test_example.py::test_foo",
             covers=["AC-VT-001-01"],
-            status="passed",
+            status=CoverageStatus.COVERED.value,
             tool_category="test",
             command="pytest tests/test_example.py",
             exit_code=0,
@@ -65,7 +66,7 @@ class TestEvidenceBuilderMerge:
 
         assert len(result.test_results_to_upsert) == 1
         assert result.test_results_to_upsert[0]["nodeid"] == "tests/test_example.py::test_foo"
-        assert result.test_results_to_upsert[0]["outcome"] == "passed"
+        assert result.test_results_to_upsert[0]["outcome"] == "covered"
         assert result.test_results_to_upsert[0]["exit_code"] == 0
         assert "tests/test_example.py" in result.files_to_purge
         assert result.stats["test_count"] == 1
@@ -99,7 +100,7 @@ class TestEvidenceBuilderMerge:
             source_type="unknown_type",
             source_path="some/path",
             covers=[],
-            status="passed",
+            status=CoverageStatus.COVERED.value,
         )
 
         builder = EvidenceBuilder(tmp_path)
@@ -116,7 +117,7 @@ class TestEvidenceBuilderMerge:
             source_type="test",
             source_path="tests/test_foo.py::test_a",
             covers=[],
-            status="passed",
+            status=CoverageStatus.COVERED.value,
             tool_category="test",
             exit_code=0,
         )
@@ -124,7 +125,7 @@ class TestEvidenceBuilderMerge:
             source_type="test",
             source_path="tests/test_foo.py::test_b",
             covers=[],
-            status="passed",
+            status=CoverageStatus.COVERED.value,
             tool_category="test",
             exit_code=0,
         )
@@ -144,7 +145,7 @@ class TestEvidenceBuilderApply:
         merge_result = EvidenceMergeResult(
             test_results_to_upsert=[{
                 "nodeid": "tests/test_example.py::test_foo",
-                "outcome": "passed",
+                "outcome": CoverageStatus.COVERED.value,
                 "exit_code": 0,
                 "command": "pytest tests/test_example.py",
                 "carried_over": False,
@@ -152,12 +153,12 @@ class TestEvidenceBuilderApply:
         )
 
         builder = EvidenceBuilder(tmp_path)
-        builder.apply(conn, merge_result)
+        builder.apply(conn, merge_result, tmp_path / "evidences")
 
         rows = conn.execute("SELECT nodeid, outcome, carried_over FROM test_results").fetchall()
         assert len(rows) == 1
         assert rows[0][0] == "tests/test_example.py::test_foo"
-        assert rows[0][1] == "passed"
+        assert rows[0][1] == "covered"
         assert rows[0][2] == 0
 
     def test_apply_upserts_coverage_reports(self, tmp_path, conn):
@@ -173,7 +174,7 @@ class TestEvidenceBuilderApply:
         )
 
         builder = EvidenceBuilder(tmp_path)
-        builder.apply(conn, merge_result)
+        builder.apply(conn, merge_result, tmp_path / "evidences")
 
         rows = conn.execute("SELECT source_path, percent_covered FROM coverage_reports").fetchall()
         assert len(rows) == 1
@@ -189,7 +190,7 @@ class TestEvidenceBuilderPersist:
         merge_result = EvidenceMergeResult(
             test_results_to_upsert=[{
                 "nodeid": "tests/test_foo.py::test_bar",
-                "outcome": "passed",
+                "outcome": CoverageStatus.COVERED.value,
                 "exit_code": 0,
                 "command": "",
                 "carried_over": False,
@@ -244,7 +245,7 @@ class TestEvidenceBuilderFullPipeline:
             source_type="test",
             source_path="tests/test_foo.py::test_bar",
             covers=["AC-VT-001-01"],
-            status="passed",
+            status=CoverageStatus.COVERED.value,
             tool_category="test",
             exit_code=0,
         )
@@ -265,7 +266,7 @@ class TestEvidenceBuilderFullPipeline:
         assert merge_result.stats["coverage_count"] == 1
 
         # Phase 2: apply
-        builder.apply(conn, merge_result)
+        builder.apply(conn, merge_result, tmp_path / "evidences")
         test_rows = conn.execute("SELECT nodeid FROM test_results").fetchall()
         cov_rows = conn.execute("SELECT source_path FROM coverage_reports").fetchall()
         assert len(test_rows) == 1
@@ -287,9 +288,9 @@ class TestEvidenceBuilderFullPipeline:
         evidences_dir.mkdir(parents=True, exist_ok=True)
 
         # Set up cache with carried-over entry
-        cached_test = [{"nodeid": "tests/test_target.py::test_old", "outcome": "passed", "exit_code": 0}]
+        cached_test = [{"nodeid": "tests/test_target.py::test_old", "outcome": CoverageStatus.COVERED.value, "exit_code": 0}]
         (evidences_dir / "test_results.json").write_text(json.dumps(cached_test))
-        load_initial_cache(conn, evidences_dir)
+        load_initial_cache(conn, evidences_dir, tmp_path)
 
         rows = conn.execute("SELECT carried_over FROM test_results").fetchall()
         assert len(rows) == 1
@@ -300,17 +301,41 @@ class TestEvidenceBuilderFullPipeline:
             source_type="test",
             source_path="tests/test_target.py::test_new",
             covers=[],
-            status="passed",
+            status=CoverageStatus.COVERED.value,
             tool_category="test",
             exit_code=0,
         )
 
         builder = EvidenceBuilder(tmp_path)
         merge_result = builder.merge([new_test_ev])
-        builder.apply(conn, merge_result)
+        builder.apply(conn, merge_result, tmp_path / "evidences")
 
         # Old carried_over entry should be purged
         rows = conn.execute("SELECT nodeid FROM test_results").fetchall()
         nodeids = {r[0] for r in rows}
         assert "tests/test_target.py::test_old" not in nodeids
         assert "tests/test_target.py::test_new" in nodeids
+
+
+class TestEvidenceBuilderBuildMeta:
+    """Tests for build_evidence_meta()."""
+
+    def test_build_evidence_meta_empty_db(self, tmp_path, conn):
+        """build_evidence_meta returns correctly structured dict on empty DB."""
+        builder = EvidenceBuilder(tmp_path)
+        meta = builder.build_evidence_meta(conn, "myproject")
+
+        assert meta["run_id"].startswith("RUN-")
+        assert len(meta["run_id"]) > 4  # RUN- + uuid chars
+        assert meta["project_id"] == "PROJECT-myproject"
+        assert "T" in meta["scan_time"]  # ISO-8601 has T separator
+        assert "+08:00" in meta["scan_time"]  # Beijing timezone offset
+        assert isinstance(meta["full_chain"], list)
+        assert meta["full_chain"] == []  # empty DB → empty chain
+
+    def test_build_evidence_meta_run_ids_are_unique(self, tmp_path, conn):
+        """Each call to build_evidence_meta generates a unique run_id."""
+        builder = EvidenceBuilder(tmp_path)
+        meta1 = builder.build_evidence_meta(conn, "proj")
+        meta2 = builder.build_evidence_meta(conn, "proj")
+        assert meta1["run_id"] != meta2["run_id"]

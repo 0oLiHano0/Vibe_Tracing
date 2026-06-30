@@ -9358,6 +9358,291 @@
         "spec_pipeline_stage_3.md：§2 代码模块结构移除 tools.py 描述，executor.py 描述改为 '工具执行引擎（预检 → 路径收集 → 执行 → 统计 → 日志）'。§5 日志事件表列出全部 7 个事件，归属 executor.py。",
         "搜索单词 'tools.py'、'_execute_tools'、'execute_all'、'infra/tools/candidate' 确认 6 个文档中无残留引用。"
       ]
+    },
+    {
+      "task_id": "TASK-VT-167",
+      "title": "execute_tool() YAGNI 清理：新增辅助方法 + 简化 _build_command",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "新增 _blocked_candidate() 和 _parse_output() 辅助方法，简化 _build_command() 删除 _sanitize_path_value 调用但保留 shlex.quote()。",
+      "atomic_scope": "1) 新增 _blocked_candidate() 方法（构造 BLOCKED candidate + 设置 tool_category）。2) 新增 _parse_output() 方法（按 output_format 分发到解析器）。3) 简化 _build_command()：删除 _sanitize_path_value 调用，直接用 shlex.quote()。",
+      "out_of_scope": [
+        "不修改 execute_tool() 主体（步骤 TASK-VT-168）",
+        "不删除旧方法（步骤 TASK-VT-169）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "T-3"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/tools/executor.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-167-01",
+          "description": "_blocked_candidate() 方法存在，返回 ToolEvidenceCandidate 且 tool_category 已设置。"
+        },
+        {
+          "dod_id": "DOD-VT-167-02",
+          "description": "_parse_output() 方法存在，按 output_format 分发到 5 个解析器。"
+        },
+        {
+          "dod_id": "DOD-VT-167-03",
+          "description": "_build_command() 中无 _sanitize_path_value 调用，使用 shlex.quote()。"
+        },
+        {
+          "dod_id": "DOD-VT-167-04",
+          "description": "现有测试全部通过（不破坏已有行为）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "_blocked_candidate() 签名：(self, path, tool_category, *, command=, exit_code=-1, stderr=, details=None)。",
+        "_parse_output() 内部用 dict 映射 output_format → lambda 调用对应解析器，替代 if/elif 链。",
+        "_build_command() 保留 shlex.quote() 替换 _sanitize_path_value()，保留 unresolved placeholders 检查。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-168",
+      "title": "execute_tool() 重写：简化签名 + 删除 4 个 YAGNI 步骤",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "重写 execute_tool()：去掉 4 个未使用的可选参数，删除白名单校验/路径安全校验/安全过滤/标记类别 4 个步骤，合并 3 个错误分支为 1 个。",
+      "atomic_scope": "1) 签名简化为 execute_tool(self, tool_category, path)。2) 删除白名单校验（L293-313）。3) 删除路径安全校验（L319-334）。4) 删除 _sanitize_path_value 调用。5) 合并 3 个错误分支为 1 个（用 _blocked_candidate）。6) 解析输出后一次性设置 tool_category（用 _parse_output + 循环设置）。7) 调用 self._tool_configs[tool_category] 替代 get_tool_config()。",
+      "out_of_scope": [
+        "不删除旧方法（步骤 TASK-VT-169）",
+        "不修改测试（步骤 TASK-VT-170）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "T-3"
+      ],
+      "depends_on": [
+        "TASK-VT-167"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/tools/executor.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-168-01",
+          "description": "execute_tool() 签名为 (self, tool_category, path)，无可选参数。"
+        },
+        {
+          "dod_id": "DOD-VT-168-02",
+          "description": "execute_tool() 中无白名单校验、路径安全校验、_sanitize_path_value 调用。"
+        },
+        {
+          "dod_id": "DOD-VT-168-03",
+          "description": "错误处理只有 1 个分支（if exec_error），调用 _blocked_candidate。"
+        },
+        {
+          "dod_id": "DOD-VT-168-04",
+          "description": "输出解析通过 _parse_output() 分发，tool_category 在返回前一次性设置。"
+        },
+        {
+          "dod_id": "DOD-VT-168-05",
+          "description": "python -c \"from vibe_tracing.infra.tools.executor import ToolExecutionEngine\" 成功。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "execute_from_claims() 中的调用点已传入 tool_config=config，重写后改为 self._tool_configs[category] 内部获取。",
+        "execute_tool() 的 8 个 return 点简化为 3 个：_build_command 失败、exec_error、正常解析。",
+        "python3 -m 回退保留在 _build_command 之后（ToolResolver.resolve_command），不删除。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-169",
+      "title": "删除 executor.py 中 6 个废弃方法",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "删除 execute_tool() 重写后不再需要的 6 个方法/常量。",
+      "atomic_scope": "1) 删除 _validate_path() 方法。2) 删除 _sanitize_path_value() 方法。3) 删除 _SAFE_PATH_PATTERN 常量。4) 删除 is_allowed_tool() 方法。5) 删除 get_tool_config() 方法。6) 删除 _stamp_category() 方法。",
+      "out_of_scope": [
+        "不修改 execute_tool()（已由 TASK-VT-168 完成）"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "C-1",
+        "T-1"
+      ],
+      "depends_on": [
+        "TASK-VT-168"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/infra/tools/executor.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-169-01",
+          "description": "executor.py 中无 _validate_path、_sanitize_path_value、_SAFE_PATH_PATTERN、is_allowed_tool、get_tool_config、_stamp_category 的定义。"
+        },
+        {
+          "dod_id": "DOD-VT-169-02",
+          "description": "python -c \"from vibe_tracing.infra.tools.executor import ToolExecutionEngine\" 成功。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "_validate_path 仅被旧 execute_tool() 调用，重写后无调用方。",
+        "_sanitize_path_value 和 _SAFE_PATH_PATTERN 仅被旧 _build_command() 调用，简化后无调用方。",
+        "is_allowed_tool 和 get_tool_config 是公共方法但零生产调用方（测试中使用，需同步更新）。",
+        "_stamp_category 仅被旧 execute_tool() 调用，重写后无调用方。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-170",
+      "title": "更新 execute_tool() 相关测试",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新 test_tool_execution.py 中对已删除方法和旧签名的测试。",
+      "atomic_scope": "1) execute_tool() 调用更新：去掉 tool_config/test_path/source_path/output_path 参数。2) 删除 is_allowed_tool 和 get_tool_config 的直接测试（方法已删除）。3) 删除 _validate_path 和 _sanitize_path_value 的直接测试（方法已删除）。4) 补充 _blocked_candidate 和 _parse_output 的测试。5) 确认全量测试通过。",
+      "out_of_scope": [
+        "不修改生产代码"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-012"
+      ],
+      "related_architecture_constraints": [
+        "X-1"
+      ],
+      "depends_on": [
+        "TASK-VT-169"
+      ],
+      "expected_deliverables": [
+        "tests/test_tool_execution.py"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-170-01",
+          "description": "所有 execute_tool() 调用使用新签名 (tool_category, path)。"
+        },
+        {
+          "dod_id": "DOD-VT-170-02",
+          "description": "无对 is_allowed_tool、get_tool_config、_validate_path、_sanitize_path_value 的测试引用。"
+        },
+        {
+          "dod_id": "DOD-VT-170-03",
+          "description": "新增 _blocked_candidate 和 _parse_output 的测试。"
+        },
+        {
+          "dod_id": "DOD-VT-170-04",
+          "description": "pytest tests/test_tool_execution.py 全部通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "测试中 engine.execute_tool(tool_category=\"lint\", path=\"src/\") 调用不变——签名简化后参数名不变。",
+        "TestIsAllowedTool 类整体删除（方法已删除）。",
+        "TestSanitizePathValue 类整体删除（方法已删除）。",
+        "TestValidatePath 类整体删除（方法已删除）。",
+        "TestGetToolConfig 类整体删除（方法已删除）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-171",
+      "title": "文档收尾：更新文档反映 execute_tool() YAGNI 清理",
+      "phase_id": "PHASE-VT-010",
+      "priority": "must",
+      "status": "done",
+      "owner_role": "AI Coding Agent",
+      "objective": "同步更新所有相关文档，反映 execute_tool() 重构后的变更：签名简化、4 步删除、辅助方法新增、废弃方法删除。",
+      "atomic_scope": "1) docs/refactoring_design.md：更新 §4.2 infra/tools/executor.py 描述（新增 _blocked_candidate/_parse_output，删除 _validate_path/_sanitize_path_value/is_allowed_tool/get_tool_config/_stamp_category）。2) docs/spec_pipeline_stage_3.md：更新步骤 5（执行工具）的描述，反映简化后的 execute_tool() 流程；更新 §6 接口定义中 execute_tool() 签名。3) docs/refactoring_tools_layer.md：更新重构 G 状态为已完成。4) docs/pipeline_stage-3-refactoring.md：新增重构 G 章节。",
+      "out_of_scope": [
+        "不修改代码文件",
+        "不修改 task_list.json"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "D-1"
+      ],
+      "depends_on": [
+        "TASK-VT-170"
+      ],
+      "expected_deliverables": [
+        "docs/refactoring_design.md",
+        "docs/spec_pipeline_stage_3.md",
+        "docs/refactoring_tools_layer.md",
+        "docs/pipeline_stage-3-refactoring.md"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-171-01",
+          "description": "refactoring_design.md §4.2 infra/tools/executor.py 描述中无 _validate_path、_sanitize_path_value、is_allowed_tool、get_tool_config、_stamp_category；有 _blocked_candidate、_parse_output。"
+        },
+        {
+          "dod_id": "DOD-VT-171-02",
+          "description": "spec_pipeline_stage_3.md 步骤 5 描述反映简化后的 execute_tool() 流程（白名单校验已删除、路径校验已删除）。"
+        },
+        {
+          "dod_id": "DOD-VT-171-03",
+          "description": "spec_pipeline_stage_3.md §6 中 execute_tool() 签名为 (self, tool_category, path)，无 tool_config/test_path/source_path/output_path 参数。"
+        },
+        {
+          "dod_id": "DOD-VT-171-04",
+          "description": "refactoring_tools_layer.md 重构 G 章节状态为已完成。"
+        },
+        {
+          "dod_id": "DOD-VT-171-05",
+          "description": "pipeline_stage-3-refactoring.md 新增重构 G 章节。"
+        },
+        {
+          "dod_id": "DOD-VT-171-06",
+          "description": "搜索单词 _validate_path、_sanitize_path_value、is_allowed_tool、_stamp_category 确认 4 个文档中无残留引用。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "refactoring_design.md §4.2 infra/tools/executor.py 行更新描述：删除 _validate_path/_sanitize_path_value/is_allowed_tool/get_tool_config/_stamp_category，新增 _blocked_candidate/_parse_output。",
+        "spec_pipeline_stage_3.md 步骤 5 当前描述包含白名单校验和路径安全校验，这两步已删除，需更新为简化后的流程（命令生成 → python3 -m 回退 → 执行 → 解析输出）。",
+        "spec_pipeline_stage_3.md §6 execute_tool() 接口定义：签名简化为 (self, tool_category: str, path: str) -> List[ToolEvidenceCandidate]。",
+        "refactoring_tools_layer.md 重构 G 的状态行从待规划改为已完成。",
+        "pipeline_stage-3-refactoring.md 新增重构 G 章节，参考重构 F 的格式（问题定义 + 设计决策 + 变更步骤 + 验证标准）。",
+        "搜索 _validate_path、_sanitize_path_value、is_allowed_tool、get_tool_config、_stamp_category 确认文档中无残留。"
+      ]
     }
   ]
 }

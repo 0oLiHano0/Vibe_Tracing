@@ -573,3 +573,47 @@ def _execute_tools(
 | 4 | `executor.py` 有 execute_from_claims，无 execute_all | 唯一入口 |
 | 5 | `builder.py` 无 getattr() | 类型安全 |
 | 6 | 全量测试通过 | 914 passed |
+
+---
+
+## 重构 G：execute_tool() YAGNI 清理
+
+**状态**：已完成
+
+### 问题定义
+
+`execute_tool()` 的 8 个步骤中有 4 个是 YAGNI：
+
+1. **白名单校验**（20 行）：死代码，`execute_from_claims()` 已过滤
+2. **路径安全校验**（15 行）：双重防御，claims 格式校验已拒绝 `../`
+3. **安全过滤**（`_sanitize_path_value`）：过度设计，输入链已可信
+4. **标记类别**（8 个 return 点）：冗余，改为解析器后一次性设置
+
+额外清理：`tool_config`/`test_path`/`source_path`/`output_path` 4 个可选参数零调用方使用，3 个错误分支合并为 1 个。
+
+### 设计决策
+
+1. 新增 `_blocked_candidate()` 辅助方法（构造 BLOCKED candidate + 设置 tool_category）
+2. 新增 `_parse_output()` 辅助方法（按 output_format 分发到解析器，替代 if/elif 链）
+3. `_build_command()` 简化：删除 `_sanitize_path_value`，保留 `shlex.quote()`
+4. `execute_tool()` 签名简化为 `(self, tool_category, path)`
+5. 删除 6 个废弃方法：`_validate_path`、`_sanitize_path_value`、`is_allowed_tool`、`get_tool_config`、`_stamp_category`、`_SAFE_PATH_PATTERN`
+
+### 变更步骤
+
+| 步骤 | 任务 | 变更文件 |
+|------|------|----------|
+| G-1 | 新增辅助方法 + 简化 _build_command | executor.py |
+| G-2 | 重写 execute_tool() | executor.py |
+| G-3 | 删除 6 个废弃方法 | executor.py |
+| G-4 | 更新测试 | test_tool_execution.py |
+| G-5 | 更新文档 | 4 个文档 |
+
+### 验证标准
+
+| # | 验证项 | 预期结果 |
+|---|--------|----------|
+| 1 | `executor.py` 中无 `_validate_path`、`_sanitize_path_value`、`_SAFE_PATH_PATTERN`、`is_allowed_tool`、`get_tool_config`、`_stamp_category` | 已删除 |
+| 2 | `execute_tool()` 签名为 `(self, tool_category, path)` | 无可选参数 |
+| 3 | `execute_tool()` 中无白名单校验、路径安全校验 | YAGNI 清除 |
+| 4 | 全量测试通过 | 901 passed |

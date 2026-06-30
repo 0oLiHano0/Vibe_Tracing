@@ -321,3 +321,211 @@ else:
 ```
 
 步骤 0 必须最先执行——它修正了架构违规（隐式依赖 + 类型不安全），后续步骤依赖正确的依赖方向和 `ToolExecutionResult` 返回值类型。
+
+---
+
+## 重构 G：execute_tool() YAGNI 清理
+
+**状态**：已完成 ✅
+**前置条件**：重构 F 已完成 ✅
+
+### 问题定义
+
+`execute_tool()` 的 8 个步骤中有 4 个是 YAGNI：
+
+| # | 步骤 | 行数 | 判定 | 理由 |
+|---|------|------|------|------|
+| 1 | 白名单校验 | L293-313（20 行） | **死代码** | `execute_from_claims()` 只遍历 `self.validation_tools` 并显式传入 `tool_config=config`，永远不会触发 `tool_config is None` |
+| 2 | 路径安全校验 | L319-334（15 行） | **双重防御** | 路径来自 claims 的 `code_refs`/`test_refs`（相对路径如 `src/module.py`），`project_root / relative_path` 永远在 project_root 内。`../` 已被 `infra/validation/checks.py` 格式校验拒绝 |
+| 4 | 安全过滤 | L135-152（`_sanitize_path_value`） | **过度设计** | 输入链已可信（claims 格式校验 → 路径安全校验），shell 元字符过滤是对不可信输入的防御 |
+| 8 | 标记类别 | 8 个 return 点各调一次 `_stamp_category()` | **冗余** | 每个解析器已知自己的类别，可在调用时一次性设置 |
+
+额外发现：
+- `execute_tool()` 的 `tool_config` 可选参数：生产代码 always 传入，测试代码依赖 `get_tool_config()` 回退——可简化签名
+- `test_path`/`source_path`/`output_path` 三个可选参数：**零调用方使用**，纯向后兼容残留
+- 错误处理有 3 个分支（timeout/not_found/generic）构造几乎相同的 candidate——可合并
+
+### 设计目标
+
+1. 删除 4 个 YAGNI 步骤（白名单校验、路径安全校验、安全过滤、标记类别）
+2. 简化 `execute_tool()` 签名：去掉 4 个未使用的可选参数
+3. 合并 3 个错误分支为 1 个
+4. `python3 -m` 回退机制保留但精确化
+
+### 目标代码
+
+```python
+def execute_tool(
+    self,
+    tool_category: str,
+    path: str,
+) -> List[ToolEvidenceCandidate]:
+    """Execute a single tool for a given path and return evidence candidates.
+
+    Pre-conditions (guaranteed by execute_from_claims):
+        - tool_category is in self._tool_configs (whitelist)
+        - path is a relative path inside project_root (claims validation)
+    """
+    tool_config = self._tool_configs[tool_category]
+
+    # 1. 命令生成：从模板替换占位符
+    template = tool_config.get("default_command", "")
+    effective_test = path  # test_path 和 source_path 统一为 path
+    effective_source = path
+
+    # output_path：仅当模板含 {output_path} 时生成临时文件
+    effective_output = ""
+    if "{output_path}" in template:
+        tmp_dir = self.project_root / ".vibetracing" / "tmp"
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        effective_output = str(tmp_dir / f"vt_{tool_category}_{uuid.uuid4().hex}.json")
+
+    try:
+        command = self._build_command(
+            template,
+            test_path=effective_test,
+            source_path=effective_source,
+            output_path=effective_output,
+        )
+    except ValueError as exc:
+        return [self._blocked_candidate(path, tool_category, stderr=str(exc))]
+
+    # 2. python3 -m 回退：工具不在 PATH 时，回退到 sys.executable -m
+    command = ToolResolver.resolve_command(command)
+
+    # 3. 执行子进程
+    exit_code, stdout, stderr, exec_error = self._run_subprocess(command)
+
+    if exec_error:
+        details = {"error_type": exec_error}
+        if exec_error == "timeout":
+            details["timeout_seconds"] = self.timeout
+        return [self._blocked_candidate(
+            path, tool_category, command=command,
+            exit_code=-1, stderr=stderr, details=details,
+        )]
+
+    # 4. 解析输出 + 标记类别
+    output_format = tool_config.get("output_format", "")
+    candidates = self._parse_output(
+        output_format, stdout, stderr, exit_code, command, path,
+    )
+    for c in candidates:
+        c.tool_category = tool_category
+    return candidates
+```
+
+### python3 -m 回退的精确执行方式
+
+`ToolResolver.resolve_command()` 的回退逻辑：
+
+```
+输入: "ruff check src/module.py --output-format=json"
+处理:
+  1. 按 ";" 分割（支持复合命令）
+  2. 取每段第一个 token 作为工具名: "ruff"
+  3. shutil.which("ruff") 检查是否在 PATH 中
+  4. 不在 → 拼接: "{sys.executable} -m ruff check src/module.py --output-format=json"
+     在   → 原样返回
+输出: "/usr/bin/python3 -m ruff check src/module.py --output-format=json"
+```
+
+`sys.executable` 是当前运行 VT 的 Python 解释器路径（如 `/usr/bin/python3` 或 venv 中的 `python3`），确保使用正确的 Python 环境。
+
+**保留此机制**：不同用户的 PATH 配置不同，`python3 -m` 回退是实际场景中的必要容错。但 `_build_command()` 中的 `_sanitize_path_value()` 可删除——路径已可信。
+
+### _build_command() 简化
+
+当前 `_build_command()` 内部调用 `_sanitize_path_value()` 做 shell 元字符过滤。简化后：
+
+```python
+def _build_command(self, template, test_path="", source_path="", output_path="") -> str:
+    """Substitute placeholders in a command template.
+
+    Only {test_path}, {source_path}, {output_path} are replaced.
+    Path values are quoted via shlex.quote() for defense-in-depth.
+    """
+    cmd = template
+    cmd = cmd.replace("{test_path}", shlex.quote(test_path))
+    cmd = cmd.replace("{source_path}", shlex.quote(source_path))
+    cmd = cmd.replace("{output_path}", shlex.quote(output_path))
+
+    remaining = re.findall(r"\{[a-z_]+\}", cmd)
+    if remaining:
+        raise ValueError(f"Unresolved placeholders: {remaining}")
+    return cmd
+```
+
+保留 `shlex.quote()`（一行代码，零成本防御），删除 `_sanitize_path_value()` 和 `_SAFE_PATH_PATTERN`。
+
+### 辅助方法：_blocked_candidate + _parse_output
+
+```python
+def _blocked_candidate(
+    self, path: str, tool_category: str, *,
+    command: str = "", exit_code: int = -1,
+    stderr: str = "", details: dict = None,
+) -> ToolEvidenceCandidate:
+    """Create a BLOCKED candidate with tool_category pre-set."""
+    c = ToolEvidenceCandidate(
+        source_type="tool", source_path=path, covers=[],
+        status=CoverageStatus.BLOCKED.value,
+        error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
+        command=command, exit_code=exit_code,
+        stderr=stderr, details=details or {},
+    )
+    c.tool_category = tool_category
+    return c
+
+def _parse_output(
+    self, output_format: str,
+    stdout: str, stderr: str, exit_code: int,
+    command: str, path: str,
+) -> List[ToolEvidenceCandidate]:
+    """Dispatch to the appropriate parser based on output_format."""
+    parsers = {
+        "pytest_json": lambda: parse_pytest_output(
+            stdout, stderr, exit_code, command, path,
+            self.project_root, self.PYTEST_SKIP_EXIT_CODES,
+            self._get_test_docstring, self._extract_covers_from_docstring,
+        ),
+        "ruff_json": lambda: parse_ruff_output(stdout, stderr, exit_code, command, path),
+        "mypy_json": lambda: parse_mypy_output(stdout, stderr, exit_code, command, path, self.MYPY_SKIP_EXIT_CODES),
+        "bandit_json": lambda: parse_bandit_output(stdout, stderr, exit_code, command, path, self.project_root),
+        "coverage_json": lambda: parse_coverage_json_output(stdout, stderr, exit_code, command, path),
+    }
+    parser = parsers.get(output_format)
+    if parser:
+        return parser()
+    return [self._blocked_candidate(path, "", stderr=f"Unsupported output format: {output_format}")]
+```
+
+### 删除项
+
+| 删除目标 | 位置 | 理由 |
+|---------|------|------|
+| `_validate_path()` 方法 | executor.py | 路径已由 claims 格式校验保证安全 |
+| `_sanitize_path_value()` 方法 | executor.py | 输入链已可信，`shlex.quote()` 足够 |
+| `_SAFE_PATH_PATTERN` 常量 | executor.py | 随 `_sanitize_path_value` 一起删除 |
+| `is_allowed_tool()` 方法 | executor.py | 零调用方（`execute_from_claims` 用 `self._tool_configs.get()` 代替） |
+| `get_tool_config()` 方法 | executor.py | 零生产调用方（直接用 `self._tool_configs[category]`） |
+| `_stamp_category()` 方法 | executor.py | 改为在 execute_tool 和 _parse_output 后一次性设置 |
+| `execute_tool()` 的 4 个可选参数 | executor.py | `tool_config`/`test_path`/`source_path`/`output_path` 零调用方使用 |
+
+### 变更步骤
+
+| 步骤 | 操作 | 影响文件 |
+|------|------|----------|
+| G-1 | 新增 `_blocked_candidate()` 和 `_parse_output()` 辅助方法 | executor.py |
+| G-2 | 简化 `_build_command()`：删除 `_sanitize_path_value` 调用，保留 `shlex.quote()` | executor.py |
+| G-3 | 重写 `execute_tool()`：简化签名 + 删除 4 个 YAGNI 步骤 + 合并错误分支 | executor.py |
+| G-4 | 删除 `_validate_path`、`_sanitize_path_value`、`_SAFE_PATH_PATTERN`、`is_allowed_tool`、`get_tool_config`、`_stamp_category` | executor.py |
+| G-5 | 更新测试：移除对已删除方法的直接测试，补充 `_blocked_candidate` 和 `_parse_output` 测试 | tests/test_tool_execution.py |
+
+### 风险评估
+
+| 风险 | 等级 | 缓解措施 |
+|------|------|----------|
+| 删除路径安全校验后引入路径遍历 | 低 | claims 格式校验已拒绝 `../`，`_build_command` 保留 `shlex.quote()` |
+| 删除白名单校验后传入非法类别 | 无 | `execute_from_claims` 已过滤，`self._tool_configs[category]` 会 KeyError（fail-fast） |
+| 测试覆盖不足 | 中 | 步骤 G-5 更新测试，916 测试基线 |

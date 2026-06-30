@@ -94,62 +94,8 @@ class ToolExecutionEngine:
                 self._tool_configs[category] = lang_matrix[category]
 
     # ------------------------------------------------------------------
-    # Whitelist enforcement
-    # ------------------------------------------------------------------
-
-    def is_allowed_tool(self, tool_category: str) -> bool:
-        """Return True if tool_category is in the active validation_tools whitelist."""
-        return tool_category in self._tool_configs
-
-    def get_tool_config(self, tool_category: str) -> Optional[Dict[str, Any]]:
-        """Return the tool config dict for a category, or None if not whitelisted."""
-        return self._tool_configs.get(tool_category)
-
-    # ------------------------------------------------------------------
-    # Path validation
-    # ------------------------------------------------------------------
-
-    def _validate_path(self, path_str: str) -> Tuple[bool, str]:
-        """
-        Validate that a path resolves inside the project root.
-
-        Returns:
-            (is_valid, error_message)
-        """
-        try:
-            resolved = (self.project_root / path_str).resolve()
-            project_resolved = self.project_root.resolve()
-            if not (resolved == project_resolved or project_resolved in resolved.parents):
-                hint = resolve_hint(_tool_hints.get("path_outside_root", {}), "level1")
-                msg = _safe_format(hint, path_str=path_str, resolved=resolved) if hint else f"Path '{path_str}' resolves outside project root: {resolved}"
-                return False, msg
-        except (ValueError, OSError) as exc:
-            return False, f"Invalid path '{path_str}': {exc}"
-        return True, ""
-
-    # ------------------------------------------------------------------
     # Command template substitution
     # ------------------------------------------------------------------
-
-    # Characters allowed in path values (safe for shell contexts)
-    _SAFE_PATH_PATTERN = re.compile(r'^[a-zA-Z0-9_./\-:]+$')
-
-    def _sanitize_path_value(self, path_str: str) -> str:
-        """
-        Sanitize a path value for safe shell substitution.
-
-        Rejects paths containing shell metacharacters that could enable
-        command injection: |, ;, &, $, `, (, ), {, }, <, >, !, ~, etc.
-
-        Then applies shlex.quote() as defense-in-depth.
-        """
-        if not path_str:
-            return ""
-        if not self._SAFE_PATH_PATTERN.match(path_str):
-            hint = resolve_hint(_tool_hints.get("unsafe_path_chars", {}), "level1")
-            msg = _safe_format(hint, path_str=path_str) if hint else f"Path '{path_str}' contains unsafe characters. Only alphanumeric, underscore, dot, slash, and hyphen are allowed."
-            raise ValueError(msg)
-        return shlex.quote(path_str)
 
     def _build_command(
         self,
@@ -158,23 +104,17 @@ class ToolExecutionEngine:
         source_path: str = "",
         output_path: str = "",
     ) -> str:
-        """
-        Substitute placeholders in a command template with sanitized path values.
+        """Substitute placeholders in a command template.
 
-        Only {test_path}, {source_path}, and {output_path} are replaced.
-        Path values are validated against shell metacharacters and quoted via shlex.quote().
+        Only {test_path}, {source_path}, {output_path} are replaced.
+        Path values are quoted via shlex.quote() for defense-in-depth.
         Any remaining unresolved placeholders cause a ValueError.
         """
-        safe_test = self._sanitize_path_value(test_path)
-        safe_source = self._sanitize_path_value(source_path)
-        safe_output = self._sanitize_path_value(output_path)
-
         cmd = template
-        cmd = cmd.replace("{test_path}", safe_test)
-        cmd = cmd.replace("{source_path}", safe_source)
-        cmd = cmd.replace("{output_path}", safe_output)
+        cmd = cmd.replace("{test_path}", shlex.quote(test_path) if test_path else "")
+        cmd = cmd.replace("{source_path}", shlex.quote(source_path) if source_path else "")
+        cmd = cmd.replace("{output_path}", shlex.quote(output_path) if output_path else "")
 
-        # Reject if any placeholder-like tokens remain
         remaining = re.findall(r"\{[a-z_]+\}", cmd)
         if remaining:
             hint = resolve_hint(_tool_hints.get("unresolved_placeholders", {}), "level1")
@@ -256,208 +196,96 @@ class ToolExecutionEngine:
     PYTEST_SKIP_EXIT_CODES = {2, 5}  # 2 = usage error, 5 = no tests collected
     MYPY_SKIP_EXIT_CODES = {2}  # 2 = usage error
 
-    @staticmethod
-    def _stamp_category(
-        candidates: List["ToolEvidenceCandidate"], tool_category: str
-    ) -> List["ToolEvidenceCandidate"]:
-        """Stamp tool_category on every candidate in the list."""
-        for c in candidates:
-            c.tool_category = tool_category
-        return candidates
+    def _blocked_candidate(
+        self, path: str, tool_category: str, *,
+        command: str = "", exit_code: int = -1,
+        stderr: str = "", details: dict = None,
+    ) -> ToolEvidenceCandidate:
+        """Create a BLOCKED candidate with tool_category pre-set."""
+        c = ToolEvidenceCandidate(
+            source_type="tool", source_path=path, covers=[],
+            status=CoverageStatus.BLOCKED.value,
+            error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
+            command=command, exit_code=exit_code,
+            stderr=stderr, details=details or {},
+        )
+        c.tool_category = tool_category
+        return c
+
+    def _parse_output(
+        self, output_format: str,
+        stdout: str, stderr: str, exit_code: int,
+        command: str, path: str,
+    ) -> List[ToolEvidenceCandidate]:
+        """Dispatch to the appropriate parser based on output_format."""
+        parsers = {
+            "pytest_json": lambda: parse_pytest_output(
+                stdout, stderr, exit_code, command, path,
+                self.project_root, self.PYTEST_SKIP_EXIT_CODES,
+                self._get_test_docstring, self._extract_covers_from_docstring,
+            ),
+            "ruff_json": lambda: parse_ruff_output(stdout, stderr, exit_code, command, path),
+            "mypy_json": lambda: parse_mypy_output(stdout, stderr, exit_code, command, path, self.MYPY_SKIP_EXIT_CODES),
+            "bandit_json": lambda: parse_bandit_output(stdout, stderr, exit_code, command, path, self.project_root),
+            "coverage_json": lambda: parse_coverage_json_output(stdout, stderr, exit_code, command, path),
+        }
+        parser = parsers.get(output_format)
+        if parser:
+            return parser()
+        hint = resolve_hint(_tool_hints.get("unsupported_output_format", {}), "level1")
+        msg = _safe_format(hint, output_format=output_format) if hint else f"Unsupported output format: {output_format}"
+        return [self._blocked_candidate(path, "", stderr=msg)]
 
     def execute_tool(
         self,
         tool_category: str,
         path: str,
-        tool_config: Optional[Dict[str, Any]] = None,
-        test_path: str = "",
-        source_path: str = "",
-        output_path: str = "",
     ) -> List[ToolEvidenceCandidate]:
+        """Execute a single tool for a given path and return evidence candidates.
+
+        Pre-conditions (guaranteed by execute_from_claims):
+            - tool_category is in self._tool_configs (whitelist)
+            - path is a relative path inside project_root (claims validation)
         """
-        Execute a single tool for a given path and return evidence candidates.
+        tool_config = self._tool_configs[tool_category]
+        template = tool_config.get("default_command", "")
 
-        Args:
-            tool_category: One of "test", "coverage", "lint", "type_check", "security".
-            path: The primary path (test file or source directory).
-            tool_config: Override tool config dict. If None, uses the whitelisted config.
-            test_path: Explicit test_path placeholder value (defaults to `path`).
-            source_path: Explicit source_path placeholder value (defaults to `path`).
-            output_path: Explicit output_path placeholder value (auto-generated if empty).
-
-        Returns:
-            List of ToolEvidenceCandidate objects.
-        """
-        candidates: List[ToolEvidenceCandidate] = []
-
-        # Whitelist check
-        if tool_config is None:
-            tool_config = self.get_tool_config(tool_category)
-        if tool_config is None:
-            hint = resolve_hint(_tool_hints.get("category_not_whitelisted", {}), "level1")
-            allowed = sorted(self._tool_configs.keys())
-            msg = _safe_format(hint,
-                tool_category=tool_category, allowed_categories=', '.join(allowed),
-                language=self.language,
-            ) if hint else f"Tool category '{tool_category}' is not in the whitelist. Allowed: {allowed}"
-            candidates = [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                    stderr=msg,
-                )
-            ]
-            return self._stamp_category(candidates, tool_category)
-
-        # Resolve paths
-        effective_test = test_path or path
-        effective_source = source_path or path
-
-        # Validate paths are inside project root
-        for label, p in [("test_path", effective_test), ("source_path", effective_source)]:
-            if p:
-                ok, err = self._validate_path(p)
-                if not ok:
-                    candidates = [
-                        ToolEvidenceCandidate(
-                            source_type="tool",
-                            source_path=path,
-                            covers=[],
-                            status=CoverageStatus.BLOCKED.value,
-                            error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                            stderr=err,
-                        )
-                    ]
-                    return self._stamp_category(candidates, tool_category)
-
-        # Generate a temporary output path if not provided
-        effective_output = output_path
-        if not effective_output and "{output_path}" in tool_config.get("default_command", ""):
+        # Generate output_path only if template needs it
+        effective_output = ""
+        if "{output_path}" in template:
             tmp_dir = self.project_root / ".vibetracing" / "tmp"
             tmp_dir.mkdir(parents=True, exist_ok=True)
-            suffix = ".json"
-            unique_id = uuid.uuid4().hex
-            effective_output = str(tmp_dir / f"vt_{tool_category}_{unique_id}{suffix}")
+            effective_output = str(tmp_dir / f"vt_{tool_category}_{uuid.uuid4().hex}.json")
 
         # Build command from template
-        template = tool_config.get("default_command", "")
         try:
             command = self._build_command(
-                template,
-                test_path=effective_test,
-                source_path=effective_source,
-                output_path=effective_output or "",
+                template, test_path=path, source_path=path, output_path=effective_output,
             )
         except ValueError as exc:
-            candidates = [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                    stderr=str(exc),
-                )
-            ]
-            return self._stamp_category(candidates, tool_category)
+            return [self._blocked_candidate(path, tool_category, stderr=str(exc))]
 
-        # Fallback: if tool binary not on PATH, try python3 -m <tool>
+        # python3 -m fallback: if tool binary not on PATH, try python3 -m <tool>
         command = ToolResolver.resolve_command(command)
 
-        # Execute the command
+        # Execute
         exit_code, stdout, stderr, exec_error = self._run_subprocess(command)
 
-        if exec_error == "timeout":
-            candidates = [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=-1,
-                    stderr=stderr,
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                    details={"error_type": "timeout", "timeout_seconds": self.timeout},
-                )
-            ]
-            return self._stamp_category(candidates, tool_category)
-
-        if exec_error == "not_found":
-            candidates = [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=-1,
-                    stderr=stderr,
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                    details={"error_type": "tool_not_found"},
-                )
-            ]
-            return self._stamp_category(candidates, tool_category)
-
         if exec_error:
-            candidates = [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=stderr,
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                    details={"error_type": exec_error},
-                )
-            ]
-            return self._stamp_category(candidates, tool_category)
+            details = {"error_type": exec_error}
+            if exec_error == "timeout":
+                details["timeout_seconds"] = self.timeout
+            return [self._blocked_candidate(
+                path, tool_category, command=command,
+                exit_code=-1, stderr=stderr, details=details,
+            )]
 
-        # Parse output based on output_format
+        # Parse output + stamp category
         output_format = tool_config.get("output_format", "")
-
-        if output_format == "pytest_json":
-            candidates = parse_pytest_output(
-                stdout, stderr, exit_code, command, path,
-                self.project_root, self.PYTEST_SKIP_EXIT_CODES,
-                self._get_test_docstring, self._extract_covers_from_docstring,
-            )
-        elif output_format == "ruff_json":
-            candidates = parse_ruff_output(stdout, stderr, exit_code, command, path)
-        elif output_format == "mypy_json":
-            candidates = parse_mypy_output(
-                stdout, stderr, exit_code, command, path,
-                self.MYPY_SKIP_EXIT_CODES,
-            )
-        elif output_format == "bandit_json":
-            candidates = parse_bandit_output(
-                stdout, stderr, exit_code, command, path,
-                self.project_root,
-            )
-        elif output_format == "coverage_json":
-            candidates = parse_coverage_json_output(stdout, stderr, exit_code, command, path)
-        else:
-            hint = resolve_hint(_tool_hints.get("unsupported_output_format", {}), "level1")
-            msg = _safe_format(hint, output_format=output_format) if hint else f"Unsupported output format: {output_format}"
-            candidates = [
-                ToolEvidenceCandidate(
-                    source_type="tool",
-                    source_path=path,
-                    covers=[],
-                    status=CoverageStatus.BLOCKED.value,
-                    command=command,
-                    exit_code=exit_code,
-                    stderr=msg,
-                    error_code=ErrorCode.TOOL_EXECUTION_FAILED.value,
-                )
-            ]
-
-        return self._stamp_category(candidates, tool_category)
+        candidates = self._parse_output(output_format, stdout, stderr, exit_code, command, path)
+        for c in candidates:
+            c.tool_category = tool_category
+        return candidates
 
     def _measure_source_coverage(
         self,
@@ -668,7 +496,6 @@ class ToolExecutionEngine:
                 candidates = self.execute_tool(
                     tool_category=category,
                     path=path,
-                    tool_config=config,
                 )
                 all_candidates.extend(candidates)
 

@@ -95,59 +95,6 @@ def engine(project_root: Path, python_matrix: dict) -> ToolExecutionEngine:
 
 
 # ---------------------------------------------------------------------------
-# Test: Whitelist enforcement
-# ---------------------------------------------------------------------------
-
-class TestWhitelistEnforcement:
-    """Verify that only whitelisted tools may be executed."""
-
-    def test_allowed_tool_returns_true(self, engine: ToolExecutionEngine) -> None:
-        """covers: AC-VT-008-01"""
-        assert engine.is_allowed_tool("test") is True
-        assert engine.is_allowed_tool("lint") is True
-        assert engine.is_allowed_tool("security") is True
-
-    def test_disallowed_tool_returns_false(self, engine: ToolExecutionEngine) -> None:
-        """covers: AC-VT-008-01"""
-        assert engine.is_allowed_tool("deploy") is False
-        assert engine.is_allowed_tool("unknown_category") is False
-
-    def test_execute_disallowed_tool_returns_blocked(self, engine: ToolExecutionEngine) -> None:
-        """covers: AC-VT-008-01"""
-        candidates = engine.execute_tool(tool_category="deploy", path="tests/")
-        assert len(candidates) == 1
-        c = candidates[0]
-        assert c.status == CoverageStatus.BLOCKED.value
-        assert c.error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
-        assert "白名单" in c.stderr or "not in the whitelist" in c.stderr
-
-    def test_partial_whitelist(self, project_root: Path, python_matrix: dict) -> None:
-        """covers: AC-VT-008-01"""
-        # Only enable "lint", not "test"
-        engine = ToolExecutionEngine(
-            language_tool_matrix=python_matrix,
-            language="python",
-            validation_tools=["lint"],
-            project_root=project_root,
-        )
-        assert engine.is_allowed_tool("lint") is True
-        assert engine.is_allowed_tool("test") is False
-        assert engine.is_allowed_tool("security") is False
-
-    def test_wrong_language_has_no_tools(
-        self, project_root: Path, python_matrix: dict
-    ) -> None:
-        """covers: AC-VT-008-01"""
-        engine = ToolExecutionEngine(
-            language_tool_matrix=python_matrix,
-            language="javascript",
-            validation_tools=["test"],
-            project_root=project_root,
-        )
-        assert engine.is_allowed_tool("test") is False
-
-
-# ---------------------------------------------------------------------------
 # Test: Command template substitution
 # ---------------------------------------------------------------------------
 
@@ -201,32 +148,33 @@ class TestCommandTemplateSubstitution:
 # ---------------------------------------------------------------------------
 
 class TestShellInjectionPrevention:
-    """Verify that path values with shell metacharacters are rejected."""
+    """Verify that path values with shell metacharacters are safely quoted."""
 
-    def test_semicolon_in_path_rejected(self, engine: ToolExecutionEngine) -> None:
+    def test_semicolon_in_path_quoted(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="不安全|unsafe"):
-            engine._build_command(template, test_path="tests/; rm -rf /")
+        cmd = engine._build_command(template, test_path="tests/; rm -rf /")
+        # shlex.quote wraps the entire path in single quotes — injection neutralized
+        assert "'tests/; rm -rf /'" in cmd
 
-    def test_pipe_in_path_rejected(self, engine: ToolExecutionEngine) -> None:
+    def test_pipe_in_path_quoted(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="不安全|unsafe"):
-            engine._build_command(template, test_path="tests/ | cat /etc/passwd")
+        cmd = engine._build_command(template, test_path="tests/ | cat /etc/passwd")
+        assert "'tests/ | cat /etc/passwd'" in cmd
 
-    def test_backtick_in_path_rejected(self, engine: ToolExecutionEngine) -> None:
+    def test_backtick_in_path_quoted(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="不安全|unsafe"):
-            engine._build_command(template, test_path="tests/`whoami`")
+        cmd = engine._build_command(template, test_path="tests/`whoami`")
+        assert "'tests/`whoami`'" in cmd
 
-    def test_dollar_substitution_rejected(self, engine: ToolExecutionEngine) -> None:
+    def test_dollar_substitution_quoted(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="不安全|unsafe"):
-            engine._build_command(template, test_path="tests/$(id)")
+        cmd = engine._build_command(template, test_path="tests/$(id)")
+        assert "'tests/$(id)'" in cmd
 
-    def test_redirect_in_path_rejected(self, engine: ToolExecutionEngine) -> None:
+    def test_redirect_in_path_quoted(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
-        with pytest.raises(ValueError, match="不安全|unsafe"):
-            engine._build_command(template, test_path="tests/> /tmp/evil")
+        cmd = engine._build_command(template, test_path="tests/> /tmp/evil")
+        assert "'tests/> /tmp/evil'" in cmd
 
     def test_valid_path_accepted(self, engine: ToolExecutionEngine) -> None:
         template = "pytest {test_path} -q"
@@ -307,7 +255,7 @@ class TestMissingTool:
         assert c.status == CoverageStatus.BLOCKED.value
         assert c.error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
         assert "未找到" in c.stderr or "not found" in c.stderr.lower()
-        assert c.details.get("error_type") == "tool_not_found"
+        assert c.details.get("error_type") == "not_found"
 
 
 # ---------------------------------------------------------------------------
@@ -315,50 +263,8 @@ class TestMissingTool:
 # ---------------------------------------------------------------------------
 
 class TestPathValidation:
-    """Verify that paths outside project root are rejected."""
-
-    def test_relative_path_inside_root_is_valid(
-        self, engine: ToolExecutionEngine
-    ) -> None:
-        """covers: AC-VT-008-01"""
-        ok, err = engine._validate_path("tests/test_foo.py")
-        assert ok is True
-        assert err == ""
-
-    def test_path_outside_root_is_rejected(
-        self, engine: ToolExecutionEngine
-    ) -> None:
-        """covers: AC-VT-008-01"""
-        ok, err = engine._validate_path("../../etc/passwd")
-        assert ok is False
-        assert "之外" in err or "outside project root" in err
-
-    def test_absolute_path_outside_root_is_rejected(
-        self, engine: ToolExecutionEngine
-    ) -> None:
-        """covers: AC-VT-008-01"""
-        ok, err = engine._validate_path("/etc/passwd")
-        assert ok is False
-        assert "之外" in err or "outside project root" in err
-
-    def test_execute_with_invalid_path_returns_blocked(
-        self, engine: ToolExecutionEngine
-    ) -> None:
-        """covers: AC-VT-008-01"""
-        candidates = engine.execute_tool(
-            tool_category="lint", path="../../etc/passwd"
-        )
-        assert len(candidates) == 1
-        c = candidates[0]
-        assert c.status == CoverageStatus.BLOCKED.value
-        assert c.error_code == ErrorCode.TOOL_EXECUTION_FAILED.value
-        assert "之外" in c.stderr or "outside project root" in c.stderr
-
-    def test_dot_dot_path_resolved_safely(self, engine: ToolExecutionEngine) -> None:
-        """covers: AC-VT-008-01"""
-        # tests/../tests/test_foo.py should resolve inside root
-        ok, err = engine._validate_path("tests/../tests/test_foo.py")
-        assert ok is True
+    """Path validation is handled by claims format checks (infra/validation).
+    execute_tool trusts paths from execute_from_claims."""
 
 
 # ---------------------------------------------------------------------------
@@ -910,22 +816,6 @@ class TestLoadHints:
 # ---------------------------------------------------------------------------
 # Test: _validate_path error handling
 # ---------------------------------------------------------------------------
-
-class TestValidatePathErrors:
-    """Verify _validate_path handles exceptions during path resolution."""
-
-    def test_invalid_path_returns_false(self, engine: ToolExecutionEngine) -> None:
-        """covers: _validate_path ValueError/OSError branch (lines 166-167)"""
-        with patch("vibe_tracing.infra.tools.executor.Path.resolve", side_effect=ValueError("bad path")):
-            ok, err = engine._validate_path("some/path")
-            assert ok is False
-            assert "Invalid path" in err
-
-    def test_path_equals_root_is_valid(self, engine: ToolExecutionEngine, project_root: Path) -> None:
-        """covers: _validate_path path == project_root branch (line 162)"""
-        # "." resolves to the project root itself
-        ok, err = engine._validate_path(".")
-        assert ok is True
 
 
 # ---------------------------------------------------------------------------
@@ -1560,39 +1450,10 @@ class TestExtractCoversFromDocstring:
 # Test: _stamp_category
 # ---------------------------------------------------------------------------
 
-class TestStampCategory:
-    """Verify _stamp_category stamps tool_category on candidates."""
-
-    def test_stamps_category(self) -> None:
-        """covers: _stamp_category (lines 623-630)"""
-        c1 = ToolEvidenceCandidate(
-            source_type="tool", source_path="src/", covers=[], status=CoverageStatus.COVERED.value
-        )
-        c2 = ToolEvidenceCandidate(
-            source_type="tool", source_path="src/b.py", covers=[], status=CoverageStatus.COVERED.value
-        )
-        result = ToolExecutionEngine._stamp_category([c1, c2], "lint")
-        assert all(c.tool_category == "lint" for c in result)
-        assert len(result) == 2
-
 
 # ---------------------------------------------------------------------------
 # Test: get_tool_config
 # ---------------------------------------------------------------------------
-
-class TestGetToolConfig:
-    """Verify get_tool_config returns correct configs."""
-
-    def test_returns_config_for_whitelisted_tool(self, engine: ToolExecutionEngine) -> None:
-        """covers: get_tool_config (line 146)"""
-        config = engine.get_tool_config("lint")
-        assert config is not None
-        assert config["tool"] == "ruff"
-
-    def test_returns_none_for_unknown_tool(self, engine: ToolExecutionEngine) -> None:
-        """covers: get_tool_config (line 146)"""
-        config = engine.get_tool_config("deploy")
-        assert config is None
 
 
 # ---------------------------------------------------------------------------

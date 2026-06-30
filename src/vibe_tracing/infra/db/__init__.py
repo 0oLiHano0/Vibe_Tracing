@@ -15,7 +15,6 @@ from vibe_tracing.infra.db.loaders import (
 )
 from vibe_tracing.infra.db.queries import (
     check_coverage_violations,
-    check_ghost_code,
     check_dangling_claims,
     check_ac_coverage,
     check_requirement_coverage,
@@ -43,7 +42,6 @@ __all__ = [
     "load_prd",
     "load_architecture_constraints",
     "check_coverage_violations",
-    "check_ghost_code",
     "check_dangling_claims",
     "check_ac_coverage",
     "check_requirement_coverage",

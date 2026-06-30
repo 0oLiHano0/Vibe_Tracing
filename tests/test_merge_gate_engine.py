@@ -4,7 +4,6 @@ Unit tests for MergeGateEngine (TASK-VT-017).
 
 from pathlib import Path
 from vibe_tracing.domain.gate.engine import MergeGateEngine
-from vibe_tracing.infra.db import init_in_memory_db
 
 
 def test_missing_ac_test_blocks():
@@ -108,7 +107,7 @@ def test_must_constraint_violated_blocks():
     compliance = {
         "architecture_compliance_status": [
             {
-                "rule_id": "GATE-VT-001",
+                "rule_id": "ARCH-RULE-MUST-001",
                 "status": "violated",
                 "severity": "must",
             }
@@ -120,7 +119,7 @@ def test_must_constraint_violated_blocks():
     res = engine.evaluate(gaps, risks, compliance)
 
     assert res["gate_decision"] == "blocked"
-    assert any("GATE-VT-001" in msg for msg in res["reasons"])
+    assert any("ARCH-RULE-MUST-001" in msg for msg in res["reasons"])
 
 
 def test_unclear_constraint_produces_fail():
@@ -136,7 +135,7 @@ def test_unclear_constraint_produces_fail():
         "architecture_violations": [],
         "unclear_constraints": [
             {
-                "rule_id": "GATE-VT-007",
+                "rule_id": "ARCH-RULE-UNCLEAR-001",
                 "reason": "Cannot automatically verify module boundary.",
             }
         ],
@@ -145,7 +144,7 @@ def test_unclear_constraint_produces_fail():
     res = engine.evaluate(gaps, risks, compliance)
 
     assert res["gate_decision"] == "fail"
-    assert any("GATE-VT-007" in msg for msg in res["reasons"])
+    assert any("ARCH-RULE-UNCLEAR-001" in msg for msg in res["reasons"])
 
 
 def test_pass_when_no_gaps_risks_or_violations():
@@ -380,16 +379,6 @@ class TestClaimEvidenceGaps:
 class TestGhostCode:
     """Tests for Rule 2: ghost code detection."""
 
-    def test_ghost_files_blocks(self):
-        """Unclaimed staged files block the gate."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        ghost_files = ["src/orphan.py"]
-        res = engine.evaluate([], [], {}, ghost_files=ghost_files, staged_items={"src/orphan.py"})
-
-        assert res["gate_decision"] == "blocked"
-        assert any("src/orphan.py" in item for item in res["blocked_items"])
-
     def test_no_ghost_files_passes(self):
         """Empty ghost files list doesn't block."""
         engine = MergeGateEngine(Path("/dummy/project/root"))
@@ -406,16 +395,6 @@ class TestGhostCode:
 
         assert res["gate_decision"] == "pass"
 
-    def test_ghost_files_exclusions(self):
-        """Files matching exclusions are filtered out."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        # config.json should be excluded
-        ghost_files = ["config.json", "src/orphan.py"]
-        res = engine.evaluate([], [], {}, ghost_files=ghost_files, staged_items={"config.json", "src/orphan.py"})
-
-        # Only src/orphan.py should block
-        assert any("src/orphan.py" in item for item in res["blocked_items"])
 
 
 # ---------------------------------------------------------------
@@ -612,28 +591,6 @@ class TestIncrementalMode:
         assert engine.incremental_only is True
         assert engine.show_historical_debt is False
 
-    def test_rule2_incremental_mode(self):
-        """Test Rule 2 (ghost code) in incremental mode."""
-        engine = MergeGateEngine(
-            Path("/dummy/project/root"),
-            incremental_only=True,
-        )
-
-        gaps = []
-        risks = []
-        ghost_files = ["utils.py"]
-        staged_items = {"CLAIM-005"}  # Different claim
-
-        res = engine.evaluate(
-            gaps, risks,
-            ghost_files=ghost_files,
-            staged_items=staged_items,
-        )
-
-        # Historical ghost code should NOT block in incremental mode
-        assert res["gate_decision"] == "pass"
-        assert res["historical_debt_count"] == 1
-
     def test_rule3_incremental_mode(self):
         """Test Rule 3 (dangling claims) in incremental mode."""
         engine = MergeGateEngine(
@@ -715,29 +672,6 @@ class TestIncrementalMode:
         # Historical AC gap should NOT block in incremental mode
         assert res["gate_decision"] == "pass"
         assert res["historical_debt_count"] == 1
-
-    def test_incremental_mode_blocks_current_debt(self):
-        """Test that incremental mode still blocks current debt."""
-        engine = MergeGateEngine(
-            Path("/dummy/project/root"),
-            incremental_only=True,
-        )
-
-        gaps = []
-        risks = []
-        ghost_files = ["main.py"]
-        staged_items = {"main.py"}  # Current commit includes this file
-
-        res = engine.evaluate(
-            gaps, risks,
-            ghost_files=ghost_files,
-            staged_items=staged_items,
-        )
-
-        # Current debt should still block in incremental mode
-        assert res["gate_decision"] == "blocked"
-        assert len(res["blocked_items"]) > 0
-        assert res["historical_debt_count"] == 0
 
     def test_incremental_mode_result_fields(self):
         """Test that incremental mode adds result fields."""

@@ -26,7 +26,7 @@ analyzers 查询 SQLite，不消费 Python dict。
 
 ### 决策 2：check_* 函数留在 db.py
 
-3 个活跃函数（`check_ac_coverage`、`check_coverage_violations`、`check_ghost_code`）+ 3 个保留函数（`check_dangling_claims`、`check_test_dead_links`、`check_active_task_coverage`）均留在 `infra/db/queries.py`。
+3 个活跃函数（`check_ac_coverage`、`check_coverage_violations`、）+ 3 个保留函数（`check_dangling_claims`、`check_test_dead_links`、`check_active_task_coverage`）均留在 `infra/db/queries.py`。
 
 ### 决策 3：evidence_builder 只做"证据合并"
 
@@ -115,7 +115,7 @@ run_analyze(project_root, ...)
 
 | # | 规则 | db 函数 | 阻断条件 |
 |---|------|---------|---------|
-| 1 | Claim 覆盖 staged 文件 | `check_ghost_code(config)` | 有业务文件未被覆盖 → blocked |
+| 1 | Claim 覆盖 staged 文件 | `` | 有业务文件未被覆盖 → blocked |
 | 2 | Claim 格式 | `validate_inputs()` | 格式错误 → Stage 1 阻断 |
 
 #### Gate 3：分析判定（Stage 9）
@@ -421,7 +421,7 @@ CREATE TABLE acceptance_criteria (
 | `get_full_chain(conn)` | 全链条 JOIN（Dashboard/Report 用） |
 | `check_ac_coverage(conn)` | 从 acceptance_criteria 出发检查覆盖 |
 | `check_dangling_claims(conn)` | Claim → Task 存在性 |
-| `check_ghost_code(conn, config)` | staged_files LEFT JOIN claim_code_refs |
+| `` | staged_files LEFT JOIN claim_code_refs |
 | `query_related_code(conn, ac_id)` | AC → 代码文件路径（task_acs → claims → claim_code_refs） |
 | `query_existing_tests(conn, ac_id)` | AC → 测试 nodeid（task_acs → claims → claim_test_refs） |
 
@@ -494,7 +494,7 @@ TASK_STATUS_TO_COVERAGE = {
                 │  ├── check_ac_coverage()           │
                 │  ├── check_claim_evidence()        │
                 │  ├── check_dangling_claims()       │
-                │  ├── check_ghost_code()            │
+                │  ├──             │
                 │  ├── check_coverage_violations()   │
                 │  └── get_full_chain()              │
                 └──────────┬──────────────────┘
@@ -592,7 +592,7 @@ from .loaders import (load_tasks, load_claims, load_staged_files,
                       load_initial_cache, load_prd, load_architecture_constraints)
 from .queries import (check_ac_coverage, check_coverage_violations,
                       check_requirement_coverage, check_claim_evidence,
-                      check_dangling_claims, check_ghost_code, get_full_chain,
+                      check_dangling_claims,  get_full_chain,
                       check_test_dead_links, check_active_task_coverage,
                       check_invalid_task_requirements, check_invalid_task_acs,
                       check_invalid_task_modules, check_invalid_task_constraints,

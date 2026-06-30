@@ -178,14 +178,14 @@ def test_compliance_results_to_risks():
         "architecture_compliance_status": [],
         "architecture_violations": [
             {
-                "rule_id": "DEP-VT-001",
+                "rule_id": "ARCH-RULE-001",
                 "evidence_id": "EVIDENCE-VT-005",
                 "message": "Core imports agent runtime package hermes",
             }
         ],
         "unclear_constraints": [
             {
-                "rule_id": "DEP-VT-002",
+                "rule_id": "ARCH-RULE-002",
                 "reason": "dashboard.html not yet generated in the workspace.",
             }
         ],
@@ -199,7 +199,7 @@ def test_compliance_results_to_risks():
 
     # First risk: violation
     assert res[0]["risk_id"] == "RISK-VT-001"
-    assert "DEP-VT-001" in res[0]["description"]
+    assert "ARCH-RULE-001" in res[0]["description"]
     assert res[0]["severity"] == "must"
     assert res[0]["evidence_ids"] == ["EVIDENCE-VT-005"]
     assert "suggested_action" in res[0]
@@ -207,7 +207,7 @@ def test_compliance_results_to_risks():
 
     # Second risk: unclear (speculative -> low confidence, suggestion)
     assert res[1]["risk_id"] == "RISK-VT-002"
-    assert "DEP-VT-002" in res[1]["description"]
+    assert "ARCH-RULE-002" in res[1]["description"]
     assert res[1]["severity"] == "should"
     assert res[1]["confidence"] == "low_confidence"
     assert res[1]["type"] == "suggestion"
@@ -226,12 +226,12 @@ def test_compliance_deduplication():
         "architecture_compliance_status": [],
         "architecture_violations": [
             {
-                "rule_id": "DEP-VT-001",
+                "rule_id": "ARCH-RULE-001",
                 "evidence_id": "EVIDENCE-VT-005",
                 "message": "Violation 1",
             },
             {
-                "rule_id": "DEP-VT-001",
+                "rule_id": "ARCH-RULE-001",
                 "evidence_id": "EVIDENCE-VT-006",
                 "message": "Violation 2",
             },
@@ -243,6 +243,6 @@ def test_compliance_deduplication():
         gaps=[], claims_analysis=[], claim_risks=[], compliance_result=compliance_result
     )
 
-    # Should deduplicate DEP-VT-001 to 1 risk item
+    # Should deduplicate ARCH-RULE-001 to 1 risk item
     assert len(res) == 1
-    assert "DEP-VT-001" in res[0]["description"]
+    assert "ARCH-RULE-001" in res[0]["description"]

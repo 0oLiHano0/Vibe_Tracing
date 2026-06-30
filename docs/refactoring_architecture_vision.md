@@ -88,7 +88,7 @@
 | 层 | 校验内容 |
 |----|---------|
 | 格式 | 暂存文件路径格式 |
-| 关系 | `check_ghost_code()` — staged 业务文件 LEFT JOIN claim_code_refs |
+| 关系 | `check_dangling_claims()` — claims LEFT JOIN tasks WHERE task_id IS NULL |
 
 ```sql
 SELECT sf.file_path

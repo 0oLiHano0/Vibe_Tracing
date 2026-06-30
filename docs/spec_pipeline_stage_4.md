@@ -168,6 +168,6 @@ optimizations:                       # PRAGMA 优化设置
 |----------|--------|------|
 | **阶段 5：灌入基础数据** | `infra/db/loaders.py` | 将 PRD 的需求/AC 写入 `requirements` / `acceptance_criteria` 表；将 Tasks 写入 `tasks` / `task_requirements` / `task_acs` / `task_modules` / `task_constraints` 表；将 Claims 写入 `claims` / `claim_code_refs` / `claim_test_refs` 表；将架构约束写入 `arch_modules` / `arch_constraints` 表 |
 | **阶段 6：构建证据** | `domain/evidence/builder.py` | 将工具执行结果（证据数据）通过 `EvidenceBuilder.apply()` 写入 `test_results` / `coverage_reports` 表 |
-| **阶段 7：运行分析** | `infra/db/queries.py` | 执行 11 种 SQL 查询（`check_requirement_coverage`、`check_ac_coverage`、`check_claim_evidence`、`check_ghost_code`、`check_dangling_claims`、`check_coverage_violations`、`check_invalid_task_*`、`check_isolated_tasks`、`check_architectural_orphans`），从 15 张表中读取数据，生成缺口（gaps）和风险 |
+| **阶段 7：运行分析** | `infra/db/queries.py` | 执行 11 种 SQL 查询（`check_requirement_coverage`、`check_ac_coverage`、`check_claim_evidence`、、`check_dangling_claims`、`check_coverage_violations`、`check_invalid_task_*`、`check_isolated_tasks`、`check_architectural_orphans`），从 15 张表中读取数据，生成缺口（gaps）和风险 |
 | **阶段 8：门禁判定 + 输出** | `infra/db/queries.py:get_full_chain()` | 从数据库提取需求→AC→任务→Claim→测试→覆盖率的全链路追踪数据，用于报告生成和 Dashboard 渲染 |
 | **infra/db/exports.py** | `infra/db/exports.py:persist_evidences()` | 将数据库中的测试结果和覆盖率数据导出为 JSON 文件写入硬盘（用于缓存供下次分析使用） |

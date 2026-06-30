@@ -17,62 +17,33 @@ from vibe_tracing.domain.compliance.checker import (
 
 @pytest.fixture
 def base_constraints_data():
-    """Returns a basic dict matching the schema of architecture_constraints.json."""
+    """Returns a generic constraints dict for testing module boundary logic."""
     return {
-        "schema_version": "0.1",
-        "project": {"project_id": "PROJECT-VT", "name": "Vibe Tracing", "stage": "mvp"},
         "module_boundaries": [
             {
-                "module_id": "MOD-VT-001",
-                "name": "agent_runtime_adapter",
-                "responsibility": "Adapter module",
-                "allowed_to_call": ["MOD-VT-002"],
-                "forbidden_to_call": ["MOD-VT-007"],
-                "owned_files": ["cli.py", "agent_runtime_adapter.py"],
+                "module_id": "MOD-A",
+                "name": "module_alpha",
+                "responsibility": "Alpha module — may call B, forbidden to call C",
+                "allowed_to_call": ["MOD-B"],
+                "forbidden_to_call": ["MOD-C"],
+                "owned_files": ["module_a.py"],
             },
             {
-                "module_id": "MOD-VT-002",
-                "name": "raw_input_loader",
-                "responsibility": "Raw loader",
-                "allowed_to_call": [],
-                "forbidden_to_call": ["MOD-VT-006"],
-                "owned_files": [
-                    "raw_input_loader.py",
-                    "prd_parser.py",
-                    "task_loader.py",
-                    "claim_loader.py",
-                ],
-            },
-            {
-                "module_id": "MOD-VT-003",
-                "name": "schema_validator",
-                "responsibility": "Validator",
+                "module_id": "MOD-B",
+                "name": "module_beta",
+                "responsibility": "Beta module — empty allowed_to_call means nothing is whitelisted",
                 "allowed_to_call": [],
                 "forbidden_to_call": [],
-                "owned_files": ["schema_validator.py"],
-            },
-        ],
-        "dependency_rules": [
-            {
-                "rule_id": "DEP-VT-001",
-                "title": "Core 不得依赖特定 Agent Runtime",
-                "severity": "must",
-                "description": "Core must not import specific runtimes",
+                "owned_files": ["module_b.py"],
             },
             {
-                "rule_id": "DEP-VT-002",
-                "title": "Dashboard 不得依赖外部前端资源",
-                "severity": "must",
-                "description": "No CDN",
+                "module_id": "MOD-C",
+                "name": "module_gamma",
+                "responsibility": "Gamma module — no restrictions",
+                "allowed_to_call": [],
+                "forbidden_to_call": [],
+                "owned_files": ["module_c.py"],
             },
-        ],
-        "storage_rules": [
-            {
-                "rule_id": "STORE-VT-001",
-                "title": "MVP 不使用数据库",
-                "severity": "must",
-                "description": "No databases",
-            }
         ],
     }
 
@@ -101,8 +72,8 @@ def temp_workspace(tmp_path, base_constraints_data):
     (docs_dir / "task_list.json").write_text("[]", encoding="utf-8")
     # Empty claims directory -- no CLAIM-*.json files needed
 
-    # Create source directory
-    src_dir = tmp_path / "src/vibe_tracing"
+    # Create source directory (abstract project, not VT-specific)
+    src_dir = tmp_path / "src/project_x"
     src_dir.mkdir(parents=True)
     (src_dir / "__init__.py").write_text("", encoding="utf-8")
 
@@ -123,114 +94,24 @@ def test_check_requires_constraints_data(tmp_path):
         checker.check(evidences=[])
 
 
-def test_clean_workspace(temp_workspace):
-    """covers: AC-VT-001-03, AC-VT-008-03"""
-    tmp_path, constraints_data = temp_workspace
-    # Create valid files in src
-    src_dir = tmp_path / "src/vibe_tracing"
-    (src_dir / "raw_input_loader.py").write_text("import json\n", encoding="utf-8")
-    (src_dir / "schema_validator.py").write_text(
-        "import jsonschema\n", encoding="utf-8"
-    )
-
-    checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    results = checker.check(evidences=[], constraints_data=constraints_data)
-
-    assert "architecture_compliance_status" in results
-    assert "architecture_violations" in results
-    assert "unclear_constraints" in results
-
-    violations = results["architecture_violations"]
-    assert len(violations) == 0, f"Expected no violations, got {violations}"
-
-    # Verify rules are compliant
-    statuses = {
-        s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
-    }
-    assert statuses["STORE-VT-001"] == "compliant"
-    assert statuses["DEP-VT-001"] == "compliant"
-    # DEP-VT-002 is unclear because dashboard.html does not exist
-    assert statuses["DEP-VT-002"] == "unclear"
-
-
-def test_database_import_violation(temp_workspace):
-    """covers: AC-VT-001-03, AC-VT-008-03"""
-    tmp_path, constraints_data = temp_workspace
-    src_dir = tmp_path / "src/vibe_tracing"
-    (src_dir / "raw_input_loader.py").write_text(
-        "import sqlalchemy\n", encoding="utf-8"
-    )
-
-    checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    evidences = [
-        {
-            "evidence_id": "EVIDENCE-VT-001",
-            "source_path": "src/vibe_tracing/raw_input_loader.py",
-        }
-    ]
-    results = checker.check(evidences=evidences, constraints_data=constraints_data)
-
-    violations = results["architecture_violations"]
-    assert len(violations) == 2
-    rule_ids = {v["rule_id"] for v in violations}
-    assert "STORE-VT-001" in rule_ids
-    assert "GATE-VT-006" in rule_ids
-
-    db_violation = next(v for v in violations if v["rule_id"] == "STORE-VT-001")
-    assert db_violation["evidence_id"] == "EVIDENCE-VT-001"
-    assert "sqlalchemy" in db_violation["message"]
-
-    statuses = {
-        s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
-    }
-    assert statuses["STORE-VT-001"] == "violated"
-
-
-def test_agent_runtime_import_violation(temp_workspace):
-    """covers: AC-VT-001-03, AC-VT-008-03"""
-    tmp_path, constraints_data = temp_workspace
-    src_dir = tmp_path / "src/vibe_tracing"
-    (src_dir / "raw_input_loader.py").write_text(
-        "import claude_code\n", encoding="utf-8"
-    )
-
-    checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    results = checker.check(evidences=[], constraints_data=constraints_data)
-
-    violations = results["architecture_violations"]
-    assert len(violations) == 2
-    rule_ids = {v["rule_id"] for v in violations}
-    assert "DEP-VT-001" in rule_ids
-    assert "GATE-VT-006" in rule_ids
-
-    dep_violation = next(v for v in violations if v["rule_id"] == "DEP-VT-001")
-    assert dep_violation["evidence_id"] == "EVIDENCE-VT-999"  # Default fallback
-    assert "claude_code" in dep_violation["message"]
-
-    statuses = {
-        s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
-    }
-    assert statuses["DEP-VT-001"] == "violated"
-
-
 def test_forbidden_module_import_violation(temp_workspace):
-    """covers: AC-VT-001-03, AC-VT-008-03"""
+    """MOD-A imports module_c (owned by MOD-C, which is in MOD-A's forbidden_to_call
+    and not in its allowed_to_call). Should produce two violations."""
     tmp_path, constraints_data = temp_workspace
-    src_dir = tmp_path / "src/vibe_tracing"
-    (src_dir / "raw_input_loader.py").write_text(
-        "import vibe_tracing.analyzers.requirement_task_analyzer\n", encoding="utf-8"
+    src_dir = tmp_path / "src/project_x"
+    (src_dir / "module_a.py").write_text(
+        "import project_x.sub.module_c\n", encoding="utf-8"
     )
 
     checker = ArchitectureComplianceChecker(project_root=tmp_path)
     results = checker.check(evidences=[], constraints_data=constraints_data)
 
     violations = results["architecture_violations"]
-    assert len(violations) == 3
+    assert len(violations) == 2
     rule_ids = {v["rule_id"] for v in violations}
-    assert "MOD-VT-002" in rule_ids
-    assert "GATE-VT-006" in rule_ids
+    assert "MOD-A" in rule_ids
 
-    mod_violations = [v for v in violations if v["rule_id"] == "MOD-VT-002"]
+    mod_violations = [v for v in violations if v["rule_id"] == "MOD-A"]
     assert len(mod_violations) == 2
     messages = {v["message"] for v in mod_violations}
     assert any("禁止导入" in m or "Forbidden import" in m for m in messages)
@@ -239,147 +120,34 @@ def test_forbidden_module_import_violation(temp_workspace):
     statuses = {
         s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
     }
-    assert statuses["MOD-VT-002"] == "violated"
+    assert statuses["MOD-A"] == "violated"
 
 
 def test_allowed_module_import_violation(temp_workspace):
-    """covers: AC-VT-001-03, AC-VT-008-03"""
+    """MOD-B has allowed_to_call=[] (empty whitelist). Importing module_c
+    (owned by MOD-C) triggers a whitelist violation."""
     tmp_path, constraints_data = temp_workspace
-    src_dir = tmp_path / "src/vibe_tracing"
-    # schema_validator (MOD-VT-003) is allowed to call []
-    # If it imports raw_input_loader, it violates the whitelist
-    (src_dir / "schema_validator.py").write_text(
-        "import vibe_tracing.domain.raw_input_loader\n", encoding="utf-8"
+    src_dir = tmp_path / "src/project_x"
+    (src_dir / "module_b.py").write_text(
+        "import project_x.sub.module_c\n", encoding="utf-8"
     )
 
     checker = ArchitectureComplianceChecker(project_root=tmp_path)
     results = checker.check(evidences=[], constraints_data=constraints_data)
 
     violations = results["architecture_violations"]
-    assert len(violations) == 2
+    assert len(violations) == 1
     rule_ids = {v["rule_id"] for v in violations}
-    assert "MOD-VT-003" in rule_ids
-    assert "GATE-VT-006" in rule_ids
+    assert "MOD-B" in rule_ids
 
-    mod_violation = next(v for v in violations if v["rule_id"] == "MOD-VT-003")
+    mod_violation = next(v for v in violations if v["rule_id"] == "MOD-B")
     assert "白名单" in mod_violation["message"] or "not in allowed" in mod_violation["message"]
 
     statuses = {
         s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
     }
-    assert statuses["MOD-VT-003"] == "violated"
+    assert statuses["MOD-B"] == "violated"
 
-
-def test_dashboard_compliance_and_violation(temp_workspace):
-    """covers: AC-VT-001-03, AC-VT-008-03"""
-    tmp_path, constraints_data = temp_workspace
-    # 1. Compliant dashboard
-    dash_file = tmp_path / "dashboard.html"
-    dash_file.write_text(
-        "<html><head><script src='local.js'></script></head></html>", encoding="utf-8"
-    )
-
-    checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    results = checker.check(evidences=[], constraints_data=constraints_data)
-
-    statuses = {
-        s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
-    }
-    assert statuses["DEP-VT-002"] == "compliant"
-    assert len(results["architecture_violations"]) == 0
-
-    # 2. Violated dashboard with CDN url
-    dash_file.write_text(
-        "<html><head><script src='https://cdn.jsdelivr.net/npm/vue'></script></head></html>",
-        encoding="utf-8",
-    )
-
-    results2 = checker.check(evidences=[], constraints_data=constraints_data)
-    statuses2 = {
-        s["rule_id"]: s["status"] for s in results2["architecture_compliance_status"]
-    }
-    assert statuses2["DEP-VT-002"] == "violated"
-    assert len(results2["architecture_violations"]) == 2
-    rule_ids = {v["rule_id"] for v in results2["architecture_violations"]}
-    assert "DEP-VT-002" in rule_ids
-    assert "GATE-VT-006" in rule_ids
-
-    dash_violation = next(
-        v for v in results2["architecture_violations"] if v["rule_id"] == "DEP-VT-002"
-    )
-    assert "外部" in dash_violation["message"] or "external" in dash_violation["message"].lower()
-
-
-def test_missing_required_files(temp_workspace):
-    """covers: AC-VT-001-03, AC-VT-008-03"""
-    tmp_path, constraints_data = temp_workspace
-    # Delete a required file
-    (tmp_path / "docs/prd.md").unlink()
-
-    checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    results = checker.check(evidences=[], constraints_data=constraints_data)
-
-    statuses = {
-        s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
-    }
-    assert statuses["GATE-VT-001"] == "violated"
-    assert len(results["architecture_violations"]) == 2
-    rule_ids = {v["rule_id"] for v in results["architecture_violations"]}
-    assert "GATE-VT-001" in rule_ids
-    assert "GATE-VT-006" in rule_ids
-
-    gate_violation = next(
-        v for v in results["architecture_violations"] if v["rule_id"] == "GATE-VT-001"
-    )
-    assert "缺失" in gate_violation["message"] or "missing" in gate_violation["message"].lower()
-
-
-def test_gate_compliance_logic(temp_workspace):
-    """covers: AC-VT-001-03, AC-VT-008-03"""
-    tmp_path, constraints_data = temp_workspace
-    # In a clean workspace, the other MUST rules (unverifiable) will be returned as unclear
-    # This should trigger GATE-VT-007 as unclear, and GATE-VT-006 as compliant (no MUST violations)
-    checker = ArchitectureComplianceChecker(project_root=tmp_path)
-    results = checker.check(evidences=[], constraints_data=constraints_data)
-
-    statuses = {
-        s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
-    }
-    assert statuses["GATE-VT-006"] == "compliant"
-    assert statuses["GATE-VT-007"] == "unclear"
-
-    # If we introduce a violation (e.g. database import)
-    (tmp_path / "src/vibe_tracing/raw_input_loader.py").write_text(
-        "import sqlite3\n", encoding="utf-8"
-    )
-
-    results2 = checker.check(evidences=[], constraints_data=constraints_data)
-    statuses2 = {
-        s["rule_id"]: s["status"] for s in results2["architecture_compliance_status"]
-    }
-    assert statuses2["GATE-VT-006"] == "violated"
-
-
-def test_check_uses_constraints_data(temp_workspace, base_constraints_data):
-    """covers: REFACTOR-007 -- check() uses the provided constraints_data directly."""
-    tmp_path, _ = temp_workspace
-
-    src_dir = tmp_path / "src/vibe_tracing"
-    (src_dir / "raw_input_loader.py").write_text("import json\n", encoding="utf-8")
-
-    checker = ArchitectureComplianceChecker(project_root=tmp_path)
-
-    results = checker.check(evidences=[], constraints_data=base_constraints_data)
-
-    assert "architecture_compliance_status" in results
-    violations = results["architecture_violations"]
-    assert len(violations) == 0, f"Expected no violations, got {violations}"
-
-    statuses = {
-        s["rule_id"]: s["status"] for s in results["architecture_compliance_status"]
-    }
-    assert statuses["STORE-VT-001"] == "compliant"
-    assert statuses["DEP-VT-001"] == "compliant"
 
 
 # ---------------------------------------------------------------------------
@@ -393,7 +161,7 @@ def test_accepted_rules_collected(temp_workspace):
     now = datetime.now(timezone.utc).isoformat()
     constraints_data["architecture_principles"] = [
         {
-            "principle_id": "PRINCIPLE-VT-TEST-01",
+            "principle_id": "PRINCIPLE-TEST-01",
             "title": "Accepted manual rule",
             "severity": "must",
             "description": "A rule that has been manually accepted.",
@@ -406,7 +174,7 @@ def test_accepted_rules_collected(temp_workspace):
         "decisions": [
             {
                 "category": "accepted_rule",
-                "targetId": "PRINCIPLE-VT-TEST-01",
+                "targetId": "PRINCIPLE-TEST-01",
                 "action": "accept",
                 "decidedBy": "agent-001",
                 "timestamp": now,
@@ -420,17 +188,17 @@ def test_accepted_rules_collected(temp_workspace):
     # Rule should be in accepted_rules
     assert "accepted_rules" in results
     accepted_ids = [r["rule_id"] for r in results["accepted_rules"]]
-    assert "PRINCIPLE-VT-TEST-01" in accepted_ids
+    assert "PRINCIPLE-TEST-01" in accepted_ids
 
     # Rule should NOT appear in status_list or unclear_list
     status_ids = [s["rule_id"] for s in results["architecture_compliance_status"]]
-    assert "PRINCIPLE-VT-TEST-01" not in status_ids
+    assert "PRINCIPLE-TEST-01" not in status_ids
     unclear_ids = [u["rule_id"] for u in results["unclear_constraints"]]
-    assert "PRINCIPLE-VT-TEST-01" not in unclear_ids
+    assert "PRINCIPLE-TEST-01" not in unclear_ids
 
     # Verify accepted_rules entry fields
     entry = next(
-        r for r in results["accepted_rules"] if r["rule_id"] == "PRINCIPLE-VT-TEST-01"
+        r for r in results["accepted_rules"] if r["rule_id"] == "PRINCIPLE-TEST-01"
     )
     assert entry["accepted_by"] == "agent-001"
     assert entry["verification_method"] == "manual"
@@ -443,7 +211,7 @@ def test_stale_acceptance_detected(temp_workspace):
     old_date = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
     constraints_data["architecture_principles"] = [
         {
-            "principle_id": "PRINCIPLE-VT-STALE-01",
+            "principle_id": "PRINCIPLE-STALE-01",
             "title": "Stale accepted rule",
             "severity": "must",
             "description": "An old accepted rule.",
@@ -456,7 +224,7 @@ def test_stale_acceptance_detected(temp_workspace):
         "decisions": [
             {
                 "category": "accepted_rule",
-                "targetId": "PRINCIPLE-VT-STALE-01",
+                "targetId": "PRINCIPLE-STALE-01",
                 "action": "accept",
                 "decidedBy": "agent-001",
                 "timestamp": old_date,
@@ -468,7 +236,7 @@ def test_stale_acceptance_detected(temp_workspace):
     results = checker.check(evidences=[], constraints_data=constraints_data, human_decisions=human_decisions)
 
     assert len(results["accepted_rules"]) == 1
-    assert results["accepted_rules"][0]["rule_id"] == "PRINCIPLE-VT-STALE-01"
+    assert results["accepted_rules"][0]["rule_id"] == "PRINCIPLE-STALE-01"
     assert results["accepted_rules"][0]["stale_acceptance"] is True
 
 
@@ -477,7 +245,7 @@ def test_unaccepted_manual_rules_not_in_unclear(temp_workspace):
     tmp_path, constraints_data = temp_workspace
     constraints_data["architecture_principles"] = [
         {
-            "principle_id": "PRINCIPLE-VT-UNACC-01",
+            "principle_id": "PRINCIPLE-UNACC-01",
             "title": "Unaccepted manual rule",
             "severity": "must",
             "description": "A manual rule that has not been accepted.",
@@ -490,22 +258,22 @@ def test_unaccepted_manual_rules_not_in_unclear(temp_workspace):
 
     # Should appear in status_list as unclear
     status_ids = [s["rule_id"] for s in results["architecture_compliance_status"]]
-    assert "PRINCIPLE-VT-UNACC-01" in status_ids
+    assert "PRINCIPLE-UNACC-01" in status_ids
     entry = next(
         s
         for s in results["architecture_compliance_status"]
-        if s["rule_id"] == "PRINCIPLE-VT-UNACC-01"
+        if s["rule_id"] == "PRINCIPLE-UNACC-01"
     )
     assert entry["status"] == "unclear"
     assert entry["verification_method"] == "manual"
 
-    # Should appear in unclear_constraints (to block GATE-VT-007)
+    # Should appear in unclear_constraints (consumed by gate engine Rule 2.1)
     unclear_ids = [u["rule_id"] for u in results["unclear_constraints"]]
-    assert "PRINCIPLE-VT-UNACC-01" in unclear_ids
+    assert "PRINCIPLE-UNACC-01" in unclear_ids
 
     # Should NOT appear in accepted_rules
     accepted_ids = [r["rule_id"] for r in results["accepted_rules"]]
-    assert "PRINCIPLE-VT-UNACC-01" not in accepted_ids
+    assert "PRINCIPLE-UNACC-01" not in accepted_ids
 
 
 # ---------------------------------------------------------------------------

@@ -193,7 +193,7 @@ values:
 2. 将每个文件路径写入 `staged_files` 表。
 3. 调用 `conn.commit()` 提交变更。
 
-> 暂存区文件表是阶段 7 `check_ghost_code()` 查询的数据来源：通过 `staged_files LEFT JOIN claim_code_refs` 找出未被任何 Claim 覆盖的文件。
+> 暂存区文件表是阶段 7 `` 查询的数据来源：通过 `staged_files LEFT JOIN claim_code_refs` 找出未被任何 Claim 覆盖的文件。
 
 ---
 
@@ -296,7 +296,7 @@ staged_files:                          # 由 load_staged_files 写入
 | **阶段 7：需求覆盖分析** | `infra/db/queries.py:check_requirement_coverage()` | 读取 `requirements`、`task_requirements`、`tasks`、`claims`、`claim_test_refs`、`test_results` 进行 6 表 JOIN 分析 |
 | **阶段 7：AC 覆盖分析** | `infra/db/queries.py:check_ac_coverage()` | 读取 `acceptance_criteria`、`requirements`、`task_acs`、`tasks`、`claims`、`claim_test_refs`、`test_results` 进行 7 表 JOIN 分析 |
 | **阶段 7：Claim 证据分析** | `infra/db/queries.py:check_claim_evidence()` | 读取 `claims`、`tasks`、`claim_test_refs`、`test_results` 进行 4 表 JOIN 分析 |
-| **阶段 7：幽灵代码检查** | `infra/db/queries.py:check_ghost_code()` | 读取 `staged_files`、`claim_code_refs`、`claims`、`tasks` 进行 4 表 LEFT JOIN 分析 |
+| **阶段 7：幽灵代码检查** | `infra/db/queries.py:` | 读取 `staged_files`、`claim_code_refs`、`claims`、`tasks` 进行 4 表 LEFT JOIN 分析 |
 | **阶段 7：悬空 Claim 检查** | `infra/db/queries.py:check_dangling_claims()` | 读取 `claims`、`tasks` 进行 LEFT JOIN 分析 |
 | **阶段 7：孤立任务检查** | `infra/db/queries.py:check_isolated_tasks()` | 读取 `tasks`、`task_requirements`、`task_acs` 进行 LEFT JOIN 分析 |
 | **阶段 7：架构孤儿检查** | `infra/db/queries.py:check_architectural_orphans()` | 读取 `tasks`、`task_modules` 进行 LEFT JOIN 分析 |

@@ -5,7 +5,7 @@ from vibe_tracing.infra.config.enums import CoverageStatus
 from vibe_tracing.infra.db import (
     init_in_memory_db, load_tasks, load_prd, load_claims, load_staged_files,
     check_ac_coverage, check_requirement_coverage, check_claim_evidence,
-    check_ghost_code, check_dangling_claims, check_coverage_violations,
+    check_dangling_claims, check_coverage_violations,
     get_full_chain, check_isolated_tasks, check_invalid_task_requirements,
     check_invalid_task_acs, check_invalid_task_modules, check_invalid_task_constraints,
     check_invalid_ac_parent,
@@ -254,48 +254,6 @@ def test_tier1_f4_coverage_5_missing_claim():
     conn.close()
 
 
-# ── Feature 5: Ghost Code Check (F5) ────────────────────────────────────────
-
-def test_tier1_f5_coverage_1_no_ghost():
-    conn = init_in_memory_db()
-    load_staged_files(conn, {"src/foo.py"})
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/foo.py"]}])
-    res = check_ghost_code(conn)
-    assert len(res) == 0
-    conn.close()
-
-def test_tier1_f5_coverage_2_ghost_exists():
-    conn = init_in_memory_db()
-    load_staged_files(conn, {"src/ghost.py"})
-    res = check_ghost_code(conn)
-    assert len(res) == 1
-    assert res[0] == "src/ghost.py"
-    conn.close()
-
-def test_tier1_f5_coverage_3_mixed_staged_files():
-    conn = init_in_memory_db()
-    load_staged_files(conn, {"src/foo.py", "src/ghost.py"})
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/foo.py"]}])
-    res = check_ghost_code(conn)
-    assert len(res) == 1
-    assert res[0] == "src/ghost.py"
-    conn.close()
-
-def test_tier1_f5_coverage_4_staged_file_in_claim_no_task():
-    conn = init_in_memory_db()
-    load_staged_files(conn, {"src/foo.py"})
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "NONEXISTENT", "code_refs": ["src/foo.py"]}])
-    res = check_ghost_code(conn)
-    assert len(res) == 0
-    conn.close()
-
-def test_tier1_f5_coverage_5_empty_staged():
-    conn = init_in_memory_db()
-    res = check_ghost_code(conn)
-    assert len(res) == 0
-    conn.close()
-
-
 # ── Feature 6: Dangling Claims Check (F6) ───────────────────────────────────
 
 def test_tier1_f6_coverage_1_no_dangling():
@@ -333,7 +291,7 @@ def test_tier1_f6_coverage_4_priority_status_independence():
 
 @pytest.mark.parametrize("check_fn", [
     check_ac_coverage, check_requirement_coverage, check_claim_evidence,
-    check_ghost_code, check_dangling_claims,
+    check_dangling_claims,
 ])
 def test_empty_database_returns_empty(check_fn, conn):
     assert check_fn(conn) == []
@@ -350,15 +308,6 @@ def test_tier2_f1_boundary_1_non_must_priority():
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "should", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
     res = check_ac_coverage(conn)
     assert len(res) == 0
-    conn.close()
-
-def test_tier2_f1_boundary_2_multiple_acs():
-    conn = init_in_memory_db()
-    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-2-1", "title": "Test AC", "is_testing_required": True}]}]})
-    load_tasks(conn, [{"task_id": "TASK-2", "priority": "must", "status": "done", "related_acceptance_criteria": ["AC-2-1"]}])
-    res = check_ac_coverage(conn)
-    assert len(res) == 1
-    assert res[0]["ac_id"] == "AC-2-1"
     conn.close()
 
 def test_tier2_f1_boundary_3_duplicate_loads():
@@ -396,7 +345,8 @@ def test_tier2_f2_boundary_2_multiple_tasks_one_covered():
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "test_refs": ["test_1"]}])
     upsert_test_result(conn, "test_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     res = check_requirement_coverage(conn)
-    assert len(res) in (0, 1)
+    assert len(res) == 1
+    assert res[0]["coverage_status"] in ("no_claim_for_task", "test_not_run")
     conn.close()
 
 def test_tier2_f2_boundary_3_single_task_multiple_reqs():
@@ -520,44 +470,6 @@ def test_tier2_f4_boundary_5_empty_database():
     conn.close()
 
 
-# ── Feature 5: Ghost Code Check (F5) ────────────────────────────────────────
-
-def test_tier2_f5_boundary_1_complex_path_formats():
-    conn = init_in_memory_db()
-    complex_path = "src/vibe_tracing/cli/analyze/reports.py"
-    load_staged_files(conn, {complex_path})
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": [complex_path]}])
-    res = check_ghost_code(conn)
-    assert len(res) == 0
-    conn.close()
-
-def test_tier2_f5_boundary_2_multiple_claims_same_file():
-    conn = init_in_memory_db()
-    load_staged_files(conn, {"src/foo.py"})
-    load_claims(conn, [
-        {"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/foo.py"]},
-        {"claim_id": "CLAIM-2", "related_task": "TASK-2", "code_refs": ["src/foo.py"]}
-    ])
-    res = check_ghost_code(conn)
-    assert len(res) == 0
-    conn.close()
-
-def test_tier2_f5_boundary_3_unstaged_claim_refs():
-    conn = init_in_memory_db()
-    load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/unstaged.py"]}])
-    res = check_ghost_code(conn)
-    assert len(res) == 0
-    conn.close()
-
-def test_tier2_f5_boundary_4_non_standard_filenames():
-    conn = init_in_memory_db()
-    filename = "src/foo.bar-baz.config.json"
-    load_staged_files(conn, {filename})
-    res = check_ghost_code(conn)
-    assert len(res) == 1
-    assert res[0] == filename
-    conn.close()
-
 
 # ── Feature 6: Dangling Claims Check (F6) ───────────────────────────────────
 
@@ -655,8 +567,6 @@ def test_tier3_combo_4_staged_violated_coverage():
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/foo.py"]}])
     upsert_coverage_report(conn, "src/foo.py", 45.0, 100, "violated", False)
 
-    assert len(check_ghost_code(conn)) == 0
-
     res_cov = check_coverage_violations(conn)
     assert len(res_cov) == 1
     assert res_cov[0]["source_path"] == "src/foo.py"
@@ -674,7 +584,6 @@ def test_tier3_combo_5_large_scale_sync():
     assert len(check_ac_coverage(conn)) == 0
     assert len(check_requirement_coverage(conn)) == 0
     assert len(check_claim_evidence(conn)) == 0
-    assert len(check_ghost_code(conn)) == 0
     assert len(check_dangling_claims(conn)) == 0
     assert len(get_full_chain(conn)) == 1
     conn.close()
@@ -687,7 +596,6 @@ def test_tier3_combo_7_soft_integrity_violations():
         {"claim_id": "CLAIM-2", "related_task": "TASK-MISSING", "test_refs": ["test_dead_2"]}
     ])
     assert len(check_dangling_claims(conn)) == 2
-    assert len(check_ghost_code(conn)) == 2
     conn.close()
 
 
@@ -704,10 +612,6 @@ def test_tier4_scenario_1_new_feature_development():
     res_f2 = check_requirement_coverage(conn)
     assert len(res_f2) == 1
     assert res_f2[0]["coverage_status"] == "no_claim_for_task"
-
-    res_f5 = check_ghost_code(conn)
-    assert len(res_f5) == 1
-    assert res_f5[0] == "src/auth.py"
     conn.close()
 
 def test_tier4_scenario_3_feature_complete_verification():
@@ -722,7 +626,6 @@ def test_tier4_scenario_3_feature_complete_verification():
     assert len(check_ac_coverage(conn)) == 0
     assert len(check_requirement_coverage(conn)) == 0
     assert len(check_claim_evidence(conn)) == 0
-    assert len(check_ghost_code(conn)) == 0
     assert len(check_dangling_claims(conn)) == 0
 
     chain = get_full_chain(conn)

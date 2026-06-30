@@ -98,7 +98,7 @@ if source_path and not (cache_path.parent.parent / source_path).is_file():
 - **文件**：`tests/test_db_import.py`
 - **问题**：架构残留。
   - 类名/注释使用 "Layer 1 Format Validation" / "Layer 2 Relation Validation"——代码库中已不存在此组织方式
-  - 仅 3 个测试（`load_tasks`、`check_dangling_claims`、`check_ghost_code`），均为非阶段 6 函数，且逻辑已被 `test_db_query_functions.py` 覆盖
+  - 仅 2 个测试（`load_tasks`、`check_dangling_claims`），均为非阶段 6 函数，且逻辑已被 `test_db_query_functions.py` 覆盖
   - 导入了 `upsert_test_result` 但未使用
 - **变更**：直接删除
 

@@ -16,18 +16,6 @@ def check_coverage_violations(conn: sqlite3.Connection) -> list:
     return [{"source_path": r[0], "percent_covered": r[1]} for r in rows]
 
 
-def check_ghost_code(conn: sqlite3.Connection) -> list:
-    """检查幽灵代码：返回暂存区中未被任何 Claim 关联的文件。"""
-    rows = conn.execute("""
-        SELECT sf.file_path FROM staged_files sf
-        LEFT JOIN claim_code_refs ccr ON sf.file_path = ccr.code_path
-        LEFT JOIN claims c ON ccr.claim_id = c.claim_id
-        LEFT JOIN tasks t ON c.related_task = t.task_id
-        WHERE ccr.code_path IS NULL
-    """).fetchall()
-    return [r[0] for r in rows]
-
-
 def check_dangling_claims(conn: sqlite3.Connection) -> list:
     """检查悬空声明：返回指向不存在 Task 的 Claim。"""
     rows = conn.execute("""

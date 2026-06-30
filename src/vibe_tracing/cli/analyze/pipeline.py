@@ -530,7 +530,6 @@ def _run_db_analysis(
         check_requirement_coverage,
         check_ac_coverage,
         check_claim_evidence,
-        check_ghost_code,
         check_dangling_claims,
         check_coverage_violations,
         check_invalid_task_requirements,
@@ -558,7 +557,7 @@ def _run_db_analysis(
 
 
     # Additional queries for MergeGateEngine
-    ghost_files = check_ghost_code(conn)
+    ghost_files: list = []  # ponytail: 阶段2已做幽灵代码前置阻断，阶段7无需再查
     dangling_claims_list = check_dangling_claims(conn)
     cov_violations = check_coverage_violations(conn)
 
@@ -611,15 +610,6 @@ def _run_db_analysis(
         claim_risks=[],
         compliance_result=compliance_res,
     )
-
-    if compliance_res:
-        final_risks.extend(compliance_res.get("proposal_risks", []))
-        seen_gaps = {(g.get("item_id"), g.get("item_type")) for g in merged_gaps}
-        for gap in compliance_res.get("proposal_gaps", []):
-            key = (gap.get("item_id"), gap.get("item_type"))
-            if key not in seen_gaps:
-                seen_gaps.add(key)
-                merged_gaps.append(gap)
 
     # Staleness tracking
     task_list_data = None

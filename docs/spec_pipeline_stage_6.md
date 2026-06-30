@@ -173,14 +173,14 @@ details:                                # 工具特定详情
 
 ### 步骤 5：构建证据元数据
 
-调用模块：`infra/db/queries.py:get_full_chain()`
+调用模块：`domain/evidence/builder.py:EvidenceBuilder.build_evidence_meta()`
 
-从内存 SQLite 数据库获取全链路追踪视图（requirements → ACs → tasks → claims → test_results + coverage_reports 的多表 LEFT JOIN），构造 `evidence_meta` 字典：
+`build_evidence_meta(conn, config_prefix)` 封装了证据元数据的全部构造逻辑：生成 `run_id`（UUID）、拼接 `project_id`（config_prefix）、记录 `scan_time`（北京时区 ISO-8601 时间戳），以及调用 `infra/db/queries.py:get_full_chain()` 获取全链路追踪数据。pipeline 仅做单行委托调用，不包含任何字段构造逻辑。
 
 ```yaml
-run_id: "RUN-{uuid}"                    # 本次运行的唯一标识
+run_id: "RUN-{uuid}"                    # 本次运行的唯一标识（uuid.uuid4()）
 project_id: "PROJECT-{config_prefix}"   # 项目标识
-scan_time: ""                           # 扫描时间（当前为空字符串，由报告层填充）
+scan_time: "2026-06-30T20:15:30+08:00"  # 扫描时间（datetime.now(BEIJING).isoformat()，北京时区 ISO-8601）
 full_chain: [...]                       # 全链路追踪数据（由 get_full_chain() 返回）
 ```
 
@@ -233,12 +233,12 @@ stats:                                  # 合并统计
 
 **输出类型**：`Dict[str, Any]`
 **输出位置**：内存（通过 pipeline 局部变量传递到阶段 8）
-**包/模块**：pipeline 内联构建（`cli/analyze/pipeline.py`）
+**包/模块**：`domain/evidence/builder.py:EvidenceBuilder.build_evidence_meta()`
 
 ```yaml
-run_id: "RUN-a1b2c3d4"                  # 本次运行的唯一标识
-project_id: "PROJECT-VT"                # 项目标识
-scan_time: ""                           # 扫描时间（由报告层填充）
+run_id: "RUN-a1b2c3d4"                  # 本次运行的唯一标识（uuid.uuid4()）
+project_id: "PROJECT-VT"                # 项目标识（config_prefix 拼接）
+scan_time: "2026-06-30T20:15:30+08:00"  # 扫描时间（datetime.now(BEIJING).isoformat()，北京时区 ISO-8601）
 full_chain:                             # 全链路追踪数据（requirements → tests 的一条或多条 JOIN 行）
   - req_id: "REQ-VT-001"                # 需求 ID
     req_title: "全链路需求追踪"          # 需求标题

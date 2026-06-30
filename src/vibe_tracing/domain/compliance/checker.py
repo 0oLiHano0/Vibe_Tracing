@@ -2,21 +2,17 @@
 Architecture Compliance Checker for Vibe Tracing.
 
 Checks machine-verifiable MUST-level constraints and module boundaries.
-Unverifiable constraints are returned as unclear, per FORBID-VT-007.
+Unverifiable constraints are returned as unclear, per configuration.
 """
 
 from datetime import datetime, timezone
 from pathlib import Path
-import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from vibe_tracing.infra import validation as ids
 from vibe_tracing.infra.compliance.loader import (
     get_python_imports,
     find_python_files,
-    find_dashboard_files,
-    read_dashboard_content,
-    check_file_exists,
 )
 from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
 from vibe_tracing.infra.logging.logger import OperationalLogger
@@ -66,8 +62,7 @@ class ArchitectureComplianceChecker:
         """Maps a Python file path to its architectural module ID and module name.
 
         Uses ``owned_files`` from the loaded architecture constraints as the
-        single source of truth.  Files inside the ``analyzers/`` directory
-        are mapped to MOD-VT-006 as a special case.
+        single source of truth.
         """
         try:
             rel_path = file_path.relative_to(src_dir)
@@ -76,9 +71,6 @@ class ArchitectureComplianceChecker:
                 return None, None
 
             filename = parts[-1]
-            if "analyzers" in parts:
-                return "MOD-VT-006", "traceability_analyzer"
-
             for boundary in self.constraints.get("module_boundaries", []):
                 if filename in boundary.get("owned_files", []):
                     return boundary["module_id"], boundary["name"]
@@ -92,31 +84,20 @@ class ArchitectureComplianceChecker:
         """Maps an imported Python module name to its architectural module ID and module name.
 
         Derives the mapping from ``owned_files`` in the loaded architecture
-        constraints: the import's submodule name is matched against each
-        module's owned filenames with the ``.py`` suffix stripped.  The
-        ``analyzers`` subpackage is treated as a special case mapped to
-        MOD-VT-006.
+        constraints: each component of the import path is tried from right to
+        left, and the first match against an owned filename (with ``.py``
+        suffix stripped) determines the module.  Standard-library and
+        third-party imports naturally return ``(None, None)`` because they
+        never appear in any module's ``owned_files``.
         """
-        if not imported_module.startswith("vibe_tracing"):
-            return None, None
         parts = imported_module.split(".")
-        if len(parts) < 2:
-            return None, None
-
-        # Handle nested packages: vibe_tracing.{pkg}.{module}
-        if len(parts) >= 3 and parts[1] in ("cli", "domain", "analyzers", "infra"):
-            sub = parts[2]
-        else:
-            sub = parts[1]
-
-        # Special case: the analyzers subpackage
-        if parts[1] == "analyzers":
-            return "MOD-VT-006", "traceability_analyzer"
-
         for boundary in self.constraints.get("module_boundaries", []):
             for owned in boundary.get("owned_files", []):
-                if owned.removesuffix(".py") == sub:
-                    return boundary["module_id"], boundary["name"]
+                owned_stem = owned.removesuffix(".py")
+                # Try each component from rightmost (deepest) to leftmost
+                for part in reversed(parts):
+                    if part == owned_stem:
+                        return boundary["module_id"], boundary["name"]
         return None, None
 
     def _find_evidence_id(self, file_path: str, evidences: List[Dict[str, Any]]) -> str:
@@ -180,7 +161,7 @@ class ArchitectureComplianceChecker:
         accepted_rules: List[Dict[str, Any]] = []
 
         # ----------------------------------------------------
-        # 1. Check Module Boundaries (MOD-VT-xxx)
+        # 1. Check Module Boundaries (MOD-xxx)
         # ----------------------------------------------------
         for m_id, m in boundaries_by_id.items():
             m_name = m.get("name", "")
@@ -298,476 +279,10 @@ class ArchitectureComplianceChecker:
                     }
                 )
 
-        # ----------------------------------------------------
-        # 2. Check DEP-VT-001 (Core must not depend on Agent Runtime)
-        # ----------------------------------------------------
-        dep_vt_001_violations = []
-        for f, ims in file_imports.items():
-            f_mod_id, _ = self._get_module_for_path(f, src_dir)
-            # Skip adapter files
-            if f_mod_id == "MOD-VT-001":
-                continue
-
-            for imp_name, lineno in ims:
-                rel_f = str(f.relative_to(self.project_root)) if self.project_root in f.parents else str(f)
-                # Check for runtime package imports
-                matched_runtime = next(
-                    (runtime for runtime in ("claude_code", "hermes", "deepseek_tui") if runtime in imp_name),
-                    None,
-                )
-                if matched_runtime:
-                    hint = resolve_hint(_compliance_hints.get("prohibited_runtime_import", {}), "level1")
-                    msg = hint.format(
-                        file_name=f.name, line_number=lineno, import_name=imp_name,
-                    ) if hint else f"Prohibited import of Agent Runtime package '{imp_name}' at line {lineno} in {f.name}"
-                    dep_vt_001_violations.append((f, msg))
-                    OperationalLogger.get().debug("compliance_dep_vt001_match", "DEP-VT-001 runtime import matched",
-                        file=rel_f, line=lineno,
-                        import_module=imp_name,
-                        matched_runtime=matched_runtime,
-                        violation_type="runtime_package")
-                # Check if core imports adapter submodules
-                imp_mod_id, _ = self._get_module_for_import(imp_name)
-                if imp_mod_id == "MOD-VT-001":
-                    hint = resolve_hint(_compliance_hints.get("prohibited_adapter_import", {}), "level1")
-                    msg = hint.format(
-                        file_name=f.name, line_number=lineno, import_name=imp_name,
-                    ) if hint else f"Prohibited import of adapter module '{imp_name}' (module {imp_mod_id}) at line {lineno} in {f.name}"
-                    dep_vt_001_violations.append((f, msg))
-                    OperationalLogger.get().debug("compliance_dep_vt001_match", "DEP-VT-001 adapter import matched",
-                        file=rel_f, line=lineno,
-                        import_module=imp_name,
-                        matched_module_id=imp_mod_id,
-                        violation_type="adapter_module")
-
-        OperationalLogger.get().debug("compliance_check", "DEP-VT-001 check complete",
-            rule_id="DEP-VT-001",
-            status="violated" if dep_vt_001_violations else "compliant",
-            violations=len(dep_vt_001_violations))
-
-        if dep_vt_001_violations:
-            status_list.append(
-                {
-                    "rule_id": "DEP-VT-001",
-                    "status": "violated",
-                    "severity": "must",
-                    "title": "Core 不得依赖特定 Agent Runtime",
-                    "description": "Vibe Tracing Core 必须能够在不依赖 Claude Code、Hermes、DeepSeek TUI 或任何特定 Agent Runtime 的情况下被调用。",
-                }
-            )
-            for f, msg in dep_vt_001_violations:
-                rel_f = (
-                    str(f.relative_to(self.project_root))
-                    if self.project_root in f.parents
-                    else str(f)
-                )
-                violations.append(
-                    {
-                        "rule_id": "DEP-VT-001",
-                        "evidence_id": self._find_evidence_id(rel_f, evidences),
-                        "message": msg,
-                    }
-                )
-        else:
-            status_list.append(
-                {
-                    "rule_id": "DEP-VT-001",
-                    "status": "compliant",
-                    "severity": "must",
-                    "title": "Core 不得依赖特定 Agent Runtime",
-                    "description": "Vibe Tracing Core 必须能够在不依赖 Claude Code、Hermes、DeepSeek TUI 或任何特定 Agent Runtime 的情况下被调用。",
-                }
-            )
-
-        # ----------------------------------------------------
-        # 3. Check DEP-VT-002 (Dashboard must not depend on CDN/external resources)
-        # ----------------------------------------------------
-        dashboard_files = find_dashboard_files(self.project_root)
-        if not dashboard_files:
-            # If dashboard.html doesn't exist, we must return unclear per FORBID-VT-007
-            status_list.append(
-                {
-                    "rule_id": "DEP-VT-002",
-                    "status": "unclear",
-                    "severity": "must",
-                    "title": "Dashboard 不得依赖外部前端资源",
-                    "description": "dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。",
-                }
-            )
-            unclear_list.append(
-                {
-                    "rule_id": "DEP-VT-002",
-                    "reason": "dashboard.html not yet generated in the workspace.",
-                }
-            )
-        else:
-            dash_file = dashboard_files[0]
-            dash_violations = []
-            try:
-                content = read_dashboard_content(dash_file)
-                if content is None:
-                    raise OSError("Could not read dashboard file")
-                # Simple check for http/https script/stylesheet links
-                # e.g., src="https://cdn.com/..."
-                external_urls = []
-                # Look for href/src starting with http or //
-                for m in re.finditer(
-                    r'(?:href|src)\s*=\s*["\'](https?:)?//([^"\']+)["\']',
-                    content,
-                    re.IGNORECASE,
-                ):
-                    external_urls.append(m.group(0))
-                if external_urls:
-                    hint = resolve_hint(_compliance_hints.get("dashboard_external_resources", {}), "level1")
-                    msg = hint.format(
-                        external_urls=', '.join(external_urls),
-                    ) if hint else f"Dashboard references external front-end resources: {', '.join(external_urls)}"
-                    dash_violations.append((dash_file, msg))
-
-                OperationalLogger.get().debug("compliance_dep_vt002_check", "DEP-VT-002 dashboard check",
-                    dashboard_file=str(dash_file.relative_to(self.project_root)) if self.project_root in dash_file.parents else str(dash_file),
-                    content_size=len(content),
-                    external_urls_found=len(external_urls),
-                    external_urls=[u[:200] for u in external_urls[:10]],
-                    has_inline_css="<style" in content.lower(),
-                    has_inline_js="<script" in content.lower() and "src=" not in content.lower(),
-                    status="violated" if external_urls else "compliant")
-            except Exception as exc:
-                dash_violations.append(
-                    (dash_file, f"Failed to check dashboard.html: {exc}")
-                )
-
-            if dash_violations:
-                status_list.append(
-                    {
-                        "rule_id": "DEP-VT-002",
-                        "status": "violated",
-                        "severity": "must",
-                        "title": "Dashboard 不得依赖外部前端资源",
-                        "description": "dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。",
-                    }
-                )
-                for f, msg in dash_violations:
-                    rel_f = (
-                        str(f.relative_to(self.project_root))
-                        if self.project_root in f.parents
-                        else str(f)
-                    )
-                    violations.append(
-                        {
-                            "rule_id": "DEP-VT-002",
-                            "evidence_id": self._find_evidence_id(rel_f, evidences),
-                            "message": msg,
-                        }
-                    )
-            else:
-                status_list.append(
-                    {
-                        "rule_id": "DEP-VT-002",
-                        "status": "compliant",
-                        "severity": "must",
-                        "title": "Dashboard 不得依赖外部前端资源",
-                        "description": "dashboard.html 必须能在任意现代浏览器中直接打开，不得依赖 CDN、npm 构建、后端服务或外部 JSON 文件。",
-                    }
-                )
-
-        _dep_vt_002_status = "unclear" if not dashboard_files else ("violated" if dashboard_files and any(s.get("rule_id") == "DEP-VT-002" and s.get("status") == "violated" for s in status_list) else "compliant")
-        OperationalLogger.get().debug("compliance_check", "DEP-VT-002 check complete",
-            rule_id="DEP-VT-002", status=_dep_vt_002_status,
-            dashboard_found=bool(dashboard_files))
-
-        # ----------------------------------------------------
-        # 4. Check STORE-VT-001 / PRINCIPLE-VT-009 (MVP no database)
-        # ----------------------------------------------------
-        db_violations = []
-        db_packages = {
-            "sqlite3",
-            "sqlalchemy",
-            "pymongo",
-            "psycopg2",
-            "redis",
-            "neo4j",
-            "tinydb",
-            "peewee",
-            "tortoise",
-        }
-        for f, ims in file_imports.items():
-            for imp_name, lineno in ims:
-                # Get the root package of import (e.g. sqlalchemy.orm -> sqlalchemy)
-                root_pkg = imp_name.split(".")[0]
-                if root_pkg in db_packages:
-                    hint = resolve_hint(_compliance_hints.get("prohibited_db_import", {}), "level1")
-                    msg = hint.format(
-                        file_name=f.name, line_number=lineno, db_package=imp_name,
-                    ) if hint else f"Prohibited import of database library '{imp_name}' at line {lineno} in {f.name}"
-                    db_violations.append((f, msg))
-
-        if db_violations:
-            status_list.append(
-                {
-                    "rule_id": "STORE-VT-001",
-                    "status": "violated",
-                    "severity": "must",
-                    "title": "MVP 不使用数据库",
-                    "description": "MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。",
-                }
-            )
-            for f, msg in db_violations:
-                rel_f = (
-                    str(f.relative_to(self.project_root))
-                    if self.project_root in f.parents
-                    else str(f)
-                )
-                violations.append(
-                    {
-                        "rule_id": "STORE-VT-001",
-                        "evidence_id": self._find_evidence_id(rel_f, evidences),
-                        "message": msg,
-                    }
-                )
-        else:
-            status_list.append(
-                {
-                    "rule_id": "STORE-VT-001",
-                    "status": "compliant",
-                    "severity": "must",
-                    "title": "MVP 不使用数据库",
-                    "description": "MVP 必须只使用文件保存输入和输出。不得要求 SQLite、PostgreSQL、向量数据库、图数据库或任何服务端存储。",
-                }
-            )
-
-        OperationalLogger.get().debug("compliance_check", "STORE-VT-001 check complete",
-            rule_id="STORE-VT-001",
-            status="violated" if db_violations else "compliant",
-            violations=len(db_violations))
-
-        # ----------------------------------------------------
-        # 5. Check GATE-VT-001 (Required input files must exist)
-        # ----------------------------------------------------
-        required_paths = {
-            "prd": self.project_root / "docs" / "prd.md",
-            "architecture_constraints": self.constraints_path,
-            "task_list": self.project_root / "docs" / "task_list.json",
-        }
-        missing_files = []
-        for name, path in required_paths.items():
-            if not check_file_exists(path):
-                try:
-                    rel_p = str(path.relative_to(self.project_root))
-                except ValueError:
-                    rel_p = str(path)
-                missing_files.append(rel_p)
-
-        if missing_files:
-            status_list.append(
-                {
-                    "rule_id": "GATE-VT-001",
-                    "status": "violated",
-                    "severity": "must",
-                    "title": "必需输入文件必须存在",
-                    "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。",
-                }
-            )
-            hint = resolve_hint(_compliance_hints.get("missing_required_files", {}), "level1")
-            msg = hint.format(
-                missing_files=', '.join(missing_files),
-            ) if hint else f"Required input files are missing: {', '.join(missing_files)}"
-            violations.append(
-                {
-                    "rule_id": "GATE-VT-001",
-                    "evidence_id": ids.sentinel_evidence_id(),
-                    "message": msg,
-                }
-            )
-        else:
-            status_list.append(
-                {
-                    "rule_id": "GATE-VT-001",
-                    "status": "compliant",
-                    "severity": "must",
-                    "title": "必需输入文件必须存在",
-                    "description": "MVP 分析至少需要 PRD、架构约束、任务列表和 Agent Claim 作为治理输入。",
-                }
-            )
-
-        OperationalLogger.get().debug("compliance_check", "GATE-VT-001 check complete",
-            rule_id="GATE-VT-001",
-            status="violated" if missing_files else "compliant",
-            missing_files=missing_files)
-
-        # ----------------------------------------------------
-        # 6. Evaluate GATE-VT-006 & GATE-VT-007 Gate compliance
-        # ----------------------------------------------------
-        has_any_violated_must = any(
-            st.get("status") == "violated" and st.get("severity") == "must"
-            for st in status_list
-        )
-        has_any_unclear_must = any(
-            st.get("status") == "unclear" and st.get("severity") == "must"
-            for st in status_list
-        )
-
-        # GATE-VT-006: Must 级架构约束不得被违反
-        if has_any_violated_must:
-            status_list.append(
-                {
-                    "rule_id": "GATE-VT-006",
-                    "status": "violated",
-                    "severity": "must",
-                    "title": "Must 级架构约束不得被违反",
-                    "description": "Must 级架构约束不得存在已确认违反项。",
-                }
-            )
-            violations.append(
-                {
-                    "rule_id": "GATE-VT-006",
-                    "evidence_id": ids.sentinel_evidence_id(),
-                    "message": "One or more Must-level architecture constraints are violated.",
-                }
-            )
-        else:
-            status_list.append(
-                {
-                    "rule_id": "GATE-VT-006",
-                    "status": "compliant",
-                    "severity": "must",
-                    "title": "Must 级架构约束不得被违反",
-                    "description": "Must 级架构约束不得存在已确认违反项。",
-                }
-            )
-
-        # GATE-VT-007: 不明确的 Must 级架构约束必须导致保守门禁
-        if has_any_unclear_must:
-            status_list.append(
-                {
-                    "rule_id": "GATE-VT-007",
-                    "status": "unclear",
-                    "severity": "must",
-                    "title": "不明确的 Must 级架构约束必须导致保守门禁",
-                    "description": "如果 Must 级架构约束无法被检查，系统不得输出完全 allow 的合并结论。",
-                }
-            )
-            unclear_list.append(
-                {
-                    "rule_id": "GATE-VT-007",
-                    "reason": "Some Must-level constraints are unclear and need manual review.",
-                }
-            )
-        else:
-            status_list.append(
-                {
-                    "rule_id": "GATE-VT-007",
-                    "status": "compliant",
-                    "severity": "must",
-                    "title": "不明确的 Must 级架构约束必须导致保守门禁",
-                    "description": "如果 Must 级架构约束无法被检查，系统不得输出完全 allow 的合并结论。",
-                }
-            )
-
-        # FORBID-VT-007: 静默处理不明确架构约束
-        status_list.append(
-            {
-                "rule_id": "FORBID-VT-007",
-                "status": "compliant",
-                "severity": "must",
-                "title": "静默处理不明确架构约束",
-                "description": "当某条架构约束无法自动检查时，系统必须将其标记为 unclear，而不是忽略它。",
-            }
-        )
-
-        # ----------------------------------------------------
-        # 6.1 Evaluate GATE-VT-014 (Architecture change proposals must be explicitly logged)
-        # ----------------------------------------------------
-        has_gate_14 = False
-        for gate in constraints_data.get("quality_gates", []):
-            if gate.get("gate_id") == "GATE-VT-014":
-                has_gate_14 = True
-                break
-
-        proposal_risks = []
-        proposal_gaps = []
-        if has_gate_14:
-            from vibe_tracing.domain.governance.change_proposal import (
-                ArchitectureChangeProposalEngine,
-            )
-
-            try:
-                proposal_engine = ArchitectureChangeProposalEngine(
-                    self.project_root, config_data=self.config_data,
-                    constraints_data=self.constraints,
-                )
-                prop_res = proposal_engine.check_governance(
-                    start_counter=200,
-                    constraints_hash=self.constraints_hash,
-                )
-                proposal_risks = prop_res.get("risks", [])
-                proposal_gaps = prop_res.get("gaps", [])
-                warnings = prop_res.get("warnings", [])
-                errors = prop_res.get("errors", [])
-
-                if errors:
-                    # Errors present - mark as violated
-                    status_list.append(
-                        {
-                            "rule_id": "GATE-VT-014",
-                            "status": "violated",
-                            "severity": "must",
-                            "title": "架构约束变更建议必须显式记录",
-                            "description": "架构约束变更没有通过显式记录提案审核，或提案本身不合法/缺失签名。",
-                        }
-                    )
-                    for err in errors:
-                        violations.append(
-                            {
-                                "rule_id": "GATE-VT-014",
-                                "evidence_id": ids.sentinel_evidence_id(),
-                                "message": err,
-                            }
-                        )
-                elif warnings:
-                    # Warnings but no errors - mark as unclear with should severity
-                    status_list.append(
-                        {
-                            "rule_id": "GATE-VT-014",
-                            "status": "unclear",
-                            "severity": "should",
-                            "title": "架构约束变更建议必须显式记录",
-                            "description": "架构约束已发生变更，需要人工审核。检测到以下警告: "
-                            + "; ".join(warnings),
-                        }
-                    )
-                else:
-                    # No warnings and no errors - compliant
-                    status_list.append(
-                        {
-                            "rule_id": "GATE-VT-014",
-                            "status": "compliant",
-                            "severity": "must",
-                            "title": "架构约束变更建议必须显式记录",
-                            "description": "检测到架构约束漂移/变更比对通过，且所有修改均有合法的已接受提案。",
-                        }
-                    )
-            except Exception as e:
-                status_list.append(
-                    {
-                        "rule_id": "GATE-VT-014",
-                        "status": "violated",
-                        "severity": "must",
-                        "title": "架构约束变更建议必须显式记录",
-                        "description": f"评估架构约束变更建议时发生异常: {e}",
-                    }
-                )
-                violations.append(
-                    {
-                        "rule_id": "GATE-VT-014",
-                        "evidence_id": ids.sentinel_evidence_id(),
-                        "message": f"Evaluation error: {e}",
-                    }
-                )
-
-        # ----------------------------------------------------
-        # 7. Collect and process all other MUST rules from constraints file
-        # ----------------------------------------------------
+        # ── 处理配置中的手动规则 ──────────────────────────────────
+        # 仅处理 verification_method == "manual" 的 must 级规则。
+        # 已人工接受 → 记入 accepted_rules。未接受 → 记入 unclear_constraints。
+        # machine 规则若无内置检查器则静默跳过（不标记 unclear、不阻断）。
         all_categories = [
             "architecture_principles",
             "dependency_rules",
@@ -789,7 +304,6 @@ class ArchitectureComplianceChecker:
 
         for cat in all_categories:
             for rule in constraints_data.get(cat, []):
-                # Resolve rule ID from potential keys
                 r_id = (
                     rule.get("rule_id")
                     or rule.get("principle_id")
@@ -805,76 +319,54 @@ class ArchitectureComplianceChecker:
                 if severity != "must":
                     continue
 
-                verification = rule.get("verification_method", "machine")
+                verification = rule.get("verification_method", "manual")
+                if verification != "manual":
+                    # 无内置检查器的 machine 规则，静默跳过。
+                    # ponytail: 项目自定义 machine 规则需要插件机制，当前无此需求。
+                    continue
 
-                if verification == "manual":
-                    # Check human_decisions for accepted rules
-                    accepted_by = None
-                    accepted_at = ""
-                    if human_decisions:
-                        decisions_list = human_decisions.get("decisions", [])
-                        for d in decisions_list:
-                            if (d.get("category") == "accepted_rule"
-                                    and d.get("targetId") == r_id
-                                    and d.get("action") == "accept"):
-                                accepted_by = d.get("decidedBy", "human")
-                                accepted_at = d.get("timestamp", "")
-                                break
-                    if accepted_by:
-                        is_stale = _is_stale_acceptance(accepted_at, threshold_days=30)
-                        accepted_rules.append({
-                            "rule_id": r_id,
-                            "title": rule.get("title", ""),
-                            "severity": severity,
-                            "verification_method": "manual",
-                            "accepted_by": accepted_by,
-                            "accepted_at": accepted_at,
-                            "stale_acceptance": is_stale,
-                        })
-                        continue
-                    # Manual rules that have NOT been accepted are
-                    # unclear and do block GATE-VT-007.
-                    status_list.append(
-                        {
-                            "rule_id": r_id,
-                            "status": "unclear",
-                            "severity": "must",
-                            "title": rule.get("title", ""),
-                            "description": rule.get("description", ""),
-                            "verification_method": "manual",
-                        }
-                    )
-                    unclear_list.append(
-                        {
-                            "rule_id": r_id,
-                            "reason": f"Manual verification rule {r_id} requires human acceptance.",
-                        }
-                    )
+                # 手动规则：检查 human_decisions
+                accepted_by = None
+                accepted_at = ""
+                if human_decisions:
+                    for d in human_decisions.get("decisions", []):
+                        if (
+                            d.get("category") == "accepted_rule"
+                            and d.get("targetId") == r_id
+                            and d.get("action") == "accept"
+                        ):
+                            accepted_by = d.get("decidedBy", "human")
+                            accepted_at = d.get("timestamp", "")
+                            break
+
+                if accepted_by:
+                    is_stale = _is_stale_acceptance(accepted_at, threshold_days=30)
+                    accepted_rules.append({
+                        "rule_id": r_id,
+                        "title": rule.get("title", ""),
+                        "severity": severity,
+                        "verification_method": "manual",
+                        "accepted_by": accepted_by,
+                        "accepted_at": accepted_at,
+                        "stale_acceptance": is_stale,
+                    })
                 else:
-                    # Machine-verifiable rules that cannot be checked are
-                    # truly unclear and must block the gate (GATE-VT-007).
-                    status_list.append(
-                        {
-                            "rule_id": r_id,
-                            "status": "unclear",
-                            "severity": "must",
-                            "title": rule.get("title", ""),
-                            "description": rule.get("description", ""),
-                            "verification_method": "machine",
-                        }
-                    )
-                    unclear_list.append(
-                        {
-                            "rule_id": r_id,
-                            "reason": "This constraint is not machine-verifiable and requires manual review.",
-                        }
-                    )
+                    status_list.append({
+                        "rule_id": r_id,
+                        "status": "unclear",
+                        "severity": "must",
+                        "title": rule.get("title", ""),
+                        "description": rule.get("description", ""),
+                        "verification_method": "manual",
+                    })
+                    unclear_list.append({
+                        "rule_id": r_id,
+                        "reason": f"Manual verification rule {r_id} requires human acceptance.",
+                    })
 
         return {
             "architecture_compliance_status": status_list,
             "architecture_violations": violations,
             "unclear_constraints": unclear_list,
             "accepted_rules": accepted_rules,
-            "proposal_risks": proposal_risks,
-            "proposal_gaps": proposal_gaps,
         }

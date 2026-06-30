@@ -7,7 +7,7 @@ proper layer separation (domain = pure logic, infra = I/O).
 
 import ast
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
+from typing import List, Tuple
 
 from vibe_tracing.infra.logging.logger import OperationalLogger
 
@@ -55,47 +55,3 @@ def find_python_files(src_dir: Path) -> List[Path]:
     if not src_dir.exists():
         return []
     return list(src_dir.rglob("*.py"))
-
-
-def find_dashboard_files(project_root: Path) -> List[Path]:
-    """Find all dashboard.html files in project.
-
-    Args:
-        project_root: Project root directory.
-
-    Returns:
-        List of dashboard.html file paths.
-    """
-    return list(project_root.rglob("dashboard.html"))
-
-
-def read_dashboard_content(dash_file: Path) -> Optional[str]:
-    """Read dashboard HTML content.
-
-    Args:
-        dash_file: Path to dashboard.html.
-
-    Returns:
-        File content or None on error.
-    """
-    try:
-        return dash_file.read_text(encoding="utf-8")
-    except OSError as exc:
-        OperationalLogger.get().warning(
-            "dashboard_read_failed",
-            f"Could not read dashboard file {dash_file}",
-            exc=exc,
-        )
-        return None
-
-
-def check_file_exists(path: Path) -> bool:
-    """Check if a file exists.
-
-    Args:
-        path: File path to check.
-
-    Returns:
-        True if file exists.
-    """
-    return path.exists()

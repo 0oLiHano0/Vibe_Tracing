@@ -1,6 +1,9 @@
 {
   "schema_version": "1.0.0",
   "project_id": "PROJECT-VT",
+  "id_rules": {
+    "all_tasks_must_link_requirements_and_acceptance_criteria": true
+  },
   "paths": {
     "prd": "docs/prd.md",
     "architecture_constraints": "docs/architecture_constraints.json",

@@ -3,6 +3,9 @@
   "project_id": "PROJECT-{{PROJECT_PREFIX}}",
   "project_prefix": "{{PROJECT_PREFIX}}",
   "project_name": "{{PROJECT_NAME}}",
+  "id_rules": {
+    "all_tasks_must_link_requirements_and_acceptance_criteria": true
+  },
   "language": "",
   "validation_tools": [],
   "architecture_constraints_hash": "",

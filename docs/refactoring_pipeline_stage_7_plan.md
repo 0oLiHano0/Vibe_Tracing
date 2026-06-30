@@ -541,3 +541,206 @@ P2 步骤 9     → 运行 P2 验证清单
 | `test_risk_advisor.py` | — | 2 | — | 2 个 fixture 改 rule_id |
 | 下游 5 文件 | — | — | — | 无需修改 |
 | **合计** | **28** | **12** | **3** | **43 项** |
+
+---
+
+## P3：修复 id_rules 配置割裂 → strict_link 静默失效
+
+> **状态：待执行**
+
+### 问题
+
+`pipeline.py:552` 从 `ctx.config`（`.vibetracing/config.json`）读取 `id_rules`，但 `id_rules` 仅存在于 `task_list.json`（由 `vibe-tracing init` 写入）。两者间无合并逻辑，`ctx.config.get("id_rules", {})` 始终返回 `{}`，导致 `strict_link` 恒为 `False`。用户在 `task_list.json` 中显式设置 `true`，但运行时被静默忽略。
+
+### 根因
+
+| 写入方 | 读取方 | 结果 |
+|--------|--------|------|
+| `init.py` → `task_list.template.json` → `docs/task_list.json` | — | `id_rules` 写入数据文件 |
+| — | `pipeline.py:552` → `ctx.config` → `.vibetracing/config.json` | 读不到 → 默认 `False` |
+
+### 设计原则
+
+1. **职责分离**：`task_list.json` = 纯任务数据；`config.json` = 治理配置。`id_rules` 是门禁行为配置，归属 `config.json`
+2. **无向后兼容**：存量 `task_list.json` 中的 `id_rules` 直接删除。不接受迁移层、兼容读取、双来源合并
+3. **死字段清零**：`task_id_format`、`dod_id_format`、`all_positive_status_must_reference_evidence` 无任何 Python 消费者，随 `id_rules` 一同删除。`id_rules` 中唯一有运行时消费者的字段是 `all_tasks_must_link_requirements_and_acceptance_criteria`（`pipeline.py:552`）
+4. **Schema 同步清理**：`task_list.schema.json` 中 `id_rules` 属性定义删除（`additionalProperties: false` 下未知属性被拒绝是正确行为——`id_rules` 不应再出现在 `task_list.json` 中）
+
+### 影响范围
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `src/vibe_tracing/templates/config.template.json` | 新增 `id_rules` | 新项目 init 时写入 `config.json` |
+| `src/vibe_tracing/templates/task_list.template.json` | 删除 `id_rules` | 新项目 init 时不再写入 `task_list.json` |
+| `src/vibe_tracing/infra/validation/schemas/task_list.schema.json` | 删除 `id_rules` 属性定义 | `additionalProperties: false` 下存量含 `id_rules` 的 `task_list.json` 将被拒绝——需同步删除存量文件中的 `id_rules` |
+| `.vibetracing/config.json` | 新增 `id_rules` | VT 自治理：使 VT 自身 `strict_link` 生效 |
+| `docs/task_list.json` | 删除 `id_rules` | VT 自治理：防止 schema 校验失败 |
+| `docs/spec_pipeline_stage_7.md` | 无需修改 | L52/L143 已正确引用 `ctx.config.id_rules...`，本次修复使代码对齐文档 |
+
+### 不影响的模块
+
+| 模块 | 原因 |
+|------|------|
+| `pipeline.py:552-555` | 读取逻辑不变——`ctx.config.get("id_rules", {}).get(...)` 在 `config.json` 含 `id_rules` 后自然生效 |
+| `infra/db/queries.py:check_isolated_tasks()` | 接口不变——仍接收 `strict_link: bool` 参数 |
+| `init.py:render_template()` | 通用字符串替换，`id_rules` 值为纯布尔，无 `{{...}}` 占位符，零影响 |
+| `tests/test_db_query_functions.py` | 测试直接传 `strict_link=True/False`，不读配置文件 |
+| `tests/test_schema_contracts.py` | `_minimal_task_list()` 不含 `id_rules`，schema 变更后仍通过校验 |
+| 所有其他测试文件 | grep 确认零引用 `id_rules`、`task_id_format`、`dod_id_format` |
+
+---
+
+### 操作步骤
+
+#### 步骤 1：config.template.json 新增 id_rules
+
+**文件**：`src/vibe_tracing/templates/config.template.json`
+
+在 `"project_name": "{{PROJECT_NAME}}",` 之后、`"language": "",` 之前插入：
+
+```json
+  "id_rules": {
+    "all_tasks_must_link_requirements_and_acceptance_criteria": true
+  },
+```
+
+完整变更（L1–8）：
+
+```diff
+ {
+   "schema_version": "1.0.0",
+   "project_id": "PROJECT-{{PROJECT_PREFIX}}",
+   "project_prefix": "{{PROJECT_PREFIX}}",
+   "project_name": "{{PROJECT_NAME}}",
++  "id_rules": {
++    "all_tasks_must_link_requirements_and_acceptance_criteria": true
++  },
+   "language": "",
+   ...
+```
+
+> `task_id_format`、`dod_id_format`、`all_positive_status_must_reference_evidence` 不迁移——无代码消费，属死配置。
+
+#### 步骤 2：task_list.template.json 删除 id_rules
+
+**文件**：`src/vibe_tracing/templates/task_list.template.json`
+
+删除 L10–15 整个 `id_rules` 块（含前导空行）：
+
+```diff
+    "generated_for": "AI Coding atomic task execution"
+  },
+-  "id_rules": {
+-    "task_id_format": "TASK-{{PROJECT_PREFIX}}-序号",
+-    "dod_id_format": "DOD-{{PROJECT_PREFIX}}-任务序号-子序号",
+-    "all_tasks_must_link_requirements_and_acceptance_criteria": true,
+-    "all_positive_status_must_reference_evidence": true
+-  },
+  "phases": [],
+```
+
+保留 `"project"` 块的闭合 `},` 与 `"phases"` 之间的逗号结构。
+
+#### 步骤 3：task_list.schema.json 删除 id_rules 属性定义
+
+**文件**：`src/vibe_tracing/infra/validation/schemas/task_list.schema.json`
+
+删除 L14–36 的 `"id_rules"` 属性定义（含其前导空行，保持 JSON 格式整洁）：
+
+```diff
+    "schema_version": { ... },
+-   "id_rules": {
+-     "type": "object",
+-     "description": "ID生成规则以及其他验证规则约束配置说明。",
+-     "additionalProperties": false,
+-     "properties": {
+-       "task_id_format": { ... },
+-       "dod_id_format": { ... },
+-       "all_tasks_must_link_requirements_and_acceptance_criteria": { ... },
+-       "all_positive_status_must_reference_evidence": { ... }
+-     }
+-   },
+    "phases": { ... },
+```
+
+> **Breaking change**：`additionalProperties: false`（L8）下，存量含 `id_rules` 的 `task_list.json` 将触发 schema 校验失败 → `vt analyze` 以 code 1 退出。需同步执行步骤 5 删除存量文件中的 `id_rules`。
+
+#### 步骤 4：VT 自治理 — config.json 新增 id_rules
+
+**文件**：`.vibetracing/config.json`
+
+在 `"project_id": "PROJECT-VT",` 之后插入：
+
+```diff
+ {
+   "schema_version": "1.0.0",
+   "project_id": "PROJECT-VT",
++  "id_rules": {
++    "all_tasks_must_link_requirements_and_acceptance_criteria": true
++  },
+   "paths": {
+```
+
+> 此后 VT 对自身执行 `vt analyze` 时，`strict_link = True`，隔离任务检查使用严格（AND）模式。
+
+#### 步骤 5：VT 自治理 — task_list.json 删除 id_rules
+
+**文件**：`docs/task_list.json`
+
+删除 L14–19 的 `id_rules` 块：
+
+```diff
+    "generated_for": "AI Coding atomic task execution"
+  },
+-  "id_rules": {
+-    "task_id_format": "TASK-VT-序号",
+-    "dod_id_format": "DOD-VT-任务序号-子序号",
+-    "all_tasks_must_link_requirements_and_acceptance_criteria": true,
+-    "all_positive_status_must_reference_evidence": true
+-  },
+  "phases": [
+```
+
+> 此步骤与步骤 3 配套：删除 schema 定义后，若 `docs/task_list.json` 仍含 `id_rules`，下次 `vt analyze` 将因 `additionalProperties: false` 被门禁阻断。
+
+#### 步骤 6：确认无需修改的文件
+
+| 文件 | 确认方式 | 结论 |
+|------|----------|------|
+| `pipeline.py` | L552–555 读取逻辑 `ctx.config.get("id_rules", {}).get(...)` 不变 | 无需修改 |
+| `queries.py` | `check_isolated_tasks(conn, strict_link)` 签名不变 | 无需修改 |
+| `init.py` | `render_template()` 通用替换，`id_rules` 值无 `{{...}}` 占位符 | 无需修改 |
+| `tests/test_db_query_functions.py` | 测试直接传 `strict_link=True/False` 参数 | 无需修改 |
+| `tests/test_schema_contracts.py` | `_minimal_task_list()` 不含 `id_rules` | 无需修改 |
+| `docs/spec_pipeline_stage_7.md` | L52/L143 已引用 `ctx.config.id_rules...`，与修复后行为一致 | 无需修改 |
+
+---
+
+### P3 验证清单
+
+- [ ] `grep -rn "id_rules" src/vibe_tracing/templates/task_list.template.json` 返回空
+- [ ] `grep -rn "all_positive_status_must_reference_evidence\|task_id_format\|dod_id_format" src/` 返回空（死字段已从模板和 schema 中清除）
+- [ ] `grep "all_positive_status_must_reference_evidence\|task_id_format\|dod_id_format" .vibetracing/config.json` 返回空（死字段未迁入 VT 自治理配置）
+- [ ] `grep "all_positive_status_must_reference_evidence\|task_id_format\|dod_id_format" docs/task_list.json` 返回空（死字段已从 VT 自治理数据文件清除）
+- [ ] `grep -rn "id_rules" src/vibe_tracing/infra/validation/schemas/task_list.schema.json` 返回空
+- [ ] `grep "id_rules" src/vibe_tracing/templates/config.template.json` 命中 1 处（新增的配置项）
+- [ ] `grep "id_rules" .vibetracing/config.json` 命中 1 处（VT 自治理配置）
+- [ ] `grep "id_rules" docs/task_list.json` 返回空（VT 自治理数据文件已清理）
+- [ ] `python -m pytest tests/test_db_query_functions.py -v` 通过（`check_isolated_tasks` 测试零回归）
+- [ ] `python -m pytest tests/test_schema_contracts.py -v` 通过（schema 校验测试零回归）
+- [ ] `python -m pytest tests/test_cli_analyze.py tests/test_merge_gate_engine.py tests/test_incremental_mode.py -v` 通过（下游零回归）
+- [ ] `vt analyze` 执行成功（VT 自治理：`strict_link=True` 生效，无 schema 校验失败）
+
+---
+
+### P3 变更总量
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `src/vibe_tracing/templates/config.template.json` | 改 | 新增 3 行 `id_rules`（仅 `all_tasks_must_link_requirements_and_acceptance_criteria`） |
+| `src/vibe_tracing/templates/task_list.template.json` | 改 | 删除 6 行 `id_rules` |
+| `src/vibe_tracing/infra/validation/schemas/task_list.schema.json` | 改 | 删除 23 行 `id_rules` 属性定义 |
+| `.vibetracing/config.json` | 改 | 新增 3 行 `id_rules` |
+| `docs/task_list.json` | 改 | 删除 6 行 `id_rules` |
+| 测试文件 | — | 无需修改 |
+| **合计** | **5 文件** | 新增 6 行，删除 35 行 |

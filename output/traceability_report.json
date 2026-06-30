@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-bc115d54-9a68-4afb-96e8-4d9a732d854e",
+  "run_id": "RUN-d62f6aaa-527e-402d-89a8-701396e236b9",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-06-30T22:54:11.373073+08:00",
+  "scan_time": "2026-06-30T23:30:39.479339+08:00",
   "gate_decision": "blocked",
   "requirement_coverage": [],
   "gaps": [
@@ -6298,9 +6298,9 @@
     }
   ],
   "metadata": {
-    "run_id": "RUN-bc115d54-9a68-4afb-96e8-4d9a732d854e",
+    "run_id": "RUN-d62f6aaa-527e-402d-89a8-701396e236b9",
     "project_id": "PROJECT-VT",
-    "scan_time": "2026-06-30T22:54:11.373073+08:00",
+    "scan_time": "2026-06-30T23:30:39.479339+08:00",
     "input_files": {
       "prd": "docs/prd.md",
       "architecture_constraints": "docs/architecture_constraints.json",

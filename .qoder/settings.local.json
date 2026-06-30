@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(cd /Users/lihan/Project/Vibe_Tracing && python -m pytest tests/test_db_query_functions.py tests/test_schema_contracts.py tests/test_cli_analyze.py tests/test_merge_gate_engine.py tests/test_incremental_mode.py -q --tb=short 2>&1 | tail -30)",
+      "Bash(ls .venv/bin/python 2>/dev/null || ls venv/bin/python 2>/dev/null || which uv 2>/dev/null)",
+      "Bash(.venv/bin/python -m pytest tests/test_db_query_functions.py tests/test_schema_contracts.py tests/test_cli_analyze.py tests/test_merge_gate_engine.py tests/test_incremental_mode.py -q --tb=short 2>&1 | tail -30)",
+      "Bash(.venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tail -10)",
+      "Bash(.venv/bin/python3 -c \"import json; json.load\\(open\\('src/vibe_tracing/templates/config.template.json'\\)\\)\" && echo \"VALID\" || echo \"INVALID\")",
+      "Bash(.venv/bin/python3 -c \"import json; json.load\\(open\\('src/vibe_tracing/templates/task_list.template.json'\\)\\)\" && echo \"VALID\" || echo \"INVALID\")",
+      "Bash(.venv/bin/python3 -c \"import json; json.load\\(open\\('src/vibe_tracing/infra/validation/schemas/task_list.schema.json'\\)\\)\" && echo \"VALID\" || echo \"INVALID\")",
+      "Bash(.venv/bin/python3 -c \"import json; json.load\\(open\\('.vibetracing/config.json'\\)\\)\" && echo \"VALID\" || echo \"INVALID\")",
+      "Bash(.venv/bin/python3 -c \"import json; json.load\\(open\\('docs/task_list.json'\\)\\)\" && echo \"VALID\" || echo \"INVALID\")",
+      "Bash(.venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tail -20)"
+    ]
+  }
+}

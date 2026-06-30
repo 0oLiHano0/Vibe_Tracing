@@ -11,29 +11,6 @@
       "type": "string",
       "description": "指明当前模式的版本，例如 '1.0.0'。"
     },
-    "id_rules": {
-      "type": "object",
-      "description": "ID生成规则以及其他验证规则约束配置说明。",
-      "additionalProperties": false,
-      "properties": {
-        "task_id_format": {
-          "type": "string",
-          "description": "Task ID的命名格式。"
-        },
-        "dod_id_format": {
-          "type": "string",
-          "description": "DoD ID的命名格式。"
-        },
-        "all_tasks_must_link_requirements_and_acceptance_criteria": {
-          "type": "boolean",
-          "description": "是否所有任务必须关联需求与验收标准。"
-        },
-        "all_positive_status_must_reference_evidence": {
-          "type": "boolean",
-          "description": "是否所有非 todo 状态必须引用证据。"
-        }
-      }
-    },
     "phases": {
       "type": "array",
       "description": "项目开发阶段的定义列表。",

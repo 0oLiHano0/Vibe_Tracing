@@ -1169,19 +1169,12 @@ def test_render_actions_coverage_below_threshold(tmp_path):
         {"priority": "HIGH", "type": "test", "title": "Test Action", "context": {}}
     ]
     coverage = {"aggregate_percent": 75}
-    evidence_index = {
-        "coverage_baseline": {
-            "src/bad.py": {"percent_covered": 45},
-        }
-    }
 
     lines = _render_actions(
         actions, coverage_summary=coverage,
-        evidence_meta=evidence_index,
     )
     assert any("BLOCKED" in l for l in lines)
     assert any("75%" in l for l in lines)
-    assert any("src/bad.py" in l and "45%" in l for l in lines)
 
 
 def test_render_actions_per_file_violations_pass(tmp_path):

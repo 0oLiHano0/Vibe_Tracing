@@ -22,11 +22,13 @@ class EvidenceMergeResult:
 
     test_results_to_upsert: List[Dict[str, Any]] = field(default_factory=list)
     coverage_reports_to_upsert: List[Dict[str, Any]] = field(default_factory=list)
+    lint_results_to_upsert: List[Dict[str, Any]] = field(default_factory=list)
     files_to_purge: List[str] = field(default_factory=list)
     skipped_evidence: List[Dict[str, Any]] = field(default_factory=list)
     stats: Dict[str, int] = field(default_factory=lambda: {
         "test_count": 0,
         "coverage_count": 0,
+        "lint_count": 0,
         "skipped_count": 0,
         "purge_count": 0,
     })

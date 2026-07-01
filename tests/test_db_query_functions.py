@@ -3,7 +3,7 @@ import pytest
 
 from vibe_tracing.infra.config.enums import CoverageStatus
 from vibe_tracing.infra.db import (
-    init_in_memory_db, load_tasks, load_prd, load_claims, load_staged_files,
+    init_in_memory_db, load_tasks, load_prd, load_claims,
     check_ac_coverage, check_requirement_coverage, check_claim_evidence,
     check_dangling_claims, check_coverage_violations,
     get_full_chain, check_isolated_tasks, check_invalid_task_requirements,
@@ -345,10 +345,20 @@ def test_empty_database_returns_empty(check_fn, conn):
 # ── Feature 1: Acceptance Criteria Coverage Check (F1) ──────────────────────
 
 def test_tier2_f1_boundary_1_non_must_priority():
+    """非 MUST 优先级的 requirement 有 AC 缺口也应被检测到（全量检查）。
+
+    原测试名同名但数据构造只 load_tasks 不 load_prd（acceptance_criteria 空表），
+    实际测的是"无 AC 数据→0 结果"。现改为真实的非 MUST 全量检查场景。
+    """
     conn = init_in_memory_db()
-    load_tasks(conn, [{"task_id": "TASK-1", "priority": "should", "status": "done", "related_acceptance_criteria": ["AC-1-1"]}])
+    load_prd(conn, [{"req_id": "REQ-1", "title": "Should Req", "priority": "should",
+                     "category": "functional",
+                     "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC 1", "is_testing_required": True}]}])
+    load_tasks(conn, [{"task_id": "TASK-1", "priority": "should", "status": "done",
+                        "related_acceptance_criteria": ["AC-1-1"]}])
     res = check_ac_coverage(conn)
-    assert len(res) == 0
+    assert len(res) == 1
+    assert res[0]["coverage_status"] == "no_claim_for_task"
     conn.close()
 
 def test_tier2_f1_boundary_3_duplicate_loads():
@@ -425,7 +435,8 @@ def test_tier2_f3_boundary_1_test_failed():
     assert res[0]["verification_status"] == "test_failed"
     conn.close()
 
-def test_tier2_f3_boundary_2_multiple_claims_for_task():
+def test_tier2_f3_boundary_2_one_task_one_claim_enforced():
+    """UNIQUE(related_task) 约束确保一个 task 只对应一个 claim，后加载的 claim 替换前者。"""
     conn = init_in_memory_db()
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done"}])
     load_claims(conn, [
@@ -436,6 +447,7 @@ def test_tier2_f3_boundary_2_multiple_claims_for_task():
     res = check_claim_evidence(conn)
     assert len(res) == 1
     assert res[0]["claim_id"] == "CLAIM-2"
+    assert res[0]["verification_status"] == "test_missing"
     conn.close()
 
 def test_tier2_f3_boundary_3_multiple_tests_one_missing():
@@ -510,6 +522,61 @@ def test_tier2_f4_boundary_5_empty_database():
     assert len(res) == 0
     conn.close()
 
+def test_tier2_f4_regression_ac_misalignment_no_spurious_pairs():
+    """退化测试：AC 通过 task_acs 关联 task，不产生虚假的 AC×Task 配对。
+
+    REQ-A 下有 AC-001（关联 TASK-001）、AC-002（关联 TASK-002），
+    预期 2 行（AC-001+TASK-001, AC-002+TASK-002），而非 4 行。
+    """
+    conn = init_in_memory_db()
+    load_prd(conn, [{
+        "req_id": "REQ-A", "title": "Req A", "priority": "must",
+        "category": "functional",
+        "acceptance_criteria": [
+            {"ac_id": "AC-001", "title": "AC 1", "is_testing_required": True},
+            {"ac_id": "AC-002", "title": "AC 2", "is_testing_required": True},
+        ],
+    }])
+    # TASK-001 关联 AC-001，TASK-002 关联 AC-002（彼此错开）
+    load_tasks(conn, [
+        {"task_id": "TASK-001", "priority": "must", "status": "done",
+         "related_requirements": ["REQ-A"],
+         "related_acceptance_criteria": ["AC-001"]},
+        {"task_id": "TASK-002", "priority": "must", "status": "done",
+         "related_requirements": ["REQ-A"],
+         "related_acceptance_criteria": ["AC-002"]},
+    ])
+    res = get_full_chain(conn)
+    # 预期 2 行：AC-001+TASK-001, AC-002+TASK-002（无虚假配对）
+    assert len(res) == 2, f"Expected 2 rows (correct pairs), got {len(res)}: {res}"
+    # 验证配对正确
+    pairs = {(r["ac_id"], r["task_id"]) for r in res}
+    assert ("AC-001", "TASK-001") in pairs
+    assert ("AC-002", "TASK-002") in pairs
+    conn.close()
+
+def test_tier2_f4_regression_ac_without_task_visibility():
+    """退化测试：AC 可以无 task 关联，仍应可见。
+
+    REQ-A 下有 AC-001 和 AC-002，均无 task 关联，
+    预期 2 行（两个 AC 各一行，task_id 均为 NULL）。
+    """
+    conn = init_in_memory_db()
+    load_prd(conn, [{
+        "req_id": "REQ-A", "title": "Req A", "priority": "must",
+        "category": "functional",
+        "acceptance_criteria": [
+            {"ac_id": "AC-001", "title": "AC 1", "is_testing_required": True},
+            {"ac_id": "AC-002", "title": "AC 2", "is_testing_required": True},
+        ],
+    }])
+    res = get_full_chain(conn)
+    assert len(res) == 2, f"Expected 2 AC rows, got {len(res)}"
+    ac_ids = {r["ac_id"] for r in res}
+    assert ac_ids == {"AC-001", "AC-002"}
+    assert all(r["task_id"] is None for r in res)
+    conn.close()
+
 
 
 # ── Feature 6: Dangling Claims Check (F6) ───────────────────────────────────
@@ -522,11 +589,11 @@ def test_tier2_f6_boundary_1_whitespace_ids():
     assert len(res) == 1
     conn.close()
 
-def test_tier2_f6_boundary_2_multiple_claims_same_missing_task():
+def test_tier2_f6_boundary_2_multiple_claims_different_missing_tasks():
     conn = init_in_memory_db()
     load_claims(conn, [
-        {"claim_id": "CLAIM-1", "related_task": "MISSING"},
-        {"claim_id": "CLAIM-2", "related_task": "MISSING"}
+        {"claim_id": "CLAIM-1", "related_task": "MISSING-1"},
+        {"claim_id": "CLAIM-2", "related_task": "MISSING-2"}
     ])
     res = check_dangling_claims(conn)
     assert len(res) == 2
@@ -552,7 +619,7 @@ def test_tier2_f6_boundary_4_empty_string_ids():
 
 def test_tier2_f6_boundary_5_bulk_dangling_claims():
     conn = init_in_memory_db()
-    claims = [{"claim_id": f"CLAIM-{i}", "related_task": "MISSING"} for i in range(50)]
+    claims = [{"claim_id": f"CLAIM-{i}", "related_task": f"MISSING-{i}"} for i in range(50)]
     load_claims(conn, claims)
     res = check_dangling_claims(conn)
     assert len(res) == 50
@@ -571,7 +638,10 @@ def test_tier3_combo_1_complete_missing_chain():
     res_f2 = check_requirement_coverage(conn)
     assert len(res_f2) == 1
     assert res_f2[0]["coverage_status"] == "no_task_for_requirement"
-    assert len(check_ac_coverage(conn)) == 0
+    # AC 无 task 关联也应被检测到（全量检查）
+    ac_res = check_ac_coverage(conn)
+    assert len(ac_res) == 1
+    assert ac_res[0]["coverage_status"] == "no_task_for_ac"
     conn.close()
 
 def test_tier3_combo_2_overlapping_dangling_and_dead_links():
@@ -604,7 +674,6 @@ def test_tier3_combo_3_cascading_test_failure():
 
 def test_tier3_combo_4_staged_violated_coverage():
     conn = init_in_memory_db()
-    load_staged_files(conn, {"src/foo.py"})
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/foo.py"]}])
     upsert_coverage_report(conn, "src/foo.py", 45.0, 100, "violated", False)
 
@@ -631,7 +700,6 @@ def test_tier3_combo_5_large_scale_sync():
     load_prd(conn, [{"req_id": "REQ-1", "title": "Req 1", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "AC 1"}]}])
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_requirements": ["REQ-1"], "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/foo.py"], "test_refs": ["test_1"]}])
-    load_staged_files(conn, {"src/foo.py"})
     upsert_test_result(conn, "test_1", CoverageStatus.COVERED.value, 0, "pytest", False)
     upsert_coverage_report(conn, "src/foo.py", 95.0, 100, "compliant", False)
 
@@ -644,10 +712,9 @@ def test_tier3_combo_5_large_scale_sync():
 
 def test_tier3_combo_7_soft_integrity_violations():
     conn = init_in_memory_db()
-    load_staged_files(conn, {"src/ghost1.py", "src/ghost2.py"})
     load_claims(conn, [
-        {"claim_id": "CLAIM-1", "related_task": "TASK-MISSING", "test_refs": ["test_dead_1"]},
-        {"claim_id": "CLAIM-2", "related_task": "TASK-MISSING", "test_refs": ["test_dead_2"]}
+        {"claim_id": "CLAIM-1", "related_task": "TASK-MISSING-1", "test_refs": ["test_dead_1"]},
+        {"claim_id": "CLAIM-2", "related_task": "TASK-MISSING-2", "test_refs": ["test_dead_2"]}
     ])
     assert len(check_dangling_claims(conn)) == 2
     conn.close()
@@ -661,7 +728,6 @@ def test_tier4_scenario_1_new_feature_development():
     conn = init_in_memory_db()
     load_prd(conn, [{"req_id": "REQ-100", "title": "New Auth", "priority": "must", "category": "functional", "acceptance_criteria": []}])
     load_tasks(conn, [{"task_id": "TASK-100", "priority": "must", "status": "in_progress", "related_requirements": ["REQ-100"]}])
-    load_staged_files(conn, {"src/auth.py"})
 
     res_f2 = check_requirement_coverage(conn)
     assert len(res_f2) == 0, f"in_progress task should not trigger no_claim_for_task, got: {res_f2}"
@@ -672,7 +738,6 @@ def test_tier4_scenario_3_feature_complete_verification():
     load_prd(conn, [MockRequirement("REQ-1", "Auth Feature", "must", "functional", [MockAcceptanceCriteria("AC-1-1", "Login validation", True)])])
     load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "done", "related_requirements": ["REQ-1"], "related_acceptance_criteria": ["AC-1-1"]}])
     load_claims(conn, [{"claim_id": "CLAIM-1", "related_task": "TASK-1", "code_refs": ["src/login.py"], "test_refs": ["tests/test_login.py::test_valid"]}])
-    load_staged_files(conn, {"src/login.py"})
     upsert_test_result(conn, "tests/test_login.py::test_valid", CoverageStatus.COVERED.value, 0, "pytest", False)
     upsert_coverage_report(conn, "src/login.py", 90.0, 50, "compliant", False)
 

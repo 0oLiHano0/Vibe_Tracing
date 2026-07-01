@@ -26,18 +26,19 @@
 |------|----------|------|
 | `requirements` | `load_prd` | req_id, title, priority, category |
 | `acceptance_criteria` | `load_prd` | ac_id, req_id, title, is_testing_required |
-| `tasks` | `load_tasks` | task_id, title, status, priority, phase_id 等 |
+| `tasks` | `load_tasks` | task_id, status |
 | `task_requirements` | `load_tasks` | task_id, req_id（多对多关联） |
 | `task_acs` | `load_tasks` | task_id, ac_id（多对多关联） |
 | `task_modules` | `load_tasks` | task_id, module_id（多对多关联） |
 | `task_constraints` | `load_tasks` | task_id, constraint_id（多对多关联） |
-| `claims` | `load_claims` | claim_id, related_task, notes, timestamp |
+| `claims` | `load_claims` | claim_id, related_task |
 | `claim_code_refs` | `load_claims` | claim_id, code_path（一对多） |
 | `claim_test_refs` | `load_claims` | claim_id, test_nodeid（一对多） |
 | `test_results` | 阶段 6 `EvidenceBuilder.apply` | nodeid, outcome |
-| `coverage_reports` | 阶段 6 `EvidenceBuilder.apply` | source_path, percent_covered, status |
-| `staged_files` | `load_staged_files` | file_path |
-| `arch_modules` | `load_architecture_constraints` | module_id, name |
+| `coverage_reports` | 阶段 6 `EvidenceBuilder.apply` | source_path, percent_covered, num_statements, status, carried_over |
+| `lint_results` | 阶段 6 `EvidenceBuilder.apply` | source_path, outcome, violations_count, command, carried_over |
+| ~~`staged_files`~~ | ~~`load_staged_files`~~ | ~~file_path~~（死表，数据通过 Python set 传递，待删除） |
+| `arch_modules` | `load_architecture_constraints` | module_id |
 | `arch_constraints` | `load_architecture_constraints` | constraint_id |
 
 ---
@@ -106,9 +107,9 @@ decisions:                          # 决策列表
 
 ---
 
-### 步骤 1：执行数据库查询（12 个 check_*）
+### 步骤 1：执行数据库查询（13 个 check_*）
 
-调用模块：`infra/db/queries.py` 的 12 个查询函数
+调用模块：`infra/db/queries.py` 的 13 个查询函数
 
 对内存 SQLite 数据库执行所有分析查询，检查从需求到测试证据的完整覆盖链路。查询分为三组：
 
@@ -117,7 +118,7 @@ decisions:                          # 决策列表
 | 函数 | 查询内容 | 返回字段 |
 |------|----------|----------|
 | `check_requirement_coverage(conn)` | 每个需求的 Task → Claim → Test 覆盖状态（不限优先级） | `req_id`, `coverage_status` |
-| `check_ac_coverage(conn)` | 每个 MUST 任务/需求的 AC 的 Task → Claim → Test 覆盖状态 | `task_id`, `ac_id`, `coverage_status` |
+| `check_ac_coverage(conn)` | 每个 AC 的 Task → Claim → Test 覆盖状态（不限优先级，全量检查） | `task_id`, `ac_id`, `coverage_status` |
 | `check_claim_evidence(conn)` | 每个 Claim 的 Task 状态 + Test 执行状态 | `claim_id`, `verification_status` |
 
 **辅助查询**（结果放入 `analysis_details` 供阶段 8 门禁和 Dashboard 使用）：
@@ -126,6 +127,7 @@ decisions:                          # 决策列表
 |------|----------|----------|
 | `check_dangling_claims(conn)` | Claim 指向不存在的 Task | `claim_id`, `related_task` |
 | `check_coverage_violations(conn)` | 覆盖率低于阈值（status=violated）的记录 | `source_path`, `percent_covered` |
+| `check_lint_violations(conn)` | lint 检查未通过（outcome=violated）的记录 | `source_path`, `violations_count` |
 | `check_invalid_task_requirements(conn)` | Task 引用了不存在的 Requirement | `task_id`, `req_id` |
 | `check_invalid_task_acs(conn)` | Task 引用了不存在的 AC | `task_id`, `ac_id` |
 | `check_invalid_task_modules(conn)` | Task 引用了不存在的 Module | `task_id`, `module_id` |
@@ -369,6 +371,9 @@ claim_evidence_gaps:                # Claim 证据原始查询结果（list[dict
 cov_violations:                     # 覆盖率违规列表（list[dict]）
   - source_path: "src/vibe_tracing/cli/main.py"
     percent_covered: 45.2
+lint_violations:                    # lint 违规列表（list[dict]）
+  - source_path: "src/vibe_tracing/cli/main.py"
+    violations_count: 3
 isolated_tasks:                     # 孤立任务列表（list[dict]）
   - task_id: "TASK-VT-007"
     reason: "isolated"              # 严格模式下："missing_req" | "missing_ac"

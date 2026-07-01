@@ -191,7 +191,7 @@ def run_analyze(
     try:
         # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
         from vibe_tracing.infra.logging.logger import OperationalLogger
-        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_prd, load_architecture_constraints, load_staged_files
+        from vibe_tracing.infra.db import init_in_memory_db, load_tasks, load_claims, load_prd, load_architecture_constraints
         _run_start_t = time.perf_counter()
 
         # ── 阶段 1：加载输入 ──────────────────────────────────────────────
@@ -328,8 +328,6 @@ def run_analyze(
             load_claims(conn, [c.__dict__ for c in ctx.claims_list])
         if ctx.constraints:
             load_architecture_constraints(conn, ctx.constraints)
-        if staged_files:
-            load_staged_files(conn, staged_files)
         vt_logger.info("phase_end", "Database init and data load completed",
                        phase="init_database",
                        duration_ms=int((time.perf_counter() - _t_db) * 1000),
@@ -500,6 +498,58 @@ def _gap(item_id: str, item_type: str, status: str, **kwargs) -> Optional[dict]:
     }
 
 
+def _check_module_code_path_mismatch(conn, constraints):
+    """检查 Task 声明的模块归属与 Claim 代码路径是否错位。
+
+    从 DB 查询 (task_id, module_id, code_path) 三元组，与
+    architecture_constraints.json 中 module_boundaries.owned_files 交叉验证。
+    如果 code_path 属于另一个模块，记录为错位。
+
+    Returns:
+        list[dict]: 错位记录列表，每项含 task_id, module_id, code_path, actual_module。
+        无约束数据时返回空列表。
+    """
+    if not constraints:
+        return []
+
+    # 构建 {module_id → set(owned_files)} 索引
+    module_files = {}
+    for mod in constraints.get("module_boundaries", []):
+        mid = mod.get("module_id")
+        files = mod.get("owned_files", [])
+        if mid and files:
+            module_files[mid] = set(files)
+
+    if not module_files:
+        return []
+
+    # 查询所有 task→module→code_path 三元组
+    rows = conn.execute("""
+        SELECT tm.task_id, tm.module_id, ccr.code_path
+        FROM task_modules tm
+        JOIN claims c ON tm.task_id = c.related_task
+        JOIN claim_code_refs ccr ON c.claim_id = ccr.claim_id
+    """).fetchall()
+
+    mismatches = []
+    for task_id, module_id, code_path in rows:
+        actual_module = None
+        for mid, files in module_files.items():
+            if code_path in files:
+                actual_module = mid
+                break
+
+        if actual_module is not None and actual_module != module_id:
+            mismatches.append({
+                "task_id": task_id,
+                "module_id": module_id,
+                "code_path": code_path,
+                "actual_module": actual_module,
+            })
+
+    return mismatches
+
+
 def _run_db_analysis(
     conn,
     ctx: UnifiedContext,
@@ -538,6 +588,7 @@ def _run_db_analysis(
         check_claim_evidence,
         check_dangling_claims,
         check_coverage_violations,
+        check_lint_violations,
         check_invalid_task_requirements,
         check_invalid_task_acs,
         check_invalid_task_modules,
@@ -566,6 +617,7 @@ def _run_db_analysis(
     ghost_files: list = []  # ponytail: 阶段2已做幽灵代码前置阻断，阶段7无需再查
     dangling_claims_list = check_dangling_claims(conn)
     cov_violations = check_coverage_violations(conn)
+    lint_violations = check_lint_violations(conn)
 
     # Invalid task reference queries
     invalid_task_reqs = check_invalid_task_requirements(conn)
@@ -634,6 +686,7 @@ def _run_db_analysis(
         "dangling_claims": dangling_claims_list,
         "claim_evidence_gaps": claim_evidence,
         "cov_violations": cov_violations,
+        "lint_violations": lint_violations,
         "isolated_tasks": isolated_tasks,
         "arch_orphans": arch_orphans,
         "invalid_task_references": {
@@ -643,6 +696,7 @@ def _run_db_analysis(
             "invalid_modules": invalid_task_mods,
             "invalid_constraints": invalid_task_consts,
             "invalid_ac_parents": invalid_ac_parents,
+            "invalid_module_code_paths": _check_module_code_path_mismatch(conn, ctx.constraints),
         },
     }
 
@@ -732,6 +786,7 @@ def _run_gate_evaluation(
     dangling_claims: Optional[list] = None,
     claim_evidence_gaps: Optional[list] = None,
     cov_violations: Optional[list] = None,
+    lint_violations: Optional[list] = None,
     analysis_details: Optional[dict] = None,
     incremental_only: bool = False,
     show_historical_debt: bool = True,
@@ -775,6 +830,7 @@ def _run_gate_evaluation(
         dangling_claims=dangling_claims,
         claim_evidence_gaps=claim_evidence_gaps,
         cov_violations=cov_violations,
+        lint_violations=lint_violations,
         invalid_task_references=analysis_details.get("invalid_task_references") if analysis_details else None,
     )
     hd_applied = gate_res.get("human_decisions_applied", 0)
@@ -840,6 +896,7 @@ def _evaluate_and_output(
         dangling_claims=analysis_details.get("dangling_claims"),
         claim_evidence_gaps=analysis_details.get("claim_evidence_gaps"),
         cov_violations=analysis_details.get("cov_violations"),
+        lint_violations=analysis_details.get("lint_violations"),
         analysis_details=analysis_details,
         incremental_only=incremental_only,
         show_historical_debt=show_historical_debt,

@@ -6,13 +6,12 @@ import sqlite3
 
 
 def init_in_memory_db() -> sqlite3.Connection:
-    """创建内存 SQLite 数据库并建 15 张表。
+    """创建内存 SQLite 数据库并建 14 张表。
 
     分组：
       任务域：tasks, task_requirements, task_acs
       Claim 域：claims, claim_code_refs, claim_test_refs
       测试与覆盖率：test_results, coverage_reports
-      Git 暂存区：staged_files
       PRD 域：requirements, acceptance_criteria
       架构域：arch_modules, arch_constraints, task_modules, task_constraints
     """
@@ -23,7 +22,6 @@ def init_in_memory_db() -> sqlite3.Connection:
     conn.executescript("""
         CREATE TABLE tasks (
             task_id TEXT PRIMARY KEY,
-            priority TEXT NOT NULL,
             status   TEXT NOT NULL
         );
         CREATE TABLE task_requirements (
@@ -38,7 +36,7 @@ def init_in_memory_db() -> sqlite3.Connection:
         );
         CREATE TABLE claims (
             claim_id     TEXT PRIMARY KEY,
-            related_task TEXT NOT NULL
+            related_task TEXT NOT NULL UNIQUE
         );
         CREATE TABLE claim_code_refs (
             claim_id  TEXT,
@@ -63,9 +61,6 @@ def init_in_memory_db() -> sqlite3.Connection:
             num_statements   INTEGER,
             status           TEXT NOT NULL,
             carried_over    INTEGER DEFAULT 0
-        );
-        CREATE TABLE staged_files (
-            file_path TEXT PRIMARY KEY
         );
         CREATE TABLE requirements (
             req_id TEXT PRIMARY KEY,
@@ -94,6 +89,13 @@ def init_in_memory_db() -> sqlite3.Connection:
             task_id TEXT,
             constraint_id TEXT,
             PRIMARY KEY (task_id, constraint_id)
+        );
+        CREATE TABLE lint_results (
+            source_path      TEXT PRIMARY KEY,
+            outcome          TEXT NOT NULL,
+            violations_count INTEGER DEFAULT 0,
+            command          TEXT,
+            carried_over     INTEGER DEFAULT 0
         );
     """)
     return conn

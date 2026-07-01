@@ -38,6 +38,7 @@ class EvidenceBuilder:
         """
         test_results: List[Dict[str, Any]] = []
         coverage_reports: List[Dict[str, Any]] = []
+        lint_results: List[Dict[str, Any]] = []
         files_to_purge: List[str] = []
         skipped: List[Dict[str, Any]] = []
 
@@ -62,6 +63,15 @@ class EvidenceBuilder:
                     "status": ev.status,
                     "carried_over": False,
                 })
+            elif ev.tool_category == "lint":
+                cnt = ev.details.get("violations_count", 0) or ev.details.get("results_count", 0)
+                lint_results.append({
+                    "source_path": ev.source_path,
+                    "outcome": ev.status,
+                    "violations_count": int(cnt),
+                    "command": ev.command,
+                    "carried_over": False,
+                })
             else:
                 skipped.append({
                     "source_path": ev.source_path,
@@ -72,11 +82,13 @@ class EvidenceBuilder:
         return EvidenceMergeResult(
             test_results_to_upsert=test_results,
             coverage_reports_to_upsert=coverage_reports,
+            lint_results_to_upsert=lint_results,
             files_to_purge=list(set(files_to_purge)),  # deduplicate
             skipped_evidence=skipped,
             stats={
                 "test_count": len(test_results),
                 "coverage_count": len(coverage_reports),
+                "lint_count": len(lint_results),
                 "skipped_count": len(skipped),
                 "purge_count": len(set(files_to_purge)),
             },
@@ -95,6 +107,7 @@ class EvidenceBuilder:
             load_initial_cache,
             upsert_test_result,
             upsert_coverage_report,
+            upsert_lint_result,
             purge_stale_cache,
         )
 
@@ -127,6 +140,17 @@ class EvidenceBuilder:
                 carried_over=entry["carried_over"],
             )
 
+        # Upsert lint results
+        for entry in merge_result.lint_results_to_upsert:
+            upsert_lint_result(
+                conn,
+                source_path=entry["source_path"],
+                outcome=entry["outcome"],
+                violations_count=entry["violations_count"],
+                command=entry["command"],
+                carried_over=entry["carried_over"],
+            )
+
     def persist(self, output_dir: Path, merge_result: EvidenceMergeResult) -> Dict[str, str]:
         """Export evidence JSON files directly from merge result.
 
@@ -152,10 +176,16 @@ class EvidenceBuilder:
         with open(str(cov_file), "w", encoding="utf-8") as fh:
             json.dump(merge_result.coverage_reports_to_upsert, fh, indent=2, ensure_ascii=False)
 
+        # Write lint_results.json
+        lint_file = output_dir / "lint_results.json"
+        with open(str(lint_file), "w", encoding="utf-8") as fh:
+            json.dump(merge_result.lint_results_to_upsert, fh, indent=2, ensure_ascii=False)
+
         return {
             "evidences_dir": str(output_dir),
             "test_results_file": str(test_file),
             "coverage_reports_file": str(cov_file),
+            "lint_results_file": str(lint_file),
         }
 
     def build_evidence_meta(self, conn: Any, config_prefix: str) -> Dict[str, Any]:

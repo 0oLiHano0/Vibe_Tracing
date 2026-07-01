@@ -279,7 +279,7 @@ class MergeGateEngine:
             msg = (
                 hint.format(ac_id=ac_id, task_id=task_id, reason=reason)
                 if hint
-                else f"MUST AC {ac_id} (task {task_id}) 未被测试覆盖: {reason}"
+                else f"AC {ac_id} (task {task_id}) 未被测试覆盖: {reason}"
             )
             gap_entry = {
                 "item_id": ac_id,
@@ -369,6 +369,21 @@ class MergeGateEngine:
             ac_id = ref.get("ac_id", "")
             parent_req_id = ref.get("parent_req_id", "")
             msg = f"Task {task_id} 引用验收标准 {ac_id}，但其父需求 {parent_req_id} 未在关联需求中。"
+            reasons.append(self._tag_reason(msg, {task_id}, staged_items))
+            if not self.incremental_only or self._is_current({task_id}, staged_items):
+                blocked_items.append(msg)
+                has_blocked = True
+            else:
+                self._historical_debt_count += 1
+
+        # Check invalid module code paths
+        for ref in invalid_task_references.get("invalid_module_code_paths", []):
+            task_id = ref.get("task_id", "")
+            module_id = ref.get("module_id", "")
+            code_path = ref.get("code_path", "")
+            actual_module = ref.get("actual_module", "")
+            msg = f"Task {task_id} 的代码路径 {code_path} 属于模块 {actual_module}，"
+            msg += f"但 Task 声明归属模块 {module_id}（链条错位）。"
             reasons.append(self._tag_reason(msg, {task_id}, staged_items))
             if not self.incremental_only or self._is_current({task_id}, staged_items):
                 blocked_items.append(msg)
@@ -556,6 +571,7 @@ class MergeGateEngine:
         staged_items: Optional[Set[str]],
         reasons: List[str],
         cov_violations: List[Dict[str, Any]],
+        lint_violations: List[Dict[str, Any]],
         accepted_rule_target_ids: Optional[Set[str]] = None,
         rejected_rule_target_ids: Optional[Set[str]] = None,
     ) -> Dict[str, Any]:
@@ -581,6 +597,25 @@ class MergeGateEngine:
             historical_violations = len(cov_violations) - len(active_violations)
             if historical_violations > 0:
                 self._historical_debt_count += historical_violations
+
+        # 2.6 Check lint violations (warning-level, not blocking)
+        if lint_violations:
+            active_lint_violations = [
+                lv for lv in lint_violations
+                if not self.incremental_only or not lv.get("carried_over", False)
+            ]
+            if active_lint_violations:
+                for lv in active_lint_violations:
+                    tag = "[当前] " if staged_items is not None else ""
+                    reasons.append(
+                        f"{tag}Lint violations: {lv['source_path']} "
+                        f"({lv['violations_count']} issues)"
+                    )
+                if gate_decision not in ("blocked",):
+                    gate_decision = "fail"
+            historical_lint = len(lint_violations) - len(active_lint_violations)
+            if historical_lint > 0:
+                self._historical_debt_count += historical_lint
 
         # 3. Handle 'pass'
         if gate_decision == "pass" and not reasons:
@@ -624,6 +659,7 @@ class MergeGateEngine:
         dangling_claims: Optional[List[Dict[str, Any]]] = None,
         claim_evidence_gaps: Optional[List[Dict[str, Any]]] = None,
         cov_violations: Optional[List[Dict[str, Any]]] = None,
+        lint_violations: Optional[List[Dict[str, Any]]] = None,
         invalid_task_references: Optional[Dict[str, List[Dict[str, Any]]]] = None,
     ) -> Dict[str, Any]:
         """
@@ -836,5 +872,6 @@ class MergeGateEngine:
             human_decisions_applied, staged_items,
             reasons,
             cov_violations or [],
+            lint_violations or [],
             accepted_rule_target_ids, rejected_rule_target_ids,
         )

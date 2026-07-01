@@ -71,22 +71,6 @@ def _build_report_document(
             warnings.append(desc)
         report_doc["warnings"] = warnings
 
-    # Add coverage summary to report
-    cb_data = evidence_meta.get("coverage_baseline", {})
-    if cb_data:
-        total_stmts = sum(f.get("num_statements", 0) for f in cb_data.values() if isinstance(f, dict))
-        total_covered_f = sum(
-            f.get("num_statements", 0) * f.get("percent_covered", 0) / 100
-            for f in cb_data.values() if isinstance(f, dict)
-        )
-        aggregate_pct = round(total_covered_f / total_stmts * 100, 1) if total_stmts > 0 else 0
-        report_doc["coverage_summary"] = {
-            "aggregate_percent": aggregate_pct,
-            "total_statements": total_stmts,
-            "total_covered": int(total_covered_f),
-            "file_count": len(cb_data),
-        }
-
     # Build and save traceability report
     report_builder = TraceabilityReportBuilder(project_root)
     report_path = output_dir / "traceability_report.json"

@@ -18,7 +18,11 @@
       "Bash(find /Users/lihan/Project/Vibe_Tracing -type f | head -200)",
       "Bash(cd /Users/lihan/Project/Vibe_Tracing && python -m pytest tests/test_db_query_functions.py tests/test_merge_gate_engine.py tests/test_pipeline.py -v --tb=short 2>&1 | tail -80)",
       "Bash(python3 -m pytest tests/test_db_query_functions.py tests/test_merge_gate_engine.py tests/test_pipeline.py -v --tb=short 2>&1 | tail -100)",
-      "Bash(python3 -m pytest --tb=short 2>&1 | tail -30)"
+      "Bash(python3 -m pytest --tb=short 2>&1 | tail -30)",
+      "Bash(find /Users/lihan/Project/Vibe_Tracing -type f -name \"*.py\" -o -name \"*.sql\" | head -80)",
+      "Bash(python3 -m pytest --tb=short 2>&1 | tail -20)",
+      "Bash(python3 -m pytest --tb=short 2>&1 | tail -5)",
+      "Bash(python3 -m pytest --tb=short tests/test_db_query_functions.py::test_tier2_f3_boundary_2_one_task_one_claim_enforced tests/test_db_query_functions.py::test_tier2_f6_boundary_2_multiple_claims_same_missing_task tests/test_db_query_functions.py::test_tier2_f6_boundary_5_bulk_dangling_claims tests/test_db_query_functions.py::test_tier3_combo_7_soft_integrity_violations 2>&1)"
     ]
   }
 }

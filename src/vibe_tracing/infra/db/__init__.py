@@ -8,7 +8,6 @@ from vibe_tracing.infra.db.schema import (
 from vibe_tracing.infra.db.loaders import (
     load_tasks,
     load_claims,
-    load_staged_files,
     load_initial_cache,
     load_prd,
     load_architecture_constraints,
@@ -26,10 +25,12 @@ from vibe_tracing.infra.db.queries import (
     check_invalid_task_constraints,
     check_invalid_ac_parent,
     check_isolated_tasks,
+    check_lint_violations,
 )
 from vibe_tracing.infra.db.exports import (
     upsert_test_result,
     upsert_coverage_report,
+    upsert_lint_result,
     purge_stale_cache,
 )
 
@@ -37,7 +38,6 @@ __all__ = [
     "init_in_memory_db",
     "load_tasks",
     "load_claims",
-    "load_staged_files",
     "load_initial_cache",
     "load_prd",
     "load_architecture_constraints",
@@ -53,7 +53,9 @@ __all__ = [
     "check_invalid_task_constraints",
     "check_invalid_ac_parent",
     "check_isolated_tasks",
+    "check_lint_violations",
     "upsert_test_result",
     "upsert_coverage_report",
+    "upsert_lint_result",
     "purge_stale_cache",
 ]

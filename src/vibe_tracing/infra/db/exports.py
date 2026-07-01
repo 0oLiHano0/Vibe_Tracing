@@ -41,6 +41,24 @@ def upsert_coverage_report(
     conn.commit()
 
 
+def upsert_lint_result(
+    conn: sqlite3.Connection,
+    source_path: str,
+    outcome: str,
+    violations_count: int,
+    command: str,
+    carried_over: bool,
+) -> None:
+    """插入或替换单条 lint 检查结果。"""
+    conn.execute(
+        "INSERT OR REPLACE INTO lint_results "
+        "(source_path, outcome, violations_count, command, carried_over) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (source_path, outcome, violations_count, command, int(carried_over)),
+    )
+    conn.commit()
+
+
 def purge_stale_cache(conn: sqlite3.Connection, target_files: list) -> None:
     """清除目标文件对应的陈旧缓存记录。"""
     for f in target_files:
@@ -51,6 +69,11 @@ def purge_stale_cache(conn: sqlite3.Connection, target_files: list) -> None:
         )
         conn.execute(
             "DELETE FROM coverage_reports "
+            "WHERE source_path = ? AND carried_over = 1",
+            (f,),
+        )
+        conn.execute(
+            "DELETE FROM lint_results "
             "WHERE source_path = ? AND carried_over = 1",
             (f,),
         )

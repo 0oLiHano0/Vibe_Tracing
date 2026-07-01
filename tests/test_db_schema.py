@@ -25,7 +25,7 @@ class TestDDL:
             "claim_test_refs",
             "claims",
             "coverage_reports",
-            "staged_files",
+            "lint_results",
             "task_acs",
             "tasks",
             "test_results",

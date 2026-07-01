@@ -22,8 +22,8 @@ def load_tasks(conn: sqlite3.Connection, tasks: list) -> None:
     """批量加载任务到数据库。"""
     for task in tasks:
         conn.execute(
-            "INSERT OR REPLACE INTO tasks (task_id, priority, status) VALUES (?, ?, ?)",
-            (task["task_id"], task["priority"], task["status"]),
+            "INSERT OR REPLACE INTO tasks (task_id, status) VALUES (?, ?)",
+            (task["task_id"], task["status"]),
         )
         for ac in _coerce_strlist(task.get("related_acceptance_criteria", [])):
             conn.execute(
@@ -70,19 +70,6 @@ def load_claims(conn: sqlite3.Connection, claims: list) -> None:
                 (claim["claim_id"], ref),
             )
     conn.commit()
-
-
-def load_staged_files(conn: sqlite3.Connection, files: set) -> list:
-    """将 Git 暂存区文件列表写入 staged_files 表。"""
-    inserted: list = []
-    for f in files:
-        conn.execute(
-            "INSERT OR REPLACE INTO staged_files (file_path) VALUES (?)",
-            (f,),
-        )
-        inserted.append(f)
-    conn.commit()
-    return inserted
 
 
 def load_architecture_constraints(conn: sqlite3.Connection, constraints: dict) -> None:

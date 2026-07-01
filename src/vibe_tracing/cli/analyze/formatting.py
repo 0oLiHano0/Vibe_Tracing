@@ -12,7 +12,7 @@ from vibe_tracing.cli.analyze.actions import (
 )
 
 
-def _render_actions(actions: list, coverage_summary: Optional[dict] = None, evidence_meta: Optional[dict] = None) -> list:
+def _render_actions(actions: list, coverage_summary: Optional[dict] = None) -> list:
     """Render action dicts to text lines for Agent consumption.
 
     Actions are sorted by urgency (descending) so that the most pressing
@@ -21,7 +21,6 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None, evid
     Args:
         actions: List of action dicts.
         coverage_summary: Aggregate coverage info.
-        evidence_meta: Evidence metadata for per-file coverage detail.
     """
     lines: List[str] = []
     if not actions:
@@ -85,15 +84,6 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None, evid
         status = "PASS" if pct >= 80 else "BLOCKED"
         lines.append("")
         lines.append(f"Coverage: {pct}% ({status}, target: 80%)")
-        if pct < 80:
-            # List files below threshold from evidence_meta coverage_baseline
-            cb = (evidence_meta or {}).get("coverage_baseline", {})
-            if cb:
-                below = [(f, d["percent_covered"]) for f, d in cb.items()
-                         if isinstance(d, dict) and d.get("percent_covered", 100) < 80]
-                below.sort(key=lambda x: x[1])
-                for f, p in below[:5]:
-                    lines.append(f"  {f}: {p}%")
 
     return lines
 
@@ -119,5 +109,5 @@ def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
     actions.extend(_collect_gate_reason_actions(
         gate_decision, gate_reasons or [], actions,
     ))
-    lines.extend(_render_actions(actions, coverage_summary, evidence_meta=evidence_meta))
+    lines.extend(_render_actions(actions, coverage_summary))
     return "\n".join(lines)

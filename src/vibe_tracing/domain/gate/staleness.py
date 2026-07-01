@@ -12,6 +12,7 @@ def determine_affected_items(
     staged_files: Set[str],
     claims_list: list,
     task_result: Optional[object] = None,
+    affected_claim_ids: Optional[Set[str]] = None,
 ) -> Tuple[Set[str], Set[str], Set[str]]:
     """Determine which claims, requirements, and ACs are affected by staged changes.
 
@@ -23,23 +24,17 @@ def determine_affected_items(
         staged_files: Set of staged file paths.
         claims_list: List of Claim objects.
         task_result: Optional TaskListLoadResult object with tasks attribute.
+        affected_claim_ids: Pre-computed set of affected claim IDs.
+            When provided, skips the inline traversal. Pipeline passes this
+            to eliminate the duplicate traversal already done in Stage 2.
 
     Returns:
         ``(affected_claim_ids, affected_req_ids, affected_ac_ids)``.
     """
-    affected_claims: Set[str] = set()
+    affected_claims: Set[str] = affected_claim_ids or set()
+
     affected_reqs: Set[str] = set()
     affected_acs: Set[str] = set()
-
-    for claim in claims_list:
-        claim_id = getattr(claim, "claim_id", None)
-        if not claim_id:
-            continue
-        for ref in (getattr(claim, "code_refs", []) or []) + (getattr(claim, "test_refs", []) or []):
-            path = ref.split("#")[0]
-            if path in staged_files:
-                affected_claims.add(claim_id)
-                break
 
     # Map affected claims -> tasks -> requirements / ACs
     if affected_claims and task_result and hasattr(task_result, "tasks") and task_result.tasks:
@@ -65,6 +60,7 @@ def mark_staleness(
     staged_files: Optional[Set[str]],
     claims_list: list,
     task_list_data: Optional[list] = None,
+    affected_claim_ids: Optional[Set[str]] = None,
 ) -> Tuple[List[Dict], List[Dict]]:
     """Mark gaps and risks from unchanged items as stale.
 
@@ -79,6 +75,9 @@ def mark_staleness(
             are marked stale (full analysis mode).
         claims_list: List of Claim objects for mapping claim_id -> code_refs.
         task_list_data: Optional list of task dicts for mapping task_id -> requirements/ACs.
+        affected_claim_ids: Pre-computed set of affected claim IDs.
+            When provided, skips the inline traversal. Pipeline passes this
+            to eliminate the duplicate traversal already done in Stage 2.
 
     Returns:
         Tuple of (new_gaps, new_risks) with stale markers added.
@@ -88,22 +87,10 @@ def mark_staleness(
         return list(merged_gaps), list(risks)
 
     # Build sets of affected item IDs based on staged file paths
-    affected_claims: Set[str] = set()
     affected_reqs: Set[str] = set()
     affected_acs: Set[str] = set()
 
-    # Map claims to staged files
-    for claim in claims_list:
-        claim_id = getattr(claim, "claim_id", None)
-        if not claim_id:
-            continue
-        code_refs = getattr(claim, "code_refs", []) or []
-        test_refs = getattr(claim, "test_refs", []) or []
-        for ref in code_refs + test_refs:
-            path = ref.split("#")[0].split("::")[0]
-            if path in staged_files:
-                affected_claims.add(claim_id)
-                break
+    affected_claims: Set[str] = affected_claim_ids or set()
 
     # Map affected claims -> tasks -> requirements / ACs
     if affected_claims and task_list_data:

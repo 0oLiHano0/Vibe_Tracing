@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Set
+from typing import Optional, Set, Tuple
 
 from vibe_tracing.domain.context import UnifiedContext
 from vibe_tracing.infra.config.boundary import is_in_scope
@@ -49,15 +49,44 @@ def build_governance_whitelist(manifest, project_root: Path) -> Set[str]:
     return whitelist
 
 
+def find_claimed_and_affected(
+    claims_list: list,
+    staged_files: Set[str],
+) -> Tuple[Set[str], Set[str]]:
+    """一次遍历 claims_list，同时产出 Stage 2 和 Stage 7 所需的数据。
+
+    Returns:
+        all_claimed:         所有被 Claim 覆盖的文件路径（code_refs + test_refs）
+        affected_claim_ids:  refs 命中 staged_files 的 Claim ID 集合
+    """
+    all_claimed: Set[str] = set()
+    affected_claim_ids: Set[str] = set()
+
+    for claim in claims_list:
+        cid = claim.claim_id
+        for ref in (claim.code_refs or []) + (claim.test_refs or []):
+            path = ref.split("#")[0].split("::")[0]
+            if not path:
+                continue
+            all_claimed.add(path)
+            if path in staged_files:
+                affected_claim_ids.add(cid)
+
+    return all_claimed, affected_claim_ids
+
+
 def detect_ghost_code(
     ctx: UnifiedContext,
     staged_files: Set[str],
+    all_claimed: Optional[Set[str]] = None,
 ) -> GhostCodeResult:
-    """幽灵代码检测：暂存区业务文件是否被 Claim 的 code_refs 覆盖。
+    """幽灵代码检测：暂存区业务文件是否被 Claim 的 code_refs/test_refs 覆盖。
 
     Args:
         ctx:           统一上下文（阶段一加载）
         staged_files:  暂存区文件集合
+        all_claimed:   预计算的 Claim 覆盖文件集合（含 code_refs + test_refs），
+                       若为 None 则内联计算。由 pipeline 层传入以消除重复遍历。
 
     Returns:
         GhostCodeResult，包含未被 Claim 覆盖的幽灵文件集合。
@@ -69,7 +98,9 @@ def detect_ghost_code(
     if not business_files:
         return GhostCodeResult()
 
-    all_claimed = _collect_claimed_files(ctx)
+    if all_claimed is None:
+        all_claimed, _ = find_claimed_and_affected(ctx.claims_list, staged_files)
+        # ponytail: _ 是 affected_claim_ids，幽灵代码检测不需要
     return GhostCodeResult(ghost_files=business_files - all_claimed)
 
 
@@ -87,12 +118,3 @@ def _filter_business_files(
     return {f for f in business_files if is_in_scope(f, ctx.governance_boundary)}
 
 
-def _collect_claimed_files(ctx: UnifiedContext) -> Set[str]:
-    """收集所有 Claim 的 code_refs（去除 # 行号锚点）。"""
-    all_claimed: Set[str] = set()
-    for claim in ctx.claims_list:
-        for code_ref in claim.code_refs:
-            clean_ref = code_ref.split("#")[0]
-            if clean_ref:
-                all_claimed.add(clean_ref)
-    return all_claimed

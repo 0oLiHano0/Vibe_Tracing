@@ -11,7 +11,10 @@
       "Bash(.venv/bin/python3 -c \"import json; json.load\\(open\\('src/vibe_tracing/infra/validation/schemas/task_list.schema.json'\\)\\)\" && echo \"VALID\" || echo \"INVALID\")",
       "Bash(.venv/bin/python3 -c \"import json; json.load\\(open\\('.vibetracing/config.json'\\)\\)\" && echo \"VALID\" || echo \"INVALID\")",
       "Bash(.venv/bin/python3 -c \"import json; json.load\\(open\\('docs/task_list.json'\\)\\)\" && echo \"VALID\" || echo \"INVALID\")",
-      "Bash(.venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tail -20)"
+      "Bash(.venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tail -20)",
+      "Bash(.venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tail -15)",
+      "Bash(.venv/bin/python -m pytest tests/test_staleness_tracker.py -q --tb=short 2>&1 | tail -30)",
+      "Bash(.venv/bin/python -m pytest tests/test_staleness_tracker.py tests/test_stage2_claim_coverage.py -v --tb=short 2>&1 | tail -60)"
     ]
   }
 }

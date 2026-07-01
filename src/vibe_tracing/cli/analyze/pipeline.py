@@ -237,8 +237,11 @@ def run_analyze(
                               "Could not get staged files from git", exc=exc)
             staged_files = set()
 
-        from vibe_tracing.domain.gate.claim_coverage import detect_ghost_code
-        result = detect_ghost_code(ctx, staged_files)
+        from vibe_tracing.domain.gate.claim_coverage import detect_ghost_code, find_claimed_and_affected
+        all_claimed, affected_claim_ids = find_claimed_and_affected(
+            ctx.claims_list, staged_files,
+        )
+        result = detect_ghost_code(ctx, staged_files, all_claimed=all_claimed)
         exit_code = None
         if not result.is_pass:
             vt_logger.warning("ghost_code_blocked",
@@ -368,6 +371,7 @@ def run_analyze(
             conn, ctx, project_root,
             staged_files=staged_files,
             human_decisions=human_decisions,
+            affected_claim_ids=affected_claim_ids,
         )
         vt_logger.info("phase_end", "Analysis completed (db.check_*)",
                        phase="run_analyzers",
@@ -388,6 +392,7 @@ def run_analyze(
             analysis_details=analysis_details,
             incremental_only=incremental_only,
             show_historical_debt=show_historical_debt,
+            affected_claim_ids=affected_claim_ids,
         )
         gate_decision = "blocked" if exit_code == 2 else "pass"
         vt_logger.info("phase_end", "Evaluate and output completed",
@@ -501,6 +506,7 @@ def _run_db_analysis(
     project_root: Path,
     staged_files: Optional[Set[str]] = None,
     human_decisions: Optional[dict] = None,
+    affected_claim_ids: Optional[Set[str]] = None,
 ) -> tuple:
     """[阶段 7] 使用数据库查询直接执行分析。
 
@@ -618,6 +624,7 @@ def _run_db_analysis(
     merged_gaps, final_risks = mark_staleness(
         merged_gaps, final_risks, staged_files,
         ctx.claims_list, task_list_data,
+        affected_claim_ids=affected_claim_ids,
     )
 
     # Analysis details for MergeGateEngine
@@ -649,6 +656,7 @@ def _run_analysis_phase(
     evidence_meta: dict,
     project_root: Path,
     staged_files: Optional[Set[str]] = None,
+    affected_claim_ids: Optional[Set[str]] = None,
 ):
     """[阶段 8 辅助] 过滤 stale 项并构建 staged_items（用于门禁判定的债务感知）。
 
@@ -659,6 +667,7 @@ def _run_analysis_phase(
         evidence_meta:  证据元数据
         project_root:   项目根目录
         staged_files:   暂存区文件集合
+        affected_claim_ids: 预计算的受影响 Claim ID 集合
     前置条件：
         分析器已完成（_run_analyzers 已执行）
     处理逻辑：
@@ -682,7 +691,8 @@ def _run_analysis_phase(
     directly_staged_items: Optional[Set[str]] = None
     if staged_files:
         affected_claims, affected_reqs, affected_acs = _determine_affected_items(
-            staged_files, claims_list, ctx,
+            staged_files, claims_list, ctx.task_result,
+            affected_claim_ids=affected_claim_ids,
         )
         staged_items = set(affected_claims)
         if ctx.task_result and ctx.task_result.tasks:
@@ -787,6 +797,7 @@ def _evaluate_and_output(
     analysis_details: Optional[dict] = None,
     incremental_only: bool = False,
     show_historical_debt: bool = True,
+    affected_claim_ids: Optional[Set[str]] = None,
 ) -> int:
     """[阶段 8] 执行门禁判定并生成所有输出（报告、Dashboard、终端摘要）。
 
@@ -804,6 +815,7 @@ def _evaluate_and_output(
         analysis_details: 分析详情（ghost_files, ac_gaps, dangling_claims 等）
         incremental_only: 是否只检查增量问题
         show_historical_debt: 是否显示历史债务详情
+        affected_claim_ids: 预计算的受影响 Claim ID 集合
     输出：
         返回退出码（0=通过, 2=blocked）
     """
@@ -815,7 +827,8 @@ def _evaluate_and_output(
 
     # 阶段 1：分析（过滤 stale 项，构建 staged_items）
     active_gaps, active_risks, evidence_meta, staged_items, directly_staged_items = \
-        _run_analysis_phase(ctx, merged_gaps, final_risks, evidence_meta, project_root, staged_files)
+        _run_analysis_phase(ctx, merged_gaps, final_risks, evidence_meta, project_root, staged_files,
+                           affected_claim_ids=affected_claim_ids)
 
     # 阶段 2：门禁判定
     gate_res = _run_gate_evaluation(

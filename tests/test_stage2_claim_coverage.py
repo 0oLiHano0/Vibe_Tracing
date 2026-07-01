@@ -8,6 +8,7 @@ from vibe_tracing.domain.context import UnifiedContext
 from vibe_tracing.domain.gate.claim_coverage import (
     GhostCodeResult,
     detect_ghost_code,
+    find_claimed_and_affected,
     build_governance_whitelist,
 )
 from vibe_tracing.infra.loader.claim_loader import Claim
@@ -102,6 +103,32 @@ class TestGhostCodeDetection:
         assert r.is_pass is False
         assert r.ghost_files == {"src/bar.py"}
 
+    def test_staged_test_refs_not_ghost(self):
+        """仅 staged test_refs 文件不触发幽灵代码阻断。
+
+        CLAIM-VT-042 有 code_refs=["src/foo.py"], test_refs=["tests/test_foo.py"]，
+        仅 git add tests/test_foo.py → 不应报幽灵代码。
+        """
+        ctx = _make_ctx(claims=[
+            Claim(claim_id="C1", related_task="T1",
+                  code_refs=["src/foo.py"],
+                  test_refs=["tests/test_foo.py"]),
+        ])
+        r = detect_ghost_code(ctx, {"tests/test_foo.py"})
+        assert r.is_pass is True
+        assert r.ghost_files == set()
+
+    def test_unclaimed_test_file_is_ghost(self):
+        """未在任何 Claim 的 refs 中声明的测试文件仍为幽灵代码。"""
+        ctx = _make_ctx(claims=[
+            Claim(claim_id="C1", related_task="T1",
+                  code_refs=["src/foo.py"],
+                  test_refs=["tests/test_foo.py"]),
+        ])
+        r = detect_ghost_code(ctx, {"tests/test_bar.py"})
+        assert r.is_pass is False
+        assert r.ghost_files == {"tests/test_bar.py"}
+
 
 # ---------------------------------------------------------------------------
 # Boundary filtering
@@ -186,3 +213,59 @@ class TestBuildGovernanceWhitelist:
         manifest.inputs_used = [record]
         wl = build_governance_whitelist(manifest, Path("/project"))
         assert "file.txt" not in wl
+
+
+# ---------------------------------------------------------------------------
+# find_claimed_and_affected
+# ---------------------------------------------------------------------------
+
+
+class TestFindClaimedAndAffected:
+    def test_empty_claims_empty_staged(self):
+        all_claimed, affected = find_claimed_and_affected([], set())
+        assert all_claimed == set()
+        assert affected == set()
+
+    def test_code_refs_collected_into_all_claimed(self):
+        claims = [Claim(claim_id="C1", related_task="T1", code_refs=["src/a.py"])]
+        all_claimed, affected = find_claimed_and_affected(claims, set())
+        assert "src/a.py" in all_claimed
+        assert affected == set()
+
+    def test_test_refs_collected_into_all_claimed(self):
+        claims = [Claim(claim_id="C1", related_task="T1",
+                        code_refs=["src/a.py"], test_refs=["tests/test_a.py"])]
+        all_claimed, _ = find_claimed_and_affected(claims, set())
+        assert "src/a.py" in all_claimed
+        assert "tests/test_a.py" in all_claimed
+
+    def test_affected_when_code_ref_staged(self):
+        claims = [Claim(claim_id="C1", related_task="T1", code_refs=["src/a.py"])]
+        _, affected = find_claimed_and_affected(claims, {"src/a.py"})
+        assert affected == {"C1"}
+
+    def test_affected_when_test_ref_staged(self):
+        claims = [Claim(claim_id="C1", related_task="T1",
+                        code_refs=["src/a.py"], test_refs=["tests/test_a.py"])]
+        _, affected = find_claimed_and_affected(claims, {"tests/test_a.py"})
+        assert affected == {"C1"}
+
+    def test_line_anchor_stripped(self):
+        claims = [Claim(claim_id="C1", related_task="T1", code_refs=["src/a.py#L10"])]
+        all_claimed, affected = find_claimed_and_affected(claims, {"src/a.py"})
+        assert "src/a.py" in all_claimed
+        assert affected == {"C1"}
+
+    def test_multiple_claims_mixed(self):
+        claims = [
+            Claim(claim_id="C1", related_task="T1", code_refs=["src/a.py"]),
+            Claim(claim_id="C2", related_task="T2", code_refs=["src/b.py"]),
+        ]
+        _, affected = find_claimed_and_affected(claims, {"src/a.py"})
+        assert affected == {"C1"}
+
+    def test_none_refs_handled(self):
+        claims = [Claim(claim_id="C1", related_task="T1", code_refs=None, test_refs=None)]
+        all_claimed, affected = find_claimed_and_affected(claims, {"src/a.py"})
+        assert all_claimed == set()
+        assert affected == set()

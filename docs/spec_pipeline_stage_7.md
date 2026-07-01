@@ -9,6 +9,7 @@
 | **项目根目录** | `cli/main.py` | 命令行参数传入 |
 | **暂存区文件集合** | `pipeline.py`（阶段 2 `git diff --cached`） | 内存（由阶段 2 通过 subprocess 获取） |
 | **人类决策记录** | `infra/loader/raw_input.py` | 硬盘文件 `.vibetracing/human_decisions.json`（经过 `ctx.human_decisions` 传入） |
+| **受影响的 Claim ID 集合** | `pipeline.py`（阶段 2 `find_claimed_and_affected()`） | 内存（由阶段 2 预计算，传入阶段 7 避免在 staleness 中重复遍历） |
 
 ---
 
@@ -57,7 +58,8 @@ claims_list:                        # Claims 列表，用于 staleness 标记的
     related_task: "TASK-VT-001"
     code_refs: [...]
     test_refs: [...]
-manifest: RawInputManifest          # 加载清单
+manifest: RawInputManifest          # 加载清单，用于获取 constraints_hash
+human_decisions: {}                 # 人类决策记录，在 run_analyze() 中通过 ctx.human_decisions 取出后传入 _run_db_analysis
 ```
 
 ---
@@ -114,8 +116,8 @@ decisions:                          # 决策列表
 
 | 函数 | 查询内容 | 返回字段 |
 |------|----------|----------|
-| `check_requirement_coverage(conn)` | 每个 MUST 需求的 Task → Claim → Test 覆盖状态 | `req_id`, `coverage_status` |
-| `check_ac_coverage(conn)` | 每个 MUST AC 的 Task → Claim → Test 覆盖状态 | `task_id`, `ac_id`, `coverage_status` |
+| `check_requirement_coverage(conn)` | 每个需求的 Task → Claim → Test 覆盖状态（不限优先级） | `req_id`, `coverage_status` |
+| `check_ac_coverage(conn)` | 每个 MUST 任务/需求的 AC 的 Task → Claim → Test 覆盖状态 | `task_id`, `ac_id`, `coverage_status` |
 | `check_claim_evidence(conn)` | 每个 Claim 的 Task 状态 + Test 执行状态 | `claim_id`, `verification_status` |
 
 **辅助查询**（结果放入 `analysis_details` 供阶段 8 门禁和 Dashboard 使用）：
@@ -157,7 +159,7 @@ decisions:                          # 决策列表
 2. 遍历 `ac_coverage` 列表，对每行调用 `_gap(ac_id, "ac", coverage_status, task_id=...)`
 3. 遍历 `claim_evidence` 列表，对每行调用 `_gap(claim_id, "claim", verification_status)`
 
-`_gap()` 函数采用查表法：`_GAP_MESSAGES` 是一个 `(item_type, status) → 消息模板` 的映射表。共 19 个模板，覆盖 requirement（5 种状态）、ac（5 种状态）、claim（5 种状态）。未知状态（如 `covered`）未在表中注册，返回 `None`，调用方静默跳过。
+`_gap()` 函数采用查表法：`_GAP_MESSAGES` 是一个 `(item_type, status) → 消息模板` 的映射表。共 15 个模板，覆盖 requirement（5 种状态）、ac（5 种状态）、claim（5 种状态）。未知状态（如 `covered`）未在表中注册，返回 `None`，调用方静默跳过。
 
 每个缺口字典包含三个字段：`item_id`（被检查项的 ID）、`item_type`（类型：`requirement` / `ac` / `claim`）、`reason`（人类可读的缺口描述）。
 
@@ -192,7 +194,7 @@ reason: "Architectural orphan: Task TASK-VT-005 is not linked to any module."
 检查内容：
 1. **模块边界**：扫描所有 Python 文件的 import 语句，根据 `architecture_constraints.json` 中定义的 `module_boundaries`（`forbidden_to_call` / `allowed_to_call` / `owned_files`），检查是否存在禁止的跨模块引用
 2. **手动规则验收**：遍历 constraints 文件中所有类别的 `verification_method == "manual"` 的 must 级规则——已通过 `human_decisions` 接受 → 记入 `accepted_rules`；未接受 → 记入 `unclear_constraints`
-3. **machine 规则跳过**：`verification_method == "machine"` 但无内置检查器的规则静默跳过，不标记 unclear、不阻断
+3. **非 manual 规则跳过**：`verification_method != "manual"` 的规则静默跳过——当前无内置 machine 规则检查器，不标记 unclear、不阻断
 
 返回值是一个字典，包含 4 个字段（见 §4 输出结构）。
 
@@ -226,8 +228,8 @@ reason: "Architectural orphan: Task TASK-VT-005 is not linked to any module."
 1. 如果 `staged_files` 为空（无暂存文件），所有项保持原样，不标记 stale
 2. 否则，根据 `staged_files` 和 `claims_list` 计算受影响的 Claim 集合（通过匹配 Claim 的 `code_refs` / `test_refs` 路径）
 3. 通过受影响的 Claim → 关联的 Task → Task 的 `related_requirements` / `related_acceptance_criteria`，推导受影响的 Requirement 和 AC 集合
-4. 对 `merged_gaps` 中的每个缺口——如果其 `item_type` 对应的 `item_id` 不在受影响集合中，则标记 `stale: true`
-5. 对 `final_risks` 中的每个风险——如果其 `claim_id` 不在受影响集合中，则标记 `stale: true`
+4. 对 `merged_gaps` 中的每个缺口——按 `item_type` 分派：`claim` 类型检查 `claim_id` 是否在受影响 Claim 集合中、`requirement` 类型检查 `item_id` 是否在受影响 Requirement 集合中、`ac` 类型检查 `item_id` 是否在受影响 AC 集合中——不在则标记 `stale: true`
+5. 对 `final_risks` 中的每个风险——仅检查带 `claim_id` 字段的风险（即 Claim 层面的风险）：若 `claim_id` 不在受影响集合中则标记 `stale: true`。从 gaps 和 compliance 派生的风险无 `claim_id` 字段，始终活跃，不参与 staleness 判定
 
 标记为 stale 的项在阶段 8 仍会出现在完整报告中，但不参与门禁判定（由 `_run_analysis_phase` 过滤）。
 
@@ -424,7 +426,7 @@ invalid_task_references:            # 无效任务引用（dict of list[dict]）
 | 事件名 | 级别 | 触发时机 | 模块 |
 |--------|------|----------|------|
 | `compliance_module_boundary` | DEBUG | 每个模块边界检查完成时 | ArchitectureComplianceChecker |
-| `compliance_import_violation` | DEBUG | 检测到禁止的跨模块 import 时 | ArchitectureComplianceChecker |
+| `compliance_import_violation` | DEBUG | 检测到禁止的跨模块 import 或不在白名单中的 import 时 | ArchitectureComplianceChecker |
 | `compliance_import_allowed` | DEBUG | 检测到允许的跨模块 import 时 | ArchitectureComplianceChecker |
 
 ### 错误传播

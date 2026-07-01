@@ -10,7 +10,7 @@ Tests for:
 
 import pytest
 from pathlib import Path
-from vibe_tracing.cli.analyze.pipeline import _db_result_to_gaps
+from vibe_tracing.cli.analyze.db_analysis import _db_result_to_gaps
 
 
 class TestDbResultToGaps:

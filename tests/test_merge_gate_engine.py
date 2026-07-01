@@ -333,7 +333,7 @@ class TestDanglingClaims:
 
         res = engine.evaluate([], [], {}, dangling_claims=[])
 
-        assert res["gate_decision"] != "blocked" or not any("dangling" in r for r in res["reasons"])
+        assert res["gate_decision"] == "pass"
 
     def test_dangling_claims_none_skips(self):
         """When dangling_claims is None, Rule 3 is skipped."""
@@ -368,8 +368,7 @@ class TestClaimEvidenceGaps:
         claim_evidence_gaps = [{"claim_id": "CLAIM-1", "verification_status": "no_tests"}]
         res = engine.evaluate([], [], {}, claim_evidence_gaps=claim_evidence_gaps)
 
-        # no_tests is not blocked, just a gap
-        assert res["gate_decision"] != "blocked" or not any("test_failed" in r for r in res["reasons"])
+        assert res["gate_decision"] != "blocked"
 
 
 # ---------------------------------------------------------------
@@ -385,7 +384,7 @@ class TestGhostCode:
 
         res = engine.evaluate([], [], {}, ghost_files=[], staged_items={"src/foo.py"})
 
-        assert res["gate_decision"] != "blocked" or not any("missing_claim" in r for r in res["reasons"])
+        assert res["gate_decision"] == "pass"
 
     def test_ghost_files_none_skips(self):
         """When ghost_files is None, Rule 2 is skipped."""
@@ -420,7 +419,7 @@ class TestAcCoverage:
 
         res = engine.evaluate([], [], {}, ac_gaps=[])
 
-        assert res["gate_decision"] != "blocked" or not any("ac_not_covered" in r for r in res["reasons"])
+        assert res["gate_decision"] == "pass"
 
     def test_ac_gaps_none_skips(self):
         """When ac_gaps is None, Rule 5 is skipped."""
@@ -609,8 +608,8 @@ class TestStagedItems:
 
         res = engine.evaluate(gaps, [], {}, staged_items={"OTHER-ITEM"})
 
-        # Pre-existing items don't block in incremental mode
-        assert res["gate_decision"] != "blocked" or any("[预存]" in msg for msg in res["reasons"])
+        assert res["gate_decision"] != "blocked"
+        assert any("[预存]" in msg for msg in res["reasons"])
 
 
 class TestIncrementalMode:
@@ -722,3 +721,141 @@ class TestIncrementalMode:
         assert "historical_debt_count" in res
         assert res["incremental_mode"] is True
         assert res["historical_debt_count"] == 0
+
+
+# ---------------------------------------------------------------
+# Isolated tasks tests (Stage 8 Fix 1)
+# ---------------------------------------------------------------
+
+class TestIsolatedTasks:
+    """Tests for isolated tasks warning."""
+
+    def test_isolated_tasks_appear_in_reasons(self):
+        """Isolated tasks appear as warnings in reasons, gate still passes."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        isolated_tasks = [
+            {"task_id": "TASK-005", "reason": "无关联需求/AC"},
+        ]
+        res = engine.evaluate([], [], {}, isolated_tasks=isolated_tasks)
+        assert res["gate_decision"] == "pass"
+        assert any("TASK-005" in msg for msg in res["reasons"])
+        assert any("[告警]" in msg for msg in res["reasons"])
+
+    def test_no_isolated_tasks_passes(self):
+        """Empty isolated tasks list produces pass."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        res = engine.evaluate([], [], {}, isolated_tasks=[])
+        assert res["gate_decision"] == "pass"
+        assert not any("[告警]" in msg for msg in res["reasons"])
+
+    def test_isolated_tasks_none_skips(self):
+        """When isolated_tasks is None, no warning added."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        res = engine.evaluate([], [], {}, isolated_tasks=None)
+        assert res["gate_decision"] == "pass"
+        assert not any("[告警]" in msg for msg in res["reasons"])
+
+    def test_isolated_tasks_do_not_override_blocked(self):
+        """Isolated tasks don't downgrade an already-blocked gate."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        ac_gaps = [{"ac_id": "AC-1", "task_id": "TASK-1", "coverage_status": "no_tests_declared"}]
+        isolated_tasks = [{"task_id": "TASK-005", "reason": "无关联需求/AC"}]
+        res = engine.evaluate([], [], {}, ac_gaps=ac_gaps, isolated_tasks=isolated_tasks)
+        assert res["gate_decision"] == "blocked"
+        assert any("[告警]" in msg for msg in res["reasons"])
+
+    def test_isolated_tasks_incremental_tagged(self):
+        """Isolated tasks get [当前] tag when staged_items is not None."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        isolated_tasks = [{"task_id": "TASK-005", "reason": "无关联需求/AC"}]
+        res = engine.evaluate([], [], {}, isolated_tasks=isolated_tasks, staged_items={"TASK-005"})
+        assert any("[当前]" in msg and "TASK-005" in msg for msg in res["reasons"])
+
+
+# ---------------------------------------------------------------
+# Invalid task references tests (Rule 9)
+# ---------------------------------------------------------------
+
+class TestInvalidTaskReferences:
+    """Tests for Rule 9: invalid task references."""
+
+    def test_invalid_requirements_blocks(self):
+        """Tasks referencing non-existent requirements block the gate."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        refs = {"invalid_requirements": [{"task_id": "TASK-1", "req_id": "REQ-MISSING"}]}
+        res = engine.evaluate([], [], {}, invalid_task_references=refs)
+        assert res["gate_decision"] == "blocked"
+        assert any("TASK-1" in msg for msg in res["reasons"])
+
+    def test_invalid_modules_blocks(self):
+        """Tasks referencing non-existent modules block the gate."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        refs = {"invalid_modules": [{"task_id": "TASK-1", "module_id": "MOD-MISSING"}]}
+        res = engine.evaluate([], [], {}, invalid_task_references=refs)
+        assert res["gate_decision"] == "blocked"
+
+    def test_invalid_module_code_paths_blocks(self):
+        """Code path module mismatch blocks the gate."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        refs = {"invalid_module_code_paths": [
+            {"task_id": "TASK-1", "module_id": "MOD-A", "code_path": "src/b.py", "actual_module": "MOD-B"}
+        ]}
+        res = engine.evaluate([], [], {}, invalid_task_references=refs)
+        assert res["gate_decision"] == "blocked"
+        assert any("链条错位" in msg for msg in res["reasons"])
+
+    def test_empty_invalid_references_passes(self):
+        """Empty invalid references produce pass."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        refs = {
+            "invalid_requirements": [],
+            "invalid_acs": [],
+            "invalid_modules": [],
+            "invalid_constraints": [],
+            "invalid_ac_parents": [],
+            "invalid_module_code_paths": [],
+        }
+        res = engine.evaluate([], [], {}, invalid_task_references=refs)
+        assert res["gate_decision"] == "pass"
+
+    def test_invalid_refs_incremental_filters_historical(self):
+        """In incremental mode, historical invalid refs don't block."""
+        engine = MergeGateEngine(Path("/dummy/project/root"), incremental_only=True)
+        refs = {"invalid_requirements": [{"task_id": "TASK-OLD", "req_id": "REQ-X"}]}
+        res = engine.evaluate([], [], {}, invalid_task_references=refs, staged_items={"TASK-NEW"})
+        assert res["gate_decision"] == "pass"
+        assert res["historical_debt_count"] >= 1
+
+
+# ---------------------------------------------------------------
+# Lint violations tests
+# ---------------------------------------------------------------
+
+class TestLintViolations:
+    """Tests for lint violations (warning-level, not blocking)."""
+
+    def test_lint_violations_fail_not_blocked(self):
+        """Lint violations produce fail, not blocked."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        lint_violations = [{"source_path": "src/foo.py", "violations_count": 3, "carried_over": False}]
+        res = engine.evaluate([], [], {}, lint_violations=lint_violations)
+        assert res["gate_decision"] == "fail"
+        assert any("src/foo.py" in msg for msg in res["reasons"])
+
+    def test_no_lint_violations_passes(self):
+        """Empty lint violations list produces pass."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+        res = engine.evaluate([], [], {}, lint_violations=[])
+        assert res["gate_decision"] == "pass"
+
+
+# ---------------------------------------------------------------
+# AC coverage dimension fix test (Stage 8 Fix 3)
+# ---------------------------------------------------------------
+
+def test_ac_coverage_incremental_no_claim_for_task_uses_task_id():
+    """no_claim_for_task gap uses task_id for incremental check, not ac_id."""
+    engine = MergeGateEngine(Path("/dummy/project/root"), incremental_only=True)
+    ac_gaps = [{"ac_id": "AC-OLD", "task_id": "TASK-NEW", "coverage_status": "no_claim_for_task"}]
+    res = engine.evaluate([], [], {}, ac_gaps=ac_gaps, staged_items={"TASK-NEW"})
+    assert res["gate_decision"] == "blocked"

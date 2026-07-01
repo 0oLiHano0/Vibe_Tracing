@@ -1,1 +1,394 @@
-[]
+[
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_missing_ac_test_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_claim_missing_external_evidence_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_high_risk_lacking_details_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_must_constraint_violated_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_unclear_constraint_produces_fail",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_pass_when_no_gaps_risks_or_violations",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_architecture_violation_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_should_gap_produces_fail",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_mixed_gaps_blocks_when_must_present",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_should_risk_produces_fail",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_gate_decision_priority_blocked_over_fail",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestDanglingClaims::test_dangling_claims_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestDanglingClaims::test_no_dangling_claims_passes",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestDanglingClaims::test_dangling_claims_none_skips",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestClaimEvidenceGaps::test_claim_evidence_test_failed_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestClaimEvidenceGaps::test_claim_evidence_no_tests_not_blocked",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestGhostCode::test_no_ghost_files_passes",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestGhostCode::test_ghost_files_none_skips",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestAcCoverage::test_ac_gaps_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestAcCoverage::test_no_ac_gaps_passes",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestAcCoverage::test_ac_gaps_none_skips",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestCoverageViolations::test_coverage_violations_fail_not_blocked",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestCoverageViolations::test_no_coverage_violations_passes",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestCoverageViolations::test_coverage_violations_do_not_override_blocked",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestCoverageViolations::test_coverage_violations_incremental_filters_carried_over",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestCoverageViolations::test_coverage_violations_all_historical_incremental_pass",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestHumanDecisions::test_mark_complete_resolves_gap",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestHumanDecisions::test_accept_risk_downgrades_risk",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestStagedItems::test_staged_items_none_full_analysis",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestStagedItems::test_staged_items_with_current_item",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestStagedItems::test_staged_items_with_preexisting_item",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIncrementalMode::test_incremental_mode_initialization",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIncrementalMode::test_rule3_incremental_mode",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIncrementalMode::test_rule4_incremental_mode",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIncrementalMode::test_rule5_incremental_mode",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIncrementalMode::test_incremental_mode_result_fields",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIsolatedTasks::test_isolated_tasks_appear_in_reasons",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIsolatedTasks::test_no_isolated_tasks_passes",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIsolatedTasks::test_isolated_tasks_none_skips",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIsolatedTasks::test_isolated_tasks_do_not_override_blocked",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestIsolatedTasks::test_isolated_tasks_incremental_tagged",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestInvalidTaskReferences::test_invalid_requirements_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestInvalidTaskReferences::test_invalid_modules_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestInvalidTaskReferences::test_invalid_module_code_paths_blocks",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestInvalidTaskReferences::test_empty_invalid_references_passes",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestInvalidTaskReferences::test_invalid_refs_incremental_filters_historical",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestLintViolations::test_lint_violations_fail_not_blocked",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::TestLintViolations::test_no_lint_violations_passes",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_merge_gate_engine.py::test_ac_coverage_incremental_no_claim_for_task_uses_task_id",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_merge_gate_engine.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_ffd1f2a5eca745369a6cccf0d2759b35.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_incremental_mode.py::TestIncrementalMode::test_environment_variable_enables_incremental",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_incremental_mode.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_3374e038ce48454aa480b7ca57a80367.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_incremental_mode.py::TestIncrementalMode::test_environment_variable_disables_show_debt",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_incremental_mode.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_3374e038ce48454aa480b7ca57a80367.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_incremental_mode.py::TestIncrementalMode::test_config_json_incremental_only",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_incremental_mode.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_3374e038ce48454aa480b7ca57a80367.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_incremental_mode.py::TestIncrementalMode::test_priority_parameter_over_env",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_incremental_mode.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_3374e038ce48454aa480b7ca57a80367.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_incremental_mode.py::TestIncrementalMode::test_priority_env_over_config",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_incremental_mode.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_3374e038ce48454aa480b7ca57a80367.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_incremental_mode.py::TestIncrementalMode::test_print_gate_summary_filters_historical_debt",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_incremental_mode.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_3374e038ce48454aa480b7ca57a80367.json",
+    "carried_over": false
+  },
+  {
+    "nodeid": "tests/test_incremental_mode.py::TestIncrementalMode::test_print_gate_summary_shows_historical_debt",
+    "outcome": "covered",
+    "exit_code": 0,
+    "command": "pytest tests/test_incremental_mode.py --tb=short -q --json-report --json-report-file=/Users/lihan/Project/Vibe_Tracing/.vibetracing/tmp/vt_test_3374e038ce48454aa480b7ca57a80367.json",
+    "carried_over": false
+  }
+]

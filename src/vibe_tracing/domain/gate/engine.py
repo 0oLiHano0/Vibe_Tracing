@@ -290,10 +290,10 @@ class MergeGateEngine:
                 "task_id": task_id,
             }
             gaps.append(gap_entry)
-            reasons.append(self._tag_reason(msg, {ac_id}, staged_items))
+            related_ids = {task_id} if (task_id and gap.get("coverage_status") == "no_claim_for_task") else {ac_id}
+            reasons.append(self._tag_reason(msg, related_ids, staged_items))
 
-            # Incremental mode: only block if current commit related
-            if not self.incremental_only or self._is_current({ac_id}, staged_items):
+            if not self.incremental_only or self._is_current(related_ids, staged_items):
                 blocked_items.append(msg)
                 has_blocked = True
             else:
@@ -436,6 +436,12 @@ class MergeGateEngine:
                     is_human_resolved=human_resolved,
                     final_status=final_status,
                     reason=reason[:200])
+            elif not is_stale:
+                OperationalLogger.get().debug(
+                    "gate_gap_routed_to_should",
+                    "Non-AC gap in _process_must_gaps — routed to should_gaps or Rules 3/4/9",
+                    item_type=item_type, item_id=item_id,
+                )
         return has_blocked
 
     def _process_must_risks(
@@ -574,6 +580,7 @@ class MergeGateEngine:
         lint_violations: List[Dict[str, Any]],
         accepted_rule_target_ids: Optional[Set[str]] = None,
         rejected_rule_target_ids: Optional[Set[str]] = None,
+        isolated_tasks: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Sections 2.5 + 3: Final gate decision computation."""
         if current_fail_detected and gate_decision == "pass":
@@ -588,7 +595,7 @@ class MergeGateEngine:
             ]
             if active_violations:
                 for cv in active_violations:
-                    tag = "[当前] " if staged_items is not None else ""
+                    tag = "[当前] " if staged_items else ""
                     reasons.append(
                         f"{tag}Coverage below {threshold}%: {cv.get('source_path', cv.get('file', ''))} ({cv.get('percent_covered', cv.get('percent', 0))}%)"
                     )
@@ -606,7 +613,7 @@ class MergeGateEngine:
             ]
             if active_lint_violations:
                 for lv in active_lint_violations:
-                    tag = "[当前] " if staged_items is not None else ""
+                    tag = "[当前] " if staged_items else ""
                     reasons.append(
                         f"{tag}Lint violations: {lv['source_path']} "
                         f"({lv['violations_count']} issues)"
@@ -616,6 +623,14 @@ class MergeGateEngine:
             historical_lint = len(lint_violations) - len(active_lint_violations)
             if historical_lint > 0:
                 self._historical_debt_count += historical_lint
+
+        # 2.7 Isolated tasks (warning-level, not blocking)
+        if isolated_tasks:
+            for t in isolated_tasks:
+                tag = "[当前] " if staged_items else ""
+                reasons.append(
+                    f"{tag}[告警] 孤立任务 {t['task_id']}: {t.get('reason', '无关联需求/AC')}"
+                )
 
         # 3. Handle 'pass'
         if gate_decision == "pass" and not reasons:
@@ -661,6 +676,7 @@ class MergeGateEngine:
         cov_violations: Optional[List[Dict[str, Any]]] = None,
         lint_violations: Optional[List[Dict[str, Any]]] = None,
         invalid_task_references: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+        isolated_tasks: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate merge gate criteria.
@@ -874,4 +890,5 @@ class MergeGateEngine:
             cov_violations or [],
             lint_violations or [],
             accepted_rule_target_ids, rejected_rule_target_ids,
+            isolated_tasks or [],
         )

@@ -42,7 +42,6 @@ def _build_report_document(
         "project_id": evidence_meta.get("project_id"),
         "scan_time": evidence_meta.get("scan_time"),
         "gate_decision": gate_decision,
-        "requirement_coverage": [],
         "gaps": merged_gaps,
         "risks": final_risks,
         "architecture_compliance_status": compliance_res.get(

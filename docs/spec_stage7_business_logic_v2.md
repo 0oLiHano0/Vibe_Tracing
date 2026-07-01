@@ -95,7 +95,7 @@ TASK-001
 | 类型 | 矛盾双方 | 当前代码覆盖 |
 |------|---------|-------------|
 | AC 父需求不匹配 | task→ac 链路 与 task→req 链路 | ✅ `check_invalid_ac_parent` |
-| 代码路径与模块不匹配 | task→module 归属 与 claim→code_path 实际路径 | ❌ 未检查 |
+| 代码路径与模块不匹配 | task→module 归属 与 claim→code_path 实际路径 | ✅ `_check_module_code_path_mismatch` |
 
 **判定**：所有跨文件引用存在，但交叉验证发现逻辑矛盾 → 阻拦
 
@@ -165,7 +165,9 @@ Dashboard 展示：
 REQ-A ──→ TASK-001 (done) ──→ [无 Claim]
 ```
 
-**与当前代码的差异**：当前代码在检查"无声明"时不区分 task 的状态——`in_progress` 和 `done` 同样报 `no_claim_for_task`。业务逻辑正确的做法是：**只有 `done` 状态的 task 才需要阻断**。`in_progress` 的 task 没有 claim 是正常的——Agent 还在工作中。
+**业务逻辑正确的做法**：**只有 `done` 状态的 task 才需要阻断**。`in_progress` 的 task 没有 claim 是正常的——Agent 还在工作中。
+
+> **当前代码状态**：此逻辑已在 `queries.py:39` 中实现——`WHEN t.status != 'done' AND c.claim_id IS NULL THEN 'covered'`，`in_progress` 任务的 `no_claim_for_task` 被静默过滤。阶段 8 收到的是已过滤后的干净数据。详见 `docs/stage8_logic_audit_vs_spec.md`。
 
 | task 状态 | 有 Claim | 无 Claim |
 |-----------|---------|---------|
@@ -314,8 +316,8 @@ coverage_reports["src/foo.py"]:
 | 分类 | 当前覆盖 | 差距 |
 |------|---------|------|
 | 链条中断 | `check_invalid_task_*` + `check_dangling_claims` | ✅ 完全覆盖 |
-| 链条错位 | `check_invalid_ac_parent` | ⚠️ 只检查了一种错位（AC 父需求），未检查 code_path vs module 矛盾 |
+| 链条错位 | `check_invalid_ac_parent` + `_check_module_code_path_mismatch` | ✅ 完全覆盖（AC 父需求 + code_path vs module 均已检查） |
 | 孤立任务 | `check_isolated_tasks` | ✅ 覆盖 |
-| 无声明 | `check_requirement_coverage` + `check_ac_coverage` 的 `no_claim_for_task` | ⚠️ 当前不区分 task 状态，应改为仅 `done` 阻断 |
+| 无声明 | `check_requirement_coverage` + `check_ac_coverage` 的 `no_claim_for_task` | ✅ 完全覆盖（查询层已过滤 `in_progress`，仅 `done` 阻断） |
 | 任务失败 | `check_claim_evidence` 的 `test_failed` | ✅ 覆盖 |
-| 任务不达标 | `check_coverage_violations` | ❌ 未与 Claim 关联；lint 结果未入库 |
+| 任务不达标 | `check_coverage_violations` + `check_lint_violations` | ⚠️ 覆盖率未与 Claim 关联；lint 已入库并纳入门禁判定 |

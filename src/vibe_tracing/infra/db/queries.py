@@ -8,12 +8,15 @@ from vibe_tracing.infra.config.enums import CoverageStatus
 
 
 def check_coverage_violations(conn: sqlite3.Connection) -> list:
-    """检查覆盖率违规：返回所有 status='violated' 的覆盖率记录。"""
+    """检查覆盖率违规：返回所有 status='violated' 的覆盖率记录（含 carried_over 标记）。"""
     rows = conn.execute(
-        f"SELECT source_path, percent_covered FROM coverage_reports "
+        f"SELECT source_path, percent_covered, carried_over FROM coverage_reports "
         f"WHERE status = '{CoverageStatus.VIOLATED.value}'"
     ).fetchall()
-    return [{"source_path": r[0], "percent_covered": r[1]} for r in rows]
+    return [
+        {"source_path": r[0], "percent_covered": r[1], "carried_over": bool(r[2])}
+        for r in rows
+    ]
 
 
 def check_dangling_claims(conn: sqlite3.Connection) -> list:
@@ -32,6 +35,7 @@ def check_ac_coverage(conn: sqlite3.Connection) -> list:
         SELECT ta.task_id, ac.ac_id,
           CASE
             WHEN ta.task_id IS NULL THEN 'no_task_for_ac'
+            WHEN t.status != 'done' AND c.claim_id IS NULL THEN '{CoverageStatus.COVERED.value}'
             WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
             WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
             WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'
@@ -62,6 +66,7 @@ def check_requirement_coverage(conn: sqlite3.Connection) -> list:
         SELECT r.req_id,
           CASE
             WHEN trq.task_id IS NULL THEN 'no_task_for_requirement'
+            WHEN t.status != 'done' AND c.claim_id IS NULL THEN '{CoverageStatus.COVERED.value}'
             WHEN c.claim_id IS NULL THEN 'no_claim_for_task'
             WHEN COUNT(ctr.test_nodeid) = 0 THEN 'no_tests_declared'
             WHEN SUM(CASE WHEN tr.nodeid IS NULL THEN 1 ELSE 0 END) > 0 THEN 'test_not_run'

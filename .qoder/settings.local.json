@@ -14,7 +14,11 @@
       "Bash(.venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tail -20)",
       "Bash(.venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tail -15)",
       "Bash(.venv/bin/python -m pytest tests/test_staleness_tracker.py -q --tb=short 2>&1 | tail -30)",
-      "Bash(.venv/bin/python -m pytest tests/test_staleness_tracker.py tests/test_stage2_claim_coverage.py -v --tb=short 2>&1 | tail -60)"
+      "Bash(.venv/bin/python -m pytest tests/test_staleness_tracker.py tests/test_stage2_claim_coverage.py -v --tb=short 2>&1 | tail -60)",
+      "Bash(find /Users/lihan/Project/Vibe_Tracing -type f | head -200)",
+      "Bash(cd /Users/lihan/Project/Vibe_Tracing && python -m pytest tests/test_db_query_functions.py tests/test_merge_gate_engine.py tests/test_pipeline.py -v --tb=short 2>&1 | tail -80)",
+      "Bash(python3 -m pytest tests/test_db_query_functions.py tests/test_merge_gate_engine.py tests/test_pipeline.py -v --tb=short 2>&1 | tail -100)",
+      "Bash(python3 -m pytest --tb=short 2>&1 | tail -30)"
     ]
   }
 }

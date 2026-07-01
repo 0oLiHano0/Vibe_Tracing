@@ -436,16 +436,16 @@ class TestAcCoverage:
 # ---------------------------------------------------------------
 
 class TestCoverageViolations:
-    """Tests for coverage violations check."""
+    """Tests for coverage violations check (warning-level, not blocking)."""
 
-    def test_coverage_violations_blocks(self):
-        """Coverage violations block the gate."""
+    def test_coverage_violations_fail_not_blocked(self):
+        """Coverage violations produce 'fail' (warning), not 'blocked'."""
         engine = MergeGateEngine(Path("/dummy/project/root"))
 
-        cov_violations = [{"source_path": "src/foo.py", "percent_covered": 45.0}]
+        cov_violations = [{"source_path": "src/foo.py", "percent_covered": 45.0, "carried_over": False}]
         res = engine.evaluate([], [], {}, cov_violations=cov_violations)
 
-        assert res["gate_decision"] == "blocked"
+        assert res["gate_decision"] == "fail"
         assert any("src/foo.py" in msg for msg in res["reasons"])
 
     def test_no_coverage_violations_passes(self):
@@ -455,6 +455,42 @@ class TestCoverageViolations:
         res = engine.evaluate([], [], {}, cov_violations=[])
 
         assert res["gate_decision"] == "pass"
+
+    def test_coverage_violations_do_not_override_blocked(self):
+        """Coverage violations don't downgrade an already-blocked gate."""
+        engine = MergeGateEngine(Path("/dummy/project/root"))
+
+        ac_gaps = [{"ac_id": "AC-1", "task_id": "TASK-1", "coverage_status": "no_tests_declared"}]
+        cov_violations = [{"source_path": "src/foo.py", "percent_covered": 45.0, "carried_over": False}]
+        res = engine.evaluate([], [], {}, ac_gaps=ac_gaps, cov_violations=cov_violations)
+
+        assert res["gate_decision"] == "blocked"
+
+    def test_coverage_violations_incremental_filters_carried_over(self):
+        """In incremental mode, carried_over violations are counted as historical debt."""
+        engine = MergeGateEngine(Path("/dummy/project/root"), incremental_only=True)
+
+        cov_violations = [
+            {"source_path": "src/old.py", "percent_covered": 30.0, "carried_over": True},
+            {"source_path": "src/new.py", "percent_covered": 40.0, "carried_over": False},
+        ]
+        res = engine.evaluate([], [], {}, cov_violations=cov_violations)
+
+        assert any("src/new.py" in msg for msg in res["reasons"])
+        assert not any("src/old.py" in msg for msg in res["reasons"])
+        assert res["historical_debt_count"] >= 1
+
+    def test_coverage_violations_all_historical_incremental_pass(self):
+        """All carried_over violations in incremental mode produce pass."""
+        engine = MergeGateEngine(Path("/dummy/project/root"), incremental_only=True)
+
+        cov_violations = [
+            {"source_path": "src/old.py", "percent_covered": 30.0, "carried_over": True},
+        ]
+        res = engine.evaluate([], [], {}, cov_violations=cov_violations)
+
+        assert res["gate_decision"] == "pass"
+        assert res["historical_debt_count"] >= 1
 
 
 # ---------------------------------------------------------------

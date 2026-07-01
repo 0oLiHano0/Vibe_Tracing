@@ -62,6 +62,47 @@ def test_tier1_f1_coverage_2_no_claim():
     assert res[0]["coverage_status"] == "no_claim_for_task"
     conn.close()
 
+
+def test_tier1_f1_coverage_2b_in_progress_no_claim_not_flagged():
+    """in_progress 任务无 Claim 不应触发 no_claim_for_task（仅 done 任务需要 Claim）。"""
+    conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test", "priority": "must",
+              "category": "functional", "acceptance_criteria": [
+                  {"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}
+              ]}]})
+    load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "in_progress",
+                        "related_acceptance_criteria": ["AC-1-1"]}])
+    res = check_ac_coverage(conn)
+    assert len(res) == 0, f"in_progress task should not trigger no_claim_for_task, got: {res}"
+    conn.close()
+
+
+def test_tier1_f2_in_progress_no_claim_not_flagged():
+    """in_progress 任务无 Claim 不应触发 no_claim_for_task（需求覆盖检查）。"""
+    conn = init_in_memory_db()
+    load_prd(conn, [{"req_id": "REQ-1", "title": "Req 1", "priority": "must",
+                     "category": "functional", "acceptance_criteria": []}])
+    load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": "in_progress",
+                        "related_requirements": ["REQ-1"]}])
+    res = check_requirement_coverage(conn)
+    assert len(res) == 0, f"in_progress task should not trigger no_claim_for_task, got: {res}"
+    conn.close()
+
+
+@pytest.mark.parametrize("status", ["in_progress", "todo", "blocked", "cancelled"])
+def test_non_done_task_no_claim_not_flagged(status):
+    """所有非 done 状态的任务无 Claim 均不应触发 no_claim_for_task。"""
+    conn = init_in_memory_db()
+    load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test", "priority": "must",
+              "category": "functional", "acceptance_criteria": [
+                  {"ac_id": "AC-1-1", "title": "AC", "is_testing_required": True}
+              ]}]})
+    load_tasks(conn, [{"task_id": "TASK-1", "priority": "must", "status": status,
+                        "related_acceptance_criteria": ["AC-1-1"]}])
+    res = check_ac_coverage(conn)
+    assert len(res) == 0, f"status={status} should not trigger no_claim_for_task, got: {res}"
+    conn.close()
+
 def test_tier1_f1_coverage_3_no_tests():
     conn = init_in_memory_db()
     load_prd(conn, {"requirements": [{"req_id": "REQ-1", "title": "Test Requirement", "priority": "must", "category": "functional", "acceptance_criteria": [{"ac_id": "AC-1-1", "title": "Test AC", "is_testing_required": True}]}]})
@@ -570,6 +611,19 @@ def test_tier3_combo_4_staged_violated_coverage():
     res_cov = check_coverage_violations(conn)
     assert len(res_cov) == 1
     assert res_cov[0]["source_path"] == "src/foo.py"
+    assert res_cov[0]["carried_over"] is False
+    conn.close()
+
+def test_check_coverage_violations_carried_over_field():
+    """check_coverage_violations 应返回 carried_over 字段以区分历史与当次违规。"""
+    conn = init_in_memory_db()
+    upsert_coverage_report(conn, "src/current.py", 45.0, 10, "violated", False)
+    upsert_coverage_report(conn, "src/cached.py", 30.0, 5, "violated", True)
+    res = check_coverage_violations(conn)
+    assert len(res) == 2
+    by_path = {r["source_path"]: r for r in res}
+    assert by_path["src/current.py"]["carried_over"] is False
+    assert by_path["src/cached.py"]["carried_over"] is True
     conn.close()
 
 def test_tier3_combo_5_large_scale_sync():
@@ -610,8 +664,7 @@ def test_tier4_scenario_1_new_feature_development():
     load_staged_files(conn, {"src/auth.py"})
 
     res_f2 = check_requirement_coverage(conn)
-    assert len(res_f2) == 1
-    assert res_f2[0]["coverage_status"] == "no_claim_for_task"
+    assert len(res_f2) == 0, f"in_progress task should not trigger no_claim_for_task, got: {res_f2}"
     conn.close()
 
 def test_tier4_scenario_3_feature_complete_verification():

@@ -563,16 +563,24 @@ class MergeGateEngine:
         if current_fail_detected and gate_decision == "pass":
             gate_decision = "fail"
 
-        # 2.5 Check coverage violations
+        # 2.5 Check coverage violations (warning-level, not blocking)
         if cov_violations:
             threshold = getattr(self, 'coverage_threshold', 80)
-            for cv in cov_violations:
-                tag = "[当前] " if staged_items is not None else ""
-                reasons.append(
-                    f"{tag}Coverage below {threshold}%: {cv.get('source_path', cv.get('file', ''))} ({cv.get('percent_covered', cv.get('percent', 0))}%)"
-                )
-            if gate_decision not in ("blocked",):
-                gate_decision = "blocked"
+            active_violations = [
+                cv for cv in cov_violations
+                if not self.incremental_only or not cv.get("carried_over", False)
+            ]
+            if active_violations:
+                for cv in active_violations:
+                    tag = "[当前] " if staged_items is not None else ""
+                    reasons.append(
+                        f"{tag}Coverage below {threshold}%: {cv.get('source_path', cv.get('file', ''))} ({cv.get('percent_covered', cv.get('percent', 0))}%)"
+                    )
+                if gate_decision not in ("blocked",):
+                    gate_decision = "fail"
+            historical_violations = len(cov_violations) - len(active_violations)
+            if historical_violations > 0:
+                self._historical_debt_count += historical_violations
 
         # 3. Handle 'pass'
         if gate_decision == "pass" and not reasons:

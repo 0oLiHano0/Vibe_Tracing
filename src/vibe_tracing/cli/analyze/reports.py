@@ -42,6 +42,11 @@ def _build_report_document(
         "project_id": evidence_meta.get("project_id"),
         "scan_time": evidence_meta.get("scan_time"),
         "gate_decision": gate_decision,
+        "gate_reasons": gate_res.get("reasons", []),
+        "gate_blocked_items": gate_res.get("blocked_items", []),
+        "incremental_mode": gate_res.get("incremental_mode", False),
+        "historical_debt_count": gate_res.get("historical_debt_count", 0),
+        "requirement_coverage": [],
         "gaps": merged_gaps,
         "risks": final_risks,
         "architecture_compliance_status": compliance_res.get(

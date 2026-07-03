@@ -27,7 +27,9 @@
       "Bash(which python3 && cd /Users/lihan/Project/Vibe_Tracing && python3 -m pytest tests/ --tb=short -q 2>&1 | tail -40)",
       "Bash(python3 -m pytest tests/ --tb=short -q 2>&1 | tail -30)",
       "Bash(python -m pytest tests/test_merge_gate_engine.py tests/test_pipeline.py -v 2>&1)",
-      "Bash(python3 -m pytest tests/test_merge_gate_engine.py tests/test_pipeline.py -v 2>&1)"
+      "Bash(python3 -m pytest tests/test_merge_gate_engine.py tests/test_pipeline.py -v 2>&1)",
+      "Bash(find /Users/lihan/Project/Vibe_Tracing -type f -name \"*.py\" | head -100)",
+      "Bash(python3:*)"
     ]
   }
 }

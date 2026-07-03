@@ -71,6 +71,11 @@
       "phase_id": "PHASE-VT-012",
       "name": "阶段6 Bug 修复与测试清理",
       "goal": "修复阶段 6 两条数据流断裂 bug（覆盖率缓存路径 + SQL outcome 字面量），清理测试文件中的值域不一致和架构残留，统一测试数据到 CoverageStatus 值域。"
+    },
+    {
+      "phase_id": "PHASE-VT-013",
+      "name": "规则引擎重构 — 目标模型 F(o,a,r,c,v) 实现",
+      "goal": "将 MergeGateEngine 从聚合列表+3态字符串的前驱实现，重构为设计文档定义的双轴状态模型：per-issue 五元信号 → 纯函数 F → 5态输出。消除 activated 信号的文件路径血缘偏差，引入 Baseline 快照机制，实现 per-issue 历史债务状态追踪。"
     }
   ],
   "tasks": [
@@ -10068,6 +10073,589 @@
         "Plan.md 更新格式：每个步骤标题后添加状态标记和 1-2 句实际执行结果。",
         "spec_pipeline_stage_6.md：§2 中 test_results.json outcome 和 coverage_reports.json status 枚举值已在上轮修正，确认无需再改。",
         "refactoring_design.md：§6.3 中禁止硬编码字符串的要求是否需要补充说明当前为最低修复（字面量 covered 而非引用枚举）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-180",
+      "title": "定义数据模型：IssueSignal / Severity / OutputState 类型 + 规则引擎纯函数 F",
+      "phase_id": "PHASE-VT-013",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "创建规则引擎目标模型的核心数据类型和纯状态变换函数 F，作为后续所有任务的基础。这是纯类型定义+一个5分支短路函数，不涉及 I/O 或外部依赖。",
+      "atomic_scope": "1) 在 src/vibe_tracing/domain/gate/ 下创建 types.py，定义：Severity 枚举 {BLOCK, WARNING}、OutputState 枚举 {RESOLVED, ACCEPTED, HISTORICAL, CURRENT_BLOCK, CURRENT_WARNING}、DetectedIssue 数据类（issue_id: str, issue_type: str, severity: Severity, reason: str, related_task_id: str, gap_targets: list[str], item_id: str）——issue_type 取值为 spec_stage7_business_logic_v2.md 的六类之一：chain_broken / chain_misaligned / isolated_task / no_claim / task_failed / substandard、IssueSignal 数据类（observed: bool, activated: bool, resolved: bool, accepted: bool, severity: Severity, issue_id: str, task_id: str, gap_targets: list[str]）、GateAction 枚举 {BLOCK, WARN, DISPLAY}。2) 在 types.py 中实现纯函数 F(o,a,r,c,v) → OutputState，严格按 design_rule_engine.md §3.1 的 5 步优先级短路求值（resolved→accepted→HISTORICAL→CURRENT_BLOCK→CURRENT_WARNING）。3) 在 types.py 中实现 state_to_gate_action(state) → GateAction 的映射函数。4) 在 types.py 中实现 aggregate_gate_decision(states: List[Tuple[OutputState, IssueSignal]]) → Tuple[str, List[Dict], List[Dict]]——聚合所有 issue 的状态，产出 (gate_decision, historical_issues, per_issue_states)。gate_decision 逻辑：存在 CURRENT_BLOCK → 'blocked'；存在 CURRENT_WARNING（且无 BLOCK）→ 'fail'；否则 → 'pass'。historical_issues：OutputState==HISTORICAL 的 issue 列表（含 severity 和 reason）。per_issue_states：全部 issue 的状态明细。4) 在 tests/ 下创建 test_rule_engine_types.py，覆盖 F 函数全部 32 种输入组合（每组合 assert 输出状态与 design_rule_engine_formal_fsm.md §7.4 完整枚举表一致），以及所有输出状态到 GateAction 的映射。",
+      "out_of_scope": [
+        "不在此任务中修改 engine.py 或 pipeline.py",
+        "不实现 Baseline 快照或信号计算器",
+        "不引入新的外部依赖"
+      ],
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2",
+        "T-1"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/gate/types.py（DetectedIssue, IssueSignal, Severity, OutputState, GateAction, F函数, state_to_gate_action, aggregate_gate_decision）",
+        "tests/test_rule_engine_types.py（32 组合完备性测试 + GateAction 映射测试 + aggregate 逻辑测试）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-180-01",
+          "description": "F 函数对 32 种输入组合的输出与 design_rule_engine_formal_fsm.md §7.4 完整枚举表完全一致。"
+        },
+        {
+          "dod_id": "DOD-VT-180-02",
+          "description": "F 函数是纯函数——相同输入始终产出相同输出，无副作用、无外部状态依赖。"
+        },
+        {
+          "dod_id": "DOD-VT-180-03",
+          "description": "state_to_gate_action 映射正确：CURRENT_BLOCK→BLOCK, CURRENT_WARNING→WARN, 其余→DISPLAY。"
+        },
+        {
+          "dod_id": "DOD-VT-180-04",
+          "description": "pytest tests/test_rule_engine_types.py 全量通过。"
+        },
+        {
+          "dod_id": "DOD-VT-180-05",
+          "description": "aggregate_gate_decision() 正确聚合：含 CURRENT_BLOCK → 'blocked'；含 CURRENT_WARNING 无 BLOCK → 'fail'；全 DISPLAY → 'pass'。HISTORICAL 归入 historical_issues。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "design_rule_engine.md §3.1 的 5 步短路求值流程是 F 函数的唯一实现规格。不要从 §5 状态组合表推导——后者是笛卡尔积表述，前者是优先级短路。",
+        "design_rule_engine_formal_fsm.md §6.2 中的分段定义（F(o,a,r,c,v)）可以直接翻译为 if-elif 链。§7.4 的 9 行枚举表是测试用例的直接来源。",
+        "IssueSignal 的 issue_id 和 gap_targets 字段为后续信号计算器任务预留，F 函数本身不使用它们——F 只消费五元布尔/枚举信号。",
+        "不要引入 dataclasses 之外的依赖。不要创建 __init__.py 之外的额外模块文件。",
+        "aggregate_gate_decision 是 pipeline 层调用的聚合函数——输入是 F 函数输出的 (OutputState, IssueSignal) 列表，输出是供 pipeline 直接使用的 gate_decision + 结构化列表。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-181",
+      "title": "实现 Baseline 快照机制 — observed 信号来源",
+      "phase_id": "PHASE-VT-013",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "实现 VT 首次接管项目时的 Baseline 认知快照：生成、存储、查询 issue fingerprint，为 observed 信号提供数据来源。",
+      "atomic_scope": "1) 在 src/vibe_tracing/domain/gate/ 下创建 baseline.py，定义 BaselineManager 类：generate_snapshot(issues: List[dict]) → 为每个 issue 生成 fingerprint（基于 issue type + gap_targets 的确定性 hash），存入 .vibetracing/baseline.json。is_observed(issue_fingerprint: str) → bool — 查询 fingerprint 是否在 Baseline 中。load() → Set[str] — 加载已存储的 fingerprint 集合。exists() → bool — 检查 Baseline 是否已生成。2) Baseline 是一次性快照——generate_snapshot() 仅在 Baseline 不存在时调用。已存在的 Baseline 不可覆盖（除非显式传 force=True）。3) fingerprint 计算规则：sha256(issue_type + ':' + '|'.join(sorted(gap_targets)))，取前 16 位 hex。务必确定性（同 issue 同 hash）。4) 在 tests/ 下创建 test_baseline.py，覆盖：首次生成、二次调用不覆盖、is_observed 正确匹配、空 issue 列表、fingerprint 确定性验证。",
+      "out_of_scope": [
+        "不在 Baseline 中存储 issue 的完整数据（仅存 fingerprint 集合）",
+        "不在此任务中修改 engine.py 或 pipeline.py",
+        "不实现 fingerprint 的增量更新或滚动机制（Baseline 不滚动）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "T-1"
+      ],
+      "depends_on": [
+        "TASK-VT-180"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/gate/baseline.py（BaselineManager）",
+        "tests/test_baseline.py（快照生命周期测试）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-181-01",
+          "description": "generate_snapshot() 首次调用创建 .vibetracing/baseline.json，二次调用不覆盖且返回 False。"
+        },
+        {
+          "dod_id": "DOD-VT-181-02",
+          "description": "is_observed(fingerprint) 对已存储 fingerprint 返回 True，未存储返回 False。"
+        },
+        {
+          "dod_id": "DOD-VT-181-03",
+          "description": "相同 issue（同 type + 同 gap_targets）多次计算 fingerprint 得到相同 hash 值。"
+        },
+        {
+          "dod_id": "DOD-VT-181-04",
+          "description": "pytest tests/test_baseline.py 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "fingerprint 不要包含 issue 的时间戳、文件路径、或任何非确定性数据——只包含 issue_type 和 gap_targets。",
+        "baseline.json 格式：{\"version\": 1, \"created_at\": \"...\", \"fingerprints\": [\"abc123...\", ...]}。简单即可，不需要复杂 schema。",
+        "BaselineManager 不需要连接数据库——纯文件 I/O。项目根路径通过构造函数传入。",
+        "参考 design_historical_debt_mechanism.md §3.1 认知约束的定义：Baseline 是 VT 首次接管时的一次性快照，不滚动更新。",
+        "调用方：BaselineManager 由 pipeline.py 在 VT 首次运行时实例化并调用 generate_snapshot()。engine.py 仅消费 is_observed() 查询接口，不负责快照的生成时机判断。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-182",
+      "title": "重构 _check_* 方法 — 结构化 issue 输出 + severity 统一",
+      "phase_id": "PHASE-VT-013",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 engine.py 中所有 _check_* 方法和 _process_* 方法从「副作用式（mutate blocked_items/reasons/gaps）」重构为「返回值式（返回结构化 issue 列表）」，并为每个 issue 标注统一的 severity（BLOCK/WARNING）。",
+      "atomic_scope": "1) 从 types.py 导入 DetectedIssue（TASK-VT-180 已定义）——不在 engine.py 中重复定义，字段：issue_id, issue_type, severity, reason, related_task_id, gap_targets, item_id。2) 逐个重构以下方法，将 blocked_items.append(msg) 和 gate_decision='blocked' 的副作用替换为 return List[DetectedIssue]：_check_claim_existence（L121-169）、_check_dangling_claims（L171-211）、_check_claim_evidence_gaps（L213-254）、_check_ac_coverage（L256-301）、_check_invalid_task_references（L303-394）、_process_must_gaps（L396-445）、_process_must_risks（L447-496）、_process_should_gaps（L498-526）、_process_should_risks（L528-568）。3) 每个方法的 severity 判定规则（参照 design_rule_engine.md §11.1 映射总表）：链条中断/错位/无声明/任务失败 → severity=BLOCK；孤立任务/任务不达标 → severity=WARNING；_process_must_* → severity=BLOCK；_process_should_* → severity=WARNING。4) 删除 _tag_reason 方法中的 [当前]/[预存] 标签逻辑——标签由下游信号计算器统一添加。5) _check_claim_evidence_gaps 中 verification_status != 'test_failed' 的 issue 此前被静默——重构后应输出 severity=WARNING 的 DetectedIssue。6) 过渡策略（evaluate() 暂不重写，留给 TASK-VT-185）：重构后每个 _check_* / _process_* 方法应同时满足两个契约——a) 返回 List[DetectedIssue]（新接口，TASK-VT-185 消费）；b) 继续接受并 mutate blocked_items/reasons/gaps 参数（旧接口，当前 evaluate() 流程依赖）。在 evaluate() 的 L730-835 调用处，收集各方法返回值到局部变量（如 detected_issues），添加注释 '# TODO:TASK-VT-185 消费 detected_issues 替换旧流程'。这确保本任务交付后 evaluate() 行为与重构前完全一致，旧测试零破坏。",
+      "out_of_scope": [
+        "不修改 _compute_gate_decision 方法（留给 TASK-VT-185）",
+        "不修改 evaluate() 的参数签名（留给 TASK-VT-185）",
+        "不在本任务中实现信号计算器或 F 函数调用",
+        "不修改 pipeline.py"
+      ],
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2",
+        "T-1",
+        "T-3",
+        "C-3"
+      ],
+      "depends_on": [
+        "TASK-VT-180"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/gate/engine.py（9 个方法重构为返回值式，保留 evaluate() 过渡状态）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-182-01",
+          "description": "所有 _check_* 和 _process_* 方法返回 List[DetectedIssue]（新接口），同时保留 blocked_items/reasons/gaps 参数的 mutate 行为（旧接口，过渡期契约）。"
+        },
+        {
+          "dod_id": "DOD-VT-182-02",
+          "description": "每个 DetectedIssue 的 severity 字段与 design_rule_engine.md §11.1 映射一致。"
+        },
+        {
+          "dod_id": "DOD-VT-182-03",
+          "description": "_tag_reason 方法保留但已标记 '# DEPRECATED:TASK-VT-185'，其 [当前]/[预存] 标签逻辑仍在旧流程中使用（TASK-VT-185 删除）。"
+        },
+        {
+          "dod_id": "DOD-VT-182-03a",
+          "description": "过渡状态可运行：evaluate() 在 TASK-VT-182 交付后可独立执行（python -c 'from ... import MergeGateEngine; ...' 不抛异常），输出 gate_decision 与重构前等价。"
+        },
+        {
+          "dod_id": "DOD-VT-182-04",
+          "description": "verification_status != 'test_failed' 的 claim_evidence_gap 现输出 severity=WARNING 的 issue（此前被静默丢弃）。"
+        },
+        {
+          "dod_id": "DOD-VT-182-05",
+          "description": "pytest tests/ 全量通过。关键验证：evaluate() 在过渡状态下输出与重构前完全一致（方法同时返回 List[DetectedIssue] + mutate 旧参数，evaluate() 仍走旧流程）。零回归。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "重构策略：每个方法逐一重构。对每个方法，先将函数体末尾的 return has_blocked 改为 return issues (List[DetectedIssue])，再从调用处收集返回值。保留旧的 blocked_items.append() 等 mutate 操作不动——同时满足新旧两个契约。",
+        "过渡期契约：方法签名从 '-> bool' 改为 '-> List[DetectedIssue]'，但参数列表不变（仍接受 blocked_items/reasons/gaps 并 mutate 它们）。返回值用于 TASK-VT-185，mutate 用于当前 evaluate() 流程。",
+        "在 evaluate() 的每个 _check_* 调用处添加临时变量收集返回值：detected = self._check_*(...); detected_issues.extend(detected)。并在行尾注释 '# TODO:TASK-VT-185'。旧逻辑（if ...: gate_decision = 'blocked'）保持不变。",
+        "DetectedIssue 的 issue_type 字段取值为 spec_stage7_business_logic_v2.md 的六类之一：chain_broken / chain_misaligned / isolated_task / no_claim / task_failed / substandard。",
+        "如果某个方法当前同时产生 BLOCK 和 WARNING 两种 issue（如 _check_claim_evidence_gaps），重构后应在返回值中正确区分 severity。",
+        "verification_status != 'test_failed' 的 claim_evidence_gap 此前被静默丢弃（L246-252 仅 block test_failed）——重构后应将非 test_failed 的 gap 作为 severity=WARNING 的 DetectedIssue 返回，但旧流程中不加入 blocked_items（保持旧行为不变）。",
+        "_tag_reason 方法保留但标记废弃：添加注释 '# DEPRECATED:TASK-VT-185 由 SignalComputer 统一添加标签'，TASK-VT-185 删除它。",
+        "不要在此任务中删除 _historical_debt_count 或 incremental_only 逻辑（留给 TASK-VT-185）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-183",
+      "title": "实现信号计算器 — 结构化 issue → per-issue 五元信号 (o,a,r,c,v)",
+      "phase_id": "PHASE-VT-013",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "创建信号计算器模块，将 TASK-VT-182 重构后的结构化 issue 列表 + TASK-VT-181 的 Baseline 快照 + 人类决策记录转化为每个 issue 的 (observed, activated, resolved, accepted, severity) 五元信号。",
+      "atomic_scope": "1) 在 src/vibe_tracing/domain/gate/ 下创建 signal_computer.py，定义 SignalComputer 类。2) 实现 compute_signals(detected_issues, staged_items, human_decisions, baseline_manager) → List[IssueSignal]：  - observed: baseline_manager.is_observed(issue.fingerprint())  - activated: issue.task_id ∈ staged_items。    ⚠️ 注意：本任务执行时 staged_items 仍由旧 pipeline 的文件路径血缘构建（TASK-VT-184 与本任务并行，尚未修复）。    SignalComputer 的职责是消费 staged_items 做集合成员判定——不关心 staged_items 的来源语义。    信号正确性（activated 是否反映 Task 承诺）由 TASK-VT-185 集成测试端到端验证。  - resolved: 检查 human_decisions 中的 mark_complete 操作（TASK-VT-185 实现自动核销后替换）  - accepted: 检查 human_decisions 中的 accept_risk 操作（含过期检查）  - severity: 直接取自 DetectedIssue.severity3) 实现 IssueSignal 的 fingerprint() 方法（复用 TASK-VT-181 的 hash 算法）。4) 实现 human_decisions 的解析逻辑（从 decisions_list 中提取 mark_complete/accepted_risk 到 target_id 集合），从 engine.py evaluate() L700-727 中提取为独立方法。5) 在 tests/ 下创建 test_signal_computer.py，覆盖六类 issue 的信号计算、observed 匹配/不匹配、activated 匹配/不匹配、human_decisions 的 resolved/accepted 映射。",
+      "out_of_scope": [
+        "不在此任务中修改 engine.py 或 pipeline.py",
+        "不改变 staged_items 的构建方式（留给 TASK-VT-184）",
+        "不实现自动核销（resolved 信号暂用 human_decisions 的 mark_complete）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2"
+      ],
+      "depends_on": [
+        "TASK-VT-180",
+        "TASK-VT-181",
+        "TASK-VT-182"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/gate/signal_computer.py（SignalComputer）",
+        "tests/test_signal_computer.py（信号计算逻辑测试）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-183-01",
+          "description": "SignalComputer.compute_signals() 对六类 issue 均输出正确的五元信号。测试中使用手动构造的 staged_items（而非 pipeline 构建的）来验证信号计算逻辑，避免依赖未修复的 pipeline 层。"
+        },
+        {
+          "dod_id": "DOD-VT-183-02",
+          "description": "observed 信号正确读取 Baseline 快照（已存储 fingerprint→true，未存储→false）。"
+        },
+        {
+          "dod_id": "DOD-VT-183-03",
+          "description": "activated 信号正确执行集合成员判定（task_id ∈ staged_items → true, 否则 → false）。本 DOD 验证的是判定逻辑的正确性（集合运算），不是 staged_items 的语义正确性——staged_items 的语义（Task 承诺 vs 文件血缘）由 TASK-VT-184 修正，由 TASK-VT-185 集成测试端到端验证。"
+        },
+        {
+          "dod_id": "DOD-VT-183-04",
+          "description": "resolved/accepted 信号正确映射 human_decisions 的 mark_complete/accept_risk 操作。"
+        },
+        {
+          "dod_id": "DOD-VT-183-05",
+          "description": "human_decisions 解析逻辑从 engine.py evaluate() 中成功提取（原处逻辑不变，本任务为独立实现）。"
+        },
+        {
+          "dod_id": "DOD-VT-183-06",
+          "description": "pytest tests/test_signal_computer.py 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "SignalComputer 不调用 engine.py 的任何方法——它消费 TASK-VT-182 重构后的 DetectedIssue 列表（由 engine.py 的 _check_* 方法产出，在本任务集成前通过测试手动构造）。",
+        "fingerprint 算法必须与 TASK-VT-181 的 baseline.py 完全一致——baseline.py 必须暴露公共函数 compute_fingerprint(issue_type, gap_targets) → str，signal_computer.py 通过 import 共用。",
+        "accepted 信号的过期检查：如果 human_decision 包含 expires_at 字段且已过期，accepted 信号应为 false。当前 human_decisions 无 expires_at——此任务预留检查逻辑，暂不启用。",
+        "SignalComputer 是纯数据变换层——输入 List[DetectedIssue] + staged_items + human_decisions + baseline → 输出 List[IssueSignal]。不产生副作用。",
+        "⚠️ 并行任务风险：TASK-VT-184 与本任务并行执行，两者修改不同文件（本任务新建 signal_computer.py，VT-184 修改 pipeline.py），无文件冲突。但 staged_items 的语义在 VT-184 之前仍是文件路径血缘。SignalComputer 不应假设 staged_items 的来源——只做集合成员判定（id ∈ set → bool）。信号语义的正确性由 TASK-VT-185 集成测试端到端验证。",
+        "测试策略：test_signal_computer.py 中使用手动构造的 staged_items = {'TASK-001', 'TASK-003'} 等固定值，覆盖 activated=true/false 两个分支。不要从 pipeline 层导入或依赖其构建逻辑。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-184",
+      "title": "Pipeline 层 — activated 信号从文件路径血缘改为 Task 承诺",
+      "phase_id": "PHASE-VT-013",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "消除 activated 信号的文件路径血缘偏差。当前 staged_items 经过 5 步文件路径推导链构建——需精确删除整条链，替换为开发者显式声明的 Task ID 集合（current_commit_task_set）。",
+      "atomic_scope": "1) 定义 current_commit_task_set 的提取机制——两个来源取并集，解析后统一交叉验证：来源 1：从 commit message 解析。执行 git log -1 --format=%B，用正则 r'TASK-VT-\\d+' 提取所有 task_id。来源 2：从环境变量 VT_TASKS 解析（逗号分隔的 task_id 列表）。两个来源取并集（union）：parsed_task_ids = set(from_commit_msg) | set(from_env_var)。交叉验证：将 parsed_task_ids 与 task_list.json 中实际存在的 task_id 做交集——不存在的 task_id（拼写错误、已删除的 Task）忽略并记录 OperationalLogger.warning，不抛出异常。只有通过交叉验证的 task_id 才进入 current_commit_task_set。2) 删除 pipeline.py _run_analysis_phase()（L462-489）中的 5 步文件路径血缘推导链。需精确删除以下每一步（参照 design_rule_engine.md §1.1 activated 行完整推导链）：  ① staged_files 构建（L227-239 git diff --cached）→ 保留（ghost code 检测仍需 staged_files），但不再用于构建 staged_items。  ② find_claimed_and_affected() 的 affected_claim_ids 调用（L242-243）→ 删除（pipeline.py 中对 affected_claim_ids 的依赖）。  ③ _determine_affected_items(staged_files, claims_list, task_result, affected_claim_ids=...) 调用（L466-469）→ 删除（该调用专为 staged_items 构建服务）。  ④ affected_task_ids 的反查逻辑（L471-477 claim.related_task for claim in claims_list if claim.claim_id in affected_claims）→ 删除。  ⑤ staged_items = set(affected_claims) ∪ affected_task_ids ∪ affected_acs ∪ affected_reqs（L470-479）→ 替换为 staged_items = current_commit_task_set ∪ directly_staged_claims。3) 保留 directly_staged_items 逻辑（L483-489）：从 staged_files 中提取 CLAIM-*.json 文件名 → claim_id 集合。直接 staged 的 claim 应始终视为当前。4) 确认 find_claimed_and_affected() 的 all_claimed 返回值仍被 detect_ghost_code() 使用——不删除函数，仅移除 pipeline 中对 affected_claim_ids 的消费。5) 确认 _determine_affected_items() 在 pipeline.py 之外是否有其他调用方。若仅此一处调用，可删除 import（L42 的 from ... import _determine_affected_items）。6) 在 pipeline.py 中添加日志：记录 current_commit_task_set 的内容和来源（commit_message / env_var / empty）。",
+      "out_of_scope": [
+        "不删除 find_claimed_and_affected() 函数（仍用于 ghost code 检测）",
+        "不修改 ghost code 检测逻辑",
+        "不在此任务中实现 Task 声明的 UI 或交互流程（纯 commit message 解析）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2",
+        "T-1",
+        "T-3"
+      ],
+      "depends_on": [
+        "TASK-VT-180"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/pipeline.py（staged_items 构建逻辑修改）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-184-01",
+          "description": "commit message 中包含 'TASK-VT-042, TASK-VT-099' 时，current_commit_task_set = {'TASK-VT-042', 'TASK-VT-099'}。"
+        },
+        {
+          "dod_id": "DOD-VT-184-01a",
+          "description": "交叉验证：commit message 中包含 'TASK-VT-042, TASK-VT-999' 而 TASK-VT-999 在 task_list.json 中不存在时，current_commit_task_set = {'TASK-VT-042'}，TASK-VT-999 被忽略且记录 warning 日志。不抛出异常。"
+        },
+        {
+          "dod_id": "DOD-VT-184-02",
+          "description": "pipeline.py 中 5 步文件路径血缘推导链（② affected_claim_ids 调用、③ _determine_affected_items 调用、④ affected_task_ids 反查、⑤ staged_items 组装）已全部删除。"
+        },
+        {
+          "dod_id": "DOD-VT-184-03",
+          "description": "staged_items 仅由 current_commit_task_set ∪ directly_staged_claims 构成，不含通过文件血缘推导的 task/AC/req ID。"
+        },
+        {
+          "dod_id": "DOD-VT-184-04",
+          "description": "find_claimed_and_affected 仍可正常调用（ghost code 检测使用其 all_claimed 返回值），但 pipeline 不再消费其 affected_claim_ids。"
+        },
+        {
+          "dod_id": "DOD-VT-184-05",
+          "description": "_determine_affected_items 在 pipeline.py 外无其他调用方时，L42 的 import 已删除。"
+        },
+        {
+          "dod_id": "DOD-VT-184-06",
+          "description": "commit message 无 TASK-ID 且 VT_TASKS 环境变量为空或未设置时，parsed_task_ids 为空集——所有 issue 的 activated=false，落入 HISTORICAL（增量模式）或全量评估。"
+        },
+        {
+          "dod_id": "DOD-VT-184-07",
+          "description": "日志中记录了 current_commit_task_set 的来源和内容。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "design_historical_debt_mechanism.md §7 明确标注了文件路径血缘为错误方案。design_rule_engine.md §1.1 activated 行列出了需删除的完整 5 步推导链（含每步的文件:行号）。按链逐项删除，不要遗漏中间步骤。",
+        "删除顺序：从下游往上游删——先删 staged_items 的组装逻辑（L470-479），再删 _determine_affected_items 调用（L466-469），再删 affected_claim_ids 的获取（L242-243）。逐步确认每步删除后不引入未定义变量。",
+        "commit message 解析：subprocess.run(['git', 'log', '-1', '--format=%B'], ...)，用 re.findall(r'TASK-VT-\\d+', stdout) 提取。VT_TASKS 环境变量用 os.environ.get('VT_TASKS', '') 按逗号分割。两者取并集：parsed = set(git_tasks) | set(env_tasks)。两者均为空时 parsed 为空集。",
+        "交叉验证实现：从 task_list.json 的 tasks 数组中提取所有 task_id → Set。解析结果与这个 Set 做交集：valid_tasks = parsed_task_ids & existing_task_ids。被过滤的 id 记录：logger.warning('task_id_not_found', parsed_id=id)。task_list.json 的路径为 project_root / 'docs' / 'task_list.json'。",
+        "directly_staged_items 逻辑：从 staged_files 中提取 CLAIM-*.json 文件名 → claim_id 集合。这个逻辑保持不变——直接 staged 的 claim 应始终视为当前。directly_staged_items 合并到 staged_items 中。",
+        "日志示例：OperationalLogger.get().info('current_commit_task_set', task_ids=sorted(current_commit_task_set), source='commit_message' if commit_msg else 'env_var' if vt_tasks else 'empty')。",
+        "如果 _determine_affected_items 在 pipeline.py 之外无调用方（grep 确认），一并删除 L42 的 import 行以减少死代码。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-185",
+      "title": "Pipeline 集成调度 — 串联检测→信号→状态→门禁，engine 精简为 issue 检测器",
+      "phase_id": "PHASE-VT-013",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将当前 engine.evaluate() 的聚合列表+副作用模式替换为 pipeline 调度的四层流水线：pipeline 调 engine.detect_all_issues() 获取 issue 列表 → SignalComputer 计算信号 → F 函数判定状态 → aggregate_gate_decision 产出 gate_decision。engine.py 精简为纯 issue 检测器（不再承担门禁编排职责）。",
+      "atomic_scope": "1) engine.py — 创建 detect_all_issues() 公开方法：  编排所有 _check_* 和 _process_* 方法的调用，收集并返回 List[DetectedIssue]。  方法签名：detect_all_issues(gaps, risks, compliance_res, ghost_files, ac_gaps, dangling_claims, claim_evidence_gaps, cov_violations, lint_violations, invalid_task_references, isolated_tasks) → List[DetectedIssue]。2) engine.py — 删除旧编排逻辑：  删除 evaluate() 方法（L664-895）及其内部的 blocked_items 列表、reasons 手动构建、  gate_decision 字符串累积、_compute_gate_decision() 的调用。  删除 _compute_gate_decision() 方法（L570-662）——其逻辑由 pipeline 层的 aggregate_gate_decision() 替代。3) pipeline.py — _run_gate_evaluation() 改为四层调度：  a) engine.detect_all_issues(...) → List[DetectedIssue]  b) signal_computer.compute_signals(issues, current_commit_task_set, human_decisions, baseline_manager) → List[IssueSignal]  c) for each signal: F(s.observed, s.activated, s.resolved, s.accepted, s.severity) → OutputState  d) states_and_signals = [(state, signal) for ...]; gate_decision, historical_issues, per_issue_states = aggregate_gate_decision(states_and_signals)4) pipeline.py — 构建 gate_res dict（替代 engine.evaluate() 的返回 dict）：  gate_res = {gate_decision, reasons（从 per_issue_states 提取）, blocked_items（CURRENT_BLOCK 的 issue reason 列表）, historical_issues, per_issue_states, incremental_mode, ...}  保留旧字段名（gate_decision, reasons, blocked_items）以保持 CLI 层兼容。5) engine.py — 清理过渡期产物（P1）：  删除所有 _check_* / _process_* 方法的流程控制参数（blocked_items, reasons, gaps, staged_items, resolved_gap_target_ids, accepted_risk_target_ids, risk_staged）。  方法签名仅保留业务数据输入参数，返回值仅为 List[DetectedIssue]。  删除 _tag_reason 方法（L108-119）。  删除 _is_current 方法（L96-106）。  删除 _historical_debt_count 计数器及 show_historical_debt 相关逻辑。  删除 incremental_only 参数——新模型中 F 函数产出的 HISTORICAL 状态天然不阻拦门禁（aggregate_gate_decision 只聚合 CURRENT_BLOCK/CURRENT_WARNING），无需额外的模式开关。6) pipeline.py — human_decisions 的处理：  accept_risk 和 mark_complete 操作传给 SignalComputer 计算 resolved/accepted 信号。  accepted_rule/rejected_rule 操作保留在 pipeline 层，直接写入 gate_res（gate-level metadata，非 per-issue）。7) 添加 OperationalLogger 日志：pipeline 调度各层时记录 issue 计数和各状态分布。",
+      "out_of_scope": [
+        "不修改 _check_* / _process_* 方法的检测逻辑（已在 TASK-VT-182 中重构）",
+        "不在此任务中修改 Dashboard 模板或输出格式（留给 TASK-VT-186）",
+        "不修改 BaselineManager 或 SignalComputer（已在 TASK-VT-181/183 中实现）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2",
+        "T-1",
+        "T-3",
+        "C-1",
+        "C-3"
+      ],
+      "depends_on": [
+        "TASK-VT-182",
+        "TASK-VT-183",
+        "TASK-VT-184"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/gate/engine.py（新增 detect_all_issues()，删除 evaluate()/_compute_gate_decision()/_tag_reason/_is_current）",
+        "src/vibe_tracing/cli/analyze/pipeline.py（_run_gate_evaluation() 改为四层调度）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-185-01",
+          "description": "engine.detect_all_issues() 正确编排所有 _check_* / _process_* 方法，返回完整的 List[DetectedIssue]。"
+        },
+        {
+          "dod_id": "DOD-VT-185-02",
+          "description": "pipeline._run_gate_evaluation() 完整走通四层调度：detect → SignalComputer → F → aggregate_gate_decision。"
+        },
+        {
+          "dod_id": "DOD-VT-185-03",
+          "description": "gate_res dict 包含 gate_decision（pass/fail/blocked）、historical_issues（per-issue 含 severity）、per_issue_states。旧字段 reasons/blocked_items 保留以兼容 CLI。"
+        },
+        {
+          "dod_id": "DOD-VT-185-04",
+          "description": "observed=true ∧ activated=false 的 issue 经 F 函数产出 HISTORICAL 状态，aggregate_gate_decision 将其归入 historical_issues，不参与 gate_decision 的 blocked/fail 判定。"
+        },
+        {
+          "dod_id": "DOD-VT-185-05",
+          "description": "所有 CURRENT_BLOCK 和 CURRENT_WARNING 状态的 issue 均参与 gate_decision 计算。incremental_only 参数已删除——历史债务的'不阻拦'语义由 F 函数的 HISTORICAL 状态天然承载。"
+        },
+        {
+          "dod_id": "DOD-VT-185-06",
+          "description": "gate_decision 输出值在 current_commit_task_set 完整覆盖 staged files 对应 Task 的场景下与重构前等价——相同输入产生相同的 pass/fail/blocked 结果。注意：activated 信号来源已从文件路径血缘改为 Task 承诺，这是有意的行为变更（design_historical_debt_mechanism.md §7），在 commit message 未声明某 Task 但修改了其文件的场景下，输出必然不同——这是设计决策，不是回归。"
+        },
+        {
+          "dod_id": "DOD-VT-185-07",
+          "description": "所有 _check_* / _process_* 方法签名中不再包含流程控制参数——无 blocked_items、reasons、gaps、staged_items、resolved_gap_target_ids、accepted_risk_target_ids、risk_staged。方法只接受业务数据输入，只返回 List[DetectedIssue]。"
+        },
+        {
+          "dod_id": "DOD-VT-185-08",
+          "description": "_tag_reason、_is_current、_historical_debt_count、evaluate()、_compute_gate_decision() 均已删除。"
+        },
+        {
+          "dod_id": "DOD-VT-185-09",
+          "description": "跨任务对齐：SignalComputer 消费 TASK-VT-184 修正后的 current_commit_task_set，activated 信号正确反映 Task 承诺（非文件血缘）。构造测试：commit message 声明 TASK-A 但修改 TASK-B 的文件 → TASK-B 的 issue 应 activated=false。"
+        },
+        {
+          "dod_id": "DOD-VT-185-10",
+          "description": "pytest tests/ 全量通过（含更新后的测试）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "detect_all_issues() 是 engine.py 的新公开 API——编排但不决策。方法内只做两件事：调各 _check_* 方法收集 DetectedIssue，返回完整列表。不涉及信号计算或门禁判定。",
+        "pipeline._run_gate_evaluation() 的改动：保留现有的 engine.evaluate() 调用位置，替换为四步流水线。保留现有的 result dict 构建结构，新增字段（historical_issues, per_issue_states）而非重写。",
+        "过渡期清理（P1）：TASK-VT-182 为过渡保留了方法的旧 mutate 参数。本任务中这些参数是死代码——逐一删除。删除后运行 pytest 确认无 NameError/TypeError。",
+        "aggregate_gate_decision 在 TASK-VT-180 的 types.py 中已定义。pipeline 直接导入使用，不在 engine.py 中重新实现。",
+        "human_decisions 分流：accept_risk/mark_complete → SignalComputer（per-issue 信号）；accepted_rule/rejected_rule → pipeline 直接写入 gate_res（gate-level metadata）。两路不重复。",
+        "兼容性：gate_res dict 的顶层字段名与旧 engine.evaluate() 返回一致（gate_decision, reasons, blocked_items），CLI 层和 output.py 无需修改。新增字段（historical_issues, per_issue_states）作为扩展。",
+        "跨任务对齐验证：TASK-VT-183 + TASK-VT-184 的成果在本任务首次集成。重点验证 activated 信号端到端正确——构造含 TASK-ID 的 commit message，确认只有声明的 Task 的 issue 被激活。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-186",
+      "title": "Dashboard 适配 — per-issue 状态展示 + severity 颜色",
+      "phase_id": "PHASE-VT-013",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新 Dashboard 模板和输出格式化逻辑，展示 per-issue 状态（而非仅聚合 gate_decision），包括：每个 issue 的目标状态、severity 颜色、历史债务列表、已接受/已解决标记。",
+      "atomic_scope": "1) 更新 output/dashboard.html 模板（src/vibe_tracing/templates/dashboard.template.html）：  - 新增「Issue 状态」面板，按状态分组展示（CURRENT_BLOCK 🔴 / CURRENT_WARNING 🟡 / HISTORICAL 📋 / ACCEPTED ✅ / RESOLVED ✓）。  - 历史债务区域：从 historical_issues 列表渲染，保留每笔的原始 severity 颜色和 reason。  - 移除或降级旧的「N historical debts exist」汇总行（若存在）。2) 更新 CLI 输出格式化（src/vibe_tracing/cli/analyze/output.py 和 formatting.py）：  - _print_gate_summary() 中新增 per-issue 状态统计（各状态计数）。  - 历史债务不再仅显示计数——显示简化的列表（issue_id + reason 摘要 + severity 图标）。3) 更新 reports.py 中 traceability_report.json 的生成逻辑：  - 在 report 中新增 per_issue_states 字段（从 gate_res 中提取）。  - 保留旧字段兼容性（gate_decision, reasons 等）。",
+      "out_of_scope": [
+        "不修改 Dashboard 的整体布局或样式框架",
+        "不实现交互式的 issue 详情展开（后续任务）",
+        "不修改 pipeline.py 的核心逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "W-1",
+        "W-2",
+        "R-5"
+      ],
+      "depends_on": [
+        "TASK-VT-185"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/templates/dashboard.template.html（新增 Issue 状态面板）",
+        "src/vibe_tracing/cli/analyze/output.py（per-issue 统计输出）",
+        "src/vibe_tracing/cli/analyze/reports.py（report 字段扩展）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-186-01",
+          "description": "Dashboard 上可看到按状态分组的 issue 列表，每个 issue 显示其状态标签、severity 颜色、reason 摘要。"
+        },
+        {
+          "dod_id": "DOD-VT-186-02",
+          "description": "HISTORICAL issue 在 Dashboard 上展示为 📋 标记，保留原始 severity 颜色（🔴 severity=BLOCK / 🟡 severity=WARNING），不触发阻拦/告警。"
+        },
+        {
+          "dod_id": "DOD-VT-186-03",
+          "description": "ACCEPTED issue 展示为 ✅ 标记，附接受原因（如有）。RESOLVED issue 不出现在活跃列表中。"
+        },
+        {
+          "dod_id": "DOD-VT-186-04",
+          "description": "CLI 输出中历史债务不再仅显示计数 '📊 N historical debts'，改为列出各 issue 的摘要行。"
+        },
+        {
+          "dod_id": "DOD-VT-186-05",
+          "description": "traceability_report.json 中包含 per_issue_states 字段。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "Dashboard 模板修改：找到现有的 issue/gap 展示区域，在其旁或上方新增按状态分组的展示块。使用与现有模板一致的 CSS class 命名约定。",
+        "output.py 的 _print_gate_summary() 修改：保持现有输出结构，在 reasons 列表前插入 per-issue 汇总行。使用 [阻拦]/[告警]/[预存]/[已接受]/[已解决] 中文标签。",
+        "reports.py 修改：在现有 report dict 中新增 per_issue_states 键，值为 objects 列表（含 state, issue_id, severity, reason）。旧字段保持不变以向后兼容。",
+        "design_rule_engine.md §6 输出状态定义表是 Dashboard 展示规格的直接来源。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-187",
+      "title": "测试更新与文档同步 — 全量回归 + 新模块测试 + 设计文档更新",
+      "phase_id": "PHASE-VT-013",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "更新全部受影响的测试以适配新架构，补充新模块的测试覆盖，同步更新设计文档和 spec 文档反映实现状态。",
+      "atomic_scope": "1) 更新现有测试中因 engine.py 接口变更导致的失败：  - tests/test_dashboard_decisions.py、tests/test_gate_*.py 等直接调用 engine.py 方法的测试。  - 若测试依赖 _historical_debt_count / _tag_reason 等已删除方法，更新为消费 historical_issues / per_issue_states。  - 若测试依赖 blocked_items 的内部结构，更新为消费新的 result dict 结构。2) 补充集成测试：  - test_rule_engine_integration.py：端到端测试 pipeline 调度——构造分析输入 → 调 pipeline._run_gate_evaluation()（或等价入口）→ 验证 gate_decision + per_issue_states + historical_issues 正确。  - 覆盖 scenario：有 BLOCK issue + 有 WARNING issue + 有 HISTORICAL issue 的混合提交。  - 覆盖 scenario：全量模式（incremental_only=False）vs 增量模式（incremental_only=True）。  - 覆盖 scenario：commit message 声明 TASK-A 但只修改 TASK-B 的文件 → TASK-B issue 应 activated=false（文件血缘偏差已消除）。3) 运行 pytest tests/ 全量，确认零失败零错误。4) 同步 docs/ 下文档：  - refactoring_design.md：更新规则引擎相关章节，标注 PHASE-VT-013 完成状态。  - spec_pipeline_stage_1.md（如存在相关描述）：更新 gate engine 接口描述。  - design_rule_engine.md §1.1 的差距描述更新为'已解决'或在末尾追加完成记录。5) 如果有任何模块的 __init__.py 需要更新导出列表（如 types.py, baseline.py, signal_computer.py 的新增公共 API），一并更新。",
+      "out_of_scope": [
+        "不创建新的 spec 文档（仅更新已有文档）",
+        "不修改 task_list.json（本任务本身即最后一个）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01",
+        "AC-VT-010-02"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "D-1",
+        "D-2",
+        "X-2",
+        "A-1"
+      ],
+      "depends_on": [
+        "TASK-VT-185",
+        "TASK-VT-186"
+      ],
+      "expected_deliverables": [
+        "tests/test_rule_engine_integration.py（新增集成测试）",
+        "tests/test_dashboard_decisions.py 等（更新以适配新接口）",
+        "docs/refactoring_design.md（更新规则引擎章节）",
+        "docs/design_rule_engine.md（§1.1 差距状态更新）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-187-01",
+          "description": "pytest tests/ 全量通过，零失败、零错误。含 test_rule_engine_types.py、test_baseline.py、test_signal_computer.py、test_rule_engine_integration.py 全部通过。"
+        },
+        {
+          "dod_id": "DOD-VT-187-02",
+          "description": "test_rule_engine_integration.py 覆盖：混合提交（BLOCK+WARNING+HISTORICAL）、全量模式、增量模式 三个 scenario。"
+        },
+        {
+          "dod_id": "DOD-VT-187-03",
+          "description": "所有因接口变更导致的旧测试失败已被修复（通过更新断言或 mock，而非删除测试）。"
+        },
+        {
+          "dod_id": "DOD-VT-187-04",
+          "description": "refactoring_design.md 中规则引擎相关描述与当前实现一致（无过期信息）。"
+        },
+        {
+          "dod_id": "DOD-VT-187-05",
+          "description": "design_rule_engine.md §1.1 的三大差距表已更新为 '✅ 已解决' 或在末尾追加 PHASE-VT-013 完成记录（标注完成日期和关键 PR/commit）。"
+        },
+        {
+          "dod_id": "DOD-VT-187-06",
+          "description": "domain/gate/__init__.py 导出列表包含 types.py、baseline.py、signal_computer.py 的公共 API。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "测试更新优先级：先让旧测试 pass（最小修改），再补新测试。不要为了'更优雅的测试'重写已有测试——只修接口适配。",
+        "废弃测试处理（规则 X-1）：如果某个旧测试唯一测试的功能已被完全替换（如 _historical_debt_count → historical_issues），且无法通过接口适配保留，直接删除该测试并新建等价的集成测试覆盖新接口。不保留测试废弃代码的适配层。",
+        "集成测试构造输入时，直接复用现有 test fixtures（如 conftest.py 中的 sample claims/tasks），减少重复代码。测试入口为 pipeline._run_gate_evaluation() 或等效的 pipeline 调度函数（非 engine.evaluate()——后者已删除）。",
+        "文档更新原则（D-1）：变更代码后必须同步更新文档。重点检查 refactoring_design.md 中对 engine.py 的接口描述是否过时。",
+        "design_rule_engine.md §1.1 的更新格式：在每个差距行尾添加 '(✅ PHASE-VT-013)' 并在章节末尾加完成状态表（日期 + commit 引用）。",
+        "如果发现任何遗漏的调用方（如 CLI 命令直接访问了 _historical_debt_count），一并更新——C-3 规则：修改接口后所有调用方必须同步更新。"
       ]
     }
   ]

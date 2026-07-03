@@ -246,7 +246,7 @@ coverage_reports["src/foo.py"]:
 | 类型 | 当前代码覆盖 | 示例 |
 |------|------------|------|
 | 覆盖率低于阈值 | ✅ 部分（check_coverage_violations 但未与 Claim 关联） | Claim 声称的文件覆盖率不达标 |
-| lint 未通过 | ❌ 未覆盖 | ruff/bandit 报错 |
+| lint 未通过 | ✅ 覆盖（`check_lint_violations` + lint 已入库并纳入门禁判定） | ruff/bandit 报错 |
 | 其他质量门禁 | ❌ 未覆盖 | 根据项目自定义规则 |
 
 **判定**：测试通过 → 质量指标 ≤ 阈值 → 告警

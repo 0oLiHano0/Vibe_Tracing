@@ -83,16 +83,6 @@ def _build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument(
         "--out", help="输出目录路径（默认：<project-root>/output）"
     )
-    # --incremental-only 模式：只检查增量问题，历史债务不阻塞门禁
-    analyze_parser.add_argument(
-        "--incremental-only", action="store_true",
-        help="只检查与当前提交相关的增量问题，历史债务不阻塞门禁"
-    )
-    # --show-debt 模式：在终端显示历史债务详情
-    analyze_parser.add_argument(
-        "--show-debt", action="store_true",
-        help="在终端显示历史债务详情（默认：仅显示摘要）"
-    )
 
     # ---------- 子命令 2：init（项目初始化）----------
     # 用途：在新项目中创建 VT 所需的模板文件（PRD、constraints、task_list 等）
@@ -302,11 +292,7 @@ def _dispatch(args, project_root: Path) -> int:
         else:
             output_dir = None  # 在 run_analyze 内部从 config 解析
 
-        return run_analyze(
-            project_root, output_dir,
-            incremental_only=args.incremental_only,
-            show_historical_debt=args.show_debt,
-        )
+        return run_analyze(project_root, output_dir)
 
     elif args.command == "init":
         # init 命令：创建模板文件，name 和 prefix 可选

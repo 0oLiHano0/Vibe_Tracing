@@ -10077,10 +10077,10 @@
     },
     {
       "task_id": "TASK-VT-180",
-      "title": "定义数据模型：IssueSignal / Severity / OutputState 类型 + 规则引擎纯函数 F",
+      "title": "定义数据模型：DetectedIssue / IssueSignal / Severity / OutputState 类型 + 规则引擎纯函数 F",
       "phase_id": "PHASE-VT-013",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "owner_role": "AI Coding Agent",
       "objective": "创建规则引擎目标模型的核心数据类型和纯状态变换函数 F，作为后续所有任务的基础。这是纯类型定义+一个5分支短路函数，不涉及 I/O 或外部依赖。",
       "atomic_scope": "1) 在 src/vibe_tracing/domain/gate/ 下创建 types.py，定义：Severity 枚举 {BLOCK, WARNING}、OutputState 枚举 {RESOLVED, ACCEPTED, HISTORICAL, CURRENT_BLOCK, CURRENT_WARNING}、DetectedIssue 数据类（issue_id: str, issue_type: str, severity: Severity, reason: str, related_task_id: str, gap_targets: list[str], item_id: str）——issue_type 取值为 spec_stage7_business_logic_v2.md 的六类之一：chain_broken / chain_misaligned / isolated_task / no_claim / task_failed / substandard、IssueSignal 数据类（observed: bool, activated: bool, resolved: bool, accepted: bool, severity: Severity, issue_id: str, task_id: str, gap_targets: list[str]）、GateAction 枚举 {BLOCK, WARN, DISPLAY}。2) 在 types.py 中实现纯函数 F(o,a,r,c,v) → OutputState，严格按 design_rule_engine.md §3.1 的 5 步优先级短路求值（resolved→accepted→HISTORICAL→CURRENT_BLOCK→CURRENT_WARNING）。3) 在 types.py 中实现 state_to_gate_action(state) → GateAction 的映射函数。4) 在 types.py 中实现 aggregate_gate_decision(states: List[Tuple[OutputState, IssueSignal]]) → Tuple[str, List[Dict], List[Dict]]——聚合所有 issue 的状态，产出 (gate_decision, historical_issues, per_issue_states)。gate_decision 逻辑：存在 CURRENT_BLOCK → 'blocked'；存在 CURRENT_WARNING（且无 BLOCK）→ 'fail'；否则 → 'pass'。historical_issues：OutputState==HISTORICAL 的 issue 列表（含 severity 和 reason）。per_issue_states：全部 issue 的状态明细。4) 在 tests/ 下创建 test_rule_engine_types.py，覆盖 F 函数全部 32 种输入组合（每组合 assert 输出状态与 design_rule_engine_formal_fsm.md §7.4 完整枚举表一致），以及所有输出状态到 GateAction 的映射。",
@@ -10249,7 +10249,7 @@
           "description": "_tag_reason 方法保留但已标记 '# DEPRECATED:TASK-VT-185'，其 [当前]/[预存] 标签逻辑仍在旧流程中使用（TASK-VT-185 删除）。"
         },
         {
-          "dod_id": "DOD-VT-182-03a",
+          "dod_id": "DOD-VT-182-10",
           "description": "过渡状态可运行：evaluate() 在 TASK-VT-182 交付后可独立执行（python -c 'from ... import MergeGateEngine; ...' 不抛异常），输出 gate_decision 与重构前等价。"
         },
         {
@@ -10384,7 +10384,7 @@
           "description": "commit message 中包含 'TASK-VT-042, TASK-VT-099' 时，current_commit_task_set = {'TASK-VT-042', 'TASK-VT-099'}。"
         },
         {
-          "dod_id": "DOD-VT-184-01a",
+          "dod_id": "DOD-VT-184-09",
           "description": "交叉验证：commit message 中包含 'TASK-VT-042, TASK-VT-999' 而 TASK-VT-999 在 task_list.json 中不存在时，current_commit_task_set = {'TASK-VT-042'}，TASK-VT-999 被忽略且记录 warning 日志。不抛出异常。"
         },
         {

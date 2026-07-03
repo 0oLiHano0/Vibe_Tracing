@@ -22,6 +22,7 @@ VT 分析流水线编排模块
   domain/gate（门禁判定 + claim_coverage）、infra/db（数据库）
 """
 
+import re
 import subprocess
 import sys
 import time
@@ -30,6 +31,9 @@ from pathlib import Path
 from typing import Optional, Set
 
 from vibe_tracing.domain.gate.engine import MergeGateEngine
+from vibe_tracing.domain.gate.baseline import BaselineManager
+from vibe_tracing.domain.gate.signal_computer import SignalComputer
+from vibe_tracing.domain.gate.types import F, aggregate_gate_decision
 from vibe_tracing.domain.evidence.builder import EvidenceBuilder
 from vibe_tracing.domain.context import UnifiedContext
 
@@ -39,7 +43,6 @@ from vibe_tracing.infra.loader.raw_input import RawInputLoader, STATUS_OK, STATU
 from vibe_tracing.infra.loader.prd_parser import PrdParser
 from vibe_tracing.infra.loader.task_loader import TaskLoader
 from vibe_tracing.infra.loader.claim_loader import ClaimLoader
-from vibe_tracing.domain.gate.staleness import determine_affected_items as _determine_affected_items
 
 from vibe_tracing.infra.tools.executor import ToolExecutionEngine
 from vibe_tracing.cli.analyze.reports import _build_report_document
@@ -164,16 +167,12 @@ def _load_context(
 def run_analyze(
     project_root: Path,
     output_dir: Optional[Path] = None,
-    incremental_only: bool = False,
-    show_historical_debt: bool = True,
 ) -> int:
     """执行完整的 VT 分析流水线。
 
     输入：
         project_root: 项目根目录（由 cli/main.py 传入）
         output_dir:   输出目录（可选，默认从 config.json 读取）
-        incremental_only: 是否只检查增量问题（历史债务不阻塞门禁）
-        show_historical_debt: 是否在终端显示历史债务详情
     前置条件：
         项目已完成 vt finalize（config.json 存在且有效）
     处理逻辑（8 个阶段）：
@@ -239,7 +238,7 @@ def run_analyze(
             staged_files = set()
 
         from vibe_tracing.domain.gate.claim_coverage import detect_ghost_code, find_claimed_and_affected
-        all_claimed, affected_claim_ids = find_claimed_and_affected(
+        all_claimed, _ = find_claimed_and_affected(
             ctx.claims_list, staged_files,
         )
         result = detect_ghost_code(ctx, staged_files, all_claimed=all_claimed)
@@ -370,7 +369,6 @@ def run_analyze(
             conn, ctx, project_root,
             staged_files=staged_files,
             human_decisions=human_decisions,
-            affected_claim_ids=affected_claim_ids,
         )
         vt_logger.info("phase_end", "Analysis completed (db.check_*)",
                        phase="run_analyzers",
@@ -379,6 +377,12 @@ def run_analyze(
                        risks_count=len(final_risks),
                        has_compliance=compliance_res is not None,
                        )
+
+        # ── 阶段 7.5：解析 commit message 获取 Task 承诺 ─────────────────
+        task_list_data = {}
+        if ctx.task_result and ctx.task_result.tasks:
+            task_list_data = {t.task_id: t for t in ctx.task_result.tasks}
+        current_commit_task_set = _parse_commit_tasks(project_root, task_list_data)
 
         # ── 阶段 8：门禁判定 + 输出 ──────────────────────────────────────
         _t_eval = time.perf_counter()
@@ -389,9 +393,7 @@ def run_analyze(
             human_decisions=human_decisions,
             conn=conn,
             analysis_details=analysis_details,
-            incremental_only=incremental_only,
-            show_historical_debt=show_historical_debt,
-            affected_claim_ids=affected_claim_ids,
+            current_commit_task_set=current_commit_task_set,
         )
         gate_decision = "blocked" if exit_code == 2 else "pass"
         vt_logger.info("phase_end", "Evaluate and output completed",
@@ -426,69 +428,43 @@ def run_analyze(
 
 
 
+def _parse_commit_tasks(project_root: Path, task_list_data: dict) -> Set[str]:
+    """从 git commit message 解析 TASK-VT-XXX ID，验证存在于 task_list 中。"""
+    from vibe_tracing.infra.logging.logger import OperationalLogger
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%B"],
+            cwd=project_root, capture_output=True, text=True, timeout=10,
+        )
+        message = result.stdout.strip() if result.returncode == 0 else ""
+    except Exception:
+        message = ""
+
+    if not message:
+        return set()
+
+    raw_ids = set(re.findall(r"TASK-[A-Z]+-\d+", message))
+    valid_ids: Set[str] = set()
+    for tid in raw_ids:
+        if tid in task_list_data:
+            valid_ids.add(tid)
+        else:
+            OperationalLogger.get().warning(
+                "commit_task_not_found",
+                "TASK ID in commit message not found in task_list",
+                task_id=tid,
+            )
+    return valid_ids
+
+
 def _run_analysis_phase(
-    ctx: UnifiedContext,
     merged_gaps: list,
     final_risks: list,
-    project_root: Path,
-    staged_files: Optional[Set[str]] = None,
-    affected_claim_ids: Optional[Set[str]] = None,
-):
-    """[阶段 8 辅助] 过滤 stale 项并构建 staged_items（用于门禁判定的债务感知）。
-
-    输入：
-        ctx:            统一上下文
-        merged_gaps:    分析器输出的全部 gaps（含 stale）
-        final_risks:    分析器输出的全部 risks（含 stale）
-        evidence_meta:  证据元数据
-        project_root:   项目根目录
-        staged_files:   暂存区文件集合
-        affected_claim_ids: 预计算的受影响 Claim ID 集合
-    前置条件：
-        分析器已完成（_run_analyzers 已执行）
-    处理逻辑：
-        1. 过滤掉 stale 标记的 gaps 和 risks（仅保留在完整报告中）
-        2. 根据 staged 文件确定受影响的 claims/tasks/acs/reqs
-        3. 从 staged 的 CLAIM-*.json 文件中提取 directly_staged_claims
-    输出：
-        返回 (active_gaps, active_risks, evidence_meta, staged_items, directly_staged_items)
-    """
-    claims_list = ctx.claims_list
-
-    # 过滤 stale 项：stale 项仍保留在完整报告中，但不参与门禁判定
+) -> tuple:
+    """过滤 stale 项，返回活跃 gaps 和 risks。"""
     active_gaps = [g for g in merged_gaps if not g.get("stale")]
     active_risks = [r for r in final_risks if not r.get("stale")]
-
-    # 构建 staged_items（用于门禁的债务感知判定）
-    staged_items: Optional[Set[str]] = None
-    directly_staged_items: Optional[Set[str]] = None
-    if staged_files:
-        affected_claims, affected_reqs, affected_acs = _determine_affected_items(
-            staged_files, claims_list, ctx.task_result,
-            affected_claim_ids=affected_claim_ids,
-        )
-        staged_items = set(affected_claims)
-        if ctx.task_result and ctx.task_result.tasks:
-            affected_task_ids = {
-                claim.related_task
-                for claim in claims_list
-                if claim.claim_id in affected_claims
-            }
-            staged_items.update(affected_task_ids)
-        staged_items.update(affected_acs)
-        staged_items.update(affected_reqs)
-
-        # 从 staged 的 CLAIM-*.json 文件中提取被直接修改的 claim
-        # 一任务一文件模式下，staged 的 CLAIM-*.json 文件即为被修改的 claim
-        directly_staged_claims = set()
-        for f in staged_files:
-            if f.startswith(".vibetracing/claims/CLAIM-") and f.endswith(".json"):
-                # 从文件名提取 claim_id（去掉路径前缀和 .json 后缀）
-                claim_id = f.replace(".vibetracing/claims/", "").replace(".json", "")
-                directly_staged_claims.add(claim_id)
-        directly_staged_items = set(directly_staged_claims)
-
-    return active_gaps, active_risks, staged_items, directly_staged_items
+    return active_gaps, active_risks
 
 
 def _run_gate_evaluation(
@@ -497,8 +473,7 @@ def _run_gate_evaluation(
     active_risks: list,
     compliance_res: Optional[dict],
     ctx: UnifiedContext,
-    staged_items: Optional[Set[str]],
-    directly_staged_items: Optional[Set[str]],
+    current_commit_task_set: Set[str],
     human_decisions: Optional[dict] = None,
     ghost_files: Optional[list] = None,
     ac_gaps: Optional[list] = None,
@@ -507,54 +482,60 @@ def _run_gate_evaluation(
     cov_violations: Optional[list] = None,
     lint_violations: Optional[list] = None,
     analysis_details: Optional[dict] = None,
-    incremental_only: bool = False,
-    show_historical_debt: bool = True,
     isolated_tasks: Optional[list] = None,
 ) -> dict:
-    """[阶段 8 辅助] 调用 MergeGateEngine 执行门禁判定。
-
-    输入：
-        project_root:          项目根目录
-        active_gaps:           活跃的 gaps（已过滤 stale）
-        active_risks:          活跃的 risks（已过滤 stale）
-        compliance_res:        架构合规检查结果
-        ctx:                   统一上下文
-        staged_items:          受暂存文件影响的 items
-        directly_staged_items: 直接被 staged 的 claim
-        human_decisions:       人类决策记录
-        ghost_files:           幽灵代码文件列表
-        ac_gaps:               AC 覆盖缺口列表
-        dangling_claims:       悬空 Claim 列表
-        claim_evidence_gaps:   Claim 证据缺口列表
-        cov_violations:        覆盖率违规列表
-        incremental_only:      是否只检查增量问题
-        show_historical_debt:  是否显示历史债务详情
-    输出：
-        返回门禁结果字典（含 gate_decision、gaps、risks 等）
-    """
+    """四层流水线：检测 → 信号 → 状态 → 门禁聚合。"""
     if human_decisions is None:
         human_decisions = ctx.human_decisions or {"version": "1.0", "decisions": []}
-    gate_engine = MergeGateEngine(
-        project_root,
-        incremental_only=incremental_only,
-        show_historical_debt=show_historical_debt,
-    )
-    gate_res = gate_engine.evaluate(
-        active_gaps, active_risks,
-        compliance_res=compliance_res,
-        staged_items=staged_items,
-        directly_staged_items=directly_staged_items,
-        human_decisions=human_decisions,
+
+    # 1. 检测
+    engine = MergeGateEngine(project_root)
+    issues = engine.detect_all_issues(
         ghost_files=ghost_files,
         ac_gaps=ac_gaps,
         dangling_claims=dangling_claims,
         claim_evidence_gaps=claim_evidence_gaps,
-        cov_violations=cov_violations,
-        lint_violations=lint_violations,
         invalid_task_references=analysis_details.get("invalid_task_references") if analysis_details else None,
         isolated_tasks=isolated_tasks,
+        cov_violations=cov_violations,
+        lint_violations=lint_violations,
+        gaps=active_gaps,
+        risks=active_risks,
+        compliance_res=compliance_res,
     )
-    hd_applied = gate_res.get("human_decisions_applied", 0)
+
+    # 2. 信号计算
+    baseline = BaselineManager(project_root)
+    fingerprints = []
+    for issue in issues:
+        from vibe_tracing.domain.gate.baseline import compute_fingerprint
+        fingerprints.append(compute_fingerprint(issue.issue_type, issue.gap_targets))
+    baseline.generate_snapshot(fingerprints)
+
+    computer = SignalComputer(baseline, current_commit_task_set, human_decisions)
+    signals = computer.compute_signals(issues)
+
+    # 3. 状态判定
+    states_and_signals = [
+        (F(s.observed, s.activated, s.resolved, s.accepted, s.severity), s, issue)
+        for s, issue in signals
+    ]
+
+    # 4. 门禁聚合
+    gate_decision, historical_issues, per_issue_states = aggregate_gate_decision(states_and_signals)
+
+    gate_res = {
+        "gate_decision": gate_decision,
+        "historical_issues": historical_issues,
+        "per_issue_states": per_issue_states,
+        "human_decisions_applied": computer.human_decisions_applied,
+    }
+    if computer.accepted_rule_ids:
+        gate_res["accepted_rule_target_ids"] = list(computer.accepted_rule_ids)
+    if computer.rejected_rule_ids:
+        gate_res["rejected_rule_target_ids"] = list(computer.rejected_rule_ids)
+
+    hd_applied = gate_res["human_decisions_applied"]
     if hd_applied > 0:
         print(f"  Applied {hd_applied} human decision(s).", file=sys.stderr)
     return gate_res
@@ -572,45 +553,22 @@ def _evaluate_and_output(
     human_decisions: Optional[dict] = None,
     conn=None,
     analysis_details: Optional[dict] = None,
-    incremental_only: bool = False,
-    show_historical_debt: bool = True,
-    affected_claim_ids: Optional[Set[str]] = None,
+    current_commit_task_set: Optional[Set[str]] = None,
 ) -> int:
-    """[阶段 8] 执行门禁判定并生成所有输出（报告、Dashboard、终端摘要）。
-
-    输入：
-        ctx:              统一上下文
-        merged_gaps:      全部 gaps（含 stale）
-        final_risks:      全部 risks（含 stale）
-        compliance_res:   架构合规检查结果
-        output_dir:       输出目录
-        evidence_meta:    证据元数据
-        project_root:     项目根目录
-        staged_files:     暂存区文件集合
-        human_decisions:  人类决策记录
-        conn:             数据库连接
-        analysis_details: 分析详情（ghost_files, ac_gaps, dangling_claims 等）
-        incremental_only: 是否只检查增量问题
-        show_historical_debt: 是否显示历史债务详情
-        affected_claim_ids: 预计算的受影响 Claim ID 集合
-    输出：
-        返回退出码（0=通过, 2=blocked）
-    """
+    """[阶段 8] 执行门禁判定并生成所有输出（报告、Dashboard、终端摘要）。"""
     if not ctx.manifest:
         return 1
 
     if analysis_details is None:
         analysis_details = {}
+    if current_commit_task_set is None:
+        current_commit_task_set = set()
 
-    # 阶段 1：分析（过滤 stale 项，构建 staged_items）
-    active_gaps, active_risks, staged_items, directly_staged_items = \
-        _run_analysis_phase(ctx, merged_gaps, final_risks, project_root, staged_files,
-                           affected_claim_ids=affected_claim_ids)
+    active_gaps, active_risks = _run_analysis_phase(merged_gaps, final_risks)
 
-    # 阶段 2：门禁判定
     gate_res = _run_gate_evaluation(
         project_root, active_gaps, active_risks, compliance_res,
-        ctx, staged_items, directly_staged_items,
+        ctx, current_commit_task_set,
         human_decisions=human_decisions,
         ghost_files=analysis_details.get("ghost_files"),
         ac_gaps=analysis_details.get("ac_gaps"),
@@ -619,30 +577,24 @@ def _evaluate_and_output(
         cov_violations=analysis_details.get("cov_violations"),
         lint_violations=analysis_details.get("lint_violations"),
         analysis_details=analysis_details,
-        incremental_only=incremental_only,
-        show_historical_debt=show_historical_debt,
         isolated_tasks=analysis_details.get("isolated_tasks"),
     )
 
-    # 阶段 3：生成追溯报告
     report_doc = _build_report_document(
         ctx, gate_res, evidence_meta, merged_gaps, final_risks,
         compliance_res, output_dir, project_root,
         isolated_tasks=analysis_details.get("isolated_tasks"),
     )
 
-    # 阶段 4：渲染输出（Dashboard + 终端摘要 + Agent 行动建议 + 反思提示）
     _render_output(
         ctx, gate_res, report_doc, evidence_meta,
         active_gaps, active_risks, merged_gaps, final_risks, compliance_res,
-        staged_items, output_dir, project_root,
+        current_commit_task_set, output_dir, project_root,
         staged_files=staged_files,
         conn=conn,
     )
 
-    # 计算退出码
     exit_code = 2 if gate_res["gate_decision"] == "blocked" else 0
-
     return exit_code
 
 

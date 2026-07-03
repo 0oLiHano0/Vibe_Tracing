@@ -1,812 +1,170 @@
 """
-Unit tests for MergeGateEngine (TASK-VT-017).
+Unit tests for MergeGateEngine.detect_all_issues (VT-182).
+
+Engine is a pure issue detector — no gate decisions, no signals.
+Tests verify issue_type, severity, and key fields of DetectedIssue.
 """
 
 from pathlib import Path
+
 from vibe_tracing.domain.gate.engine import MergeGateEngine
+from vibe_tracing.domain.gate.types import Severity
 
 
-def test_missing_ac_test_blocks():
-    """
-    Test that a missing Acceptance Criterion (AC) test coverage blocks the merge gate.
-    covers: AC-VT-008-01
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = [
-        {
-            "item_id": "AC-VT-001-01",
-            "item_type": "ac",
-            "reason": "Must acceptance criterion AC-VT-001-01 is missing passing test coverage.",
-        }
-    ]
-    risks = []
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [],
-        "unclear_constraints": [],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "blocked"
-    assert any("AC-VT-001-01" in msg for msg in res["reasons"])
-    assert len(res["blocked_items"]) > 0
+def _engine(tmp_path=None):
+    return MergeGateEngine(tmp_path or Path("/dummy/project/root"))
 
 
-def test_claim_missing_external_evidence_blocks():
-    """
-    Test that completed Agent Claims missing external evidence (violating self-attestation forbidden rules) block the merge gate.
-    covers: AC-VT-001-03, AC-VT-002-02, AC-VT-008-02
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = []
-    # completed claim without external evidence produces a risk with severity="must" and self-referential description
-    risks = [
-        {
-            "risk_id": "RISK-VT-001",
-            "description": "Completed claim CLAIM-VT-001 has only self-referential or empty evidence.",
-            "severity": "must",
-            "suggested_action": "Provide external evidence",
-            "business_impact": "Violates no self-attestation principles",
-        }
-    ]
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [],
-        "unclear_constraints": [],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "blocked"
-    assert any("RISK-VT-001" in msg for msg in res["reasons"])
-    assert len(res["blocked_items"]) > 0
+def _find_issues(issues, issue_type=None, severity=None):
+    result = issues
+    if issue_type:
+        result = [i for i in result if i.issue_type == issue_type]
+    if severity:
+        result = [i for i in result if i.severity == severity]
+    return result
 
 
-def test_high_risk_lacking_details_blocks():
-    """
-    Test that a MUST/high risk lacking suggested action or business impact blocks the gate.
-    covers: AC-VT-008-02
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
+# ── Rule 2: Ghost code (no_claim / BLOCK) ─────────────────────────
 
-    gaps = []
-    risks = [
-        {
-            "risk_id": "RISK-VT-002",
-            "description": "Critical security bug found by bandit.",
-            "severity": "must",
-            "suggested_action": "",  # missing action
-            "business_impact": "Exposes workspace to arbitrary code execution",
-        }
-    ]
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [],
-        "unclear_constraints": [],
-    }
+class TestClaimExistence:
+    def test_ghost_files_produce_issues(self, tmp_path):
+        engine = _engine(tmp_path)
+        issues = engine.detect_all_issues(ghost_files=["src/foo.py", "src/bar.py"])
+        assert len(issues) == 2
+        assert all(i.issue_type == "no_claim" for i in issues)
+        assert all(i.severity == Severity.BLOCK for i in issues)
 
-    res = engine.evaluate(gaps, risks, compliance)
+    def test_empty_ghost_files(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(ghost_files=[])
+        assert len(issues) == 0
 
-    assert res["gate_decision"] == "blocked"
-    assert any("缺失处理建议" in msg for msg in res["reasons"])
-    assert len(res["blocked_items"]) > 0
+    def test_none_ghost_files_skipped(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(ghost_files=None)
+        assert len(issues) == 0
 
+    def test_ghost_file_in_issue_id(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(ghost_files=["src/foo.py"])
+        assert issues[0].issue_id == "no_claim:src/foo.py"
 
-def test_must_constraint_violated_blocks():
-    """
-    Test that a MUST architecture constraint violation blocks the gate.
-    covers: AC-VT-008-03
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = []
-    risks = []
-    compliance = {
-        "architecture_compliance_status": [
-            {
-                "rule_id": "ARCH-RULE-MUST-001",
-                "status": "violated",
-                "severity": "must",
-            }
-        ],
-        "architecture_violations": [],
-        "unclear_constraints": [],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "blocked"
-    assert any("ARCH-RULE-MUST-001" in msg for msg in res["reasons"])
+    def test_ghost_code_exclusions(self, tmp_path):
+        import json
+        config_dir = tmp_path / ".vibetracing"
+        config_dir.mkdir(parents=True)
+        (config_dir / "config.json").write_text(
+            json.dumps({"ghost_code_exclusions": ["generated/"]})
+        )
+        engine = _engine(tmp_path)
+        issues = engine.detect_all_issues(ghost_files=["generated/auto.py", "src/manual.py"])
+        assert len(issues) == 1
+        assert issues[0].item_id == "src/manual.py"
 
 
-def test_unclear_constraint_produces_fail():
-    """
-    Test that an unclear architecture constraint produces 'fail' (not 'blocked').
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = []
-    risks = []
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [],
-        "unclear_constraints": [
-            {
-                "rule_id": "ARCH-RULE-UNCLEAR-001",
-                "reason": "Cannot automatically verify module boundary.",
-            }
-        ],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "fail"
-    assert any("ARCH-RULE-UNCLEAR-001" in msg for msg in res["reasons"])
-
-
-def test_pass_when_no_gaps_risks_or_violations():
-    """
-    Test that the gate passes when there are no gaps, risks, or violations.
-    covers: AC-VT-008-01
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = []
-    risks = []
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [],
-        "unclear_constraints": [],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "pass"
-    assert any("所有质量门禁规则均已通过" in msg for msg in res["reasons"])
-    assert len(res["blocked_items"]) == 0
-
-
-def test_architecture_violation_blocks():
-    """
-    Test that an architecture violation in compliance result blocks the gate.
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = []
-    risks = []
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [
-            {
-                "rule_id": "FORBID-VT-001",
-                "message": "Self-attestation detected.",
-            }
-        ],
-        "unclear_constraints": [],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "blocked"
-    assert any("FORBID-VT-001" in msg for msg in res["reasons"])
-
-
-def test_should_gap_produces_fail():
-    """
-    Test that a SHOULD-level gap produces 'fail' decision.
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = [
-        {
-            "item_id": "REQ-VT-003",
-            "item_type": "requirement",
-            "reason": "Should requirement has no task coverage.",
-        }
-    ]
-    risks = []
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [],
-        "unclear_constraints": [],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "fail"
-    assert any("REQ-VT-003" in msg for msg in res["reasons"])
-
-
-def test_mixed_gaps_blocks_when_must_present():
-    """
-    Test that mixed gaps (must + should) result in 'blocked' when a must gap exists.
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = [
-        {
-            "item_id": "AC-VT-001-01",
-            "item_type": "ac",
-            "reason": "Must AC missing test.",
-        },
-        {
-            "item_id": "REQ-VT-003",
-            "item_type": "requirement",
-            "reason": "Should requirement has no task coverage.",
-        },
-    ]
-    risks = []
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [],
-        "unclear_constraints": [],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "blocked"
-    # Both reasons should be present
-    assert any("AC-VT-001-01" in msg for msg in res["reasons"])
-    assert any("REQ-VT-003" in msg for msg in res["reasons"])
-
-
-def test_should_risk_produces_fail():
-    """
-    Test that a SHOULD-level risk produces 'fail' decision.
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = []
-    risks = [
-        {
-            "risk_id": "RISK-VT-003",
-            "description": "Low priority improvement suggestion.",
-            "severity": "should",
-        }
-    ]
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [],
-        "unclear_constraints": [],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "fail"
-    assert any("RISK-VT-003" in msg for msg in res["reasons"])
-
-
-def test_gate_decision_priority_blocked_over_fail():
-    """
-    Test that 'blocked' takes priority over 'fail' when both conditions exist.
-    """
-    engine = MergeGateEngine(Path("/dummy/project/root"))
-
-    gaps = [
-        {
-            "item_id": "AC-VT-001-01",
-            "item_type": "ac",
-            "reason": "Must AC missing test.",
-        },
-    ]
-    risks = [
-        {
-            "risk_id": "RISK-VT-003",
-            "description": "Low priority improvement suggestion.",
-            "severity": "should",
-        }
-    ]
-    compliance = {
-        "architecture_compliance_status": [],
-        "architecture_violations": [],
-        "unclear_constraints": [],
-    }
-
-    res = engine.evaluate(gaps, risks, compliance)
-
-    assert res["gate_decision"] == "blocked"
-
-
-# ---------------------------------------------------------------
-# Dangling claims tests (Rule 3)
-# ---------------------------------------------------------------
+# ── Rule 3: Dangling claims (chain_broken / BLOCK) ───────────────
 
 class TestDanglingClaims:
-    """Tests for Rule 3: dangling claims detection."""
+    def test_dangling_claims_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        dangling = [{"claim_id": "CLAIM-1", "related_task": "TASK-MISSING"}]
+        issues = engine.detect_all_issues(dangling_claims=dangling)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "chain_broken"
+        assert issues[0].severity == Severity.BLOCK
 
-    def test_dangling_claims_blocks(self):
-        """Claims referencing non-existent tasks block the gate."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
+    def test_no_dangling_claims(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(dangling_claims=[])
+        assert len(issues) == 0
 
-        dangling_claims = [{"claim_id": "CLAIM-1", "related_task": "TASK-MISSING"}]
-        res = engine.evaluate([], [], {}, dangling_claims=dangling_claims)
+    def test_dangling_claims_none_skipped(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(dangling_claims=None)
+        assert len(issues) == 0
 
-        assert res["gate_decision"] == "blocked"
-        assert any("CLAIM-1" in item for item in res["blocked_items"])
-
-    def test_no_dangling_claims_passes(self):
-        """Empty dangling claims list doesn't block."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        res = engine.evaluate([], [], {}, dangling_claims=[])
-
-        assert res["gate_decision"] == "pass"
-
-    def test_dangling_claims_none_skips(self):
-        """When dangling_claims is None, Rule 3 is skipped."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        res = engine.evaluate([], [], {}, dangling_claims=None)
-
-        assert res["gate_decision"] == "pass"
+    def test_dangling_claim_related_task(self, tmp_path):
+        engine = _engine(tmp_path)
+        dangling = [{"claim_id": "CLAIM-1", "related_task": "TASK-MISSING"}]
+        issues = engine.detect_all_issues(dangling_claims=dangling)
+        assert issues[0].related_task_id == "TASK-MISSING"
 
 
-# ---------------------------------------------------------------
-# Claim evidence gaps tests (Rule 4)
-# ---------------------------------------------------------------
+# ── Rule 4: Claim evidence gaps (mixed severity) ─────────────────
 
 class TestClaimEvidenceGaps:
-    """Tests for Rule 4: claim evidence gaps detection."""
+    def test_test_failed_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        ceg = [{"claim_id": "CLAIM-1", "verification_status": "test_failed"}]
+        issues = engine.detect_all_issues(claim_evidence_gaps=ceg)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "task_failed"
+        assert issues[0].severity == Severity.BLOCK
 
-    def test_claim_evidence_test_failed_blocks(self):
-        """Claims with failed tests block the gate."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
+    def test_no_tests_warning(self, tmp_path):
+        engine = _engine(tmp_path)
+        ceg = [{"claim_id": "CLAIM-1", "verification_status": "no_tests"}]
+        issues = engine.detect_all_issues(claim_evidence_gaps=ceg)
+        assert len(issues) == 1
+        assert issues[0].severity == Severity.WARNING
 
-        claim_evidence_gaps = [{"claim_id": "CLAIM-1", "verification_status": "test_failed"}]
-        res = engine.evaluate([], [], {}, claim_evidence_gaps=claim_evidence_gaps)
-
-        assert res["gate_decision"] == "blocked"
-        assert any("CLAIM-1" in item for item in res["blocked_items"])
-
-    def test_claim_evidence_no_tests_not_blocked(self):
-        """Claims with no tests produce warning but don't block."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        claim_evidence_gaps = [{"claim_id": "CLAIM-1", "verification_status": "no_tests"}]
-        res = engine.evaluate([], [], {}, claim_evidence_gaps=claim_evidence_gaps)
-
-        assert res["gate_decision"] != "blocked"
+    def test_empty_claim_evidence_gaps(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(claim_evidence_gaps=[])
+        assert len(issues) == 0
 
 
-# ---------------------------------------------------------------
-# Ghost code tests (Rule 2)
-# ---------------------------------------------------------------
-
-class TestGhostCode:
-    """Tests for Rule 2: ghost code detection."""
-
-    def test_no_ghost_files_passes(self):
-        """Empty ghost files list doesn't block."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        res = engine.evaluate([], [], {}, ghost_files=[], staged_items={"src/foo.py"})
-
-        assert res["gate_decision"] == "pass"
-
-    def test_ghost_files_none_skips(self):
-        """When ghost_files is None, Rule 2 is skipped."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        res = engine.evaluate([], [], {}, ghost_files=None)
-
-        assert res["gate_decision"] == "pass"
-
-
-
-# ---------------------------------------------------------------
-# AC coverage tests (Rule 5)
-# ---------------------------------------------------------------
+# ── Rule 5: AC coverage (no_claim / BLOCK) ───────────────────────
 
 class TestAcCoverage:
-    """Tests for Rule 5: AC coverage check."""
-
-    def test_ac_gaps_blocks(self):
-        """Uncovered ACs block the gate."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        ac_gaps = [{"ac_id": "AC-VT-001-01", "task_id": "TASK-VT-001", "coverage_status": "no_tests_declared"}]
-        res = engine.evaluate([], [], {}, ac_gaps=ac_gaps)
-
-        assert res["gate_decision"] == "blocked"
-        assert any("AC-VT-001-01" in item for item in res["blocked_items"])
-
-    def test_no_ac_gaps_passes(self):
-        """Empty AC gaps list doesn't block."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        res = engine.evaluate([], [], {}, ac_gaps=[])
-
-        assert res["gate_decision"] == "pass"
-
-    def test_ac_gaps_none_skips(self):
-        """When ac_gaps is None, Rule 5 is skipped."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        res = engine.evaluate([], [], {}, ac_gaps=None)
-
-        assert res["gate_decision"] == "pass"
-
-
-# ---------------------------------------------------------------
-# Coverage violations tests
-# ---------------------------------------------------------------
-
-class TestCoverageViolations:
-    """Tests for coverage violations check (warning-level, not blocking)."""
-
-    def test_coverage_violations_fail_not_blocked(self):
-        """Coverage violations produce 'fail' (warning), not 'blocked'."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        cov_violations = [{"source_path": "src/foo.py", "percent_covered": 45.0, "carried_over": False}]
-        res = engine.evaluate([], [], {}, cov_violations=cov_violations)
-
-        assert res["gate_decision"] == "fail"
-        assert any("src/foo.py" in msg for msg in res["reasons"])
-
-    def test_no_coverage_violations_passes(self):
-        """Empty coverage violations list doesn't block."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        res = engine.evaluate([], [], {}, cov_violations=[])
-
-        assert res["gate_decision"] == "pass"
-
-    def test_coverage_violations_do_not_override_blocked(self):
-        """Coverage violations don't downgrade an already-blocked gate."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        ac_gaps = [{"ac_id": "AC-1", "task_id": "TASK-1", "coverage_status": "no_tests_declared"}]
-        cov_violations = [{"source_path": "src/foo.py", "percent_covered": 45.0, "carried_over": False}]
-        res = engine.evaluate([], [], {}, ac_gaps=ac_gaps, cov_violations=cov_violations)
-
-        assert res["gate_decision"] == "blocked"
-
-    def test_coverage_violations_incremental_filters_carried_over(self):
-        """In incremental mode, carried_over violations are counted as historical debt."""
-        engine = MergeGateEngine(Path("/dummy/project/root"), incremental_only=True)
-
-        cov_violations = [
-            {"source_path": "src/old.py", "percent_covered": 30.0, "carried_over": True},
-            {"source_path": "src/new.py", "percent_covered": 40.0, "carried_over": False},
-        ]
-        res = engine.evaluate([], [], {}, cov_violations=cov_violations)
-
-        assert any("src/new.py" in msg for msg in res["reasons"])
-        assert not any("src/old.py" in msg for msg in res["reasons"])
-        assert res["historical_debt_count"] >= 1
-
-    def test_coverage_violations_all_historical_incremental_pass(self):
-        """All carried_over violations in incremental mode produce pass."""
-        engine = MergeGateEngine(Path("/dummy/project/root"), incremental_only=True)
-
-        cov_violations = [
-            {"source_path": "src/old.py", "percent_covered": 30.0, "carried_over": True},
-        ]
-        res = engine.evaluate([], [], {}, cov_violations=cov_violations)
-
-        assert res["gate_decision"] == "pass"
-        assert res["historical_debt_count"] >= 1
-
-
-# ---------------------------------------------------------------
-# Human decisions tests
-# ---------------------------------------------------------------
-
-class TestHumanDecisions:
-    """Tests for human decisions integration."""
-
-    def test_mark_complete_resolves_gap(self):
-        """mark_complete human decision resolves a gap."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        gaps = [
-            {
-                "item_id": "AC-VT-001-01",
-                "item_type": "ac",
-                "target_id": "AC-VT-001-01",
-                "reason": "Must AC missing test.",
-            }
-        ]
-        human_decisions = {
-            "decisions": [
-                {
-                    "category": "mark_complete",
-                    "targetId": "AC-VT-001-01",
-                    "action": "mark_complete",
-                }
-            ]
-        }
-
-        res = engine.evaluate(gaps, [], {}, human_decisions=human_decisions)
-
-        assert res["gate_decision"] == "pass"
-        assert res["human_decisions_applied"] > 0
-
-    def test_accept_risk_downgrades_risk(self):
-        """accept_risk human decision downgrades a risk."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        risks = [
-            {
-                "risk_id": "RISK-VT-001",
-                "description": "High risk issue.",
-                "severity": "must",
-                "target_id": "RISK-VT-001",
-            }
-        ]
-        human_decisions = {
-            "decisions": [
-                {
-                    "category": "accept_risk",
-                    "targetId": "RISK-VT-001",
-                    "action": "accept_risk",
-                }
-            ]
-        }
-
-        res = engine.evaluate([], risks, {}, human_decisions=human_decisions)
-
-        assert res["gate_decision"] == "pass"
-        assert res["human_decisions_applied"] > 0
-
-
-# ---------------------------------------------------------------
-# Staged items tests
-# ---------------------------------------------------------------
-
-class TestStagedItems:
-    """Tests for staged items awareness."""
-
-    def test_staged_items_none_full_analysis(self):
-        """When staged_items is None, all items are considered current."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        gaps = [
-            {
-                "item_id": "AC-VT-001-01",
-                "item_type": "ac",
-                "reason": "Must AC missing test.",
-            }
-        ]
-
-        res = engine.evaluate(gaps, [], {}, staged_items=None)
-
-        assert res["gate_decision"] == "blocked"
-
-    def test_staged_items_with_current_item(self):
-        """Current staged items are evaluated normally."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        gaps = [
-            {
-                "item_id": "AC-VT-001-01",
-                "item_type": "ac",
-                "reason": "Must AC missing test.",
-            }
-        ]
-
-        res = engine.evaluate(gaps, [], {}, staged_items={"AC-VT-001-01"})
-
-        assert res["gate_decision"] == "blocked"
-        assert any("[当前]" in msg for msg in res["reasons"])
-
-    def test_staged_items_with_preexisting_item(self):
-        """Pre-existing items get [预存] prefix and don't block."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-
-        gaps = [
-            {
-                "item_id": "AC-VT-001-01",
-                "item_type": "ac",
-                "reason": "Must AC missing test.",
-            }
-        ]
-
-        res = engine.evaluate(gaps, [], {}, staged_items={"OTHER-ITEM"})
-
-        assert res["gate_decision"] != "blocked"
-        assert any("[预存]" in msg for msg in res["reasons"])
-
-
-class TestIncrementalMode:
-    """Test incremental_only mode (TASK-VT-096)."""
-
-    def test_incremental_mode_initialization(self):
-        """Test MergeGateEngine initialization with incremental_only."""
-        engine = MergeGateEngine(
-            Path("/dummy/project/root"),
-            incremental_only=True,
-            show_historical_debt=False,
-        )
-
-        assert engine.incremental_only is True
-        assert engine.show_historical_debt is False
-
-    def test_rule3_incremental_mode(self):
-        """Test Rule 3 (dangling claims) in incremental mode."""
-        engine = MergeGateEngine(
-            Path("/dummy/project/root"),
-            incremental_only=True,
-        )
-
-        gaps = []
-        risks = []
-        dangling_claims = [
-            {
-                "claim_id": "CLAIM-003",
-                "related_task": "TASK-999",
-            }
-        ]
-        staged_items = {"CLAIM-005"}  # Different claim
-
-        res = engine.evaluate(
-            gaps, risks,
-            dangling_claims=dangling_claims,
-            staged_items=staged_items,
-        )
-
-        # Historical dangling claim should NOT block in incremental mode
-        assert res["gate_decision"] == "pass"
-        assert res["historical_debt_count"] == 1
-
-    def test_rule4_incremental_mode(self):
-        """Test Rule 4 (claim evidence gaps) in incremental mode."""
-        engine = MergeGateEngine(
-            Path("/dummy/project/root"),
-            incremental_only=True,
-        )
-
-        gaps = []
-        risks = []
-        claim_evidence_gaps = [
-            {
-                "claim_id": "CLAIM-003",
-                "verification_status": "test_failed",
-            }
-        ]
-        staged_items = {"CLAIM-005"}  # Different claim
-
-        res = engine.evaluate(
-            gaps, risks,
-            claim_evidence_gaps=claim_evidence_gaps,
-            staged_items=staged_items,
-        )
-
-        # Historical failed test should NOT block in incremental mode
-        assert res["gate_decision"] == "pass"
-        assert res["historical_debt_count"] == 1
-
-    def test_rule5_incremental_mode(self):
-        """Test Rule 5 (AC coverage) in incremental mode."""
-        engine = MergeGateEngine(
-            Path("/dummy/project/root"),
-            incremental_only=True,
-        )
-
-        gaps = []
-        risks = []
-        ac_gaps = [
-            {
-                "ac_id": "AC-VT-001-01",
-                "task_id": "TASK-VT-001",
-                "coverage_status": "no_test_coverage",
-            }
-        ]
-        staged_items = {"CLAIM-005"}  # Different claim
-
-        res = engine.evaluate(
-            gaps, risks,
-            ac_gaps=ac_gaps,
-            staged_items=staged_items,
-        )
-
-        # Historical AC gap should NOT block in incremental mode
-        assert res["gate_decision"] == "pass"
-        assert res["historical_debt_count"] == 1
-
-    def test_incremental_mode_result_fields(self):
-        """Test that incremental mode adds result fields."""
-        engine = MergeGateEngine(
-            Path("/dummy/project/root"),
-            incremental_only=True,
-        )
-
-        res = engine.evaluate([], [], {})
-
-        assert "incremental_mode" in res
-        assert "historical_debt_count" in res
-        assert res["incremental_mode"] is True
-        assert res["historical_debt_count"] == 0
-
-
-# ---------------------------------------------------------------
-# Isolated tasks tests (Stage 8 Fix 1)
-# ---------------------------------------------------------------
-
-class TestIsolatedTasks:
-    """Tests for isolated tasks warning."""
-
-    def test_isolated_tasks_appear_in_reasons(self):
-        """Isolated tasks appear as warnings in reasons, gate still passes."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-        isolated_tasks = [
-            {"task_id": "TASK-005", "reason": "无关联需求/AC"},
-        ]
-        res = engine.evaluate([], [], {}, isolated_tasks=isolated_tasks)
-        assert res["gate_decision"] == "pass"
-        assert any("TASK-005" in msg for msg in res["reasons"])
-        assert any("[告警]" in msg for msg in res["reasons"])
-
-    def test_no_isolated_tasks_passes(self):
-        """Empty isolated tasks list produces pass."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-        res = engine.evaluate([], [], {}, isolated_tasks=[])
-        assert res["gate_decision"] == "pass"
-        assert not any("[告警]" in msg for msg in res["reasons"])
-
-    def test_isolated_tasks_none_skips(self):
-        """When isolated_tasks is None, no warning added."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-        res = engine.evaluate([], [], {}, isolated_tasks=None)
-        assert res["gate_decision"] == "pass"
-        assert not any("[告警]" in msg for msg in res["reasons"])
-
-    def test_isolated_tasks_do_not_override_blocked(self):
-        """Isolated tasks don't downgrade an already-blocked gate."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-        ac_gaps = [{"ac_id": "AC-1", "task_id": "TASK-1", "coverage_status": "no_tests_declared"}]
-        isolated_tasks = [{"task_id": "TASK-005", "reason": "无关联需求/AC"}]
-        res = engine.evaluate([], [], {}, ac_gaps=ac_gaps, isolated_tasks=isolated_tasks)
-        assert res["gate_decision"] == "blocked"
-        assert any("[告警]" in msg for msg in res["reasons"])
-
-    def test_isolated_tasks_incremental_tagged(self):
-        """Isolated tasks get [当前] tag when staged_items is not None."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-        isolated_tasks = [{"task_id": "TASK-005", "reason": "无关联需求/AC"}]
-        res = engine.evaluate([], [], {}, isolated_tasks=isolated_tasks, staged_items={"TASK-005"})
-        assert any("[当前]" in msg and "TASK-005" in msg for msg in res["reasons"])
-
-
-# ---------------------------------------------------------------
-# Invalid task references tests (Rule 9)
-# ---------------------------------------------------------------
+    def test_ac_gaps_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        ac_gaps = [{"ac_id": "AC-001", "task_id": "TASK-001", "coverage_status": "no_tests_declared"}]
+        issues = engine.detect_all_issues(ac_gaps=ac_gaps)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "no_claim"
+        assert issues[0].severity == Severity.BLOCK
+
+    def test_no_ac_gaps(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(ac_gaps=[])
+        assert len(issues) == 0
+
+    def test_ac_gaps_none_skipped(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(ac_gaps=None)
+        assert len(issues) == 0
+
+    def test_no_claim_for_task_uses_task_id(self, tmp_path):
+        engine = _engine(tmp_path)
+        ac_gaps = [{"ac_id": "AC-001", "task_id": "TASK-001", "coverage_status": "no_claim_for_task"}]
+        issues = engine.detect_all_issues(ac_gaps=ac_gaps)
+        assert issues[0].related_task_id == "TASK-001"
+        assert issues[0].gap_targets == ["TASK-001"]
+
+
+# ── Rule 9: Invalid task references ──────────────────────────────
 
 class TestInvalidTaskReferences:
-    """Tests for Rule 9: invalid task references."""
-
-    def test_invalid_requirements_blocks(self):
-        """Tasks referencing non-existent requirements block the gate."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
+    def test_invalid_requirements_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
         refs = {"invalid_requirements": [{"task_id": "TASK-1", "req_id": "REQ-MISSING"}]}
-        res = engine.evaluate([], [], {}, invalid_task_references=refs)
-        assert res["gate_decision"] == "blocked"
-        assert any("TASK-1" in msg for msg in res["reasons"])
+        issues = engine.detect_all_issues(invalid_task_references=refs)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "chain_broken"
+        assert issues[0].severity == Severity.BLOCK
+        assert issues[0].related_task_id == "TASK-1"
 
-    def test_invalid_modules_blocks(self):
-        """Tasks referencing non-existent modules block the gate."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
+    def test_invalid_modules_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
         refs = {"invalid_modules": [{"task_id": "TASK-1", "module_id": "MOD-MISSING"}]}
-        res = engine.evaluate([], [], {}, invalid_task_references=refs)
-        assert res["gate_decision"] == "blocked"
+        issues = engine.detect_all_issues(invalid_task_references=refs)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "chain_broken"
 
-    def test_invalid_module_code_paths_blocks(self):
-        """Code path module mismatch blocks the gate."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
+    def test_invalid_module_code_paths_misaligned(self, tmp_path):
+        engine = _engine(tmp_path)
         refs = {"invalid_module_code_paths": [
             {"task_id": "TASK-1", "module_id": "MOD-A", "code_path": "src/b.py", "actual_module": "MOD-B"}
         ]}
-        res = engine.evaluate([], [], {}, invalid_task_references=refs)
-        assert res["gate_decision"] == "blocked"
-        assert any("链条错位" in msg for msg in res["reasons"])
+        issues = engine.detect_all_issues(invalid_task_references=refs)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "chain_misaligned"
 
-    def test_empty_invalid_references_passes(self):
-        """Empty invalid references produce pass."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
+    def test_empty_invalid_references(self, tmp_path):
+        engine = _engine(tmp_path)
         refs = {
             "invalid_requirements": [],
             "invalid_acs": [],
@@ -815,47 +173,283 @@ class TestInvalidTaskReferences:
             "invalid_ac_parents": [],
             "invalid_module_code_paths": [],
         }
-        res = engine.evaluate([], [], {}, invalid_task_references=refs)
-        assert res["gate_decision"] == "pass"
+        issues = engine.detect_all_issues(invalid_task_references=refs)
+        assert len(issues) == 0
 
-    def test_invalid_refs_incremental_filters_historical(self):
-        """In incremental mode, historical invalid refs don't block."""
-        engine = MergeGateEngine(Path("/dummy/project/root"), incremental_only=True)
-        refs = {"invalid_requirements": [{"task_id": "TASK-OLD", "req_id": "REQ-X"}]}
-        res = engine.evaluate([], [], {}, invalid_task_references=refs, staged_items={"TASK-NEW"})
-        assert res["gate_decision"] == "pass"
-        assert res["historical_debt_count"] >= 1
+    def test_invalid_acs(self, tmp_path):
+        engine = _engine(tmp_path)
+        refs = {"invalid_acs": [{"task_id": "TASK-1", "ac_id": "AC-MISSING"}]}
+        issues = engine.detect_all_issues(invalid_task_references=refs)
+        assert len(issues) == 1
+        assert issues[0].gap_targets == ["AC-MISSING"]
+
+    def test_invalid_constraints(self, tmp_path):
+        engine = _engine(tmp_path)
+        refs = {"invalid_constraints": [{"task_id": "TASK-1", "constraint_id": "CON-001"}]}
+        issues = engine.detect_all_issues(invalid_task_references=refs)
+        assert len(issues) == 1
+
+    def test_invalid_ac_parents(self, tmp_path):
+        engine = _engine(tmp_path)
+        refs = {"invalid_ac_parents": [{"task_id": "TASK-1", "ac_id": "AC-001", "parent_req_id": "REQ-X"}]}
+        issues = engine.detect_all_issues(invalid_task_references=refs)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "chain_misaligned"
 
 
-# ---------------------------------------------------------------
-# Lint violations tests
-# ---------------------------------------------------------------
+# ── Architecture compliance: must gaps (task_failed / BLOCK) ─────
+
+class TestMustGaps:
+    def test_must_ac_gap_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        gaps = [{"item_id": "AC-001", "item_type": "ac", "reason": "missing test"}]
+        issues = engine.detect_all_issues(gaps=gaps)
+        block_issues = _find_issues(issues, severity=Severity.BLOCK)
+        assert len(block_issues) >= 1
+        assert block_issues[0].issue_type == "task_failed"
+
+    def test_non_ac_gap_skipped_in_must(self, tmp_path):
+        engine = _engine(tmp_path)
+        gaps = [{"item_id": "REQ-001", "item_type": "requirement", "reason": "no coverage"}]
+        issues = engine.detect_all_issues(gaps=gaps)
+        must_issues = _find_issues(issues, issue_type="task_failed")
+        assert len(must_issues) == 0
+
+    def test_stale_gap_skipped(self, tmp_path):
+        engine = _engine(tmp_path)
+        gaps = [{"item_id": "AC-001", "item_type": "ac", "reason": "old", "stale": True}]
+        issues = engine.detect_all_issues(gaps=gaps)
+        must_issues = _find_issues(issues, issue_type="task_failed")
+        assert len(must_issues) == 0
+
+
+# ── Architecture compliance: must risks (chain_broken / BLOCK) ───
+
+class TestMustRisks:
+    def test_must_risk_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        risks = [{"risk_id": "RISK-001", "severity": "must", "description": "critical bug"}]
+        issues = engine.detect_all_issues(risks=risks)
+        block_issues = _find_issues(issues, severity=Severity.BLOCK)
+        assert len(block_issues) >= 1
+
+    def test_self_referential_risk_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        risks = [{"risk_id": "RISK-001", "severity": "should", "description": "self-referential claim detected"}]
+        issues = engine.detect_all_issues(risks=risks)
+        block_issues = _find_issues(issues, severity=Severity.BLOCK)
+        assert len(block_issues) >= 1
+
+    def test_high_risk_missing_action(self, tmp_path):
+        engine = _engine(tmp_path)
+        risks = [{
+            "risk_id": "RISK-001", "severity": "must",
+            "description": "critical", "suggested_action": "", "business_impact": "high"
+        }]
+        issues = engine.detect_all_issues(risks=risks)
+        assert len(issues) >= 2
+
+    def test_low_risk_not_in_must(self, tmp_path):
+        engine = _engine(tmp_path)
+        risks = [{"risk_id": "RISK-001", "severity": "should", "description": "minor"}]
+        issues = engine.detect_all_issues(risks=risks)
+        must_issues = _find_issues(issues, issue_type="chain_broken")
+        assert len(must_issues) == 0
+
+
+# ── Architecture compliance: violations ──────────────────────────
+
+class TestArchitectureViolations:
+    def test_violation_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        compliance = {
+            "architecture_violations": [{"rule_id": "FORBID-001", "message": "Self-attestation."}],
+            "architecture_compliance_status": [],
+            "unclear_constraints": [],
+        }
+        issues = engine.detect_all_issues(compliance_res=compliance)
+        block_issues = _find_issues(issues, severity=Severity.BLOCK)
+        assert len(block_issues) >= 1
+        assert any("FORBID-001" in i.issue_id for i in block_issues)
+
+    def test_violated_must_status_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        compliance = {
+            "architecture_violations": [],
+            "architecture_compliance_status": [
+                {"rule_id": "ARCH-001", "status": "violated", "severity": "must"}
+            ],
+            "unclear_constraints": [],
+        }
+        issues = engine.detect_all_issues(compliance_res=compliance)
+        block_issues = _find_issues(issues, severity=Severity.BLOCK)
+        assert len(block_issues) >= 1
+
+
+# ── Architecture compliance: proposal governance ─────────────────
+
+class TestProposalGovernance:
+    def test_proposal_risk_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        compliance = {
+            "architecture_violations": [],
+            "architecture_compliance_status": [],
+            "unclear_constraints": [],
+            "proposal_risks": [{"risk_id": "PROP-R1", "description": "Breaking change"}],
+            "proposal_gaps": [],
+        }
+        issues = engine.detect_all_issues(compliance_res=compliance)
+        block_issues = _find_issues(issues, severity=Severity.BLOCK)
+        assert len(block_issues) >= 1
+
+    def test_proposal_gap_blocks(self, tmp_path):
+        engine = _engine(tmp_path)
+        compliance = {
+            "architecture_violations": [],
+            "architecture_compliance_status": [],
+            "unclear_constraints": [],
+            "proposal_risks": [],
+            "proposal_gaps": [{"item_id": "PROP-G1", "reason": "Missing migration"}],
+        }
+        issues = engine.detect_all_issues(compliance_res=compliance)
+        block_issues = _find_issues(issues, severity=Severity.BLOCK)
+        assert len(block_issues) >= 1
+
+
+# ── Should gaps (substandard / WARNING) ──────────────────────────
+
+class TestShouldGaps:
+    def test_should_gap_warning(self, tmp_path):
+        engine = _engine(tmp_path)
+        gaps = [{"item_id": "REQ-003", "item_type": "requirement", "reason": "no task coverage"}]
+        issues = engine.detect_all_issues(gaps=gaps)
+        warnings = _find_issues(issues, issue_type="substandard")
+        assert len(warnings) >= 1
+        assert warnings[0].severity == Severity.WARNING
+
+    def test_ac_gap_not_in_should(self, tmp_path):
+        """AC-type gaps are handled by _check_must_gaps, not _check_should_gaps."""
+        engine = _engine(tmp_path)
+        gaps = [{"item_id": "AC-001", "item_type": "ac", "reason": "test"}]
+        issues = engine.detect_all_issues(gaps=gaps)
+        should_issues = _find_issues(issues, issue_type="substandard")
+        assert len(should_issues) == 0
+
+
+# ── Should risks (substandard / WARNING) ─────────────────────────
+
+class TestShouldRisks:
+    def test_should_risk_warning(self, tmp_path):
+        engine = _engine(tmp_path)
+        risks = [{"risk_id": "RISK-003", "severity": "should", "description": "Low priority"}]
+        issues = engine.detect_all_issues(risks=risks)
+        warnings = _find_issues(issues, severity=Severity.WARNING)
+        assert len(warnings) >= 1
+
+    def test_low_confidence_risk_warning(self, tmp_path):
+        engine = _engine(tmp_path)
+        risks = [{"risk_id": "RISK-004", "severity": "must", "confidence": "low_confidence", "description": "maybe"}]
+        issues = engine.detect_all_issues(risks=risks)
+        warnings = _find_issues(issues, issue_type="substandard")
+        assert len(warnings) >= 1
+
+
+# ── Unclear constraints (substandard / WARNING) ──────────────────
+
+class TestUnclearConstraints:
+    def test_unclear_constraint_warning(self, tmp_path):
+        engine = _engine(tmp_path)
+        compliance = {
+            "architecture_violations": [],
+            "architecture_compliance_status": [],
+            "unclear_constraints": [{"rule_id": "UNCLEAR-001", "reason": "Cannot verify"}],
+        }
+        issues = engine.detect_all_issues(compliance_res=compliance)
+        warnings = _find_issues(issues, severity=Severity.WARNING)
+        assert any("UNCLEAR-001" in i.issue_id for i in warnings)
+
+    def test_unclear_status_in_compliance(self, tmp_path):
+        engine = _engine(tmp_path)
+        compliance = {
+            "architecture_violations": [],
+            "architecture_compliance_status": [
+                {"rule_id": "RULE-001", "status": "unclear"}
+            ],
+            "unclear_constraints": [],
+        }
+        issues = engine.detect_all_issues(compliance_res=compliance)
+        warnings = _find_issues(issues, severity=Severity.WARNING)
+        assert len(warnings) >= 1
+
+
+# ── Coverage violations (substandard / WARNING) ──────────────────
+
+class TestCoverageViolations:
+    def test_coverage_violation_warning(self, tmp_path):
+        engine = _engine(tmp_path)
+        cov = [{"source_path": "src/foo.py", "percent_covered": 45.0}]
+        issues = engine.detect_all_issues(cov_violations=cov)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "substandard"
+        assert issues[0].severity == Severity.WARNING
+
+    def test_empty_coverage_violations(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(cov_violations=[])
+        assert len(issues) == 0
+
+
+# ── Lint violations (substandard / WARNING) ──────────────────────
 
 class TestLintViolations:
-    """Tests for lint violations (warning-level, not blocking)."""
+    def test_lint_violation_warning(self, tmp_path):
+        engine = _engine(tmp_path)
+        lint = [{"source_path": "src/foo.py", "violations_count": 3}]
+        issues = engine.detect_all_issues(lint_violations=lint)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "substandard"
+        assert issues[0].severity == Severity.WARNING
 
-    def test_lint_violations_fail_not_blocked(self):
-        """Lint violations produce fail, not blocked."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-        lint_violations = [{"source_path": "src/foo.py", "violations_count": 3, "carried_over": False}]
-        res = engine.evaluate([], [], {}, lint_violations=lint_violations)
-        assert res["gate_decision"] == "fail"
-        assert any("src/foo.py" in msg for msg in res["reasons"])
-
-    def test_no_lint_violations_passes(self):
-        """Empty lint violations list produces pass."""
-        engine = MergeGateEngine(Path("/dummy/project/root"))
-        res = engine.evaluate([], [], {}, lint_violations=[])
-        assert res["gate_decision"] == "pass"
+    def test_empty_lint_violations(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(lint_violations=[])
+        assert len(issues) == 0
 
 
-# ---------------------------------------------------------------
-# AC coverage dimension fix test (Stage 8 Fix 3)
-# ---------------------------------------------------------------
+# ── Isolated tasks (isolated_task / WARNING) ─────────────────────
 
-def test_ac_coverage_incremental_no_claim_for_task_uses_task_id():
-    """no_claim_for_task gap uses task_id for incremental check, not ac_id."""
-    engine = MergeGateEngine(Path("/dummy/project/root"), incremental_only=True)
-    ac_gaps = [{"ac_id": "AC-OLD", "task_id": "TASK-NEW", "coverage_status": "no_claim_for_task"}]
-    res = engine.evaluate([], [], {}, ac_gaps=ac_gaps, staged_items={"TASK-NEW"})
-    assert res["gate_decision"] == "blocked"
+class TestIsolatedTasks:
+    def test_isolated_task_warning(self, tmp_path):
+        engine = _engine(tmp_path)
+        isolated = [{"task_id": "TASK-005", "reason": "no req/AC"}]
+        issues = engine.detect_all_issues(isolated_tasks=isolated)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "isolated_task"
+        assert issues[0].severity == Severity.WARNING
+        assert issues[0].related_task_id == "TASK-005"
+
+    def test_empty_isolated_tasks(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(isolated_tasks=[])
+        assert len(issues) == 0
+
+    def test_isolated_tasks_none_skipped(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues(isolated_tasks=None)
+        assert len(issues) == 0
+
+
+# ── Combined detection ───────────────────────────────────────────
+
+class TestCombinedDetection:
+    def test_multiple_sources_combined(self, tmp_path):
+        engine = _engine(tmp_path)
+        issues = engine.detect_all_issues(
+            ghost_files=["src/orphan.py"],
+            ac_gaps=[{"ac_id": "AC-001", "task_id": "TASK-001", "coverage_status": "no_tests"}],
+            isolated_tasks=[{"task_id": "TASK-005", "reason": "no req"}],
+        )
+        types = {i.issue_type for i in issues}
+        assert "no_claim" in types
+        assert "isolated_task" in types
+        assert len(issues) == 3
+
+    def test_no_inputs_produces_empty(self, tmp_path):
+        issues = _engine(tmp_path).detect_all_issues()
+        assert len(issues) == 0

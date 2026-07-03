@@ -29,7 +29,10 @@
       "Bash(python -m pytest tests/test_merge_gate_engine.py tests/test_pipeline.py -v 2>&1)",
       "Bash(python3 -m pytest tests/test_merge_gate_engine.py tests/test_pipeline.py -v 2>&1)",
       "Bash(find /Users/lihan/Project/Vibe_Tracing -type f -name \"*.py\" | head -100)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(python3 -m pytest tests/test_rule_engine_types.py -v 2>&1 | tail -20)",
+      "Bash(python3 -m pytest tests/ --tb=short 2>&1 | tail -15)",
+      "Bash(git stash && python3 -m pytest tests/test_schema_validator.py tests/test_self_governance.py --tb=line 2>&1 | tail -10 && git stash pop)"
     ]
   }
 }

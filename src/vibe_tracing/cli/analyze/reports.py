@@ -42,10 +42,8 @@ def _build_report_document(
         "project_id": evidence_meta.get("project_id"),
         "scan_time": evidence_meta.get("scan_time"),
         "gate_decision": gate_decision,
-        "gate_reasons": gate_res.get("reasons", []),
-        "gate_blocked_items": gate_res.get("blocked_items", []),
-        "incremental_mode": gate_res.get("incremental_mode", False),
-        "historical_debt_count": gate_res.get("historical_debt_count", 0),
+        "per_issue_states": gate_res.get("per_issue_states", []),
+        "historical_issues": gate_res.get("historical_issues", []),
         "requirement_coverage": [],
         "gaps": merged_gaps,
         "risks": final_risks,
@@ -139,7 +137,11 @@ def _build_metadata(
         },
         "gate_decision": gate_decision,
         "exit_code": exit_code,
-        "summary": "; ".join(gate_res["reasons"]),
+        "summary": "; ".join(
+            pis.get("reason", pis.get("issue_id", ""))
+            for pis in gate_res.get("per_issue_states", [])
+            if pis.get("state") not in ("RESOLVED",)
+        ),
     }
 
 

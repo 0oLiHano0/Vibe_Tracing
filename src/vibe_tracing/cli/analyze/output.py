@@ -13,29 +13,51 @@ from vibe_tracing.cli.analyze.reports import (
     _render_dashboard,
 )
 
+_STATE_LABELS = {
+    "CURRENT_BLOCK": "阻拦",
+    "CURRENT_WARNING": "告警",
+    "HISTORICAL": "预存",
+    "ACCEPTED": "已接受",
+}
 
-def _print_gate_summary(gate_res: dict, staged_items: Optional[Set[str]]) -> None:
-    """Print gate decision summary, separating current issues from pre-existing debt."""
+
+def _derive_reasons(per_issue_states: list) -> List[str]:
+    """从 per_issue_states 生成展示用 reason 列表。"""
+    reasons: List[str] = []
+    for pis in per_issue_states:
+        state = pis.get("state", "")
+        label = _STATE_LABELS.get(state)
+        if label is None:
+            continue
+        reason_text = pis.get("reason", pis.get("issue_id", ""))
+        reasons.append(f"[{label}] {reason_text}")
+    return reasons
+
+
+def _print_gate_summary(gate_res: dict) -> None:
+    """Print gate decision summary from per-issue states."""
     gate_decision = gate_res["gate_decision"]
     print(f"Analysis complete. Gate decision: {gate_decision.upper()}")
-    if staged_items is not None:
-        current_reasons = [r for r in gate_res["reasons"] if r.startswith("[当前]")]
-        pre_existing_reasons = [r for r in gate_res["reasons"] if r.startswith("[预存]")]
-        unprefixed = [r for r in gate_res["reasons"] if not r.startswith("[当前]") and not r.startswith("[预存]")]
-        if current_reasons:
-            print("\nCURRENT ISSUES (blocks commit):")
-            for reason in current_reasons:
-                print(f"- {reason}")
-        if pre_existing_reasons and gate_res.get("show_historical_debt", True):
-            print("\nPRE-EXISTING DEBT (does not block):")
-            for reason in pre_existing_reasons:
-                print(f"- {reason}")
-        if unprefixed:
-            for reason in unprefixed:
-                print(f"- {reason}")
-    else:
-        for reason in gate_res["reasons"]:
-            print(f"- {reason}")
+
+    per_issue_states = gate_res.get("per_issue_states", [])
+    if not per_issue_states:
+        if gate_decision == "pass":
+            print("- 所有质量门禁规则均已通过，无阻塞项或风险项。")
+        return
+
+    for pis in per_issue_states:
+        state = pis.get("state", "")
+        if state == "RESOLVED":
+            continue
+        label = _STATE_LABELS.get(state, "")
+        if not label:
+            continue
+        severity = pis.get("severity", "")
+        reason_text = pis.get("reason", pis.get("issue_id", ""))
+        severity_marker = ""
+        if state == "HISTORICAL":
+            severity_marker = " 🔴" if severity == "BLOCK" else " 🟡"
+        print(f"- [{label}] {reason_text}{severity_marker}")
 
 
 def _print_agent_actions(
@@ -47,7 +69,7 @@ def _print_agent_actions(
     active_risks: list,
     merged_gaps: list,
     compliance_res: Optional[dict],
-    staged_items: Optional[Set[str]],
+    current_commit_task_set: Set[str],
     project_root,
     conn=None,
 ) -> None:
@@ -56,6 +78,7 @@ def _print_agent_actions(
     violations = compliance_res.get("architecture_violations", []) if compliance_res else []
     accepted_rules = compliance_res.get("accepted_rules", []) if compliance_res else []
     compliance_status = compliance_res.get("architecture_compliance_status", []) if compliance_res else []
+    gate_reasons = _derive_reasons(gate_res.get("per_issue_states", []))
 
     agent_output = _format_agent_actions(
         gate_decision=gate_decision,
@@ -66,11 +89,11 @@ def _print_agent_actions(
         prd_result=ctx.prd,
         task_result=ctx.task_result,
         claims_list=ctx.claims_list,
-        gate_reasons=gate_res["reasons"],
+        gate_reasons=gate_reasons,
         merged_gaps=merged_gaps,
         compliance_status=compliance_status,
         coverage_summary=report_doc.get("coverage_summary"),
-        staged_items=staged_items,
+        staged_items=current_commit_task_set,
         evidence_meta=evidence_meta,
         conn=conn,
     )
@@ -148,7 +171,7 @@ def _render_output(
     merged_gaps: list,
     final_risks: list,
     compliance_res: Optional[dict],
-    staged_items: Optional[Set[str]],
+    current_commit_task_set: Set[str],
     output_dir,
     project_root,
     staged_files: Optional[Set[str]] = None,
@@ -156,11 +179,11 @@ def _render_output(
 ) -> None:
     """Render dashboard, print gate summary, agent actions, and reflection prompts."""
     _render_dashboard(ctx, report_doc, evidence_meta, output_dir, project_root)
-    _print_gate_summary(gate_res, staged_items)
+    _print_gate_summary(gate_res)
     _print_empty_claims_hint(ctx, staged_files)
     _print_agent_actions(
         ctx, gate_res, report_doc, evidence_meta,
         active_gaps, active_risks, merged_gaps, compliance_res,
-        staged_items, project_root, conn=conn,
+        current_commit_task_set, project_root, conn=conn,
     )
     _print_reflection_prompts(ctx, gate_res, merged_gaps, final_risks, compliance_res, project_root)

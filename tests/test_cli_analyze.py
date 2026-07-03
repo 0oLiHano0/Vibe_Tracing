@@ -782,92 +782,103 @@ def test_hint_context():
 
 
 def test_apply_human_decisions_accepted_rule_reconfirm(tmp_path):
-    """Test human_decisions reconfirm applied via MergeGateEngine."""
-    from vibe_tracing.domain.gate.engine import MergeGateEngine
-    from vibe_tracing.infra.db import init_in_memory_db
+    """Test human_decisions reconfirm parsed correctly by SignalComputer."""
+    from vibe_tracing.domain.gate.signal_computer import SignalComputer
+    from vibe_tracing.domain.gate.baseline import BaselineManager
 
-    engine = MergeGateEngine(tmp_path)
-    gate_res = engine.evaluate(
-        gaps=[], risks=[],
-        human_decisions={
-            "decisions": [
-                {
-                    "category": "accepted_rule",
-                    "targetId": "RULE-001",
-                    "action": "accept_risk",
-                }
-            ]
-        },
-    )
-    # accept_risk with no matching risk -> 0 applied
-    assert gate_res["human_decisions_applied"] >= 0
+    baseline = BaselineManager(tmp_path)
+    computer = SignalComputer(baseline, set(), human_decisions={
+        "decisions": [
+            {
+                "category": "accepted_rule",
+                "targetId": "RULE-001",
+                "action": "reconfirm",
+            }
+        ]
+    })
+    assert "RULE-001" in computer.accepted_rule_ids
+    assert computer.human_decisions_applied >= 1
 
 
 def test_apply_human_decisions_mark_complete(tmp_path):
-    """Test human_decisions mark_complete resolves gaps via MergeGateEngine."""
+    """Test human_decisions mark_complete resolves issues via SignalComputer."""
     from vibe_tracing.domain.gate.engine import MergeGateEngine
-    from vibe_tracing.infra.db import init_in_memory_db
+    from vibe_tracing.domain.gate.signal_computer import SignalComputer
+    from vibe_tracing.domain.gate.baseline import BaselineManager
+    from vibe_tracing.domain.gate.types import F
 
     engine = MergeGateEngine(tmp_path)
     gaps = [{"item_id": "AC-001", "item_type": "ac", "severity": "must", "reason": "no test"}]
-    gate_res = engine.evaluate(
-        gaps=gaps, risks=[],
-        human_decisions={
-            "decisions": [
-                {
-                    "category": "uncovered_ac",
-                    "targetId": "AC-001",
-                    "action": "mark_complete",
-                }
-            ]
-        },
-    )
-    assert gate_res["human_decisions_applied"] >= 1
+    issues = engine.detect_all_issues(gaps=gaps)
+
+    baseline = BaselineManager(tmp_path)
+    computer = SignalComputer(baseline, set(), human_decisions={
+        "decisions": [
+            {
+                "category": "uncovered_ac",
+                "targetId": "AC-001",
+                "action": "mark_complete",
+            }
+        ]
+    })
+    signals = computer.compute_signals(issues)
+    assert len(signals) > 0
+    signal, _ = signals[0]
+    assert signal.resolved is True
+    state = F(signal.observed, signal.activated, signal.resolved, signal.accepted, signal.severity)
+    assert state.value == "RESOLVED"
 
 
 def test_apply_human_decisions_stale_debt_defer(tmp_path):
-    """Test human_decisions accept_risk on risks via MergeGateEngine."""
+    """Test human_decisions accept_risk on risks via SignalComputer."""
     from vibe_tracing.domain.gate.engine import MergeGateEngine
-    from vibe_tracing.infra.db import init_in_memory_db
+    from vibe_tracing.domain.gate.signal_computer import SignalComputer
+    from vibe_tracing.domain.gate.baseline import BaselineManager
+    from vibe_tracing.domain.gate.types import F
 
     engine = MergeGateEngine(tmp_path)
     risks = [{"risk_id": "R-001", "severity": "must", "title": "Old debt", "claim_id": "CLAIM-001"}]
-    gate_res = engine.evaluate(
-        gaps=[], risks=risks,
-        human_decisions={
-            "decisions": [
-                {
-                    "category": "stale_debt",
-                    "targetId": "CLAIM-001",
-                    "action": "accept_risk",
-                }
-            ]
-        },
-    )
-    assert gate_res["human_decisions_applied"] >= 1
+    issues = engine.detect_all_issues(risks=risks)
+
+    baseline = BaselineManager(tmp_path)
+    computer = SignalComputer(baseline, set(), human_decisions={
+        "decisions": [
+            {
+                "category": "stale_debt",
+                "targetId": "R-001",
+                "action": "accept_risk",
+            }
+        ]
+    })
+    signals = computer.compute_signals(issues)
+    block_issues = [(s, i) for s, i in signals if s.severity.value == "BLOCK"]
+    assert len(block_issues) > 0
+    signal, _ = block_issues[0]
+    assert signal.accepted is True
+    state = F(signal.observed, signal.activated, signal.resolved, signal.accepted, signal.severity)
+    assert state.value == "ACCEPTED"
 
 
 def test_apply_human_decisions_accepted_rule_reject(tmp_path):
-    """Test human_decisions applied count with no matching items."""
-    from vibe_tracing.domain.gate.engine import MergeGateEngine
-    from vibe_tracing.infra.db import init_in_memory_db
+    """Test human_decisions reject parsed correctly by SignalComputer."""
+    from vibe_tracing.domain.gate.signal_computer import SignalComputer
+    from vibe_tracing.domain.gate.baseline import BaselineManager
 
-    engine = MergeGateEngine(tmp_path)
-    gate_res = engine.evaluate(
-        gaps=[], risks=[],
-        human_decisions={"decisions": []},
-    )
-    assert gate_res["human_decisions_applied"] == 0
+    baseline = BaselineManager(tmp_path)
+    computer = SignalComputer(baseline, set(), human_decisions={"decisions": []})
+    assert computer.human_decisions_applied == 0
+    assert len(computer.accepted_rule_ids) == 0
+    assert len(computer.rejected_rule_ids) == 0
 
 
 def test_apply_human_decisions_no_decisions(tmp_path):
     """Test human_decisions with empty decisions list."""
-    from vibe_tracing.domain.gate.engine import MergeGateEngine
-    from vibe_tracing.infra.db import init_in_memory_db
+    from vibe_tracing.domain.gate.signal_computer import SignalComputer
+    from vibe_tracing.domain.gate.baseline import BaselineManager
 
-    engine = MergeGateEngine(tmp_path)
-    gate_res = engine.evaluate(gaps=[], risks=[], human_decisions={"decisions": []})
-    assert gate_res["human_decisions_applied"] == 0
+    baseline = BaselineManager(tmp_path)
+    computer = SignalComputer(baseline, set(), human_decisions={"decisions": []})
+    assert computer.human_decisions_applied == 0
 
 # =========================================================================
 # Tests for governance boundary functions

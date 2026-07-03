@@ -512,7 +512,7 @@ def _run_gate_evaluation(
         fingerprints.append(compute_fingerprint(issue.issue_type, issue.gap_targets))
     baseline.generate_snapshot(fingerprints)
 
-    computer = SignalComputer(baseline, current_commit_task_set, human_decisions)
+    computer = SignalComputer(baseline, current_commit_task_set, human_decisions, claims_list=ctx.claims_list)
     signals = computer.compute_signals(issues)
 
     # 3. 状态判定

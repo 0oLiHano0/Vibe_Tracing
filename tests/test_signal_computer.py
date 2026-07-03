@@ -138,6 +138,97 @@ class TestSignalComputerResolved:
         signals = computer.compute_signals([issue])
         assert signals[0][0].resolved is False
 
+    def test_auto_resolved_when_claim_covers_all_gap_targets(self, tmp_path):
+        """覆盖即核销：Claim 的 code_refs 覆盖了全部 gap_targets → resolved=true."""
+        from types import SimpleNamespace
+        issue = _make_issue(gap_targets=["src/old.py"])
+        baseline = BaselineManager(tmp_path)
+        claims = [SimpleNamespace(
+            claim_id="CLAIM-010", related_task="TASK-010",
+            code_refs=["src/old.py", "src/new.py"], test_refs=[],
+        )]
+        computer = SignalComputer(baseline, set(), claims_list=claims)
+        signals = computer.compute_signals([issue])
+        assert signals[0][0].resolved is True
+
+    def test_auto_resolved_partial_coverage_not_resolved(self, tmp_path):
+        """部分覆盖不核销：only some gap_targets covered → resolved=false."""
+        from types import SimpleNamespace
+        issue = _make_issue(gap_targets=["src/a.py", "src/b.py"])
+        baseline = BaselineManager(tmp_path)
+        claims = [SimpleNamespace(
+            claim_id="CLAIM-010", related_task="TASK-010",
+            code_refs=["src/a.py"], test_refs=[],
+        )]
+        computer = SignalComputer(baseline, set(), claims_list=claims)
+        signals = computer.compute_signals([issue])
+        assert signals[0][0].resolved is False
+
+    def test_auto_resolved_via_related_task(self, tmp_path):
+        """Claim 的 related_task 覆盖 gap_target → resolved=true."""
+        from types import SimpleNamespace
+        issue = _make_issue(gap_targets=["TASK-001"])
+        baseline = BaselineManager(tmp_path)
+        claims = [SimpleNamespace(
+            claim_id="CLAIM-010", related_task="TASK-001",
+            code_refs=[], test_refs=[],
+        )]
+        computer = SignalComputer(baseline, set(), claims_list=claims)
+        signals = computer.compute_signals([issue])
+        assert signals[0][0].resolved is True
+
+    def test_auto_resolved_via_claim_id(self, tmp_path):
+        """Claim 的 claim_id 覆盖 gap_target → resolved=true."""
+        from types import SimpleNamespace
+        issue = _make_issue(gap_targets=["CLAIM-005"])
+        baseline = BaselineManager(tmp_path)
+        claims = [SimpleNamespace(
+            claim_id="CLAIM-005", related_task="TASK-005",
+            code_refs=[], test_refs=[],
+        )]
+        computer = SignalComputer(baseline, set(), claims_list=claims)
+        signals = computer.compute_signals([issue])
+        assert signals[0][0].resolved is True
+
+    def test_no_claims_falls_back_to_manual(self, tmp_path):
+        """无 claims 时退化为仅人工标记."""
+        issue = _make_issue(gap_targets=["AC-001"])
+        baseline = BaselineManager(tmp_path)
+        computer = SignalComputer(baseline, set(), claims_list=None)
+        signals = computer.compute_signals([issue])
+        assert signals[0][0].resolved is False
+
+    def test_auto_resolve_or_manual_both_work(self, tmp_path):
+        """自动核销和人工标记是 OR 关系——任一为 true 即 resolved."""
+        from types import SimpleNamespace
+        issue_manual = _make_issue(gap_targets=["AC-001"], item_id="ITEM-M")
+        issue_auto = _make_issue(gap_targets=["src/foo.py"], item_id="ITEM-A")
+        baseline = BaselineManager(tmp_path)
+        claims = [SimpleNamespace(
+            claim_id="CLAIM-010", related_task="TASK-010",
+            code_refs=["src/foo.py"], test_refs=[],
+        )]
+        human_decisions = {
+            "decisions": [{"action": "mark_complete", "targetId": "AC-001"}]
+        }
+        computer = SignalComputer(baseline, set(), human_decisions, claims_list=claims)
+        signals = computer.compute_signals([issue_manual, issue_auto])
+        assert signals[0][0].resolved is True
+        assert signals[1][0].resolved is True
+
+    def test_auto_resolved_via_test_refs(self, tmp_path):
+        """Claim 的 test_refs 覆盖 gap_target → resolved=true."""
+        from types import SimpleNamespace
+        issue = _make_issue(gap_targets=["tests/test_ac001.py"])
+        baseline = BaselineManager(tmp_path)
+        claims = [SimpleNamespace(
+            claim_id="CLAIM-010", related_task="TASK-010",
+            code_refs=[], test_refs=["tests/test_ac001.py"],
+        )]
+        computer = SignalComputer(baseline, set(), claims_list=claims)
+        signals = computer.compute_signals([issue])
+        assert signals[0][0].resolved is True
+
 
 class TestSignalComputerAccepted:
     """Tests for the accepted signal."""

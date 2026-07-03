@@ -19,11 +19,12 @@ def _run_pipeline(
     baseline: BaselineManager,
     current_commit_task_set: set,
     human_decisions=None,
+    claims_list=None,
     **detect_kwargs,
 ):
     """Run the full four-layer pipeline and return (gate_decision, historical, per_issue)."""
     issues = engine.detect_all_issues(**detect_kwargs)
-    computer = SignalComputer(baseline, current_commit_task_set, human_decisions)
+    computer = SignalComputer(baseline, current_commit_task_set, human_decisions, claims_list=claims_list)
     signals = computer.compute_signals(issues)
     states_and_signals = [
         (F(s.observed, s.activated, s.resolved, s.accepted, s.severity), s, issue)
@@ -229,3 +230,79 @@ class TestPipelineMixed:
         )
         assert gate == "fail"
         assert per[0]["state"] == "CURRENT_WARNING"
+
+
+class TestPipelineAutoResolve:
+    """覆盖即核销 — Claim coverage auto-resolves issues."""
+
+    def test_historical_debt_auto_resolved_by_new_claim(self, tmp_path):
+        """Historical BLOCK issue auto-resolved when a Claim covers its gap target."""
+        from types import SimpleNamespace
+
+        engine = MergeGateEngine(tmp_path)
+        baseline = BaselineManager(tmp_path)
+
+        ghost_files = ["src/orphan.py"]
+        issues = engine.detect_all_issues(ghost_files=ghost_files)
+        fps = [compute_fingerprint(i.issue_type, i.gap_targets) for i in issues]
+        baseline.generate_snapshot(fps)
+
+        claims = [SimpleNamespace(
+            claim_id="CLAIM-010", related_task="TASK-010",
+            code_refs=["src/orphan.py"], test_refs=[],
+        )]
+        gate, hist, per = _run_pipeline(
+            engine, baseline, set(), claims_list=claims,
+            ghost_files=ghost_files,
+        )
+        assert gate == "pass"
+        resolved = [p for p in per if p["state"] == "RESOLVED"]
+        assert len(resolved) == 1
+        assert len(hist) == 0
+
+    def test_partial_coverage_stays_historical(self, tmp_path):
+        """Partial coverage does NOT auto-resolve — issue stays HISTORICAL."""
+        from types import SimpleNamespace
+
+        engine = MergeGateEngine(tmp_path)
+        baseline = BaselineManager(tmp_path)
+
+        cov_violations = [
+            {"source_path": "src/a.py", "percent_covered": 40.0},
+            {"source_path": "src/b.py", "percent_covered": 50.0},
+        ]
+        issues = engine.detect_all_issues(cov_violations=cov_violations)
+        fps = [compute_fingerprint(i.issue_type, i.gap_targets) for i in issues]
+        baseline.generate_snapshot(fps)
+
+        claims = [SimpleNamespace(
+            claim_id="CLAIM-010", related_task="TASK-010",
+            code_refs=["src/a.py"], test_refs=[],
+        )]
+        gate, hist, per = _run_pipeline(
+            engine, baseline, set(), claims_list=claims,
+            cov_violations=cov_violations,
+        )
+        historical = [p for p in per if p["state"] == "HISTORICAL"]
+        resolved = [p for p in per if p["state"] == "RESOLVED"]
+        assert len(historical) == 1
+        assert len(resolved) == 1
+
+    def test_no_claims_historical_stays(self, tmp_path):
+        """Without claims, historical issues remain HISTORICAL (not auto-resolved)."""
+        engine = MergeGateEngine(tmp_path)
+        baseline = BaselineManager(tmp_path)
+
+        ghost_files = ["src/old.py"]
+        issues = engine.detect_all_issues(ghost_files=ghost_files)
+        fps = [compute_fingerprint(i.issue_type, i.gap_targets) for i in issues]
+        baseline.generate_snapshot(fps)
+
+        gate, hist, per = _run_pipeline(
+            engine, baseline, set(), claims_list=None,
+            ghost_files=ghost_files,
+        )
+        assert gate == "pass"
+        assert len(hist) == 1
+        assert per[0]["state"] == "HISTORICAL"
+

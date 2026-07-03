@@ -76,6 +76,11 @@
       "phase_id": "PHASE-VT-013",
       "name": "规则引擎重构 — 目标模型 F(o,a,r,c,v) 实现",
       "goal": "将 MergeGateEngine 从聚合列表+3态字符串的前驱实现，重构为设计文档定义的双轴状态模型：per-issue 五元信号 → 纯函数 F → 5态输出。消除 activated 信号的文件路径血缘偏差，引入 Baseline 快照机制，实现 per-issue 历史债务状态追踪。"
+    },
+    {
+      "phase_id": "PHASE-VT-014",
+      "name": "自动核销 — resolved 信号从人工标记改为覆盖即核销",
+      "goal": "实现 design_historical_debt_mechanism.md §6 定义的覆盖即核销机制：all gap_targets ⊆ current_claim_coverage → resolved=true，消除 design_rule_engine.md §1.1 差距 2。"
     }
   ],
   "tasks": [
@@ -10656,6 +10661,80 @@
         "文档更新原则（D-1）：变更代码后必须同步更新文档。重点检查 refactoring_design.md 中对 engine.py 的接口描述是否过时。",
         "design_rule_engine.md §1.1 的更新格式：在每个差距行尾添加 '(✅ PHASE-VT-013)' 并在章节末尾加完成状态表（日期 + commit 引用）。",
         "如果发现任何遗漏的调用方（如 CLI 命令直接访问了 _historical_debt_count），一并更新——C-3 规则：修改接口后所有调用方必须同步更新。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-188",
+      "title": "自动核销 — resolved 信号从人工标记改为覆盖即核销",
+      "phase_id": "PHASE-VT-014",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "实现 design_historical_debt_mechanism.md §6 定义的覆盖即核销：当任意 Claim 的 code_refs/test_refs 覆盖了 issue 的所有 gap_targets 时，resolved=true（自动核销）。保留 human_decisions mark_complete 作为额外核销路径。消除 design_rule_engine.md §1.1 差距 2。",
+      "atomic_scope": "1) SignalComputer 新增 claims_list 参数，构建 current_claim_coverage 集合（所有 Claim 的 code_refs + test_refs + claim_id + related_task）。2) resolved 信号判定：all(t in coverage for t in gap_targets) OR any(t in _resolved_gap_ids for t in gap_targets)。3) pipeline.py _run_gate_evaluation 传入 ctx.claims_list。4) 补充测试覆盖自动核销场景。",
+      "out_of_scope": [
+        "不修改 engine.py 的 _check_* 检测逻辑",
+        "不修改 Baseline 快照机制",
+        "不修改 accepted 信号逻辑",
+        "不修改 Dashboard 模板"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "D-1",
+        "D-2"
+      ],
+      "depends_on": [
+        "TASK-VT-183",
+        "TASK-VT-185"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/gate/signal_computer.py（resolved 信号改为覆盖即核销）",
+        "src/vibe_tracing/cli/analyze/pipeline.py（传入 claims_list）",
+        "tests/test_signal_computer.py（自动核销测试）",
+        "tests/test_rule_engine_integration.py（端到端自动核销测试）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-188-01",
+          "description": "SignalComputer 接收 claims_list 参数，构建 current_claim_coverage = ∪(code_refs ∪ test_refs ∪ {claim_id} ∪ {related_task})。"
+        },
+        {
+          "dod_id": "DOD-VT-188-02",
+          "description": "resolved 信号判定：all(t in coverage for t in gap_targets) OR any(t in _resolved_gap_ids for t in gap_targets)。覆盖即核销 + 人工标记双路径。"
+        },
+        {
+          "dod_id": "DOD-VT-188-03",
+          "description": "pipeline._run_gate_evaluation 将 ctx.claims_list 传给 SignalComputer。"
+        },
+        {
+          "dod_id": "DOD-VT-188-04",
+          "description": "test_signal_computer.py 覆盖：Claim 覆盖全部 gap_targets → resolved=true；部分覆盖 → resolved=false；空 claims_list → 仅人工标记生效。"
+        },
+        {
+          "dod_id": "DOD-VT-188-05",
+          "description": "test_rule_engine_integration.py 端到端：历史债务被新 Claim 覆盖 → RESOLVED（非 HISTORICAL）。"
+        },
+        {
+          "dod_id": "DOD-VT-188-06",
+          "description": "pytest tests/ 全量通过，零失败。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "coverage 集合构建是纯函数——从 claims_list 提取，不依赖外部状态。",
+        "保留 _resolved_gap_ids（人工标记）作为 OR 条件——不删除已有功能，只追加自动核销。",
+        "claims_list 为空或 None 时，coverage 为空集——退化为仅人工标记，与当前行为一致。",
+        "gap_targets 为空列表时，all() 返回 True——这是 Python 语义，符合 \"无缺口即已覆盖\" 逻辑。"
       ]
     }
   ]

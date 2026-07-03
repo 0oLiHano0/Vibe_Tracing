@@ -51,6 +51,31 @@ def parse_human_decisions(human_decisions: Optional[Dict[str, Any]]) -> Tuple[
     return accepted_risk_ids, resolved_gap_ids, accepted_rule_ids, rejected_rule_ids
 
 
+def _build_claim_coverage(claims_list: Optional[List[Any]]) -> Set[str]:
+    """构建 Claim 覆盖集合 — 覆盖即核销的数据来源。
+
+    design_historical_debt_mechanism.md §6：
+    任意 Claim 的 code_refs/test_refs 覆盖了 gap_target 即计入。
+    """
+    coverage: Set[str] = set()
+    if not claims_list:
+        return coverage
+    for claim in claims_list:
+        for ref in getattr(claim, "code_refs", []) or []:
+            if ref:
+                coverage.add(ref)
+        for ref in getattr(claim, "test_refs", []) or []:
+            if ref:
+                coverage.add(ref)
+        cid = getattr(claim, "claim_id", "")
+        if cid:
+            coverage.add(cid)
+        tid = getattr(claim, "related_task", "")
+        if tid:
+            coverage.add(tid)
+    return coverage
+
+
 class SignalComputer:
     """信号计算器：DetectedIssue → IssueSignal。"""
 
@@ -59,9 +84,11 @@ class SignalComputer:
         baseline: BaselineManager,
         current_commit_task_set: Set[str],
         human_decisions: Optional[Dict[str, Any]] = None,
+        claims_list: Optional[List[Any]] = None,
     ) -> None:
         self._baseline = baseline
         self._current_commit_task_set = current_commit_task_set
+        self._claim_coverage = _build_claim_coverage(claims_list)
         (
             self._accepted_risk_ids,
             self._resolved_gap_ids,
@@ -103,7 +130,9 @@ class SignalComputer:
             bool(issue.related_task_id)
             and issue.related_task_id in self._current_commit_task_set
         )
-        resolved = any(t in self._resolved_gap_ids for t in issue.gap_targets)
+        resolved = all(
+            t in self._claim_coverage for t in issue.gap_targets
+        ) or any(t in self._resolved_gap_ids for t in issue.gap_targets)
         accepted = (
             issue.item_id in self._accepted_risk_ids
             or issue.related_task_id in self._accepted_risk_ids

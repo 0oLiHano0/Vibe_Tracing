@@ -1,0 +1,20 @@
+{
+  "claim_id": "CLAIM-VT-180",
+  "related_task": "TASK-VT-180",
+  "claimed_status": "completed",
+  "timestamp": "2026-07-03T12:00:00Z",
+  "code_refs": [
+    "src/vibe_tracing/domain/gate/types.py"
+  ],
+  "test_refs": [
+    "tests/test_rule_engine_types.py"
+  ],
+  "doc_refs": [
+    "docs/design_rule_engine.md",
+    "docs/design_rule_engine_formal_fsm.md"
+  ],
+  "evidence_refs": [
+    "AC-VT-001-01"
+  ],
+  "notes": "定义数据模型：DetectedIssue、IssueSignal、Severity 枚举、OutputState 枚举、GateAction 枚举、纯函数 F(o,a,r,c,v)、state_to_gate_action()、aggregate_gate_decision()。F 函数覆盖全部 32 种输入组合，优先级短路求值。"
+}

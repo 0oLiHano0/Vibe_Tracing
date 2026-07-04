@@ -516,14 +516,14 @@ _evaluate_and_output()
 
 **一期落地顺序理由**：先数据（1、2）→ 后呈现（3、4、5）→ 最后通道收尾（6）。步骤 6 放在最后避免 Dashboard 面板开发期间面对脏 stdout。
 
-#### 二期（约 5 工作日，待一期数据积累后启动）
+#### 二期（约 5.25 工作日，待一期数据积累后启动）
 
 | 步骤 | 任务 | 工时 | 核心产出 |
 |---|---|---|---|
 | 7 | Phase 反思引擎 + CLI | 2d | phase.py / `vt reflect --phase` / 反思 markdown |
 | 8 | Phase 反思 Dashboard 面板 | 1d | Dashboard Tab 6 / markdown→HTML |
 | 9 | 治理复盘报告（跨 PHASE 元分析） | 1d | 规则触发表追加趋势列 / 跨 PHASE 聚合 |
-| 10 | 任务完成报告完整版文件 | 0.5d | `.vibetracing/completion_reports/TASK-VT-XXX.md` |
+| 10 | 任务完成报告完整版文件 + Dashboard 任务级过滤 | 0.75d | `.vibetracing/completion_reports/TASK-VT-XXX.md`；Dashboard Overview 诊断容器追加 task_id 下拉过滤（数据源 task_sessions.json，默认"全部"，选项为 OPEN/IN_PROGRESS task；隔离"其他 task 活跃债务"对当前 task 概览的视觉干扰） |
 | 11 | Agent 能力按 model 拆分 | 0.5d | Dashboard Agent 能力面板分组视图 |
 
 ### 5.2 测试策略

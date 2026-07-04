@@ -1251,15 +1251,6 @@
                     });
                 }
 
-                // Add action instructions
-                let actionText = '';
-                if (stage.code === 'broken_chain') actionText = '修改设计文档 (prd.json / task_list.json / architecture_constraints.json) 修正不存在的 ID 引用。';
-                else if (stage.code === 'misaligned_chain') actionText = '调整任务或验收标准的逻辑关联，确保 AC 归属的 PRD 需求与 Task 关联的需求一致。';
-                else if (stage.code === 'isolated_task') actionText = '将任务归入适当的需求中，或在右侧一键加入白名单免检；建议补充对应 PRD 或是架构模块设计。';
-                else if (stage.code === 'no_claim') actionText = '要求 Agent 针对已经标记为 done 的 Task 自动生成对应的 CLAIM-VT-*.json 文件并重新运行检查。';
-                else if (stage.code === 'task_failed') actionText = '分析以下测试错误输出，指示 Agent 修复业务代码或者单元测试用例。';
-                else if (stage.code === 'substandard_task') actionText = '指示 Agent 编写更多测试用例提升代码覆盖率，或者修复相应的 Linter 静态扫描报错。';
-
                 diagCard.innerHTML = `
                     <div class="diag-header">
                         <span style="font-weight: 600; font-size:16px;">评估维度 0${i} - ${stage.name}</span>
@@ -1267,9 +1258,6 @@
                     </div>
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         ${errorsHTML}
-                    </div>
-                    <div class="diag-action">
-                        <strong>💡 Agent 修复指引：</strong> ${actionText}
                     </div>
                 `;
                 diagnosticContainer.appendChild(diagCard);

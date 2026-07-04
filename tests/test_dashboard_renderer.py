@@ -38,6 +38,29 @@ def test_dashboard_renderer_success(tmp_path: Path):
         "project_id": "PROJECT-VT",
         "scan_time": "2026-05-22T12:00:00Z",
         "gate_decision": "pass",
+        "per_issue_states": [
+            {
+                "issue_id": "substandard:src/foo.py",
+                "issue_type": "substandard",
+                "state": "CURRENT_WARNING",
+                "severity": "WARNING",
+                "task_id": "TASK-VT-001",
+                "reason": "Test AC coverage substandard",
+                "observed": False,
+                "activated": True,
+                "resolved": False,
+                "accepted": False,
+            }
+        ],
+        "historical_issues": [
+            {
+                "issue_id": "isolated_task:TASK-VT-002",
+                "issue_type": "isolated_task",
+                "severity": "BLOCK",
+                "task_id": "TASK-VT-002",
+                "reason": "Isolated task in baseline",
+            }
+        ],
         "requirement_coverage": [
             {
                 "req_id": "REQ-VT-001",
@@ -121,6 +144,8 @@ def test_dashboard_renderer_missing_fields(tmp_path: Path):
         "project_id": "PROJECT-VT",
         "scan_time": "2026-05-22T12:00:00Z",
         "gate_decision": "blocked",
+        "per_issue_states": [],
+        "historical_issues": [],
         "requirement_coverage": [],
         "gaps": [],
         "risks": [],
@@ -159,6 +184,8 @@ def test_dashboard_renderer_svg_no_emojis(tmp_path: Path):
             "project_id": "PROJECT-VT",
             "scan_time": "2026-05-22T12:00:00Z",
             "gate_decision": "pass",
+            "per_issue_states": [],
+            "historical_issues": [],
             "requirement_coverage": [],
             "gaps": [],
             "risks": [],

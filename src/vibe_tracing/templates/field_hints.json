@@ -74,72 +74,72 @@
   },
   "gate_decision": {
     "draft_approved": {
-      "level1": "项目处于 PRD 草稿阶段（draft），跳过强阻塞门禁规则校验。门禁结果为 draft_approved，不会阻断。修复：完成 PRD 定稿后通过 `vt finalize` 锁定基线，然后重新运行 `vt analyze` 触发完整门禁校验。",
+      "level1": "项目处于 PRD 草稿阶段，门禁校验已跳过。完成 PRD 定稿后运行 `vt finalize` 锁定基线，再执行 `vt analyze`。",
       "level2": "项目目前处于需求草稿阶段，质量门禁暂时放宽。完成需求定稿后门禁将恢复正常校验。",
       "level3": "PRD status=draft，MergeGateEngine 跳过所有 blocked 条件，返回 gate_decision=draft_approved"
     },
     "ac_missing_evidence": {
-      "level1": "验收标准 {item_id} 缺失测试证据：{reason}。此为 MUST 级别缺口，门禁将阻断。修复：为该 AC 补充测试用例，在测试函数 docstring 中声明 `covers: {item_id}`，确保 pytest 通过后重新运行 `vt analyze`。",
+      "level1": "AC {item_id} 无测试覆盖。编写测试用例，docstring 声明 `covers: {item_id}`，确保 pytest 通过。",
       "level2": "验收标准缺少通过的测试证明。必须补充测试来证明该标准已被满足，否则无法合并代码。",
       "level3": "AC gap (item_id={item_id}, severity=must): {reason}。触发 gate_decision=blocked，该缺口关联到当前暂存的变更（staged）。"
     },
     "high_risk_or_self_ref": {
-      "level1": "高风险或自引用违规 (risk_id={risk_id}): {desc}。门禁将阻断。修复：为关联的 Claim 补充外部工具验证证据（如 pytest 测试报告），或将 Claim 的 claimed_status 降级，然后重新运行 `vt analyze`。",
+      "level1": "高风险或自引用 ({risk_id}): {desc}。为关联 Claim 补充外部验证证据，或将 claimed_status 降级。",
       "level2": "存在高风险项或声明未经独立验证。需要提供外部证据或修正声明状态。",
       "level3": "Risk {risk_id} 触发 blocked：severity={severity}, is_self_ref={is_self_ref}, claim_id={claim_id}。该风险关联到当前暂存的变更。"
     },
     "high_risk_missing_action": {
-      "level1": "高风险项 (risk_id={risk_id}) 缺失处理建议（suggested_action）或业务影响描述（business_impact）。修复：在 risk_advisor 或相关 analyzer 中为该风险补充 suggested_action 和 business_impact 字段。",
+      "level1": "高风险项 ({risk_id}) 缺失处理建议和业务影响描述。为该 risk_advisor 中补充 suggested_action 和 business_impact 字段。",
       "level2": "高风险项缺少处理方案和影响说明。需要补充这两项信息以便评估风险。",
       "level3": "High-severity risk {risk_id} missing suggested_action={has_action} or business_impact={has_impact}。此为 MUST 级风险的完整性要求。"
     },
     "low_confidence_claim": {
-      "level1": "存在低可信度 Claim（无工具验证证据）。Claim 声明任务完成但未被任何验证工具（pytest/ruff/mypy 等）确认。修复：确保关联的测试文件存在、声明了 covers AC、且 pytest 能通过，然后重新运行 `vt analyze`。",
+      "level1": "Claim 声称完成但无工具验证。确保关联测试文件存在、docstring 声明 covers AC，且 pytest 通过。",
       "level2": "有声明声称任务完成，但没有通过工具验证。需要运行测试来确认任务确实完成。",
       "level3": "Claim credibility=low_confidence。VT 未找到覆盖该 Claim 的工具执行证据。"
     },
     "must_arch_violation": {
-      "level1": "违反 MUST 级别架构约束 (rule_id={rule_id}): {msg_violation}。门禁将阻断。修复：根据 architecture_constraints.json 中规则 {rule_id} 的定义，重构代码以移除禁用的依赖或外部资源引用。",
+      "level1": "架构约束违反 ({rule_id}): {msg_violation}。根据规则定义重构代码，移除违规的导入或依赖。",
       "level2": "代码违反了必须遵守的架构规则。需要修改代码以符合架构约束。",
       "level3": "Architecture violation: rule_id={rule_id}, message={msg_violation}。该违反来自 ArchitectureComplianceChecker.check()，关联 evidence_id={evidence_id}。"
     },
     "arch_rule_violated": {
-      "level1": "架构规则 {rule_id} 被违规触发（compliance_status 中 status=violated, severity=must）。修复：检查该规则在 architecture_constraints.json 中的定义，确认违规的具体导入或依赖关系，然后重构代码。",
+      "level1": "架构规则 {rule_id} 检测到违规。检查规则定义，确认违规的导入或依赖关系，重构代码修复。",
       "level2": "有一条架构规则检测到违规。需要检查并修复代码中的违规项。",
       "level3": "Architecture compliance status: rule_id={rule_id}, status=violated, severity=must。该规则在 compliance_status 列表中被标记为已违反。"
     },
     "unclear_constraint_rule": {
-      "level1": "存在不明确的架构约束规则 (rule_id={rule_id}): {reason}。该约束无法被机器自动验证，门禁降级为 fail。修复：由架构师或人类项目经理对约束 {rule_id} 进行人工核对，并通过 `vt accept {rule_id}` 标记为已接受。",
+      "level1": "架构约束不明确 ({rule_id}): {reason}。需人类审核，通过 `vt accept {rule_id}` 标记为已接受。",
       "level2": "有一条架构规则无法自动检查，需要人工确认。请由了解架构设计的人员审核该规则。",
       "level3": "Unclear constraint: rule_id={rule_id}, reason={reason}。该约束来自 ArchitectureComplianceChecker.unclear_constraints 列表。"
     },
     "arch_rule_unclear": {
-      "level1": "架构规则 {rule_id} 状态不明确（compliance_status 中 status=unclear）。门禁降级为 fail。修复：通过 `vt accept {rule_id}` 标记为人工已确认，或在 architecture_constraints.json 中将 verification_method 改为可自动检查的方式。",
+      "level1": "架构规则 {rule_id} 状态不明确。通过 `vt accept {rule_id}` 标记已确认，或改进验证方式。",
       "level2": "有一条架构规则的状态不确定。需要人工确认或改进自动检查方式。",
       "level3": "Architecture compliance status: rule_id={rule_id}, status=unclear。需人工介入确认合规性。"
     },
     "non_blocking_gap": {
-      "level1": "非阻塞缺口 ({item_type} {item_id}): {reason}。此为 SHOULD 级别缺口，门禁降级为 fail 但不阻断。修复：根据缺口类型补充对应内容（任务/需求/Claim），然后重新运行 `vt analyze`。",
+      "level1": "非阻塞缺口 ({item_type} {item_id}): {reason}。根据缺口类型补充对应内容。",
       "level2": "存在非关键缺口。建议修复但不会阻断合并。",
       "level3": "Should-level gap: item_type={item_type}, item_id={item_id}, reason={reason}。该缺口不会触发 blocked，仅将门禁从 pass 升级为 fail。"
     },
     "low_medium_risk": {
-      "level1": "低/中风险或推测性风险 (risk_id={risk_id}): {desc}。门禁降级为 fail 但不阻断。修复：根据风险描述和 suggested_action 补充证据或修正声明，然后重新运行 `vt analyze`。",
+      "level1": "低/中风险 ({risk_id}): {desc}。根据风险描述补充证据或修正声明。",
       "level2": "存在低或中等级别的风险。建议关注但不会阻断合并。",
       "level3": "Should/could severity or speculative risk: risk_id={risk_id}, severity={severity}, confidence={confidence}, type={type}。该风险不触发 blocked。"
     },
     "all_gates_passed": {
-      "level1": "所有质量门禁规则均已通过，无阻塞项或风险项。gate_decision=pass，可以安全合并。",
+      "level1": "所有质量检查通过安全合并。",
       "level2": "所有质量检查均已通过，代码可以合并。",
       "level3": "MergeGateEngine.evaluate() 返回 gate_decision=pass，reasons 列表仅包含该通过消息，无 blocked_items。"
     },
     "missing_claim": {
-      "level1": "业务文件 {file} 未被任何 Claim 覆盖。门禁将阻断。修复：在 .vibetracing/claims/ 中创建新 Claim，在 code_refs 中引用该文件路径，并关联对应的 task 和证据。",
+      "level1": "文件 {file} 无 Claim 覆盖。在 .vibetracing/claims/ 中创建 Claim，code_refs 引用该文件。",
       "level2": "暂存的业务文件缺少 Claim 声明。每个业务文件的变更必须被 Claim 覆盖。",
       "level3": "Claim existence check failed: file={file} 未出现在任何 Claim 的 code_refs 或 test_refs 中。触发 gate_decision=blocked。"
     },
     "ac_not_covered": {
-      "level1": "MUST AC {ac_id}（task {task_id}）未被测试覆盖: {reason}。门禁将阻断。修复：为关联的 Claim 补充 test_refs 并确保测试通过，或在 docs/task_list.json 中确认该 task 的 related_acceptance_criteria 是否正确。",
+      "level1": "AC {ac_id} (task {task_id}) 未测试覆盖。为 Claim 补充 test_refs，确保测试通过。",
       "level2": "必须完成的验收标准缺少通过的测试覆盖。需要补充测试并关联到 Claim。",
       "level3": "AC coverage derivation: ac_id={ac_id}, task_id={task_id}, reason={reason}。该 MUST AC 的覆盖链（Task -> Claim -> test_refs -> evidence）中断，触发 gate_decision=blocked。"
     }
@@ -354,38 +354,38 @@
   },
   "action": {
     "cover_gap": {
-      "level1": "补充测试：{ac_id} \"{ac_text}\"。此为 MUST 级别缺口。修复步骤：1) 查看关联的实现文件 {implementation_files}；2) 参考已有测试 {existing_tests}；3) 根据场景 {test_scenarios} 编写测试；4) 在测试函数 docstring 中声明 `covers: {ac_id}`；5) 确保 pytest 通过后运行 `vt analyze` 验证 gap 消失。",
+      "level1": "AC {ac_id} \"{ac_text}\" 无测试覆盖。编写测试用例，docstring 声明 `covers: {ac_id}`，确保 pytest 通过。",
       "level2": "需要为验收标准补充测试。请查看关联的代码文件和已有测试作为参考。",
       "level3": "Action: priority=HIGH, type=cover_gap, ac_id={ac_id}, severity=MUST。verification: pytest 中新增覆盖 {ac_id} 的测试，vt analyze 后 gap 消失。stale={stale}。",
       "verification": "pytest 中新增覆盖 {ac_id} 的测试，vt analyze 后 gap 消失",
       "stale_note": "此 gap 来自未变更文件（stale），但仍是 MUST 级别"
     },
     "fix_violation": {
-      "level1": "修复违规：{rule_id}。违规原因：{violation_reason}。修复方式：完成关联的 gap 修复后自动消除。检查 docs/architecture_constraints.json 中规则 {rule_id} 的定义，重构代码移除违规的导入或依赖。",
+      "level1": "架构约束违反 ({rule_id})。根据规则定义重构代码，移除违规的导入或依赖。",
       "level2": "需要修复架构规则违规。请查看规则定义和违规原因。",
       "level3": "Action: priority=HIGH, type=fix_violation, rule_id={rule_id}。rule_text={rule_text}, violation_reason={violation_reason}。",
       "fix_via": "完成关联的 gap 修复后自动消除"
     },
     "high_risk": {
-      "level1": "高风险项：{risk_id} — {title}。修复方式：补充外部工具验证证据，或降低 claim 覆盖范围。具体操作：{suggested_action}。如果 Claim 已无实际代码对应，将其从 .vibetracing/claims/ 中移除。",
+      "level1": "高风险项 ({risk_id}): {title}。为关联 Claim 补充外部验证证据，或将 claimed_status 降级。",
       "level2": "存在高风险项需要处理。请查看建议的修复方式。",
       "level3": "Action: priority=HIGH, type=high_risk, risk_id={risk_id}, severity={severity}, claim_id={claim_id}。description={description}。",
       "fix_via": "补充外部工具验证证据，或降低 claim 覆盖范围"
     },
     "arch_status_violation": {
-      "level1": "架构规则违规：{rule_id}。修复方式：检查代码是否违反架构约束，修复后重新运行 vt analyze。",
+      "level1": "架构规则 ({rule_id}) 检测到违规。检查代码是否违反约束，重构修复。",
       "level2": "代码违反了必须遵守的架构规则。需要检查并修复。",
       "level3": "Action: priority=HIGH, type=arch_status_violation, rule_id={rule_id}, severity={severity}。",
       "fix_via": "检查代码是否违反架构约束，修复后重新运行 vt analyze"
     },
     "stale_debt": {
-      "level1": "预存债务：{title}。该风险来自未变更的文件，已持续 {age}。修复方式：根据风险描述 {description} 补充证据或修正声明。",
+      "level1": "预存债务: {title}。根据风险描述补充证据或修正声明。",
       "level2": "存在长期未解决的技术债务。建议择机处理。",
       "level3": "Action: priority=LOW, type=stale_debt, title={title}。age={age}。该风险标记为 stale，来自未变更文件。",
       "age_format": "{age_iterations} 个迭代"
     },
     "gate_blocked": {
-      "level1": "门禁阻塞：{reason}。修复方式：根据门禁原因修复对应问题后重新运行 vt analyze。如果被 Gate 1（防篡改）阻断，必须恢复文件或走 vt finalize 流程。",
+      "level1": "门禁阻塞: {reason}。根据原因修复后重新运行 `vt analyze`。",
       "level2": "合并门禁被阻塞。请查看阻塞原因并修复。",
       "level3": "Action: priority=HIGH, type=gate_blocked。reason={reason}。gate_decision in (blocked, fail)，无其他具体 action 匹配时的兜底提示。",
       "fix_via": "根据门禁原因修复对应问题后重新运行 vt analyze"

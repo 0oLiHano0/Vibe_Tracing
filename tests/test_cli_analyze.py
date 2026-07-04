@@ -971,131 +971,89 @@ def test_resolve_hint_non_string():
 
 
 # =========================================================================
-# Tests for _collect_gap_actions, _collect_risk_actions,
-# _collect_violation_actions, _collect_gate_reason_actions
+# Tests for _format_agent_actions (unified triple API, PHASE-VT-015)
 # =========================================================================
 
-def test_collect_gap_actions():
-    """Test _collect_gap_actions generates actions for MUST gaps."""
-    from vibe_tracing.cli.analyze.actions import _collect_gap_actions
+def _make_triple(state, issue_type, issue_id, item_id="", reason="reason",
+                 related_task_id="", gap_targets=None, observed=False,
+                 severity="BLOCK"):
+    """Helper: build a (OutputState, IssueSignal, DetectedIssue) triple."""
+    from vibe_tracing.domain.gate.types import (
+        DetectedIssue, IssueSignal, OutputState, Severity,
+    )
 
-    gaps = [
-        {"item_id": "AC-001", "severity": "must", "item_type": "ac", "requirement_id": "REQ-001"},
-        {"item_id": "AC-002", "severity": "should", "item_type": "ac"},  # skipped
-        {"item_id": "AC-003", "severity": "must", "item_type": "ac", "human_accepted": True},  # skipped
-    ]
-
-    actions = _collect_gap_actions(gaps, None, None, [])
-    assert len(actions) == 1
-    assert actions[0]["type"] == "cover_gap"
-    assert actions[0]["priority"] == "HIGH"
-
-
-def test_collect_risk_actions_must():
-    """Test _collect_risk_actions generates HIGH actions for must risks."""
-    from vibe_tracing.cli.analyze.actions import _collect_risk_actions
-
-    risks = [
-        {"risk_id": "R-001", "severity": "must", "title": "High Risk", "description": "desc"},
-        {"risk_id": "R-002", "severity": "should", "title": "Low Risk", "description": "desc"},
-    ]
-
-    actions = _collect_risk_actions(risks, [])
-    assert len(actions) == 1
-    assert actions[0]["type"] == "high_risk"
-
-
-def test_collect_risk_actions_self_referential():
-    """Test _collect_risk_actions generates action for self-referential risks."""
-    from vibe_tracing.cli.analyze.actions import _collect_risk_actions
-
-    risks = [
-        {"risk_id": "R-001", "severity": "should", "title": "Self Ref", "description": "only self-referential evidence"},
-    ]
-
-    actions = _collect_risk_actions(risks, [])
-    assert len(actions) == 1
-    assert actions[0]["type"] == "high_risk"
+    st = OutputState(state)
+    gap_targets = gap_targets or [item_id]
+    sev = Severity(severity) if isinstance(severity, str) else severity
+    signal = IssueSignal(
+        observed=observed, activated=True, resolved=False,
+        accepted=False, severity=sev,
+        issue_id=issue_id, task_id=related_task_id,
+        gap_targets=gap_targets,
+    )
+    issue = DetectedIssue(
+        issue_id=issue_id,
+        issue_type=issue_type,
+        severity=sev,
+        item_id=item_id,
+        related_task_id=related_task_id,
+        gap_targets=gap_targets,
+        reason=reason,
+    )
+    return (st, signal, issue)
 
 
-def test_collect_risk_actions_stale_debt():
-    """Test _collect_risk_actions generates LOW action for stale risks."""
-    from vibe_tracing.cli.analyze.actions import _collect_risk_actions
+def test_format_agent_actions_pass():
+    """Test _format_agent_actions formats a passing decision with empty triples."""
+    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
 
-    risks = [
-        {"risk_id": "R-001", "severity": "should", "title": "Stale", "description": "old", "stale": True, "age_iterations": "3"},
-    ]
-
-    actions = _collect_risk_actions(risks, [])
-    assert len(actions) == 1
-    assert actions[0]["type"] == "stale_debt"
-    assert actions[0]["priority"] == "LOW"
+    result = _format_agent_actions(gate_decision="pass", states_and_signals=[])
+    assert "GATE DECISION: PASS" in result
+    assert "NO ACTION REQUIRED" in result
 
 
-def test_collect_risk_actions_stale_deferred_skipped():
-    """Test _collect_risk_actions skips stale+deferred risks."""
-    from vibe_tracing.cli.analyze.actions import _collect_risk_actions
+def test_format_agent_actions_blocked_with_issue():
+    """Test _format_agent_actions renders action for a CURRENT_BLOCK issue."""
+    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
 
-    risks = [
-        {"risk_id": "R-001", "severity": "should", "title": "Stale", "description": "old", "stale": True, "deferred": True},
-    ]
-
-    actions = _collect_risk_actions(risks, [])
-    assert len(actions) == 0
-
-
-def test_collect_violation_actions():
-    """Test _collect_violation_actions generates actions for violations."""
-    from vibe_tracing.cli.analyze.actions import _collect_violation_actions
-
-    violations = [{"rule_id": "R-001", "description": "Rule desc", "reason": "violation reason"}]
-    compliance_status = []
-
-    actions = _collect_violation_actions(violations, compliance_status)
-    assert len(actions) == 1
-    assert actions[0]["type"] == "fix_violation"
+    triple = _make_triple(
+        "CURRENT_BLOCK", "no_claim", "no_claim:TASK-001",
+        item_id="TASK-001", reason="任务 TASK-001 缺少声明",
+    )
+    result = _format_agent_actions(
+        gate_decision="blocked", states_and_signals=[triple],
+    )
+    assert "GATE DECISION: BLOCKED" in result
+    assert "TASK-001" in result
 
 
-def test_collect_violation_actions_arch_status():
-    """Test _collect_violation_actions handles arch_status_violation."""
-    from vibe_tracing.cli.analyze.actions import _collect_violation_actions
+def test_format_agent_actions_filters_historical():
+    """HISTORICAL issues must not leak into Agent actions."""
+    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
 
-    violations = []
-    compliance_status = [
-        {"rule_id": "R-002", "status": "violated", "severity": "must"},
-        {"rule_id": "R-003", "status": "compliant", "severity": "must"},  # skipped
-    ]
-
-    actions = _collect_violation_actions(violations, compliance_status)
-    assert len(actions) == 1
-    assert actions[0]["type"] == "arch_status_violation"
-
-
-def test_collect_gate_reason_actions():
-    """Test _collect_gate_reason_actions generates fallback actions."""
-    from vibe_tracing.cli.analyze.actions import _collect_gate_reason_actions
-
-    # Blocked with no HIGH actions and reasons
-    actions = _collect_gate_reason_actions("blocked", ["reason 1", "reason 2"], [])
-    assert len(actions) == 2
-    assert all(a["type"] == "gate_blocked" for a in actions)
+    triple = _make_triple(
+        "HISTORICAL", "no_claim", "no_claim:TASK-001",
+        item_id="TASK-001", reason="预存债务",
+    )
+    result = _format_agent_actions(
+        gate_decision="pass", states_and_signals=[triple],
+    )
+    assert "NO ACTION REQUIRED" in result
+    assert "预存债务" not in result
 
 
-def test_collect_gate_reason_actions_skipped_when_high_exists():
-    """Test _collect_gate_reason_actions skips when HIGH actions exist."""
-    from vibe_tracing.cli.analyze.actions import _collect_gate_reason_actions
+def test_format_agent_actions_human_decision():
+    """Human-decision issues render as INFO prompts, not fix actions."""
+    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
 
-    existing = [{"priority": "HIGH", "type": "cover_gap", "title": "t", "context": {}}]
-    actions = _collect_gate_reason_actions("blocked", ["reason"], existing)
-    assert len(actions) == 0
-
-
-def test_collect_gate_reason_actions_skipped_when_pass():
-    """Test _collect_gate_reason_actions skips when decision is pass."""
-    from vibe_tracing.cli.analyze.actions import _collect_gate_reason_actions
-
-    actions = _collect_gate_reason_actions("pass", ["reason"], [])
-    assert len(actions) == 0
+    triple = _make_triple(
+        "CURRENT_WARNING", "isolated_task", "isolated_task:TASK-002",
+        item_id="TASK-002", reason="孤立任务 TASK-002",
+    )
+    result = _format_agent_actions(
+        gate_decision="pass", states_and_signals=[triple],
+    )
+    assert "human_decision_required" in result or "INFO" in result
 
 
 # =========================================================================
@@ -1145,11 +1103,10 @@ def test_render_actions_with_human_decisions():
 
     actions = [
         {
-            "priority": "HIGH",
-            "type": "human_decision",
+            "priority": "INFO",
+            "type": "human_decision_required",
             "title": "Decision needed",
-            "id": "DEC-001",
-            "context": {},
+            "context": {"issue_id": "DEC-001"},
         },
     ]
 
@@ -1203,56 +1160,6 @@ def test_render_actions_per_file_violations_pass(tmp_path):
     assert any("PASS" in l for l in lines)
     assert not any("BLOCKED" in l for l in lines)
     assert any("85%" in l for l in lines)
-
-
-# =========================================================================
-# Tests for _format_agent_actions
-# =========================================================================
-
-def test_format_agent_actions_pass():
-    """Test _format_agent_actions formats a passing decision."""
-    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
-
-    result = _format_agent_actions(
-        gate_decision="pass",
-        active_gaps=[],
-        active_risks=[],
-        violations=[],
-        accepted_rules=[],
-    )
-    assert "GATE DECISION: PASS" in result
-    assert "NO ACTION REQUIRED" in result
-
-
-def test_format_agent_actions_blocked():
-    """Test _format_agent_actions formats a blocked decision."""
-    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
-
-    result = _format_agent_actions(
-        gate_decision="blocked",
-        active_gaps=[],
-        active_risks=[],
-        violations=[],
-        accepted_rules=[],
-        gate_reasons=["Must AC missing coverage"],
-    )
-    assert "GATE DECISION: BLOCKED" in result
-    assert "Must AC missing coverage" in result
-
-
-def test_format_agent_actions_with_violations():
-    """Test _format_agent_actions includes violation actions."""
-    from vibe_tracing.cli.analyze.formatting import _format_agent_actions
-
-    result = _format_agent_actions(
-        gate_decision="blocked",
-        active_gaps=[],
-        active_risks=[],
-        violations=[{"rule_id": "R-001", "description": "desc", "reason": "reason"}],
-        accepted_rules=[],
-    )
-    assert "R-001" in result
-    assert "BLOCKED" in result
 
 
 # =========================================================================

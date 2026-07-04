@@ -32,7 +32,13 @@
       "Bash(python3:*)",
       "Bash(python3 -m pytest tests/test_rule_engine_types.py -v 2>&1 | tail -20)",
       "Bash(python3 -m pytest tests/ --tb=short 2>&1 | tail -15)",
-      "Bash(git stash && python3 -m pytest tests/test_schema_validator.py tests/test_self_governance.py --tb=line 2>&1 | tail -10 && git stash pop)"
+      "Bash(git stash && python3 -m pytest tests/test_schema_validator.py tests/test_self_governance.py --tb=line 2>&1 | tail -10 && git stash pop)",
+      "Bash(tail -n +3 /tmp/design_body.md > /tmp/design_final.md && head -5 /tmp/design_final.md && echo \"---\" && tail -3 /tmp/design_final.md && echo \"---\" && wc -l /tmp/design_final.md)",
+      "Bash(git log --oneline --all -50 --no-pager 2>/dev/null | head -50)",
+      "Bash(git log --oneline --all -100 --no-pager 2>/dev/null | grep -i \"phase\" | head -30)",
+      "Bash(PYTHONPATH=src python3 -c \"\nimport json\nfrom jsonschema import validate\nschema = json.load\\(open\\('src/vibe_tracing/infra/validation/schemas/task_list.schema.json'\\)\\)\ndata = json.load\\(open\\('docs/task_list.json'\\)\\)\nvalidate\\(instance=data, schema=schema\\)\nprint\\('Schema validation: PASSED'\\)\n# Also check the new tasks are well-formed\nnew_tasks = [t for t in data['tasks'] if t['phase_id'] == 'PHASE-VT-016']\nprint\\(f'New tasks: {len\\(new_tasks\\)}'\\)\nfor t in new_tasks:\n    deps = t.get\\('depends_on', []\\)\n    print\\(f\\\\\"  {t['task_id']}: {len\\(deps\\)} deps, {len\\(t['definition_of_done']\\)} DODs\\\\\"\\)\n\")",
+      "Bash(PYTHONPATH=src python3 -c \"\nimport json\nd = json.load\\(open\\('docs/task_list.json'\\)\\)\ntasks = {t['task_id']: t for t in d['tasks'] if t['phase_id']=='PHASE-VT-016'}\n\ndef depth\\(tid, seen=None\\):\n    if seen is None: seen = set\\(\\)\n    if tid in seen: return 0\n    seen.add\\(tid\\)\n    t = tasks.get\\(tid\\)\n    if not t: return 0\n    deps = t.get\\('depends_on', []\\)\n    if not deps: return 1\n    return 1 + max\\(depth\\(dep, seen\\) for dep in deps\\)\n\nestimates = {'TASK-VT-192': 1.5, 'TASK-VT-193': 1, 'TASK-VT-194': 1.5, 'TASK-VT-195': 2, 'TASK-VT-196': 1.5, 'TASK-VT-197': 1, 'TASK-VT-198': 0.5}\n\n# Critical path\ncp = max\\(\\(depth\\(tid\\), sum\\(estimates[d] for d in ['TASK-VT-192','TASK-VT-193','TASK-VT-194','TASK-VT-197','TASK-VT-198'] if depth\\(d\\) <= depth\\(tid\\)\\)\\) for tid in tasks\\)\nprint\\('Serial critical path estimate \\(T192→T193→T194→T197→T198\\):', 1.5+1+1.5+1+0.5, 'days'\\)\nprint\\('Parallelizable \\(T195/T196 alongside T193/T194\\)'\\)\nprint\\('All tasks:'\\)\nfor tid in ['TASK-VT-192','TASK-VT-193','TASK-VT-194','TASK-VT-195','TASK-VT-196','TASK-VT-197','TASK-VT-198']:\n    t = tasks[tid]\n    print\\(f\\\\\"  {tid} \\({estimates[tid]}d\\): {t['title'][:60]}...\\\\\"\\)\n    print\\(f\\\\\"    deps: {t.get\\('depends_on', []\\)}\\\\\"\\)\n\")",
+      "Bash(python3 .tmp_apply_fixes.py && rm .tmp_apply_fixes.py)"
     ]
   }
 }

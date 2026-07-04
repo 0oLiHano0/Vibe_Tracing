@@ -81,6 +81,16 @@
       "phase_id": "PHASE-VT-014",
       "name": "自动核销 — resolved 信号从人工标记改为覆盖即核销",
       "goal": "实现 design_historical_debt_mechanism.md §6 定义的覆盖即核销机制：all gap_targets ⊆ current_claim_coverage → resolved=true，消除 design_rule_engine.md §1.1 差距 2。"
+    },
+    {
+      "phase_id": "PHASE-VT-015",
+      "name": "Agent Action 消费路径统一",
+      "goal": "将 Agent 指令生成链路从独立消费原始 gaps/risks/violations 重构为统一消费 DetectedIssue[]，消除门禁判定与 Agent 指令的数据源分裂，确保 Gate blocked ⟺ 存在对应 Agent action。同步优化 field_hints.json 的 Agent 修复指引文本。详见 docs/design_agent_action_unification.md。"
+    },
+    {
+      "phase_id": "PHASE-VT-016",
+      "name": "Channel 分离 + 任务反思基础设施（一期 MVP）",
+      "goal": "落地 docs/design_channel_separation.md 一期 MVP：实现 stdout 双通道分离（Agent 指令段 + 验收摘要段）、task session 持久化与不可变性检查、Agent 能力评分与治理演进 Dashboard 面板，使 stdout 信噪比从 42% 提升至 90%+，并沉淀任务轨迹数据供二期 Phase 反思机制消费。"
     }
   ],
   "tasks": [
@@ -10735,6 +10745,840 @@
         "保留 _resolved_gap_ids（人工标记）作为 OR 条件——不删除已有功能，只追加自动核销。",
         "claims_list 为空或 None 时，coverage 为空集——退化为仅人工标记，与当前行为一致。",
         "gap_targets 为空列表时，all() 返回 True——这是 Python 语义，符合 \"无缺口即已覆盖\" 逻辑。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-189",
+      "title": "实现 _collect_issue_actions() — 统一 Agent action 收集核心函数",
+      "phase_id": "PHASE-VT-015",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "在 actions.py 中新增 _collect_issue_actions() 函数，消费 (OutputState, IssueSignal, DetectedIssue) 三元组列表（内部过滤仅处理 CURRENT_BLOCK/CURRENT_WARNING 状态），按 issue_type 分发到对应的上下文增强逻辑或人类决策提示，替代现有的三个独立 collector（_collect_gap_actions / _collect_risk_actions / _collect_violation_actions）和一个兜底函数（_collect_gate_reason_actions）。",
+      "atomic_scope": "1) 在 actions.py 中新增 _collect_issue_actions(items: List[Tuple[OutputState, IssueSignal, DetectedIssue]], prd_result, task_result, claims_list, coverage_summary, conn) -> list 函数。函数内部过滤仅处理 state in (CURRENT_BLOCK, CURRENT_WARNING) 的项，urgency 从 signal.observed 和 state 计算。2) 按 issue_type 分发（参见 design_agent_action_unification.md §2.4 明细表）：14 类 Agent 可修复 issue 生成 action dict（含 priority/type/title/context/urgency）；3 类人类决策 issue（proposal governance / unclear constraints / isolated tasks）生成 type='human_decision_required' 提示。3) 实现 3 级 urgency 计算：CURRENT_BLOCK+signal.observed=true→90, CURRENT_BLOCK+signal.observed=false→70, CURRENT_WARNING→50。4) 上下文增强按 issue_type 分级（参见 §3.3 增强能力分级表）：深度增强类（no_claim AC coverage / task_failed）查 PRD+DB+hint；中度增强类（chain_broken / chain_misaligned / no_claim ghost code）用 reason+hint；轻度增强类（substandard / isolated_task）用 reason+hint。5) 编写 tests/test_collect_issue_actions.py 单元测试，构造 (OutputState, IssueSignal, DetectedIssue) 三元组验证每类 issue_type 的输出。",
+      "out_of_scope": [
+        "不修改 formatting.py 或 output.py（留给 TASK-VT-190）",
+        "不修改 pipeline.py（留给 TASK-VT-190）",
+        "不删除旧的 _collect_gap_actions / _collect_risk_actions / _collect_violation_actions / _collect_gate_reason_actions（留给 TASK-VT-190）",
+        "不修改 field_hints.json（留给 TASK-VT-191）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2"
+      ],
+      "depends_on": [
+        "TASK-VT-188"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/actions.py（新增 _collect_issue_actions 函数 + 3 级 urgency 计算）",
+        "tests/test_collect_issue_actions.py（每类 issue_type 输出验证）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-189-01",
+          "description": "_collect_issue_actions 接收 List[Tuple[OutputState, IssueSignal, DetectedIssue]]，内部过滤仅处理 CURRENT_BLOCK 和 CURRENT_WARNING 状态的 issue，忽略 HISTORICAL/ACCEPTED/RESOLVED。"
+        },
+        {
+          "dod_id": "DOD-VT-189-02",
+          "description": "14 类 Agent 可修复 issue_type 均生成 action dict，含 priority/type/title/context/urgency 五个字段。"
+        },
+        {
+          "dod_id": "DOD-VT-189-03",
+          "description": "3 类人类决策 issue（chain_broken proposal governance / substandard unclear constraints / isolated_task）生成 type='human_decision_required' 提示，不含修复 action。"
+        },
+        {
+          "dod_id": "DOD-VT-189-04",
+          "description": "urgency 3 级：CURRENT_BLOCK+signal.observed=true→90, CURRENT_BLOCK+signal.observed=false→70, CURRENT_WARNING→50。observed 从 IssueSignal 读取，state 从 OutputState 读取。"
+        },
+        {
+          "dod_id": "DOD-VT-189-05",
+          "description": "深度增强类 issue（no_claim AC coverage / task_failed）的 context 包含 AC 描述或关联测试信息（从 prd_result 或 conn 查询）。"
+        },
+        {
+          "dod_id": "DOD-VT-189-06",
+          "description": "pytest tests/test_collect_issue_actions.py 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_agent_action_unification.md §3.3（函数签名与分发逻辑）、§2.4（全量 issue 明细表与 Agent 分类）。",
+        "设计决策：函数接收 List[Tuple[OutputState, IssueSignal, DetectedIssue]] 三元组列表，即 pipeline.py L519 states_and_signals 的 CURRENT 子集。OutputState 用于判断 BLOCK/WARNING 以计算 urgency，IssueSignal 用于读取 observed 信号，DetectedIssue 承载 issue_type/reason/item_id 等分发字段。调用方负责过滤：仅传入 state in (CURRENT_BLOCK, CURRENT_WARNING) 的项。",
+        "旧的 _collect_gap_actions（actions.py L133-179）是深度增强类的参考实现：它查 PRD 获取 AC/需求描述、查 DB 获取关联代码和测试、从 hint 系统获取修复指引。新函数对同类 issue_type 保留这些增强。",
+        "人类决策类 issue 的判定依据：issue_type + reason 文本前缀。proposal governance 的 reason 以 '[架构变更提案' 开头；unclear constraints 的 issue_id 含 'unclear'；isolated_task 的 issue_type='isolated_task'。具体映射参见 design 文档 §2.4 的 #11/#14/#17。",
+        "此任务不修改任何已有函数——新增 _collect_issue_actions 与旧 collector 并存。旧代码的删除在 TASK-VT-190 中完成。",
+        "coverage_summary 参数可为 None（项目无覆盖率数据时）。处理此情况：不附加覆盖率信息到 action context。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-190",
+      "title": "重构数据流与输出链 — pipeline/output/formatting 统一消费 (OutputState, IssueSignal, DetectedIssue) 三元组列表",
+      "phase_id": "PHASE-VT-015",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "将 (OutputState, IssueSignal, DetectedIssue) 三元组列表从 pipeline 层传入输出链路，重构 _format_agent_actions 和 _print_agent_actions 消费 TASK-VT-189 的 _collect_issue_actions，删除旧的四个 collector 函数和 _derive_reasons，消除 gate_reasons 参数在全链路的传递。",
+      "atomic_scope": "1) 修改 pipeline.py _run_gate_evaluation()：返回 (gate_res, states_and_signals) 元组，states_and_signals 为 pipeline L519 已有的 (OutputState, IssueSignal, DetectedIssue) 三元组列表。2) 修改 pipeline.py _render_output()：接收 states_and_signals 参数，传给 _print_agent_actions。3) 修改 output.py _print_agent_actions()：新增 states_and_signals 参数，直接传给 _format_agent_actions（状态过滤在 _collect_issue_actions 内部完成）。删除 _derive_reasons() 调用和 gate_reasons 传递。4) 修改 formatting.py _format_agent_actions()：入参从 gate_reasons+merged_gaps+active_risks+violations 改为 List[Tuple[OutputState, IssueSignal, DetectedIssue]]。内部调用 _collect_issue_actions() 替代旧 collector。删除 gate_reasons/active_gaps/active_risks/violations 参数。保留 coverage_summary。5) 删除旧代码：actions.py 的 _collect_gap_actions、_collect_risk_actions、_collect_violation_actions、_collect_gate_reason_actions、_compute_gap_urgency、_compute_risk_urgency；output.py 的 _derive_reasons。6) 删除 gate_reasons 参数在全链路的传递（output.py → formatting.py）。7) 更新测试：验证 pipeline 端到端运行，CURRENT issue 产生对应 action，HISTORICAL issue 不出现在 agent output 中。",
+      "out_of_scope": [
+        "不修改 engine.py / signal_computer.py / types.py（检测层和规则层不变）",
+        "不修改 reports.py / Dashboard 模板（per_issue_states/historical_issues 仍为全量）",
+        "不修改 _print_gate_summary()（仍从 per_issue_states 输出全量状态）",
+        "不修改 _print_reflection_prompts()（仍消费 merged_gaps/final_risks/compliance_res）",
+        "不修改 field_hints.json（留给 TASK-VT-191）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2"
+      ],
+      "depends_on": [
+        "TASK-VT-189"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/pipeline.py（states_and_signals 传递到 _render_output）",
+        "src/vibe_tracing/cli/analyze/output.py（_print_agent_actions 消费三元组列表，删除 _derive_reasons）",
+        "src/vibe_tracing/cli/analyze/formatting.py（_format_agent_actions 消费三元组列表，删除旧参数）",
+        "src/vibe_tracing/cli/analyze/actions.py（删除 4 个旧 collector + 2 个旧 urgency 函数）",
+        "tests/ 更新（集成测试验证端到端数据流）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-190-01",
+          "description": "_run_gate_evaluation 返回 (gate_res, states_and_signals) 元组，调用方 _evaluate_and_output 解包后将 states_and_signals 传入 _render_output。gate_res (dict) 不存储 DetectedIssue/IssueSignal 对象（保持可序列化）。"
+        },
+        {
+          "dod_id": "DOD-VT-190-02",
+          "description": "_format_agent_actions 的入参不再包含 gate_reasons / active_gaps / active_risks / violations。仅保留 gate_decision + List[Tuple[OutputState, IssueSignal, DetectedIssue]] + coverage_summary + 必要的上下文参数。"
+        },
+        {
+          "dod_id": "DOD-VT-190-03",
+          "description": "_collect_gap_actions、_collect_risk_actions、_collect_violation_actions、_collect_gate_reason_actions、_derive_reasons 全部删除，无引用残留。"
+        },
+        {
+          "dod_id": "DOD-VT-190-04",
+          "description": "Gate blocked ⟺ 存在至少一个 Agent action（HIGH priority）。悖论不可能出现。"
+        },
+        {
+          "dod_id": "DOD-VT-190-05",
+          "description": "HISTORICAL / ACCEPTED / RESOLVED 状态的 issue 不出现在 Agent action 输出中。"
+        },
+        {
+          "dod_id": "DOD-VT-190-06",
+          "description": "merged_gaps / active_risks / compliance_res 仍保留在 pipeline → _print_reflection_prompts 传递链中（反思提示不受影响）。"
+        },
+        {
+          "dod_id": "DOD-VT-190-07",
+          "description": "PYTHONPATH=src python3 -m vibe_tracing.cli analyze 端到端运行成功，输出格式正确。"
+        },
+        {
+          "dod_id": "DOD-VT-190-08",
+          "description": "pytest tests/ 全量通过，零失败。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_agent_action_unification.md §3.4（数据流变更）、§3.5（输出层适配）、§3.6（不受影响的参数传递）。",
+        "数据流方案：_run_gate_evaluation 返回 (gate_res, states_and_signals) 元组，_evaluate_and_output 解包后传给 _render_output。只有这一个调用方（pipeline.py L569）。",
+        "pipeline.py 中 states_and_signals 变量的来源：_run_gate_evaluation 内 L519 构建的 (OutputState, IssueSignal, DetectedIssue) 三元组列表。当前此变量在函数作用域内传给 aggregate_gate_decision 后就丢弃——改为 return (gate_res, states_and_signals)。",
+        "_print_reflection_prompts（output.py L109-153）不消费 gate_reasons，只消费 merged_gaps/final_risks/compliance_res。这些参数必须保留在 _render_output 的参数列表中。",
+        "_print_gate_summary（output.py L37-60）不消费 DetectedIssue[]，仍从 gate_res['per_issue_states'] 读取。不修改。",
+        "删除函数前先 grep 全项目确认无其他调用点。特别注意 test 文件中可能直接 import 旧函数。",
+        "urgency 3 级模型已在 TASK-VT-189 的 _collect_issue_actions 中实现。此任务不需要额外的 urgency 逻辑——旧 _compute_gap_urgency 和 _compute_risk_urgency 直接删除。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-191",
+      "title": "优化 field_hints.json — Agent 修复指引文本精简",
+      "phase_id": "PHASE-VT-015",
+      "priority": "should",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "按 design_agent_action_unification.md §3.7 的优化原则，重写 field_hints.json 中 gate_decision 和 action 两节的 level1 文本，使 AI Coding Agent 仅读取 hints 就能准确理解问题和修复方式。",
+      "atomic_scope": "1) 打开 src/vibe_tracing/templates/field_hints.json。2) 逐条重写 gate_decision 节（约 14 条）的 level1 文本：删除内部实现泄漏（函数名、返回值、gate_decision 状态变量），统一为 [问题简述] [修复指令] 格式，修复指令用祈使句。3) 逐条重写 action 节（约 7 条）的 level1 文本：同上原则。4) 不修改 input / risk / compliance / tool / cli 五节（它们服务于 schema 校验和工具执行，不直接构成 Agent action 文本）。5) 不修改 level2 / level3（人类可读 / 机器诊断，保持现状）。6) 删除 action 节中与 gate_decision 节重复的措辞（如 cover_gap 与 ac_missing_evidence 描述同一问题），统一用 gate_decision 节的表述。",
+      "out_of_scope": [
+        "不修改 Python 源代码（actions.py / output.py / pipeline.py 等）",
+        "不修改 input / risk / compliance / tool / cli 节的 hints",
+        "不修改 level2 / level3 文本",
+        "不修改 resolve_hint() 加载逻辑"
+      ],
+      "related_requirements": [
+        "REQ-VT-001"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "A-1"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/templates/field_hints.json（gate_decision 节 + action 节的 level1 重写）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-191-01",
+          "description": "gate_decision 节所有 level1 文本不含内部实现细节（不提及 MergeGateEngine / gate_decision 变量 / evaluate() / blocked_items 等内部概念）。"
+        },
+        {
+          "dod_id": "DOD-VT-191-02",
+          "description": "所有 level1 文本统一格式：[问题简述（一句话）] [修复指令（祈使句，明确操作对象和文件路径）]。"
+        },
+        {
+          "dod_id": "DOD-VT-191-03",
+          "description": "action 节与 gate_decision 节对同类问题的描述措辞一致（消除重复表述）。"
+        },
+        {
+          "dod_id": "DOD-VT-191-04",
+          "description": "每条 level1 文本不超过 120 字符（含模板变量占位符）。"
+        },
+        {
+          "dod_id": "DOD-VT-191-05",
+          "description": "JSON 格式合法，resolve_hint() 加载不报错。pytest tests/ 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_agent_action_unification.md §3.7（优化原则 + 示例对比）。",
+        "核心原则：level1 只回答两个问题——'什么问题？'和'怎么修？'。Agent 不需要知道门禁内部如何判定 blocked，只需要知道哪个文件/ID 有问题、该做什么操作。",
+        "反面示例（当前）：'验收标准 {item_id} 缺失测试证据：{reason}。此为 MUST 级别缺口，门禁将阻断。修复：为该 AC 补充测试用例...' → 正面示例：'AC {item_id} 无测试覆盖。编写测试用例，docstring 声明 covers: {item_id}，确保 pytest 通过。'",
+        "template 变量（如 {item_id}、{risk_id}、{ac_text}）保留不动——它们是运行时由 resolve_hint() 填充的占位符。只改围绕变量的文本。",
+        "gate_decision.all_gates_passed 的 level1 保留简洁的通过消息，不需要修复指令。",
+        "action.test_scenarios 子节（invalid_input / empty_input / valid_input / default）不是 level1 文本，是测试场景模板，不修改。",
+        "此任务与 TASK-VT-189/190 无依赖关系，可并行执行。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-192",
+      "title": "实现 TaskSessionManager + schema + immutability 检查",
+      "phase_id": "PHASE-VT-016",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "落地 design_channel_separation.md §3.1 / §3.3.2 / §3.2.1 步骤 1：实现 TaskSessionManager（domain/task/session.py），完成 .vibetracing/task_sessions.json 的 schema、读写、状态机（OPEN → IN_PROGRESS → CLOSED）、迭代计数、issue_counts 累加、closed task 引用检测（find_closed_references）；本任务是 T193-T198 的数据基础。",
+      "atomic_scope": "1) 新建 src/vibe_tracing/domain/task/__init__.py 与 session.py。2) 在 session.py 中定义 TaskSession dataclass（字段严格匹配 §3.3.2 schema：task_id / phase_id / status / first_seen / closed_at / iterations / issue_counts / model / acceptance_summary）和 TaskSessionsFile 顶层 schema（schema_version + tasks dict）。3) 实现 TaskSessionManager 类，提供方法：load() / _save()（文件不存在视为 {schema_version: '1.0.0', tasks: {}}，首次 update_sessions 时创建）；find_closed_references(current_commit_task_set: set[str]) -> list[str]（返回已 CLOSED 的 task_id 列表，命中则触发 exit 3 短路）；update_sessions(current_commit_task_set, states_and_signals, gate_decision, task_name_lookup, phase_id_lookup, model)（OPEN → IN_PROGRESS 首次 seen；IN_PROGRESS 累加 iterations 和 issue_counts；gate=PASS 且 task 在 set 中 → CLOSED，写入 closed_at + acceptance_summary.delivery = task_name_lookup[task_id]）。4) 实现 immutability 检查：CLOSED task 数据不可修改（任何写入尝试 raise 或短路）。5) issue_counts key 格式：非架构类 issue 用 issue_type（如 'no_claim'）；架构合规类用 issue_type:rule_id（如 'chain_broken:GATE-VT-006'）；子分类用 issue_type:subtype（如 'substandard:coverage'）。6) 新建 tests/test_task_session_manager.py 覆盖：创建、OPEN → IN_PROGRESS → CLOSED 状态机、immutability、find_closed_references 返回非空 / 空、issue_counts 累加、文件不存在时的加载行为。",
+      "out_of_scope": [
+        "不修改 pipeline.py（T194 负责）",
+        "不实现 AcceptanceSummaryBuilder（T193 负责）",
+        "不修改 engine.py 的 15 个 _check_* 方法（closed task 检测已迁至 TaskSessionManager.find_closed_references，engine 不感知）",
+        "不修改 Dashboard / 模板",
+        "不实现 BusinessImpactResolver（T193 负责）",
+        "不修改 field_hints.json（T193 负责）",
+        "不预先设计 schema 迁移器（YAGNI：schema_version 字段保留，按需实现）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2"
+      ],
+      "depends_on": [],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/task/__init__.py（新建空包）",
+        "src/vibe_tracing/domain/task/session.py（TaskSession dataclass + TaskSessionManager 类）",
+        "tests/test_task_session_manager.py（新建，覆盖 schema 读写、状态机、immutability、find_closed_references、issue_counts 累加）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-192-01",
+          "description": "src/vibe_tracing/domain/task/session.py 存在，TaskSession dataclass 字段与 §3.3.2 schema 完全一致（task_id / phase_id / status / first_seen / closed_at / iterations / issue_counts / model / acceptance_summary）。"
+        },
+        {
+          "dod_id": "DOD-VT-192-02",
+          "description": "TaskSessionManager.update_sessions() 签名接受 (current_commit_task_set, states_and_signals, gate_decision, task_name_lookup, phase_id_lookup, model) 共 6 个参数；按 task 状态机 OPEN → IN_PROGRESS → CLOSED 正确转移。"
+        },
+        {
+          "dod_id": "DOD-VT-192-03",
+          "description": "find_closed_references(current_commit_task_set) -> list[str]：返回 set 中已 CLOSED 的 task_id 列表；未 CLOSED 返回空 list。"
+        },
+        {
+          "dod_id": "DOD-VT-192-04",
+          "description": "CLOSED task 数据完全不可变：后续 update_sessions 调用对 CLOSED task 不修改任何字段（包括 acceptance_summary），immutability 通过测试断言。"
+        },
+        {
+          "dod_id": "DOD-VT-192-05",
+          "description": "issue_counts key 支持复合粒度：issue_type（非架构类） / issue_type:rule_id（架构合规类） / issue_type:subtype（子分类），同一 task 多次 update 累加计数不重置。"
+        },
+        {
+          "dod_id": "DOD-VT-192-06",
+          "description": "task_sessions.json 不存在时视为 {schema_version: '1.0.0', tasks: {}}，首次 update_sessions 时创建文件，不报错。"
+        },
+        {
+          "dod_id": "DOD-VT-192-07",
+          "description": "CLOSED 时写入 acceptance_summary.delivery = task_name_lookup[task_id]；phase_id 首次创建时写入（来自 phase_id_lookup），后续不更新。"
+        },
+        {
+          "dod_id": "DOD-VT-192-08",
+          "description": "pytest tests/test_task_session_manager.py 全量通过；pytest tests/ 全量通过，无回归。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_channel_separation.md §3.1（新增模块表 TaskSessionManager 行）、§3.3.2（task_sessions.json schema + 加载规则 + issue_counts key 格式 + phase_id 写入来源）、§3.2.1（pipeline 调用签名 6 参数）。",
+        "状态机：OPEN（首次 seen，task_id 在 current_commit_task_set 中但 session 不存在）→ IN_PROGRESS（gate≠PASS，task 未 CLOSED）→ CLOSED（gate=PASS 且 task 在 current_commit_task_set 中）。",
+        "update_sessions 内部逻辑：遍历 current_commit_task_set；若 task 不存在则创建 OPEN；若 task 已 CLOSED 跳过（immutability）；若 IN_PROGRESS 且本次 gate=PASS 则 CLOSED，写入 closed_at（ISO 8601 UTC） + acceptance_summary.delivery = task_name_lookup[task_id]；每次调用累加 iterations += 1 并按 states_and_signals 的 issue_type 累加 issue_counts。",
+        "issue_counts 累加逻辑：遍历 states_and_signals；对每个 (OutputState, IssueSignal, DetectedIssue) 三元组，先按 DetectedIssue.related_task_id 归属 task session（related_task_id 为空或不在 current_commit_task_set 中时，归入 sorted(current_commit_task_set) 的首个 task，与 T193 build_list 的 task 归属策略一致，避免双计或丢失）；在对应 task 的 issue_counts 中构造 key（非架构类 issue 用 issue_type，架构合规类如 chain_broken/substandard 用 issue_type:rule_id）；按 OutputState 是 CURRENT_BLOCK / CURRENT_WARNING 累加 BLOCK / WARNING 计数。",
+        "文件读写用 Python 标准库 json.load / json.dump；单进程模型无需锁；load 时 FileNotFoundError 捕获返回空 dict。",
+        "find_closed_references 返回 list[str] 而非 bool，便于调用方日志记录具体冲突的 task_id。",
+        "测试覆盖点：session 创建、OPEN → IN_PROGRESS、IN_PROGRESS → CLOSED、CLOSED 后 immutability、find_closed_references 非空 / 空、issue_counts 累加、文件不存在 / 格式损坏的降级处理。",
+        "本任务是 T193-T198 的数据基础，所有下游任务都依赖 TaskSession / TaskSessionManager 类型。实现时先确认类型签名稳定再进入 T193。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-193",
+      "title": "实现 AcceptanceSummaryBuilder + BusinessImpactResolver + field_hints business_impact 标注",
+      "phase_id": "PHASE-VT-016",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "落地 design_channel_separation.md §3.1 / §3.2.1 / §3.3.4 / §3.3.5 步骤 3 数据层：实现 AcceptanceSummaryBuilder（domain/task/acceptance.py），从 TaskSession + states_and_signals 构造每 task 一份的验收摘要（list[dict]）+ 建议行判定（严重风险 = 无 → ✅ 接受；≥1 → ⚠️ 驳回）；实现 BusinessImpactResolver 双层查找（项目覆写 > field_hints 默认 > 'high' 兜底）；在 field_hints.json 中为所有 issue hint 增加 business_impact 字段。",
+      "atomic_scope": "1) 新建 src/vibe_tracing/domain/task/acceptance.py，定义 AcceptanceSummaryBuilder 类与 build_list 静态方法：build_list(current_commit_task_set: set[str], sessions: dict[str, TaskSession], states_and_signals: list[tuple[OutputState, IssueSignal, DetectedIssue]]) -> list[dict]。每 task 返回一个 summary dict：{recommendation, delivery, severe_risks, resolved_block, resolved_warning, remaining_warning}。2) 在同文件或新建 src/vibe_tracing/domain/task/business_impact.py 实现 BusinessImpactResolver：构造时加载 .vibetracing/business_impacts.json（项目覆写，不存在视为空 dict，格式损坏 warning 并降级）和 src/vibe_tracing/templates/field_hints.json（系统默认）；提供 resolve(issue_type, subtype=None) -> 'high'|'low'|'none'；查找顺序：精确匹配 issue_type:subtype → 回退 issue_type → field_hints 默认 → 'high' 兜底。3) 在 src/vibe_tracing/templates/field_hints.json 中为所有 issue hint 条目新增 business_impact 字段，一期仅标注高频 BLOCK 类（no_claim / chain_broken / task_failed 等）为显式 high/low/none，其余默认 high。4) task 归属策略：优先使用 DetectedIssue.related_task_id 匹配 task；related_task_id 为空时归入 current_commit_task_set 中的 task（多 task 时归入首个）。5) recommendation 判定：severe_risks 为空 → 'accept'；非空 → 'reject'。6) delivery 字段从 TaskSession.acceptance_summary.delivery 读取（由 T192 的 update_sessions 在 CLOSED 时写入）。7) 新建 tests/test_acceptance_summary_builder.py 覆盖：单 task / 多 task / 严重风险判定 / 双层查找优先级 / related_task_id 回退策略。",
+      "out_of_scope": [
+        "不修改 pipeline.py（T194 负责调用 build_list）",
+        "不修改 output.py 的 stdout 渲染（T197 负责 _print_acceptance_summary）",
+        "不修改 Dashboard 模板（T195 / T196 负责新 Tab）",
+        "不修改 TaskSessionManager（T192 已实现）",
+        "不修改 field_hints.json 的 level1 / level2 / level3 文本（仅新增 business_impact 字段）",
+        "不实现 _print_acceptance_summary（T197 负责）",
+        "不校验 .vibetracing/business_impacts.json 的语义正确性（仅校验 JSON 格式）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001"
+      ],
+      "related_architecture_constraints": [
+        "A-1"
+      ],
+      "depends_on": [
+        "TASK-VT-192"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/task/acceptance.py（AcceptanceSummaryBuilder + build_list）",
+        "src/vibe_tracing/domain/task/business_impact.py（BusinessImpactResolver + resolve 方法）",
+        "src/vibe_tracing/templates/field_hints.json（所有 issue hint 新增 business_impact 字段，高频 BLOCK 类显式标注）",
+        "tests/test_acceptance_summary_builder.py（新建，覆盖摘要生成、建议行判定、双层查找、task 归属）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-193-01",
+          "description": "AcceptanceSummaryBuilder.build_list 签名与 §3.2.1 一致：(current_commit_task_set, sessions, states_and_signals) -> list[dict]；返回 list 长度 = len(current_commit_task_set)（每 task 一份）。"
+        },
+        {
+          "dod_id": "DOD-VT-193-02",
+          "description": "summary dict 字段完整：recommendation（'accept' | 'reject'）、delivery（来自 TaskSession.acceptance_summary.delivery）、severe_risks（list）、resolved_block（int）、resolved_warning（int）、remaining_warning（int）。"
+        },
+        {
+          "dod_id": "DOD-VT-193-03",
+          "description": "recommendation 判定正确：severe_risks 为空 → 'accept'；severe_risks ≥ 1 项 → 'reject'。"
+        },
+        {
+          "dod_id": "DOD-VT-193-04",
+          "description": "BusinessImpactResolver.resolve() 优先级正确：项目覆写（精确 issue_type:subtype → 回退 issue_type） > field_hints.json 默认 > 'high' 兜底。"
+        },
+        {
+          "dod_id": "DOD-VT-193-05",
+          "description": ".vibetracing/business_impacts.json 不存在时视为空 dict（不报错）；JSON 格式损坏时 warning 并降级到 field_hints 默认。"
+        },
+        {
+          "dod_id": "DOD-VT-193-06",
+          "description": "task 归属策略正确：优先 DetectedIssue.related_task_id 匹配；为空时回退到 current_commit_task_set 中的首个 task。"
+        },
+        {
+          "dod_id": "DOD-VT-193-07",
+          "description": "field_hints.json 所有 issue hint 条目新增 business_impact 字段；JSON 格式合法，resolve_hint() 加载不报错。"
+        },
+        {
+          "dod_id": "DOD-VT-193-08",
+          "description": "pytest tests/test_acceptance_summary_builder.py 全量通过；pytest tests/ 全量通过，无回归。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_channel_separation.md §2.3.2（验收摘要契约 + 双层查找规则）、§3.2.1（build_list 签名 + task 归属策略 + delivery 字段来源）、§3.3.4（field_hints business_impact 字段）、§3.3.5（business_impacts.json schema + key 格式规范 + 加载规则）。",
+        "build_list 内部流程：遍历 current_commit_task_set；对每个 task_id 从 sessions[task_id] 取 TaskSession；从 states_and_signals 中按 related_task_id（优先）或回退策略（为空或不在 set 中 → sorted(current_commit_task_set) 首个 task）过滤属于该 task 的三元组；统计三个计数 —— resolved_block = OutputState.RESOLVED 且 DetectedIssue.severity == BLOCK 的 issue 数；resolved_warning = OutputState.RESOLVED 且 severity == WARNING 的 issue 数；remaining_warning = OutputState.CURRENT_WARNING 的 issue 数；调用 BusinessImpactResolver 判定每个 remaining WARNING 的 business_impact；severe_risks 收集 business_impact == 'high' 的 remaining issue；recommendation 由 severe_risks 是否为空决定。",
+        "BusinessImpactResolver 构造：__init__(project_root: Path)；加载 project_root / '.vibetracing' / 'business_impacts.json'（FileNotFoundError 捕获，json 解析失败 warning 并置为空 dict）；加载 src/vibe_tracing/templates/field_hints.json（系统默认，必须存在）。",
+        "field_hints.json 新增 business_impact 字段：每个 issue hint 条目（与 level1 / level2 / level3 同级）增加 'business_impact': 'high'|'low'|'none'；一期仅标注高频 BLOCK 类（no_claim / chain_broken / task_failed / isolated_task / ac_missing_evidence 等），其余默认 'high'（不显式标注等同于 high）。",
+        "business_impacts.json schema 参考 §3.3.5：{schema_version: '1.0.0', overrides: {key: impact}}；key 格式：一级 'issue_type'（如 'no_claim'），二级 'issue_type:subtype'（如 'task_failed:test_failed'）；key 中不包含 entity_id。",
+        "所有反思 / 摘要文本中文业务语言（决策 7）。",
+        "测试覆盖点：单 task / 多 task / severe_risks 为空 → accept / severe_risks 非空 → reject / 项目覆写优先 / field_hints 默认 / high 兜底 / related_task_id 为空时的回退。",
+        "本任务与 T195 / T196 无直接依赖，可并行执行（都依赖 T192 的 TaskSession 类型）。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-194",
+      "title": "Pipeline 编排 — 接入 TaskSessionManager 与验收摘要生成",
+      "phase_id": "PHASE-VT-016",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "落地 design_channel_separation.md §3.2.1 步骤 2-3 的编排逻辑：在 _evaluate_and_output 签名中新增 4 个参数（session_mgr / task_name_lookup / phase_id_lookup / model），实现 4 步编排（closed task 预检查 → exit 3 短路；gate 检测不变；session 更新 + 验收摘要生成；报告 + 渲染），新增 --task-status CLI 参数，读取 config.json 的 model 字段。",
+      "atomic_scope": "1) 修改 cli/analyze/pipeline.py _evaluate_and_output 签名：新增 session_mgr: TaskSessionManager / task_name_lookup: dict[str, str] / phase_id_lookup: dict[str, str] / model: str 共 4 个参数（在现有 12 个基础上）。2) 在 _evaluate_and_output 开头新增步骤 1：调用 session_mgr.find_closed_references(current_commit_task_set)；返回非空 list 则 sys.exit(3)（短路，不进入 gate 检测）。3) 步骤 2 保持不变：调用 _run_gate_evaluation()（不修改），返回 (gate_res, states_and_signals)。4) 在 _run_gate_evaluation 返回后新增步骤 3：调用 session_mgr.update_sessions(current_commit_task_set, states_and_signals, gate_decision, task_name_lookup, phase_id_lookup, model)；当 gate=PASS 且 current_commit_task_set 非空时，调用 AcceptanceSummaryBuilder.build_list(current_commit_task_set, sessions, states_and_signals) -> list[dict]。5) 步骤 4 报告 + 渲染：_build_report_document() + _render_output()（_render_output 签名不变）；build_list 返回的 list[dict] 以 acceptance_summaries 局部变量形式在 _evaluate_and_output 内持有，不传给 _render_output；T197 统一负责 _render_output 签名变更（删除 4 个旧参数 + 新增 acceptance_summaries）+ 逐个传给 _print_acceptance_summary 的实际接入。6) 在 run_analyze 入口新增 --task-status <task_id> 参数：仅查询并打印 task session 状态，不触发分析（与常规 analyze 互斥）。7) 在 run_analyze 内部读取 .vibetracing/config.json 的 model 字段（缺失默认 'unknown'），传给 _evaluate_and_output。8) 在 pipeline 内部构造 task_name_lookup / phase_id_lookup（从已加载的 task_list 上下文构建），传给 _evaluate_and_output。9) 测试：test_pipeline.py 扩展 closed task 阻断路径；test_cli_analyze.py 扩展 --task-status 行为。",
+      "out_of_scope": [
+        "不修改 _run_gate_evaluation 内部逻辑（保持只做检测与判定）",
+        "不实现 _print_acceptance_summary（T197 负责）",
+        "不修改 output.py 的 gate summary 格式（T197 负责）",
+        "不实现 TaskSessionManager / AcceptanceSummaryBuilder（T192 / T193 已实现）",
+        "不新增 Dashboard Tab（T195 / T196 负责）",
+        "不修改 reports.py 新增 key（T195 / T196 负责）",
+        "不删除 _print_reflection_prompts（T197 负责）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2"
+      ],
+      "depends_on": [
+        "TASK-VT-192",
+        "TASK-VT-193"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/pipeline.py（_evaluate_and_output 4 步编排 + --task-status CLI + model 读取 + lookup 构造）",
+        "tests/test_pipeline.py（扩展 closed task 阻断、session 更新、验收摘要生成路径）",
+        "tests/test_cli_analyze.py（扩展 --task-status 行为、config.model 缺失降级）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-194-01",
+          "description": "_evaluate_and_output 签名扩展 4 个新参数（session_mgr / task_name_lookup / phase_id_lookup / model），现有参数不变。"
+        },
+        {
+          "dod_id": "DOD-VT-194-02",
+          "description": "closed task 预检查在 _run_gate_evaluation 调用之前执行；find_closed_references 返回非空 → sys.exit(3)；不进入 gate 检测。"
+        },
+        {
+          "dod_id": "DOD-VT-194-03",
+          "description": "gate 检测步骤 _run_gate_evaluation() 行为不变，仍返回 (gate_res, states_and_signals)。"
+        },
+        {
+          "dod_id": "DOD-VT-194-04",
+          "description": "gate 检测后调用 session_mgr.update_sessions 更新 task_sessions.json；CLOSED task 写入 acceptance_summary.delivery = task_name_lookup[task_id]。"
+        },
+        {
+          "dod_id": "DOD-VT-194-05",
+          "description": "gate=PASS 且 current_commit_task_set 非空时调用 AcceptanceSummaryBuilder.build_list 生成 list[dict]；否则不调用。"
+        },
+        {
+          "dod_id": "DOD-VT-194-06",
+          "description": "新增 --task-status <task_id> CLI 参数：仅查询并打印 task session 状态（status / iterations / closed_at 等），不触发分析；与常规 analyze 互斥。"
+        },
+        {
+          "dod_id": "DOD-VT-194-07",
+          "description": "config.json 的 model 字段被读取并传给 session_mgr；缺失时默认 'unknown'。"
+        },
+        {
+          "dod_id": "DOD-VT-194-08",
+          "description": "task_name_lookup / phase_id_lookup 在 pipeline 内部从已加载的 task_list 上下文构造，传给 session_mgr.update_sessions。"
+        },
+        {
+          "dod_id": "DOD-VT-194-09",
+          "description": "pytest tests/test_pipeline.py 新增 closed task 阻断测试、gate=PASS 时 session CLOSED 测试、gate=BLOCKED 时 session IN_PROGRESS 测试；pytest tests/ 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_channel_separation.md §3.2.1（_evaluate_and_output 4 步编排 + 签名扩展 4 参数 + AcceptanceSummaryBuilder.build_list 调用方职责）、§3.5（数据流图）。",
+        "4 步编排顺序严格：1) session_mgr.find_closed_references → 非空 exit 3；2) _run_gate_evaluation（不修改）；3) session_mgr.update_sessions + build_list（仅 gate=PASS）；4) _build_report_document + _render_output。",
+        "exit code 语义四级制：0（成功）/ 1（崩溃）/ 2（gate BLOCKED）/ 3（closed task 引用）。本任务负责 exit 3 路径；exit 2 已存在（pipeline.py L260 / L598）。",
+        "--task-status 实现位置：在 run_analyze 入口解析参数；若提供则实例化 TaskSessionManager + 读取 session + print 状态后 sys.exit(0)；否则走常规 analyze 流程。",
+        "config.json 读取路径：project_root / '.vibetracing' / 'config.json'；FileNotFoundError 捕获默认 'unknown'；JSON 解析失败 warning 并默认 'unknown'。",
+        "task_name_lookup / phase_id_lookup 构造：从 task_list（已加载的 task 列表）遍历，{task.task_id: task.title} / {task.task_id: task.phase_id}。",
+        "build_list 返回的 list[dict] 以 acceptance_summaries 局部变量形式持有；本任务不修改 _render_output 签名、不调用 _print_acceptance_summary（T197 统一负责 _render_output 签名变更与逐个调用）。",
+        "_run_gate_evaluation 签名和返回值不变（gate_res, states_and_signals）；本任务只在 _evaluate_and_output 层增加编排逻辑。",
+        "测试覆盖点：closed task 阻断（exit 3）/ gate=PASS 且 task 非空时 session CLOSED / gate=BLOCKED 时 session 保持 IN_PROGRESS / --task-status 正常 / config.model 缺失降级。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-195",
+      "title": "实现 GovernanceMetricsAggregator + 验收存档 + 治理演进 Dashboard 面板",
+      "phase_id": "PHASE-VT-016",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "落地 design_channel_separation.md §3.1 / §3.2.3 / §3.2.4 步骤 5：实现 GovernanceMetricsAggregator（domain/governance/metrics.py），从 task_sessions.json 聚合全量规则触发表（按 BLOCK 降序）+ 衍生 task 比例（标题关键词匹配）+ 任务平均迭代次数（按 PHASE 分组）；扩展 reports.py 新增 rule_stats_table / governance_metrics / acceptance_archive 三个顶层 key；扩展 Dashboard 模板新增 Tab 5（验收存档）和 Tab 8（治理演进）。",
+      "atomic_scope": "1) 新建 src/vibe_tracing/domain/governance/__init__.py 与 metrics.py。2) 实现 GovernanceMetricsAggregator 类，提供三个方法：aggregate_rule_stats_table(sessions: dict) -> list[dict]：从所有 task 的 issue_counts 聚合，按 BLOCK 次数降序，输出 [{rule_id, description, block_count, warning_count, last_triggered}]；从未触发的规则沉底。aggregate_derived_task_ratio(tasks: list, sessions: dict) -> float：标题关键词匹配（'修复/优化/调整 TASK-VT-XXX'），输出衍生比例（近似指标）。aggregate_avg_iterations_by_phase(sessions: dict) -> dict[phase_id, float]：按 PHASE 分组计算平均迭代次数。3) 扩展 cli/analyze/reports.py _build_report_document：新增 3 个顶层 key：acceptance_archive（从 sessions 聚合所有 CLOSED task 的 acceptance_summary）、rule_stats_table（GovernanceMetricsAggregator 输出）、governance_metrics（derived_task_ratio + avg_iterations_by_phase）。4) 扩展 templates/dashboard.template.html：新增 Tab 5（验收存档，数据源 report.acceptance_archive）和 Tab 8（治理演进，数据源 report.rule_stats_table + report.governance_metrics）；保持现有 4 个 Tab 不变；CSS 变量复用现有样式。5) 在 Tab 8 中显式标注'衍生 task 比例'为'近似指标，仅作参考'（设计 §2.3.4 要求）。6) 新建 tests/test_governance_metrics.py 覆盖：规则触发表聚合 / 降序 / 衍生比例 / 平均迭代；扩展 tests/test_dashboard_renderer.py 验证新 Tab 容器存在且数据非空。",
+      "out_of_scope": [
+        "不实现趋势列（跨 PHASE 对比，二期）",
+        "不实现 Phase Reflection Dashboard Tab（二期 Tab 6）",
+        "不实现 Agent Capability Dashboard Tab（T196 负责 Tab 7）",
+        "不修改 pipeline.py（T194 已负责编排）",
+        "不修改 output.py（T197 负责）",
+        "不修改 TaskSessionManager / AcceptanceSummaryBuilder（T192 / T193 已实现）",
+        "不实现 PhaseReflectionEngine（二期）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "A-1"
+      ],
+      "depends_on": [
+        "TASK-VT-192"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/governance/__init__.py（新建空包）",
+        "src/vibe_tracing/domain/governance/metrics.py（GovernanceMetricsAggregator + 三个聚合方法）",
+        "src/vibe_tracing/cli/analyze/reports.py（_build_report_document 新增 3 个顶层 key）",
+        "src/vibe_tracing/templates/dashboard.template.html（新增 Tab 5 验收存档 + Tab 8 治理演进）",
+        "tests/test_governance_metrics.py（新建，覆盖规则触发表、衍生比例、平均迭代）",
+        "tests/test_dashboard_renderer.py（扩展，验证 Tab 5 / Tab 8 容器存在且数据非空）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-195-01",
+          "description": "GovernanceMetricsAggregator.aggregate_rule_stats_table 输出 list[dict] 按 block_count 降序；从未触发的规则（block_count=0, warning_count=0）沉底。"
+        },
+        {
+          "dod_id": "DOD-VT-195-02",
+          "description": "规则触发表条目字段完整：rule_id（issue_type 或 issue_type:rule_id 或 issue_type:subtype）/ description / block_count / warning_count / last_triggered（ISO 8601）。"
+        },
+        {
+          "dod_id": "DOD-VT-195-03",
+          "description": "aggregate_derived_task_ratio 基于标题关键词匹配（'修复/优化/调整 TASK-VT-XXX'）；输出 0.0-1.0 之间比例。"
+        },
+        {
+          "dod_id": "DOD-VT-195-04",
+          "description": "aggregate_avg_iterations_by_phase 按 phase_id 分组计算平均迭代次数。"
+        },
+        {
+          "dod_id": "DOD-VT-195-05",
+          "description": "reports.py _build_report_document 新增 acceptance_archive / rule_stats_table / governance_metrics 三个顶层 key；现有 key 不变。"
+        },
+        {
+          "dod_id": "DOD-VT-195-06",
+          "description": "Dashboard 模板新增 Tab 5（验收存档）和 Tab 8（治理演进）；现有 4 个 Tab DOM 结构不变；CSS 变量复用。"
+        },
+        {
+          "dod_id": "DOD-VT-195-07",
+          "description": "Tab 8 中'衍生 task 比例'指标旁显式标注'近似指标，仅作参考'（§2.3.4 要求）。"
+        },
+        {
+          "dod_id": "DOD-VT-195-08",
+          "description": "pytest tests/test_governance_metrics.py + tests/test_dashboard_renderer.py 全量通过；pytest tests/ 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_channel_separation.md §2.3.4（治理演进三类指标）、§3.1（GovernanceMetricsAggregator 模块表）、§3.2.3（reports.py 新增 key 表）、§3.2.4（Dashboard Tab 表 Tab 5 / Tab 8）。",
+        "全量规则触发表聚合逻辑：遍历所有 task.session.issue_counts；每个 key 作为 rule_id；累加 BLOCK / WARNING 计数；last_triggered 从 task.closed_at 或 task.first_seen 取最新；按 block_count 降序排序。",
+        "衍生 task 比例正则：re.search(r'(修复|优化|调整)\\s*TASK-VT-\\d+', task.title)；命中数 / 总 task 数 = ratio。",
+        "Dashboard 新增 Tab 实现模式：沿用现有 4 个 Tab 的客户端渲染方式（<script type=\"application/json\"> 嵌入数据 + JS 生成 HTML）；新增 Tab 不修改现有 4 个 Tab 的 DOM 结构。",
+        "acceptance_archive 聚合逻辑：遍历所有 CLOSED task；取其 acceptance_summary dict；按 closed_at 倒序；输出 list[dict]。",
+        "Tab 5 / Tab 8 容器元素始终存在（无论数据是否为空）；当有数据时容器内数据字段非空（§5.2 断言 5a + 5b）。",
+        "本任务与 T196 无直接依赖，可并行执行（都依赖 T192 的 TaskSession 类型）。",
+        "测试覆盖点：规则触发表聚合（含从未触发沉底）/ 衍生比例（命中 / 未命中 / 空 task 列表）/ 平均迭代（单 PHASE / 多 PHASE）/ Dashboard Tab 容器存在性 / 数据非空性。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-196",
+      "title": "实现 Agent 能力评分 Dashboard 面板 + 警告徽章",
+      "phase_id": "PHASE-VT-016",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "落地 design_channel_separation.md §3.1 / §3.2.3 / §3.2.4 步骤 4：实现 Agent 能力评分的 4 个指标（first-time-right 率 / 平均迭代次数 / 同类 issue 重复 / BLOCK 集中度），扩展 reports.py 新增 agent_capability_metrics 顶层 key，扩展 Dashboard 模板新增 Tab 7（Agent 能力），当检测到能力警告时仅通过 Dashboard 徽章展示（不阻断主流程、不在 stdout 提示，决策 5）。",
+      "atomic_scope": "1) 在 src/vibe_tracing/domain/governance/metrics.py 新增 AgentCapabilityMetricsAggregator 类（或在现有 GovernanceMetricsAggregator 中扩展），提供 4 个方法：first_time_right_ratio(sessions)：iterations == 1 的 CLOSED task 比例。avg_iterations(sessions)：所有 CLOSED task 的 iterations 平均值。repeated_issue_types(sessions)：按 issue_type 统计重复出现的 top N（BLOCK 集中度）。block_concentration(sessions)：BLOCK 计数前 3 的 issue_type 占总 BLOCK 的比例。2) 能力警告判定：当 avg_iterations > 阈值（如 5）或 first_time_right < 阈值（如 0.3）或 block_concentration > 阈值（如 0.8）时生成 warning badge；badge 仅写入 report_doc，不输出到 stdout。3) 扩展 cli/analyze/reports.py _build_report_document：新增 agent_capability_metrics 顶层 key，包含 4 个指标值 + warnings 列表。4) 扩展 templates/dashboard.template.html：新增 Tab 7（Agent 能力），展示 4 指标 + 警告徽章；保持现有 Tab 不变。5) 新建或扩展 tests 验证：4 指标计算正确、警告阈值判定、Dashboard Tab 7 容器存在且数据非空。",
+      "out_of_scope": [
+        "不按 model 拆分能力评分（二期，需多 PHASE 数据积累）",
+        "不在 stdout 输出能力警告（决策 5：仅 Dashboard 徽章）",
+        "不阻断主流程（决策 5：能力警告不阻断）",
+        "不实现 Phase Reflection（二期）",
+        "不修改 pipeline.py（T194 已负责编排）",
+        "不修改 output.py（T197 负责）",
+        "不实现趋势列（二期）",
+        "Dashboard 模板 Tab 顺序必须保持 §3.2.4 约定的 5（验收存档）→ 6（Phase 反思，二期）→ 7（Agent 能力）→ 8（治理演进）；若与 T195 并行执行，Tab 7 必须插入在 T195 的 Tab 5 之后、Tab 8 之前；建议串行执行 T195 合并后再改 T196，避免 reports.py / dashboard.template.html 的 merge conflict"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "A-1"
+      ],
+      "depends_on": [
+        "TASK-VT-192"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/domain/governance/metrics.py（新增 AgentCapabilityMetricsAggregator 类或扩展现有类，4 指标 + 警告判定）",
+        "src/vibe_tracing/cli/analyze/reports.py（_build_report_document 新增 agent_capability_metrics 顶层 key）",
+        "src/vibe_tracing/templates/dashboard.template.html（新增 Tab 7 Agent 能力 + 警告徽章）",
+        "tests/test_governance_metrics.py（扩展，覆盖 4 指标计算、警告阈值判定）",
+        "tests/test_dashboard_renderer.py（扩展，验证 Tab 7 容器存在且数据非空）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-196-01",
+          "description": "AgentCapabilityMetricsAggregator 输出 dict 包含 4 个指标：first_time_right_ratio（0.0-1.0）/ avg_iterations（float）/ repeated_issue_types（list[dict]，top N）/ block_concentration（0.0-1.0）。"
+        },
+        {
+          "dod_id": "DOD-VT-196-02",
+          "description": "能力警告判定正确：avg_iterations > 阈值 / first_time_right < 阈值 / block_concentration > 阈值时生成 warning badge；阈值可配置（默认 5 / 0.3 / 0.8）。"
+        },
+        {
+          "dod_id": "DOD-VT-196-03",
+          "description": "reports.py _build_report_document 新增 agent_capability_metrics 顶层 key；现有 key 不变。"
+        },
+        {
+          "dod_id": "DOD-VT-196-04",
+          "description": "Dashboard 模板新增 Tab 7（Agent 能力）；现有 Tab 1-4 + 新增 Tab 5 / Tab 8（T195）DOM 结构不变。"
+        },
+        {
+          "dod_id": "DOD-VT-196-05",
+          "description": "能力警告仅通过 Dashboard 徽章展示；stdout 中不出现任何能力警告文本（决策 5，§5.2 断言 7 验证）。"
+        },
+        {
+          "dod_id": "DOD-VT-196-06",
+          "description": "pytest tests/test_governance_metrics.py + tests/test_dashboard_renderer.py 全量通过；pytest tests/ 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_channel_separation.md §2.3.4（治理演进指标，Agent 能力评分作为治理数据基础）、§3.2.3（agent_capability_metrics key）、§3.2.4（Dashboard Tab 7）、§2.5（决策 5：Agent 能力警告不阻断、不在 stdout、仅 Dashboard 徽章）。",
+        "4 指标计算逻辑：first_time_right_ratio = CLOSED task 中 iterations == 1 的比例；avg_iterations = CLOSED task 的 iterations 平均值；repeated_issue_types = 统计所有 task.issue_counts 中出现次数 top N 的 issue_type（BLOCK 计数）；block_concentration = top 3 issue_type 的 BLOCK 计数之和 / 总 BLOCK 计数。",
+        "警告阈值建议：avg_iterations > 5 / first_time_right < 0.3 / block_concentration > 0.8；阈值可作为常量定义在 AgentCapabilityMetricsAggregator 类中。",
+        "Dashboard Tab 7 渲染：沿用客户端渲染（<script> 标签注入 JSON + JS 生成 HTML）；展示 4 个指标卡片 + 警告徽章（当 warnings 非空时显示）。",
+        "关键约束：能力警告绝对不能出现在 stdout（决策 5）；仅写入 report_doc 的 agent_capability_metrics.warnings 字段，由 Dashboard 渲染时读取。",
+        "本任务与 T195 无直接依赖，可并行执行（都依赖 T192 的 TaskSession 类型）；两者都修改 reports.py 和 dashboard.template.html，需注意合并顺序避免冲突。",
+        "测试覆盖点：4 指标计算（空 sessions / 单 session / 多 session）/ 警告阈值边界 / Dashboard Tab 7 容器存在性 / stdout 无能力警告文本。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-197",
+      "title": "Channel 分离 — stdout 精简 + 反思提示迁移 + 验收摘要输出",
+      "phase_id": "PHASE-VT-016",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "落地 design_channel_separation.md §3.2.1 / §3.2.2 步骤 6（通道收尾）：重构 output.py 实现 stdout 双通道分离 — 将 gate summary 从 70+ 行精简为单行 GATE DECISION: {decision}；删除 _print_reflection_prompts 的 stdout 调用（迁移到二期 PhaseReflectionEngine + Dashboard）；新增 _print_section_separator 和 _print_acceptance_summary；更新 pipeline.py _render_output 调用以适配新签名；确保 stdout 仅包含 Agent 指令段 + 验收摘要段，信噪比从 42% 提升至 90%+。",
+      "atomic_scope": "1) 修改 cli/analyze/output.py：将 _print_gate_summary(gate_res) 重构为 _print_gate_summary_line(gate_res)，仅打印 'GATE DECISION: {decision}' 单行（decision 从 gate_res['gate_decision'] 读取）。删除 _print_reflection_prompts 函数（逻辑二期迁至 PhaseReflectionEngine + Dashboard 渲染；本任务直接删除函数定义和调用）。新增 _print_section_separator()：打印 Agent 指令段与验收摘要段之间的分隔符（如 '══════' 60 字符）。新增 _print_acceptance_summary(summary: dict)：按 §2.2 stdout 结构打印单 task 验收摘要段（任务 / 建议 / 交付 / 已解决 / 遗留 / 严重风险 / 迭代次数，5-8 行中文业务语言）。2) 修改 cli/analyze/pipeline.py _render_output 调用：删除传给 _print_reflection_prompts 的 4 个参数（merged_gaps, final_risks, compliance_res, project_root）；新增 acceptance_summaries 参数（list[dict]，来自 T194 的 build_list 返回值）；在 _render_output 内部调用 _print_section_separator（仅 gate=PASS 且 summaries 非空时）+ 循环调用 _print_acceptance_summary（每 task 一次）。3) 更新 test_cli_analyze.py / test_reflection_prompts.py / test_collect_issue_actions.py 中所有捕获 stdout 的测试：删除对 [阻拦] / [告警] / [预存] 字符串的断言；删除对 8 维度反思文本的断言；新增对 'GATE DECISION: X' 单行的断言；新增对验收摘要段（gate=PASS 时）的断言。4) 验证 stdout 总行数：正常 gate=PASS 场景约 50-70 行（vs 现状 120+ 行）。",
+      "out_of_scope": [
+        "不修改 _print_agent_actions（stdout Agent 指令段核心，保留）",
+        "不修改 _print_empty_claims_hint（保留，Agent 可执行）",
+        "不修改 Dashboard 模板（T195 / T196 已负责新 Tab）",
+        "不修改 reports.py（T195 / T196 已负责新增 key）",
+        "不实现 PhaseReflectionEngine（二期）",
+        "不实现 Phase Reflection Dashboard Tab（二期 Tab 6）",
+        "不修改 TaskSessionManager / AcceptanceSummaryBuilder / pipeline 编排（T192 / T193 / T194 已实现）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2"
+      ],
+      "depends_on": [
+        "TASK-VT-194",
+        "TASK-VT-195",
+        "TASK-VT-196"
+      ],
+      "expected_deliverables": [
+        "src/vibe_tracing/cli/analyze/output.py（_print_gate_summary_line 替换旧 _print_gate_summary；删除 _print_reflection_prompts；新增 _print_section_separator + _print_acceptance_summary）",
+        "src/vibe_tracing/cli/analyze/pipeline.py（_render_output 调用签名更新，传递 acceptance_summaries；删除 _print_reflection_prompts 调用）",
+        "tests/test_cli_analyze.py（更新 stdout 断言）",
+        "tests/test_reflection_prompts.py（删除或迁移）",
+        "tests/test_collect_issue_actions.py（更新 stdout 相关断言）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-197-01",
+          "description": "stdout 中不再出现旧的 gate summary 格式（无 [阻拦] / [告警] / [预存] 标签列表，无 per_issue_states 输出）；仅出现 'GATE DECISION: {decision}' 单行。"
+        },
+        {
+          "dod_id": "DOD-VT-197-02",
+          "description": "stdout 中不再出现 _print_reflection_prompts 的 8 维度反思文本（§5.2 断言 4 验证）。"
+        },
+        {
+          "dod_id": "DOD-VT-197-03",
+          "description": "_print_acceptance_summary 仅在 gate=PASS 且 current_commit_task_set 非空时被调用；每 task 调用一次（多 task 输出多份摘要段）。"
+        },
+        {
+          "dod_id": "DOD-VT-197-04",
+          "description": "_print_section_separator 在 Agent 指令段（gate decision + actions）之后、验收摘要段之前打印（仅 gate=PASS 时）。"
+        },
+        {
+          "dod_id": "DOD-VT-197-05",
+          "description": "_print_acceptance_summary 输出格式符合 §2.2 stdout 结构（任务 / 建议 / 交付 / 已解决 / 遗留 / 严重风险 / 迭代次数，5-8 行中文业务语言）。"
+        },
+        {
+          "dod_id": "DOD-VT-197-06",
+          "description": "stdout 总行数在正常 gate=PASS 场景约 50-70 行（vs 现状 120+ 行，信噪比从 42% → 90%+）。"
+        },
+        {
+          "dod_id": "DOD-VT-197-07",
+          "description": "_print_agent_actions 和 _print_empty_claims_hint 行为不变（stdout Agent 指令段核心保留）。"
+        },
+        {
+          "dod_id": "DOD-VT-197-08",
+          "description": "pytest tests/test_cli_analyze.py + tests/test_reflection_prompts.py + tests/test_collect_issue_actions.py 全量通过；pytest tests/ 全量通过。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_channel_separation.md §2.2（Channel 契约 + stdout 结构）、§3.2.1（_render_output 重构）、§3.2.2（output.py 具体修改）、§3.5（数据流图）。",
+        "_print_gate_summary_line 实现：仅 print(f\"GATE DECISION: {gate_res['gate_decision']}\")；不输出 per_issue_states / 状态标签列表。",
+        "_print_acceptance_summary 实现：按 §2.2 模板打印 5-8 行；建议行判定（严重风险 = 无 → '✅ 接受'；≥1 → '⚠️ 驳回'）；严重风险字段来自 summary['severe_risks']；所有文本中文业务语言。",
+        "_print_section_separator 实现：print('═' * 60)；在 Agent 指令段和验收摘要段之间提供视觉分隔。",
+        "_print_reflection_prompts 函数直接删除（不仅是删除调用，连函数定义也删除）；其逻辑二期迁至 PhaseReflectionEngine + Dashboard 渲染。",
+        "_render_output 签名变化：删除 merged_gaps / final_risks / compliance_res / project_root 4 个参数；新增 acceptance_summaries: list[dict] 参数。",
+        "测试影响范围：test_cli_analyze.py 中约 35 个 capsys 测试，多数针对 doctor / accept / init / finalize 命令，gate summary 相关断言预计影响范围小；test_reflection_prompts.py 测试 render_reflection_prompts() 函数（非 stdout），函数删除后测试也删除或迁移；test_collect_issue_actions.py 仅 1 个断言涉及 [告警] 字符串（在 reason 文本中），按需更新。",
+        "关键约束：stdout 只允许包含 Agent 指令段（gate decision + actions + coverage summary）+ 验收摘要段（仅 gate=PASS）；任何人类向内容（反思提示、历史债务列表、空 claims 警告）不得出现在 stdout。"
+      ]
+    },
+    {
+      "task_id": "TASK-VT-198",
+      "title": "一期 MVP 端到端验证与集成回归",
+      "phase_id": "PHASE-VT-016",
+      "priority": "must",
+      "status": "todo",
+      "owner_role": "AI Coding Agent",
+      "objective": "完成 PHASE-VT-016 一期 MVP 的端到端验证：运行 vt analyze 在真实项目数据上验证 stdout 结构符合 §2.2（约 50-70 行、信噪比 90%+）；验证 task_sessions.json schema 与 §3.3.2 一致；验证 Dashboard 4 个新 Tab（Tab 5 / Tab 7 / Tab 8）渲染正确；运行 pytest tests/ 全量通过；更新 docs/design_channel_separation.md 状态为'一期已落地'。本任务是 T192-T197 的集成验证，不引入新功能。",
+      "atomic_scope": "1) 在项目根目录运行 PYTHONPATH=src python3 -m vibe_tracing.cli analyze，验证：stdout 总行数 ≤ 70 行；stdout 仅包含 Agent 指令段 + 验收摘要段（gate=PASS 时）；无 [阻拦] / [告警] / [预存] 标签列表；无 8 维度反思文本；'GATE DECISION: X' 单行存在；当 current_commit_task_set 非空时验收摘要段存在（每 task 一份）。2) 检查 .vibetracing/task_sessions.json：文件存在且 schema 与 §3.3.2 一致（schema_version / tasks dict / 每个 task 字段完整）；OPEN / IN_PROGRESS / CLOSED 状态机正确；CLOSED task 数据封存。3) 检查 .vibetracing/business_impacts.json 加载：不存在时不报错；格式损坏时 warning 并降级。4) 生成 Dashboard HTML 并验证：Tab 5（验收存档）/ Tab 7（Agent 能力）/ Tab 8（治理演进）容器元素存在；当有数据时数据字段非空；现有 4 个 Tab 行为不变。5) 运行 pytest tests/ 全量通过，零失败。6) 验证 exit code 语义四级制：gate=PASS → exit 0；gate=BLOCKED → exit 2；closed task 引用 → exit 3。7) 更新 docs/design_channel_separation.md 状态字段：'已批准（PHASE-VT-016 待实施）' → '一期已落地（PHASE-VT-016）'。8) 不引入新功能；仅做集成验证和文档状态更新。",
+      "out_of_scope": [
+        "不实现新功能（T192-T197 已完成所有一期功能）",
+        "不实现二期功能（Phase Reflection / 趋势列 / 按 model 拆分 / 完成报告文件）",
+        "不修改业务规范文档 docs/business_task_reflection_trajectory.md（已锁定，不可变）",
+        "不修改 src/vibe_tracing/ 源代码（除测试和文档状态更新）"
+      ],
+      "related_requirements": [
+        "REQ-VT-001",
+        "REQ-VT-010"
+      ],
+      "related_acceptance_criteria": [
+        "AC-VT-001-01",
+        "AC-VT-010-01"
+      ],
+      "related_modules": [
+        "MOD-VT-001",
+        "MOD-VT-008"
+      ],
+      "related_architecture_constraints": [
+        "A-1",
+        "A-2"
+      ],
+      "depends_on": [
+        "TASK-VT-194",
+        "TASK-VT-195",
+        "TASK-VT-196",
+        "TASK-VT-197"
+      ],
+      "expected_deliverables": [
+        "docs/design_channel_separation.md（状态字段更新为'一期已落地（PHASE-VT-016）'）",
+        ".vibetracing/task_sessions.json（端到端验证产物，schema 符合 §3.3.2）",
+        ".vibetracing/business_impacts.json（可选，端到端验证加载行为）",
+        "Dashboard HTML（端到端验证产物，4 个新 Tab 渲染正确）"
+      ],
+      "definition_of_done": [
+        {
+          "dod_id": "DOD-VT-198-01",
+          "description": "PYTHONPATH=src python3 -m vibe_tracing.cli analyze 端到端运行成功；stdout 总行数 ≤ 70 行；无 [阻拦] / [告警] / [预存] 标签列表；无 8 维度反思文本。"
+        },
+        {
+          "dod_id": "DOD-VT-198-02",
+          "description": "stdout 中 'GATE DECISION: {decision}' 单行存在；当 gate=PASS 且 current_commit_task_set 非空时验收摘要段存在（每 task 一份，5-8 行中文业务语言）。"
+        },
+        {
+          "dod_id": "DOD-VT-198-03",
+          "description": ".vibetracing/task_sessions.json schema 与 §3.3.2 完全一致（schema_version / tasks dict / 每个 task 字段完整：task_id / phase_id / status / first_seen / closed_at / iterations / issue_counts / model / acceptance_summary）。"
+        },
+        {
+          "dod_id": "DOD-VT-198-04",
+          "description": "Dashboard HTML 渲染成功；Tab 5 / Tab 7 / Tab 8 容器元素存在；当有数据时数据字段非空；现有 4 个 Tab 行为不变。"
+        },
+        {
+          "dod_id": "DOD-VT-198-05",
+          "description": "pytest tests/ 全量通过，零失败；零警告（或警告为已知可接受项）。"
+        },
+        {
+          "dod_id": "DOD-VT-198-06",
+          "description": "exit code 语义四级制验证：gate=PASS → exit 0 / gate=BLOCKED → exit 2 通过实际 CLI 调用验证；exit 3（closed task 引用）路径由 T192 的 test_task_session_manager.py（find_closed_references）和 T194 的 test_pipeline.py（closed task 短路）已覆盖，本任务不重复验证 —— 仅需运行 `pytest tests/test_pipeline.py tests/test_task_session_manager.py -k closed_task` 确认通过；无需手工构造 commit 场景或伪造历史 commit。"
+        },
+        {
+          "dod_id": "DOD-VT-198-07",
+          "description": "docs/design_channel_separation.md 状态字段更新为'一期已落地（PHASE-VT-016）'。"
+        },
+        {
+          "dod_id": "DOD-VT-198-08",
+          "description": "所有变更符合 P1-P5 原则：不考虑向后兼容（P1）、不接受打补丁式重构（P2）、不得过度设计（P3）、不得重复代码逻辑（P4）、测试文件视同业务代码（P5）。"
+        }
+      ],
+      "ai_coding_guidance": [
+        "设计文档：docs/design_channel_separation.md 全文（一期 MVP 的所有章节）。",
+        "验证顺序建议：1) pytest tests/ 先跑通（修复测试失败）；2) vt analyze 端到端（检查 stdout 行数和结构）；3) Dashboard HTML（浏览器验证或 grep 容器元素）；4) task_sessions.json schema 校验。",
+        "stdout 行数统计方法：PYTHONPATH=src python3 -m vibe_tracing.cli analyze 2>&1 | wc -l；目标 ≤ 70 行。",
+        "stdout 内容验证：grep -E '(阻拦|告警|预存)' 应无匹配；grep -E 'GATE DECISION' 应有 1 行匹配；gate=PASS 时 grep -E '(任务验收摘要|验收结束)' 应有匹配。",
+        "task_sessions.json schema 校验：对比 §3.3.2 示例；所有 task 字段必须存在；CLOSED task 的 acceptance_summary 必须完整。",
+        "Dashboard Tab 验证：grep -E '(验收存档|Agent 能力|治理演进)' dashboard.html 应有匹配；容器元素 id 一致。",
+        "exit code 验证：gate=PASS 场景 exit 0；gate=BLOCKED 场景（可构造失败测试）exit 2；closed task 引用场景（手工 CLOSED 一个 task 后再 commit 引用）exit 3。",
+        "本任务不引入新功能；发现任何 T192-T197 的遗留问题应追溯到对应任务修复，不在本任务中临时打补丁（P2）。"
       ]
     }
   ]

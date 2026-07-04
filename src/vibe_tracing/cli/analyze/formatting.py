@@ -4,12 +4,7 @@ Action rendering and formatting for agent consumption.
 
 from typing import List, Optional
 
-from vibe_tracing.cli.analyze.actions import (
-    _collect_gap_actions,
-    _collect_risk_actions,
-    _collect_violation_actions,
-    _collect_gate_reason_actions,
-)
+from vibe_tracing.cli.analyze.actions import _collect_issue_actions
 
 
 def _render_actions(actions: list, coverage_summary: Optional[dict] = None) -> list:
@@ -61,13 +56,19 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None) -> l
     # Category breakdown by urgency
     current_change_count = sum(1 for a in actions if a.get("urgency", 0) >= 80)
     pre_existing_count = sum(1 for a in actions if 20 <= a.get("urgency", 0) < 80)
-    pending_human_count = sum(1 for a in actions if a.get("pending_human_decision"))
+    pending_human_count = sum(
+        1 for a in actions if a.get("type") == "human_decision_required"
+    )
     lines.append(f"当前变更: {current_change_count} 项 | 预存债务: {pre_existing_count} 项 | 等待人类: {pending_human_count} 项")
 
     # If there are human decision items, add explicit Agent instructions
-    human_decision_items = [a for a in actions if a.get("type") == "human_decision"]
+    human_decision_items = [
+        a for a in actions if a.get("type") == "human_decision_required"
+    ]
     if human_decision_items:
-        dec_ids = [a.get("id", "") for a in human_decision_items]
+        dec_ids = [
+            a.get("context", {}).get("issue_id", "") for a in human_decision_items
+        ]
         lines.append("")
         lines.append("⚠ 存在待人类决策的事项。请执行以下操作：")
         lines.append(f"1. 通知人类打开 dashboard: output/dashboard.html")
@@ -88,26 +89,19 @@ def _render_actions(actions: list, coverage_summary: Optional[dict] = None) -> l
     return lines
 
 
-def _format_agent_actions(gate_decision, active_gaps, active_risks, violations,
-                          accepted_rules, prd_result=None, task_result=None,
-                          claims_list=None, gate_reasons=None, merged_gaps=None,
-                          compliance_status=None, coverage_summary=None,
-                          staged_items=None, evidence_meta=None, conn=None):
-    """Format an Agent-executable action list with full inline context."""
+def _format_agent_actions(gate_decision, states_and_signals,
+                          prd_result=None, task_result=None,
+                          claims_list=None, coverage_summary=None,
+                          conn=None):
+    """Format an Agent-executable action list from (OutputState, IssueSignal, DetectedIssue) triples."""
     lines = [f"GATE DECISION: {gate_decision.upper()}", ""]
-    gaps_for_actions = merged_gaps if merged_gaps is not None else active_gaps
-    actions: list = []
-    actions.extend(_collect_gap_actions(
-        gaps_for_actions, prd_result, task_result, claims_list,
-        staged_items=staged_items, evidence_index=evidence_meta, conn=conn,
-    ))
-    actions.extend(_collect_risk_actions(
-        active_risks, merged_gaps or [],
-        staged_items=staged_items, evidence_index=evidence_meta,
-    ))
-    actions.extend(_collect_violation_actions(violations, compliance_status or []))
-    actions.extend(_collect_gate_reason_actions(
-        gate_decision, gate_reasons or [], actions,
-    ))
+    actions: list = _collect_issue_actions(
+        states_and_signals,
+        prd_result=prd_result,
+        task_result=task_result,
+        claims_list=claims_list,
+        coverage_summary=coverage_summary,
+        conn=conn,
+    )
     lines.extend(_render_actions(actions, coverage_summary))
     return "\n".join(lines)

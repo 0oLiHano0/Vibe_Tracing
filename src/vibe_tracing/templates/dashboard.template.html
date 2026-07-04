@@ -906,125 +906,39 @@
                 6: { id: 6, name: "任务不达标", status: "pass", errors: [], code: "substandard_task" }
             };
 
-            // If backend gate_reasons is available, use it directly (classification-based)
-            if (report.gate_reasons && report.gate_reasons.length > 0) {
-                const reasons = report.gate_reasons;
-                reasons.forEach(r => {
-                    if (r.includes('historical debts exist')) return;
+            // Direct mapping of issue_type to pipeline stages
+            const STAGE_MAPPING = {
+                "chain_broken": 1,
+                "chain_misaligned": 2,
+                "isolated_task": 3,
+                "no_claim": 4,
+                "task_failed": 5,
+                "substandard": 6
+            };
 
-                    const isCurrent = r.startsWith('[当前]');
-                    const isHistorical = r.startsWith('[预存]');
-                    const cleanText = r.replace(/^\[(当前|预存)\]\s*/, '');
+            const perIssueStates = report.per_issue_states || [];
+            perIssueStates.forEach(item => {
+                const stageId = STAGE_MAPPING[item.issue_type] || 6;
 
-                    // In incremental mode, historical debts do not show as blockers in Overview
-                    if (isHistorical && report.incremental_mode) {
-                        return;
-                    }
-
-                    // Classify by content
-                    if (cleanText.includes('引用不存在') || cleanText.includes('invalid_task') || cleanText.includes('dangling_claim') || cleanText.includes('无源') || cleanText.includes('引用错误') || cleanText.includes('引用指向不存在')) {
-                        pipeline[1].status = "blocked";
-                        pipeline[1].errors.push(cleanText);
-                    } else if (cleanText.includes('错位') || cleanText.includes('不匹配') || cleanText.includes('mismatch') || (cleanText.includes('AC-VT-') && cleanText.includes('需求'))) {
-                        pipeline[2].status = "blocked";
-                        pipeline[2].errors.push(cleanText);
-                    } else if (cleanText.includes('孤立任务') || cleanText.includes('isolated')) {
-                        const match = cleanText.match(/TASK-VT-[0-9]+/i) || cleanText.match(/TASK-[a-zA-Z0-9_-]+/i);
-                        if (match && whitelist.includes(match[0])) {
-                            return; // Whitelisted
+                // Only evaluate active issues for the pipeline stages (blocked / warning)
+                if (item.state === "CURRENT_BLOCK" || item.state === "CURRENT_WARNING") {
+                    if (item.issue_type === 'isolated_task') {
+                        if (!whitelist.includes(item.task_id)) {
+                            pipeline[stageId].status = "warn";
                         }
-                        pipeline[3].status = "warn";
-                        pipeline[3].errors.push({ id: match ? match[0] : '', text: cleanText });
-                    } else if (cleanText.includes('无声明') || cleanText.includes('缺少 Claim') || cleanText.includes('no_claim_for_task') || cleanText.includes('done 但未提交 Claim')) {
-                        pipeline[4].status = "blocked";
-                        pipeline[4].errors.push(cleanText);
-                    } else if (cleanText.includes('测试') && (cleanText.includes('未通过') || cleanText.includes('失败') || cleanText.includes('failed') || cleanText.includes('test_failed'))) {
-                        pipeline[5].status = "blocked";
-                        pipeline[5].errors.push(cleanText);
+                        pipeline[stageId].errors.push({ id: item.task_id, text: item.reason });
                     } else {
-                        pipeline[6].status = "warn";
-                        pipeline[6].errors.push(cleanText);
-                    }
-                });
-            } else {
-                // Fallback to original client-side rules for tests without gate_reasons
-                const gaps = report.gaps || [];
-                
-                gaps.forEach(g => {
-                    const r = g.reason || "";
-                    if (r.startsWith('invalid_task_') || r.includes('dangling') || r.includes('not_exist')) {
-                        pipeline[1].status = "blocked";
-                        pipeline[1].errors.push(`设计文件引用错误: ${g.item_id} (${g.reason})`);
-                    }
-                });
-
-                if (report.architecture_violations) {
-                    report.architecture_violations.forEach(v => {
-                        if (v.message.includes("不匹配") || v.message.includes("mismatch") || v.message.includes("父需求不匹配")) {
-                            pipeline[2].status = "blocked";
-                            pipeline[2].errors.push(`架构/需求关联错位: ${v.message}`);
-                        }
-                    });
-                }
-
-                gaps.forEach(g => {
-                    if (g.reason === 'missing_req' || g.reason === 'missing_ac' || g.reason === 'missing_module' || g.reason === 'isolated') {
-                        if (whitelist.includes(g.item_id)) {
-                            return; // Whitelisted
-                        }
-                        pipeline[3].status = "warn";
-                        let desc = `孤立任务 ${g.item_id}: 缺少必要的设计关联。`;
-                        if (g.reason === 'missing_req') desc = `孤立任务 ${g.item_id}: 缺少需求关联。`;
-                        if (g.reason === 'missing_ac') desc = `孤立任务 ${g.item_id}: 缺少验收标准关联。`;
-                        if (g.reason === 'missing_module') desc = `孤立任务 ${g.item_id}: 缺少架构模块归属。`;
-                        pipeline[3].errors.push({ id: g.item_id, text: desc });
-                    }
-                });
-
-                if (report.warnings) {
-                    report.warnings.forEach(w => {
-                        if (w.includes("孤立任务")) {
-                            const match = w.match(/孤立任务\s+([A-Za-z0-9_-]+):/);
-                            if (match) {
-                                const taskId = match[1];
-                                if (whitelist.includes(taskId)) return;
-                                pipeline[3].status = "warn";
-                                pipeline[3].errors.push({ id: taskId, text: w });
+                        if (item.state === "CURRENT_BLOCK") {
+                            pipeline[stageId].status = "blocked";
+                        } else if (item.state === "CURRENT_WARNING") {
+                            if (pipeline[stageId].status !== "blocked") {
+                                pipeline[stageId].status = "warn";
                             }
                         }
-                    });
+                        pipeline[stageId].errors.push(item.reason);
+                    }
                 }
-
-                gaps.forEach(g => {
-                    if (g.reason === 'no_claim_for_task') {
-                        pipeline[4].status = "blocked";
-                        pipeline[4].errors.push(`任务已标记为 done 但未提交 Claim 文件: ${g.item_id}`);
-                    }
-                });
-
-                testResults.forEach(t => {
-                    if (t.outcome !== 'passed' && t.outcome !== 'covered' && t.outcome !== 'success') {
-                        pipeline[5].status = "blocked";
-                        pipeline[5].errors.push(`独立测试未通过: ${t.nodeid || t.name} -> outcome: ${t.outcome}`);
-                    }
-                });
-
-                coverageReports.forEach(c => {
-                    if (c.status === 'violated' || (c.percent_covered !== undefined && c.percent_covered < 80)) {
-                        pipeline[6].status = "warn";
-                        pipeline[6].errors.push(`覆盖率未达标: 文件 ${c.source_path || c.file_path} 覆盖率仅为 ${c.percent_covered}% (期望 >= 80%)`);
-                    }
-                });
-
-                if (report.architecture_violations) {
-                    report.architecture_violations.forEach(v => {
-                        if (!(v.message.includes("不匹配") || v.message.includes("mismatch") || v.message.includes("父需求不匹配"))) {
-                            pipeline[6].status = "warn";
-                            pipeline[6].errors.push(`质量或其它规范不符: ${v.message}`);
-                        }
-                    });
-                }
-            }
+            });
 
             // Cascading Downstream Greying-out (時序依賴阻斷)
             let isBlocked = false;
@@ -1222,8 +1136,7 @@
             if (!tableBody) return;
             tableBody.innerHTML = '';
 
-            const reasons = report.gate_reasons || [];
-            const historicalDebts = reasons.filter(r => r.startsWith('[预存]'));
+            const historicalDebts = report.historical_issues || [];
 
             if (historicalDebts.length === 0) {
                 tableBody.innerHTML = `
@@ -1237,12 +1150,18 @@
             }
 
             historicalDebts.forEach((debt, index) => {
-                const cleanDebt = debt.replace(/^\[(当前|预存)\]\s*/, '');
                 const tr = document.createElement('tr');
+                const isBlock = debt.severity === 'BLOCK';
+                const prefix = isBlock ? '🔴 [历史阻拦] ' : '🟡 [历史警告] ';
+                const badgeColor = isBlock 
+                    ? 'background-color: var(--status-fail-glow); color: var(--status-fail); border: 1px solid var(--status-fail);'
+                    : 'background-color: var(--status-warn-glow); color: var(--status-warn); border: 1px solid var(--status-warn);';
+                const badgeText = isBlock ? '历史阻拦' : '历史警告';
+
                 tr.innerHTML = `
                     <td><b style="color:var(--text-muted);">${index + 1}</b></td>
-                    <td style="color:var(--text-primary); font-size:13.5px; line-height:1.5;">⚠️ ${cleanDebt}</td>
-                    <td><span class="badge" style="background-color: var(--status-warn-glow); color: var(--status-warn); border: 1px solid var(--status-warn);">存量债务</span></td>
+                    <td style="color:var(--text-primary); font-size:13.5px; line-height:1.5;">${prefix}${debt.reason}</td>
+                    <td><span class="badge" style="${badgeColor}">${badgeText}</span></td>
                 `;
                 tableBody.appendChild(tr);
             });

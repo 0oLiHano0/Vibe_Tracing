@@ -21,19 +21,6 @@ _STATE_LABELS = {
 }
 
 
-def _derive_reasons(per_issue_states: list) -> List[str]:
-    """从 per_issue_states 生成展示用 reason 列表。"""
-    reasons: List[str] = []
-    for pis in per_issue_states:
-        state = pis.get("state", "")
-        label = _STATE_LABELS.get(state)
-        if label is None:
-            continue
-        reason_text = pis.get("reason", pis.get("issue_id", ""))
-        reasons.append(f"[{label}] {reason_text}")
-    return reasons
-
-
 def _print_gate_summary(gate_res: dict) -> None:
     """Print gate decision summary from per-issue states."""
     gate_decision = gate_res["gate_decision"]
@@ -64,37 +51,20 @@ def _print_agent_actions(
     ctx: UnifiedContext,
     gate_res: dict,
     report_doc: dict,
-    evidence_meta: dict,
-    active_gaps: list,
-    active_risks: list,
-    merged_gaps: list,
-    compliance_res: Optional[dict],
-    current_commit_task_set: Set[str],
     project_root,
     conn=None,
+    states_and_signals=None,
 ) -> None:
     """Format and print the Agent action list."""
     gate_decision = gate_res["gate_decision"]
-    violations = compliance_res.get("architecture_violations", []) if compliance_res else []
-    accepted_rules = compliance_res.get("accepted_rules", []) if compliance_res else []
-    compliance_status = compliance_res.get("architecture_compliance_status", []) if compliance_res else []
-    gate_reasons = _derive_reasons(gate_res.get("per_issue_states", []))
 
     agent_output = _format_agent_actions(
         gate_decision=gate_decision,
-        active_gaps=active_gaps,
-        active_risks=active_risks,
-        violations=violations,
-        accepted_rules=accepted_rules,
+        states_and_signals=states_and_signals or [],
         prd_result=ctx.prd,
         task_result=ctx.task_result,
         claims_list=ctx.claims_list,
-        gate_reasons=gate_reasons,
-        merged_gaps=merged_gaps,
-        compliance_status=compliance_status,
         coverage_summary=report_doc.get("coverage_summary"),
-        staged_items=current_commit_task_set,
-        evidence_meta=evidence_meta,
         conn=conn,
     )
     print(agent_output)
@@ -176,14 +146,14 @@ def _render_output(
     project_root,
     staged_files: Optional[Set[str]] = None,
     conn=None,
+    states_and_signals=None,
 ) -> None:
     """Render dashboard, print gate summary, agent actions, and reflection prompts."""
     _render_dashboard(ctx, report_doc, evidence_meta, output_dir, project_root)
     _print_gate_summary(gate_res)
     _print_empty_claims_hint(ctx, staged_files)
     _print_agent_actions(
-        ctx, gate_res, report_doc, evidence_meta,
-        active_gaps, active_risks, merged_gaps, compliance_res,
-        current_commit_task_set, project_root, conn=conn,
+        ctx, gate_res, report_doc, project_root,
+        conn=conn, states_and_signals=states_and_signals,
     )
     _print_reflection_prompts(ctx, gate_res, merged_gaps, final_risks, compliance_res, project_root)

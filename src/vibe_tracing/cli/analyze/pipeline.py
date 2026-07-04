@@ -257,7 +257,7 @@ def run_analyze(
                 "并将其与代码一同提交。",
                 file=sys.stderr,
             )
-            exit_code = 1
+            exit_code = 2
 
         vt_logger.info("phase_end", "Integrity gates completed",
                        phase="integrity_gates",
@@ -538,7 +538,7 @@ def _run_gate_evaluation(
     hd_applied = gate_res["human_decisions_applied"]
     if hd_applied > 0:
         print(f"  Applied {hd_applied} human decision(s).", file=sys.stderr)
-    return gate_res
+    return gate_res, states_and_signals
 
 
 def _evaluate_and_output(
@@ -566,7 +566,7 @@ def _evaluate_and_output(
 
     active_gaps, active_risks = _run_analysis_phase(merged_gaps, final_risks)
 
-    gate_res = _run_gate_evaluation(
+    gate_res, states_and_signals = _run_gate_evaluation(
         project_root, active_gaps, active_risks, compliance_res,
         ctx, current_commit_task_set,
         human_decisions=human_decisions,
@@ -592,6 +592,7 @@ def _evaluate_and_output(
         current_commit_task_set, output_dir, project_root,
         staged_files=staged_files,
         conn=conn,
+        states_and_signals=states_and_signals,
     )
 
     exit_code = 2 if gate_res["gate_decision"] == "blocked" else 0

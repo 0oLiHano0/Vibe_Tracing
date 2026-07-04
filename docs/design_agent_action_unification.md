@@ -2,6 +2,10 @@
 
 > 设计决策文档。解决门禁判定与 Agent 指令数据源分裂问题。
 
+**状态**：**已落地**（PHASE-VT-015 实施完成，VT-190 已删除 6 个旧 collector，三元组链路 `_collect_issue_actions` 已生效）
+**定位**：历史架构决策记录（回溯"为什么这么写"时查阅），不再作为待实现设计
+**下游关联**：`docs/business_task_reflection_trajectory.md` §2.1.6 跨通道审计以本文档 §2.2 状态分流为 issue 粒度依据
+
 ---
 
 ## 1. 背景

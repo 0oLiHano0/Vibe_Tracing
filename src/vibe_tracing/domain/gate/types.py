@@ -180,6 +180,7 @@ def aggregate_gate_decision(
         per_issue_states.append(
             {
                 "issue_id": signal.issue_id,
+                "issue_type": issue.issue_type,
                 "state": state.value,
                 "severity": signal.severity.value,
                 "task_id": signal.task_id,
@@ -195,6 +196,7 @@ def aggregate_gate_decision(
             historical_issues.append(
                 {
                     "issue_id": signal.issue_id,
+                    "issue_type": issue.issue_type,
                     "severity": signal.severity.value,
                     "task_id": signal.task_id,
                     "reason": issue.reason,

@@ -4,14 +4,14 @@ Agent action collectors, urgency scoring, and hint resolution.
 Absorbs former helpers.py: AC/requirement description helpers and hint resolution.
 """
 
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, List, Optional, Tuple
 
+from vibe_tracing.domain.gate.types import DetectedIssue, IssueSignal, OutputState
 from vibe_tracing.infra.config.hint_loader import load_hints, resolve_hint
 
-URGENCY_STAGED = 85
-URGENCY_IN_EVIDENCE = 60
-URGENCY_DEFAULT = 30
-URGENCY_STALE = 25
+URGENCY_BLOCK_OBSERVED = 90
+URGENCY_BLOCK_NEW = 70
+URGENCY_WARNING = 50
 
 # --- Hint resolution (from former helpers.py) ---
 
@@ -101,225 +101,155 @@ def _get_existing_tests(conn, ac_id: str) -> list:
     return query_existing_tests(conn, ac_id)
 
 
-def _compute_gap_urgency(
-    gap: dict,
-    staged_items: Optional[Set[str]],
-    evidence_index: Optional[dict],
-) -> int:
-    """Compute urgency score (0-100) for a gap action.
+# ---------------------------------------------------------------------------
+# Unified issue action collector (PHASE-VT-015 / TASK-VT-189)
+# ---------------------------------------------------------------------------
 
-    - 80-100: gap relates to current staged changes
-    - 50-70: gap has evidence in the evidence index (known historical issue)
-    - 20-40: other (pre-existing debt, non-current change)
-    """
-    item_id = gap.get("item_id", "")
-    item_type = gap.get("item_type", "")
-
-    # Check if the gap's item is in the staged change set
-    if staged_items is not None and item_id in staged_items:
-        return URGENCY_STAGED
-
-    # Check if the gap has evidence in the evidence index
-    if evidence_index:
-        for ev in evidence_index.get("evidences", []):
-            covers = ev.get("covers", [])
-            if item_id in covers:
-                return URGENCY_IN_EVIDENCE
-
-    # Default: pre-existing debt
-    return URGENCY_DEFAULT
+def _compute_issue_urgency(state: OutputState, signal: IssueSignal) -> int:
+    """3-level urgency from OutputState + IssueSignal.observed."""
+    if state == OutputState.CURRENT_BLOCK:
+        return URGENCY_BLOCK_OBSERVED if signal.observed else URGENCY_BLOCK_NEW
+    return URGENCY_WARNING
 
 
-def _collect_gap_actions(
-    merged_gaps: list,
+def _is_human_decision(issue: DetectedIssue) -> bool:
+    """Identify human-decision issues by issue_id prefix / issue_type."""
+    if issue.issue_type == "isolated_task":
+        return True
+    if issue.issue_id.startswith("chain_broken:proposal"):
+        return True
+    if ":unclear" in issue.issue_id:
+        return True
+    return False
+
+
+def _build_issue_action(
+    issue: DetectedIssue,
+    urgency: int,
+    ctx: Dict[str, Any],
+    action_type: str,
+    priority: str = "HIGH",
+) -> Dict[str, Any]:
+    """Construct a single action dict for an Agent-fixable issue."""
+    return {
+        "priority": priority,
+        "type": action_type,
+        "title": issue.reason,
+        "context": ctx,
+        "urgency": urgency,
+    }
+
+
+def _build_deep_context(
+    issue: DetectedIssue,
     prd_result: Any,
-    task_result: Any,
-    claims_list: list,
-    staged_items: Optional[Set[str]] = None,
-    evidence_index: Optional[dict] = None,
-    conn=None,
-) -> list:
-    """Collect gap-related actions for MUST-level gaps."""
-    actions = []
-    for gap in merged_gaps:
-        if gap.get("severity") != "must" or gap.get("human_accepted"):
-            continue
-        ac_id = gap.get("item_id", "")
-        ac_text = _get_ac_description(ac_id, prd_result) or gap.get("title", "")
-        related_code = _get_related_code(conn, ac_id) if conn else []
-        existing_tests = _get_existing_tests(conn, ac_id) if conn else []
-        test_scenarios = _derive_test_scenarios(ac_text)
+    conn: Any,
+) -> Dict[str, Any]:
+    """Deep enhancement: PRD + DB + reason for AC-coverage / task_failed."""
+    ctx: Dict[str, Any] = {"reason": issue.reason}
+    ac_id = issue.item_id
 
-        ctx: Dict[str, Any] = {
-            "ac_description": ac_text,
-            "severity": gap.get("severity", "MUST"),
-            "requirement_id": gap.get("requirement_id", ""),
-            "requirement_text": _get_req_description(
-                gap.get("requirement_id"), prd_result,
-            ),
-            "test_scenarios": test_scenarios,
-            "verification": _hint_context("cover_gap", "verification", ac_id=ac_id),
-        }
-        if gap.get("stale"):
-            ctx["note"] = _hint_context("cover_gap", "stale_note")
+    if ac_id.startswith("AC-"):
+        ac_text = _get_ac_description(ac_id, prd_result)
+        if ac_text:
+            ctx["ac_description"] = ac_text
+        req_id = ""
+        if prd_result and hasattr(prd_result, "requirements"):
+            for req in prd_result.requirements:
+                for ac in req.acceptance_criteria:
+                    if ac.ac_id == ac_id:
+                        req_id = req.req_id
+                        break
+                if req_id:
+                    break
+        if req_id:
+            ctx["requirement_id"] = req_id
+            req_text = _get_req_description(req_id, prd_result)
+            if req_text:
+                ctx["requirement_text"] = req_text
+
+    if conn:
+        related_code = _get_related_code(conn, ac_id)
         if related_code:
             ctx["implementation_files"] = related_code
+        existing_tests = _get_existing_tests(conn, ac_id)
         if existing_tests:
             ctx["existing_tests"] = existing_tests
 
-        urgency = _compute_gap_urgency(gap, staged_items, evidence_index)
-
-        actions.append({
-            "priority": "HIGH",
-            "type": "cover_gap",
-            "title": _hint_title("cover_gap", ac_id=ac_id, ac_text=ac_text),
-            "context": ctx,
-            "urgency": urgency,
-        })
-    return actions
+    return ctx
 
 
-def _compute_risk_urgency(
-    risk: dict,
-    staged_items: Optional[Set[str]],
-    evidence_index: Optional[dict],
-) -> int:
-    """Compute urgency score (0-100) for a risk action.
+def _build_reason_context(issue: DetectedIssue) -> Dict[str, Any]:
+    """Light/mid enhancement: reason + identifiers."""
+    ctx: Dict[str, Any] = {"reason": issue.reason}
+    if issue.item_id:
+        ctx["item_id"] = issue.item_id
+    if issue.related_task_id:
+        ctx["related_task_id"] = issue.related_task_id
+    if issue.gap_targets:
+        ctx["gap_targets"] = issue.gap_targets
+    return ctx
 
-    - 80-100: risk relates to current staged changes (claim_id in staged_items)
-    - 50-70: risk has evidence in the evidence index (known historical issue)
-    - 20-40: other (pre-existing debt)
+
+def _collect_issue_actions(
+    items: List[Tuple[OutputState, IssueSignal, DetectedIssue]],
+    prd_result: Any = None,
+    task_result: Any = None,
+    claims_list: list = None,
+    coverage_summary: Any = None,
+    conn: Any = None,
+) -> list:
+    """Unified Agent action collector from (OutputState, IssueSignal, DetectedIssue) triples.
+
+    Filters to CURRENT_BLOCK / CURRENT_WARNING only. Human-decision issues
+    produce type='human_decision_required' prompts; the rest produce fix actions.
     """
-    claim_id = risk.get("claim_id", "")
-
-    # Check if the risk's claim is in the staged change set
-    if staged_items is not None and claim_id and claim_id in staged_items:
-        return URGENCY_STAGED
-
-    # Check if the risk has evidence in the evidence index
-    if evidence_index and claim_id:
-        for ev in evidence_index.get("evidences", []):
-            covers = ev.get("covers", [])
-            if claim_id in covers:
-                return URGENCY_IN_EVIDENCE
-
-    # Stale debt gets lower urgency
-    if risk.get("stale"):
-        return URGENCY_STALE
-
-    # Default
-    return URGENCY_DEFAULT
-
-
-def _collect_risk_actions(
-    active_risks: list,
-    merged_gaps: list,
-    staged_items: Optional[Set[str]] = None,
-    evidence_index: Optional[dict] = None,
-) -> list:
-    """Collect risk-related actions (MUST risks and stale debts)."""
     actions = []
-    for risk in active_risks:
-        severity = risk.get("severity")
-        desc = risk.get("description", "")
-        is_self_ref = "only self-referential" in desc or "self-referential" in desc
-        if severity == "must" or is_self_ref:
-            urgency = _compute_risk_urgency(risk, staged_items, evidence_index)
+
+    for state, signal, issue in items:
+        if state not in (OutputState.CURRENT_BLOCK, OutputState.CURRENT_WARNING):
+            continue
+
+        urgency = _compute_issue_urgency(state, signal)
+
+        if _is_human_decision(issue):
             actions.append({
-                "priority": "HIGH",
-                "type": "high_risk",
-                "title": _hint_title(
-                    "high_risk",
-                    risk_id=risk.get("risk_id", ""),
-                    title=risk.get("title", ""),
-                ),
+                "priority": "INFO",
+                "type": "human_decision_required",
+                "title": issue.reason,
                 "context": {
-                    "risk_id": risk.get("risk_id", ""),
-                    "severity": severity,
-                    "description": desc,
-                    "claim_id": risk.get("claim_id", ""),
-                    "suggested_action": risk.get("suggested_action", ""),
-                    "fix_via": _hint_context("high_risk", "fix_via"),
+                    "reason": issue.reason,
+                    "issue_id": issue.issue_id,
+                    "instruction": "此问题需要人类决策，请通知人类查看 Dashboard。",
                 },
                 "urgency": urgency,
             })
+            continue
 
-    for risk in active_risks:
-        if risk.get("stale") and not risk.get("deferred"):
-            age_val = risk.get("age_iterations", "多个")
-            urgency = _compute_risk_urgency(risk, staged_items, evidence_index)
-            actions.append({
-                "priority": "LOW",
-                "type": "stale_debt",
-                "title": _hint_title("stale_debt", title=risk.get("title", "")),
-                "context": {
-                    "description": risk.get("description", ""),
-                    "age": _hint_context(
-                        "stale_debt", "age_format", age_iterations=age_val,
-                    ),
-                },
-                "urgency": urgency,
-            })
-    return actions
+        it = issue.issue_type
 
+        if it == "no_claim":
+            if issue.item_id.startswith("AC-"):
+                ctx = _build_deep_context(issue, prd_result, conn)
+            else:
+                ctx = _build_reason_context(issue)
+            actions.append(_build_issue_action(issue, urgency, ctx, "fix_no_claim"))
 
-def _collect_violation_actions(violations: list, compliance_status: list) -> list:
-    """Collect architecture violation actions."""
-    actions = []
-    for v in violations:
-        actions.append({
-            "priority": "HIGH",
-            "type": "fix_violation",
-            "title": _hint_title("fix_violation", rule_id=v.get("rule_id", "")),
-            "context": {
-                "rule_text": v.get("description", ""),
-                "violation_reason": v.get("reason", ""),
-                "fix_via": _hint_context("fix_violation", "fix_via"),
-            },
-            "urgency": 90,
-        })
+        elif it == "chain_broken":
+            ctx = _build_reason_context(issue)
+            actions.append(_build_issue_action(issue, urgency, ctx, "fix_chain_broken"))
 
-    for status_item in compliance_status:
-        rule_id = status_item.get("rule_id", "")
-        status = status_item.get("status")
-        item_severity = status_item.get("severity", "must")
-        if status == "violated" and item_severity == "must":
-            if not any(v.get("rule_id") == rule_id for v in violations):
-                actions.append({
-                    "priority": "HIGH",
-                    "type": "arch_status_violation",
-                    "title": _hint_title(
-                        "arch_status_violation", rule_id=rule_id,
-                    ),
-                    "context": {
-                        "rule_id": rule_id,
-                        "severity": item_severity,
-                        "fix_via": _hint_context("arch_status_violation", "fix_via"),
-                    },
-                    "urgency": 90,
-                })
-    return actions
+        elif it == "chain_misaligned":
+            ctx = _build_reason_context(issue)
+            actions.append(_build_issue_action(issue, urgency, ctx, "fix_chain_misaligned"))
 
+        elif it == "task_failed":
+            ctx = _build_deep_context(issue, prd_result, conn)
+            actions.append(_build_issue_action(issue, urgency, ctx, "fix_task_failed"))
 
-def _collect_gate_reason_actions(
-    gate_decision: str,
-    gate_reasons: list,
-    existing_actions: list,
-) -> list:
-    """Generate fallback actions from gate reasons when no HIGH actions exist."""
-    has_high = any(a["priority"] == "HIGH" for a in existing_actions)
-    if gate_decision not in ("blocked", "fail") or has_high or not gate_reasons:
-        return []
-    actions = []
-    for reason in gate_reasons:
-        actions.append({
-            "priority": "HIGH",
-            "type": "gate_blocked",
-            "title": _hint_title("gate_blocked", reason=reason[:80]),
-            "context": {
-                "reason": reason,
-                "fix_via": _hint_context("gate_blocked", "fix_via"),
-            },
-            "urgency": 80,
-        })
+        elif it == "substandard":
+            ctx = _build_reason_context(issue)
+            priority = "MEDIUM" if state == OutputState.CURRENT_WARNING else "HIGH"
+            actions.append(_build_issue_action(issue, urgency, ctx, "fix_substandard", priority))
+
     return actions

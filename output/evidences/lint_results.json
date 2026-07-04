@@ -19,5 +19,47 @@
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/cli/main.py --output-format=json",
     "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/domain/gate/baseline.py",
+    "outcome": "blocked",
+    "violations_count": 0,
+    "command": "ruff check src/vibe_tracing/domain/gate/baseline.py --output-format=json",
+    "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/domain/gate/signal_computer.py",
+    "outcome": "blocked",
+    "violations_count": 0,
+    "command": "ruff check src/vibe_tracing/domain/gate/signal_computer.py --output-format=json",
+    "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/cli/analyze/output.py",
+    "outcome": "blocked",
+    "violations_count": 0,
+    "command": "ruff check src/vibe_tracing/cli/analyze/output.py --output-format=json",
+    "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/cli/analyze/reports.py",
+    "outcome": "blocked",
+    "violations_count": 0,
+    "command": "ruff check src/vibe_tracing/cli/analyze/reports.py --output-format=json",
+    "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/domain/gate/__init__.py",
+    "outcome": "blocked",
+    "violations_count": 0,
+    "command": "ruff check src/vibe_tracing/domain/gate/__init__.py --output-format=json",
+    "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/domain/gate/types.py",
+    "outcome": "blocked",
+    "violations_count": 0,
+    "command": "ruff check src/vibe_tracing/domain/gate/types.py --output-format=json",
+    "carried_over": false
   }
 ]

@@ -773,22 +773,29 @@
             <div class="card">
                 <div class="card-title">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    证据索引列表 / Registered Evidence Registry
+                    证据索引 / Full Traceability Chain
                 </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
+                    需求 → AC → 任务 → 声明 → 验证与测试 的全链路追踪视图。链路断裂字段显示为灰色 <code style="background:rgba(100,116,139,0.15); padding:1px 6px; border-radius:4px;">—</code>，未声明 claim 的任务额外标注 <span style="color:var(--status-warn);">⚠️ 未声明</span>。
+                </p>
                 <div class="data-table-container">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>证据 ID / Evidence ID</th>
-                                <th>覆盖目标 / Covers</th>
-                                <th>源路径 / Source Path</th>
-                                <th>状态 / Status</th>
+                                <th>需求 / Requirement</th>
+                                <th>AC / Acceptance Criteria</th>
+                                <th>任务 / Task</th>
+                                <th>声明 / Claim</th>
+                                <th>验证与测试 / Test &amp; Coverage</th>
                             </tr>
                         </thead>
                         <tbody id="evidence-table-body">
-                            <!-- Evidence list rows -->
+                            <!-- Full traceability chain rows -->
                         </tbody>
                     </table>
+                </div>
+                <div id="evidence-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:0 4px;">
+                    <!-- Pagination controls rendered by renderEvidenceTable -->
                 </div>
             </div>
         </div>
@@ -971,13 +978,13 @@
     <script>
         // Data Extraction
         let prdReqs = [];
-        let evidenceIndex = { evidences: [] };
+        let evidenceIndex = { full_chain: [] };
         let testResults = [];
         let coverageReports = [];
         let report = { requirement_coverage: [], gaps: [], risks: [] };
 
         try { prdReqs = JSON.parse(document.getElementById('prd-reqs-json').textContent) || []; } catch(e) {}
-        try { evidenceIndex = JSON.parse(document.getElementById('evidence-idx-json').textContent) || { evidences: [] }; } catch(e) {}
+        try { evidenceIndex = JSON.parse(document.getElementById('evidence-idx-json').textContent) || { full_chain: [] }; } catch(e) {}
         try { testResults = JSON.parse(document.getElementById('test-results-json').textContent) || []; } catch(e) {}
         try { coverageReports = JSON.parse(document.getElementById('coverage-reports-json').textContent) || []; } catch(e) {}
         try { report = JSON.parse(document.getElementById('trace-report-json').textContent) || { requirement_coverage: [], gaps: [], risks: [] }; } catch(e) {}
@@ -1560,36 +1567,133 @@
             });
         }
 
-        // Render Evidence Registry Table
+        // Render Evidence Registry Table (Full Traceability Chain)
+        // Pagination state persisted across re-renders
+        window._evidenceCurrentPage = 1;
+        const EVIDENCE_PAGE_SIZE = 50;
+
+        function _chainNull(value) {
+            return value === null || value === undefined || value === '';
+        }
+
+        function _nullCell() {
+            return '<span style="color:var(--text-secondary); font-family:monospace;">—</span>';
+        }
+
+        function _priorityBadge(priority) {
+            if (!priority) return '';
+            const p = String(priority).toLowerCase();
+            if (p === 'must') return '<span class="status-badge" style="background:rgba(239,68,68,0.12); color:var(--status-blocked);">must</span>';
+            if (p === 'should') return '<span class="status-badge" style="background:rgba(245,158,11,0.12); color:var(--status-warn);">should</span>';
+            return '<span class="status-badge" style="background:rgba(100,116,139,0.12); color:var(--text-secondary);">' + priority + '</span>';
+        }
+
+        function _taskStatusBadge(status) {
+            if (!status) return '';
+            const s = String(status).toLowerCase();
+            if (s === 'done') return '<span class="status-badge" style="background:rgba(34,197,94,0.12); color:var(--status-pass);">done</span>';
+            if (s === 'in_progress') return '<span class="status-badge" style="background:rgba(245,158,11,0.12); color:var(--status-warn);">in_progress</span>';
+            return '<span class="status-badge" style="background:rgba(100,116,139,0.12); color:var(--text-secondary);">' + status + '</span>';
+        }
+
+        function _testOutcomeBadge(outcome) {
+            if (!outcome) return '';
+            const o = String(outcome).toLowerCase();
+            if (o === 'passed') return '<span class="status-badge" style="background:rgba(34,197,94,0.12); color:var(--status-pass);">passed</span>';
+            if (o === 'failed') return '<span class="status-badge" style="background:rgba(239,68,68,0.12); color:var(--status-blocked);">failed</span>';
+            return '<span class="status-badge" style="background:rgba(100,116,139,0.12); color:var(--text-secondary);">' + outcome + '</span>';
+        }
+
         function renderEvidenceTable() {
             const tableBody = document.getElementById('evidence-table-body');
+            const paginationContainer = document.getElementById('evidence-pagination');
             tableBody.innerHTML = '';
+            paginationContainer.innerHTML = '';
 
-            const evidences = evidenceIndex.evidences || [];
-            if (evidences.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">暂无任何已注册的证据记录</td></tr>';
+            const chain = (evidenceIndex && evidenceIndex.full_chain) || [];
+            if (chain.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px;">暂无追踪链路数据，请先运行 <code style="background:rgba(100,116,139,0.15); padding:2px 8px; border-radius:4px;">vt finalize</code> 生成 PRD 与架构约束映射</td></tr>';
                 return;
             }
 
-            evidences.forEach(ev => {
+            const totalPages = Math.max(1, Math.ceil(chain.length / EVIDENCE_PAGE_SIZE));
+            if (window._evidenceCurrentPage > totalPages) window._evidenceCurrentPage = 1;
+            const startIdx = (window._evidenceCurrentPage - 1) * EVIDENCE_PAGE_SIZE;
+            const pageSlice = chain.slice(startIdx, startIdx + EVIDENCE_PAGE_SIZE);
+
+            pageSlice.forEach(item => {
                 const tr = document.createElement('tr');
-                
-                let statusDotHTML = '<span class="status-badge"><span class="status-dot warn"></span>待解析</span>';
-                if (ev.status === 'valid' || ev.status === 'covered') {
-                    statusDotHTML = '<span class="status-badge"><span class="status-dot pass"></span>已核实</span>';
-                } else if (ev.status === 'failed' || ev.status === 'invalid') {
-                    statusDotHTML = '<span class="status-badge"><span class="status-dot fail"></span>验证失败</span>';
+
+                // Column 1: Requirement
+                let reqHTML = _nullCell();
+                if (!_chainNull(item.req_id)) {
+                    reqHTML = `<b style="font-family:monospace; color:var(--accent-blue);">${item.req_id}</b>`;
+                    if (!_chainNull(item.req_title)) {
+                        reqHTML += `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px; line-height:1.4;" title="${item.req_title}">${item.req_title.length > 60 ? item.req_title.slice(0, 60) + '…' : item.req_title}</div>`;
+                    }
+                    if (!_chainNull(item.req_priority)) reqHTML += `<div style="margin-top:4px;">${_priorityBadge(item.req_priority)}</div>`;
                 }
 
-                const coversList = ev.covers ? ev.covers.join(', ') : '无';
+                // Column 2: Acceptance Criteria
+                let acHTML = _nullCell();
+                if (!_chainNull(item.ac_id)) {
+                    acHTML = `<b style="font-family:monospace; color:var(--accent-blue);">${item.ac_id}</b>`;
+                    if (!_chainNull(item.ac_title)) {
+                        acHTML += `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px; line-height:1.4;" title="${item.ac_title}">${item.ac_title.length > 60 ? item.ac_title.slice(0, 60) + '…' : item.ac_title}</div>`;
+                    }
+                    if (item.is_testing_required === true) acHTML += `<div style="margin-top:4px;"><span class="status-badge" style="background:rgba(245,158,11,0.12); color:var(--status-warn);">testing required</span></div>`;
+                    else if (item.is_testing_required === false) acHTML += `<div style="margin-top:4px;"><span class="status-badge" style="background:rgba(100,116,139,0.12); color:var(--text-secondary);">no test req</span></div>`;
+                }
+
+                // Column 3: Task
+                let taskHTML = _nullCell();
+                if (!_chainNull(item.task_id)) {
+                    taskHTML = `<b style="font-family:monospace; color:var(--accent-blue);">${item.task_id}</b>`;
+                    if (!_chainNull(item.task_status)) taskHTML += `<div style="margin-top:4px;">${_taskStatusBadge(item.task_status)}</div>`;
+                }
+
+                // Column 4: Claim
+                let claimHTML = _nullCell();
+                if (!_chainNull(item.claim_id)) {
+                    claimHTML = `<b style="font-family:monospace; color:var(--accent-blue);">${item.claim_id}</b>`;
+                    if (!_chainNull(item.code_path)) {
+                        claimHTML += `<div style="font-size:11px; font-family:monospace; color:var(--text-secondary); margin-top:4px; word-break:break-all;" title="${item.code_path}">${item.code_path}</div>`;
+                    }
+                    if (!_chainNull(item.percent_covered)) {
+                        const pct = Number(item.percent_covered).toFixed(1);
+                        const covColor = pct >= 80 ? 'var(--status-pass)' : (pct >= 50 ? 'var(--status-warn)' : 'var(--status-blocked)');
+                        claimHTML += `<div style="margin-top:4px;"><span class="status-badge" style="background:rgba(100,116,139,0.12); color:${covColor};">cov ${pct}%</span></div>`;
+                    }
+                } else if (!_chainNull(item.task_id)) {
+                    claimHTML = `<span style="color:var(--status-warn); font-weight:600;">⚠️ 未声明</span>`;
+                }
+
+                // Column 5: Test & Coverage
+                let testHTML = _nullCell();
+                const hasTest = !_chainNull(item.test_nodeid);
+                if (hasTest) {
+                    const shortNodeid = String(item.test_nodeid).split('::').pop();
+                    testHTML = `<span style="font-family:monospace; font-size:12px;" title="${item.test_nodeid}">${shortNodeid}</span>`;
+                    if (!_chainNull(item.test_outcome)) testHTML += `<div style="margin-top:4px;">${_testOutcomeBadge(item.test_outcome)}</div>`;
+                }
+
                 tr.innerHTML = `
-                    <td><b style="font-family:monospace; color:var(--accent-blue);">${ev.evidence_id}</b></td>
-                    <td><span style="font-size:12px; font-family:monospace;">${coversList}</span></td>
-                    <td style="word-break:break-all; font-size:12px; font-family:monospace;">${ev.source_path || '无'}</td>
-                    <td>${statusDotHTML}</td>
+                    <td style="vertical-align:top;">${reqHTML}</td>
+                    <td style="vertical-align:top;">${acHTML}</td>
+                    <td style="vertical-align:top;">${taskHTML}</td>
+                    <td style="vertical-align:top;">${claimHTML}</td>
+                    <td style="vertical-align:top;">${testHTML}</td>
                 `;
                 tableBody.appendChild(tr);
             });
+
+            // Pagination controls
+            const totalText = `<span style="font-size:12px; color:var(--text-secondary);">共 ${chain.length} 条链路 · 第 ${window._evidenceCurrentPage} / ${totalPages} 页</span>`;
+            let buttonsHTML = '<div style="display:flex; gap:6px;">';
+            buttonsHTML += `<button style="padding:6px 12px; font-size:12px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; cursor:${window._evidenceCurrentPage === 1 ? 'not-allowed' : 'pointer'}; opacity:${window._evidenceCurrentPage === 1 ? '0.5' : '1'};" ${window._evidenceCurrentPage === 1 ? 'disabled' : ''} onclick="window._evidenceCurrentPage--; renderEvidenceTable();">上一页</button>`;
+            buttonsHTML += `<button style="padding:6px 12px; font-size:12px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; cursor:${window._evidenceCurrentPage === totalPages ? 'not-allowed' : 'pointer'}; opacity:${window._evidenceCurrentPage === totalPages ? '0.5' : '1'};" ${window._evidenceCurrentPage === totalPages ? 'disabled' : ''} onclick="window._evidenceCurrentPage++; renderEvidenceTable();">下一页</button>`;
+            buttonsHTML += '</div>';
+            paginationContainer.innerHTML = totalText + buttonsHTML;
         }
 
         // Render Acceptance Archive Table (Tab 5)

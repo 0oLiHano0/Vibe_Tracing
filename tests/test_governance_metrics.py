@@ -390,7 +390,7 @@ def test_dashboard_renderer_produces_html_with_new_tabs(tmp_path: Path) -> None:
 
     renderer.render(
         evidence_index={"run_id": "RUN-T195", "project_id": "PROJECT-VT",
-                        "scan_time": "2026-07-04T12:00:00Z", "evidences": []},
+                        "scan_time": "2026-07-04T12:00:00Z", "full_chain": []},
         traceability_report=trace_report,
         output_path=output_path,
     )

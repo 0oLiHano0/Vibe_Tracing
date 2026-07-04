@@ -41,7 +41,11 @@ class DashboardRenderer:
         Renders the HTML dashboard file.
 
         Args:
-            evidence_index: The evidence metadata (run_id, project_id, evidences).
+            evidence_index: The evidence metadata (run_id, project_id, scan_time, full_chain).
+                full_chain 是 14 字段链路记录列表（req_id / req_title / req_priority / req_category /
+                ac_id / ac_title / is_testing_required / task_id / task_status / claim_id /
+                test_nodeid / test_outcome / code_path / percent_covered），由
+                infra/db/queries.get_full_chain() 从 SQLite 查询返回。
             traceability_report: The traceability report JSON data.
             output_path: Target path to save the dashboard.html.
             prd_requirements: List of requirement dicts containing titles, priorities, and ACs.

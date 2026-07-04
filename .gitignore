@@ -11,3 +11,5 @@ build/
 .claude/
 .vibetracing/tmp/
 .vibetracing/logs/
+# vt analyze 运行时产物 (pre-commit hook 循环解法, 见 docs/tech_debt/phase16_audit_fix_plan.md)
+.vibetracing/task_sessions.json

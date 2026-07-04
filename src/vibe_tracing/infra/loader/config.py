@@ -71,3 +71,30 @@ def resolve_path(project_root: Path, config: Dict[str, Any], key: str) -> Path:
             f"Available keys: {list(paths.keys())}"
         )
     return project_root / paths[key]
+
+
+_TARGET_SCHEMA = "1.1.0"
+
+
+def migrate_config(project_root: Path) -> Dict[str, Any]:
+    """将 config.json 迁移到当前目标 schema 版本。
+
+    当前迁移：1.0.0 → 1.1.0（补 model 字段）。
+    幂等：已是目标版本时不修改文件。
+    返回迁移后的 config dict。
+    """
+    config_path = project_root / ".vibetracing" / "config.json"
+    if not config_path.exists():
+        raise FileNotFoundError(f"config.json not found at {config_path}")
+
+    with config_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if data.get("schema_version") == _TARGET_SCHEMA:
+        return data
+
+    data.setdefault("model", "")
+    data["schema_version"] = _TARGET_SCHEMA
+    with config_path.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    return data

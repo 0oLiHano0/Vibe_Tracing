@@ -163,6 +163,13 @@ def run_finalize(project_root: Path) -> int:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
 
+        # 1.1 Schema 迁移（幂等：已是目标版本时不修改）
+        try:
+            from vibe_tracing.infra.loader.config import migrate_config
+            config_data = migrate_config(project_root)
+        except Exception as exc:
+            vt_logger.warning("config_migrate_failed", f"config schema migration failed: {exc}")
+
         # 2. Resolve paths
         constraints_path = resolve_path(project_root, config_data, "architecture_constraints")
 

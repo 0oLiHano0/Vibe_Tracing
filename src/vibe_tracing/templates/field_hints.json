@@ -422,6 +422,10 @@
     "substandard": {
       "business_impact": "low",
       "description": "质量不达标（如测试覆盖不足），WARNING 级"
+    },
+    "ac_missing_evidence": {
+      "business_impact": "high",
+      "description": "验收标准缺少测试覆盖证据，AC 无法验证"
     }
   }
 }

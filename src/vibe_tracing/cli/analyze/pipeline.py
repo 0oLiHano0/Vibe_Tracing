@@ -700,6 +700,7 @@ def _evaluate_and_output(
             states_and_signals,
             project_root=project_root,
         )
+        session_mgr.writeback_acceptance_summaries(acceptance_summaries)
 
     # ── 步骤 4：报告 + 渲染（签名不变，T197 统一负责变更）────────────
     report_doc = _build_report_document(

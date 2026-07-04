@@ -80,8 +80,10 @@ def run_init(project_root: Path, name: Optional[str] = None, prefix: Optional[st
                 vt_logger.debug("init_step", "Skipped existing config.json",
                                 file=".vibetracing/config.json")
             try:
-                with config_path.open("r", encoding="utf-8") as f:
-                    config_data = json.load(f)
+                from vibe_tracing.infra.loader.config import migrate_config
+                config_data = migrate_config(project_root)
+                if config_data.get("schema_version") == "1.1.0":
+                    print("Migrated config.json schema to 1.1.0 (added model field)")
                 config_name = config_data.get("project_name", resolved_name)
                 config_prefix = config_data.get("project_prefix", resolved_prefix)
                 config_project_id = config_data.get("project_id", f"PROJECT-{config_prefix}")

@@ -281,3 +281,20 @@ class TaskSessionManager:
         if issue.issue_type in arch_types and issue.item_id:
             return f"{issue.issue_type}:{issue.item_id}"
         return issue.issue_type
+
+    def writeback_acceptance_summaries(self, summaries: List[Dict[str, Any]]) -> None:
+        """CLOSED task 唯一合法的二次写操作，专用于补全验收摘要字段。
+
+        update_sessions 对 CLOSED task 的保护在此不适用——回写发生在
+        同一次 analyze run 中，CLOSED 与回写之间无外部状态变化。
+        build_list 返回的 dict 包含 task_id 和 iterations，这两个字段
+        不在 AcceptanceSummary dataclass 中，必须在写回前过滤。
+        """
+        _EXTRA_KEYS = {"task_id", "iterations"}
+        for s in summaries:
+            tid = s["task_id"]
+            if tid in self._data["tasks"]:
+                self._data["tasks"][tid]["acceptance_summary"] = {
+                    k: v for k, v in s.items() if k not in _EXTRA_KEYS
+                }
+        self._save()

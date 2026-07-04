@@ -218,6 +218,8 @@ exit 3 与 exit 2 隔离的目的：CI 日志可区分"可修复 issue"与"任�
 3. **session 更新 + 验收摘要**（在 `_run_gate_evaluation` 返回之后）：
    - `session_mgr.update_sessions(current_commit_task_set, states_and_signals, gate_decision, task_name_lookup, phase_id_lookup, model)` 更新 task_sessions.json；CLOSED 的 task 在此步写入 `acceptance_summary.delivery = task_name_lookup[task_id]`
    - 当 `gate=PASS 且 current_commit_task_set 非空` 时，调用 `AcceptanceSummaryBuilder.build_list()` 生成**每 task 一份摘要**（返回 `list[dict]`）
+   - **验收摘要回写**：将 `build_list` 返回的 `list[dict]` 写回 `session_mgr`，更新对应 CLOSED task 的 `acceptance_summary` 字段（覆盖 `delivery` 占位的默认值），然后调用 `session_mgr._save()` 持久化。回写逻辑：遍历 `list[dict]`，对每个 summary dict **过滤掉 `task_id` 和 `iterations`**（这两个字段不在 `AcceptanceSummary` dataclass 中），然后更新 `session_mgr._data["tasks"][task_id]["acceptance_summary"]`。回写后 `acceptance_archive` 和 Dashboard 验收存档面板才能读到真实计算值。此方法是 CLOSED task 唯一合法的二次写操作，专用于补全验收摘要字段
+   - **task_list.json 保持只读**：`task_list.json` 是输入文件（由人类/Agent 维护），VT 不向其回写。task 的 `status` 和 `closed` 状态**仅在 `task_sessions.json` 中维护**。理由：输出层反向写入输入文件造成文件权限语义混乱；Agent 可通过 `vt analyze --task-status` 或读取 `task_sessions.json` 查询 task 关闭状态
 4. **报告构建 + 输出渲染**：`_build_report_document()` + `_render_output()`；验收摘要由 pipeline 将步骤 3 返回的 `list[dict]` **逐个**传给 `_print_acceptance_summary`（不经过 report_doc 中转）
 
 **`AcceptanceSummaryBuilder.build_list` 签名**：
@@ -409,6 +411,7 @@ _evaluate_and_output()
     │       └── 返回 (gate_res, states_and_signals)
     ├── 3. TaskSessionManager.update_sessions() → 更新 task_sessions.json
     │       AcceptanceSummaryBuilder.build_list() → list[dict]（仅 gate=PASS）
+    │       └── session_mgr.writeback_acceptance_summaries(summaries) → 回写 session 文件
     └── 4. _build_report_document() + _render_output()
             ├── _print_gate_summary_line()                      # Agent 指令段（单行）
             ├── _print_agent_actions()                           # Agent 指令段（actions）
@@ -416,6 +419,8 @@ _evaluate_and_output()
             │       _print_acceptance_summary(summary)
             └── _render_dashboard()                              # Human 通道（report_doc 含全量面板数据）
 ```
+
+> **范围边界注**：上图仅覆盖 `_evaluate_and_output()` 单次 analyze 执行路径。`config.json` 的 schema 迁移（§5.1 步骤 0）由 `vt init` / `vt finalize` 在 CLI 入口层触发，不在本数据流范围内；`run_analyze` 对 `config.model` 的读取通过 `_read_config_model()` 辅助函数完成，属于单次读取，不触发写回。
 
 ### 3.6 Dashboard 架构选择
 
@@ -497,13 +502,14 @@ _evaluate_and_output()
 
 ### 5.1 实施分两期
 
-#### 一期 MVP（业务规范 §6，约 7 工作日）
+#### 一期 MVP（业务规范 §6，约 7.5 工作日）
 
 | 步骤 | 任务 | 工时 | 核心产出 |
 |---|---|---|---|
+| 0 | config.json schema 迁移 | 0.5d | config.template.json 增加 `model` 字段 + schema_version 升至 `1.1.0`；`vt init` / `vt finalize` 增加 schema 迁移逻辑（已有 config.json 时补 `model` 字段） |
 | 1 | TaskSessionManager + schema | 1d | session.py / task_sessions.json / 单元测试 |
 | 2 | Task immutability 检查 | 0.5d | session.py `find_closed_references` / pipeline 预检查 / **exit 3** 路径（与常规 gate BLOCKED 的 exit 2 隔离） |
-| 3 | 验收摘要生成 + stdout | 1d | acceptance.py / output.py 扩展 / field_hints business_impact 标注 |
+| 3 | 验收摘要生成 + stdout + 回写 | 1.5d | acceptance.py / output.py 扩展 / field_hints business_impact 标注 / **验收摘要回写 session** |
 | 4 | Agent 能力评分面板 | 1.5d | metrics.py / Dashboard Tab 7 |
 | 5 | 治理演进面板 + 规则触发表 | 2d | metrics 扩展 / Dashboard Tab 8 + Tab 5（验收存档） |
 | 6 | Channel 分离（gate summary 精简 + 反思 stdout 删除） | 1d | output.py 重构 / 测试迁移 |
@@ -534,6 +540,8 @@ _evaluate_and_output()
 6. 规则触发表按 BLOCK 降序、"从未触发"沉底
 7. Agent 能力警告**不出现**在 stdout（仅 Dashboard 徽章）
 8. `task_sessions.json` CLOSED task 数据在后续 analyze 中**不被修改**（immutability 验证）
+9. CLOSED task 的 `acceptance_summary` 在 session 文件中包含**真实计算值**（非默认零值），`resolved_block` / `resolved_warning` / `remaining_warning` 与 `build_list` 输出一致
+10. `config.json` 缺失 `model` 字段时，`vt init` 或 `vt finalize` 自动补全（schema 迁移验证）；幂等性：`schema_version == "1.1.0"` 时重复执行不修改文件内容；字段保留：迁移后 `project_name` / `project_prefix` / `project_id` / `paths` 等现有字段不丢失
 
 ### 5.3 风险与缓解
 

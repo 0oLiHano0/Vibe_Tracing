@@ -98,10 +98,15 @@ def test_run_init_creates_scaffolding(tmp_path):
     exit_code_again = run_init(tmp_path, name="Vibe Tracing", prefix="VT")
     assert exit_code_again == 0
 
-    # Ensure it wasn't overwritten
+    # Ensure it wasn't overwritten (custom data preserved); schema migration
+    # (H3, design §3.3.3) adds schema_version + model on existing configs.
     with config_path.open("r", encoding="utf-8") as f:
         config_data_again = json.load(f)
-    assert config_data_again == {"custom": True}
+    assert config_data_again == {
+        "custom": True,
+        "schema_version": "1.1.0",
+        "model": "",
+    }
 
 
 def test_run_init_pre_commit_hook_uses_sys_executable(tmp_path):

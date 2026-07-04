@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "project_id": "PROJECT-VT",
   "id_rules": {
     "all_tasks_must_link_requirements_and_acceptance_criteria": true
@@ -14,7 +14,9 @@
   "language": "python",
   "language_tool_matrix": {
     "python": {
-      "extensions": [".py"],
+      "extensions": [
+        ".py"
+      ],
       "test": {
         "tool": "pytest",
         "default_command": "pytest {test_path} --tb=short -q --json-report --json-report-file={output_path}",
@@ -57,5 +59,6 @@
   "gate": {
     "incremental_only": false,
     "show_historical_debt": true
-  }
+  },
+  "model": ""
 }

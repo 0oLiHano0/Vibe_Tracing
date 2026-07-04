@@ -1,114 +1,135 @@
 [
   {
     "source_path": "src/vibe_tracing/domain/gate/engine.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/domain/gate/engine.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/cli/analyze/pipeline.py",
-    "outcome": "blocked",
-    "violations_count": 0,
+    "outcome": "violated",
+    "violations_count": 1,
     "command": "ruff check src/vibe_tracing/cli/analyze/pipeline.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/cli/main.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/cli/main.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/gate/baseline.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/domain/gate/baseline.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/gate/signal_computer.py",
-    "outcome": "blocked",
-    "violations_count": 0,
+    "outcome": "violated",
+    "violations_count": 1,
     "command": "ruff check src/vibe_tracing/domain/gate/signal_computer.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/cli/analyze/output.py",
-    "outcome": "blocked",
-    "violations_count": 0,
+    "outcome": "violated",
+    "violations_count": 3,
     "command": "ruff check src/vibe_tracing/cli/analyze/output.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/cli/analyze/reports.py",
-    "outcome": "blocked",
-    "violations_count": 0,
+    "outcome": "violated",
+    "violations_count": 1,
     "command": "ruff check src/vibe_tracing/cli/analyze/reports.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/gate/__init__.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/domain/gate/__init__.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/gate/types.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/domain/gate/types.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/task/session.py",
-    "outcome": "blocked",
-    "violations_count": 0,
+    "outcome": "violated",
+    "violations_count": 1,
     "command": "ruff check src/vibe_tracing/domain/task/session.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/task/acceptance.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/domain/task/acceptance.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/task/business_impact.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/domain/task/business_impact.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/governance/metrics.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/domain/governance/metrics.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/capability/__init__.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/domain/capability/__init__.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/domain/capability/metrics.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/domain/capability/metrics.py --output-format=json",
     "carried_over": false
   },
   {
     "source_path": "src/vibe_tracing/cli/analyze/channel.py",
-    "outcome": "blocked",
+    "outcome": "compliant",
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/cli/analyze/channel.py --output-format=json",
+    "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/infra/loader/config.py",
+    "outcome": "compliant",
+    "violations_count": 0,
+    "command": "ruff check src/vibe_tracing/infra/loader/config.py --output-format=json",
+    "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/cli/init.py",
+    "outcome": "violated",
+    "violations_count": 2,
+    "command": "ruff check src/vibe_tracing/cli/init.py --output-format=json",
+    "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/cli/finalize.py",
+    "outcome": "compliant",
+    "violations_count": 0,
+    "command": "ruff check src/vibe_tracing/cli/finalize.py --output-format=json",
     "carried_over": false
   }
 ]

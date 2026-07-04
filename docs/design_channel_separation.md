@@ -187,14 +187,18 @@ exit 3 与 exit 2 隔离的目的：CI 日志可区分"可修复 issue"与"任�
 
 > **二期数据缺口注记**：规则 2 定义的 8 维度 Phase 反思中，仅约 2.5 个维度（项目不足识别、根因修复深度、部分豁免机制）可从 Phase 1 的 `task_sessions.json` 数据推导；其余 5.5 个维度（架构精简度、计算冗余、凭证真实性、代码认知复杂度、残留与死代码）需要**代码层级分析 + 测试 mock 使用率元数据**。因此 `PhaseReflectionEngine` 二期实施时将采用**混合数据源**：`task_sessions.json` + 代码扫描 + `test_results.json` mock 计数 + `human_decisions.json` 统计。Phase 1 不在 `task_sessions.json` 中预先埋点（YAGNI）。
 
-### 3.1 新增模块（4 个）
+### 3.1 新增模块（5 个）
 
 | 模块 | 位置 | 职责 | 交付期 |
 |---|---|---|---|
 | **TaskSessionManager** | `domain/task/session.py` | task_sessions.json 读写、状态机、immutability 检查、迭代计数、issue 累加、closed task 引用检测（`find_closed_references`） | 一期 |
 | **AcceptanceSummaryBuilder** | `domain/task/acceptance.py` | 从 TaskSession + IssueSignal 构造验收摘要 + 建议行判定 | 一期 |
+| **BusinessImpactResolver** | `domain/task/business_impact.py` | 双层 business_impact 解析（项目覆写 + field_hints 默认 + `high` 兜底） | 一期 |
 | **PhaseReflectionEngine** | `domain/reflection/phase.py` | 聚合 PHASE 内所有 TaskSession、生成 8 维度反思 markdown | 二期 |
-| **GovernanceMetricsAggregator** | `domain/governance/metrics.py` | 从 task_sessions.json 计算规则触发表、衍生比例、迭代均值 | 一期（基础） + 二期（趋势列） |
+| **GovernanceMetricsAggregator** | `domain/governance/metrics.py` | 从 task_sessions.json 计算规则触发表、衍生比例、按 PHASE 迭代均值 | 一期（基础） + 二期（趋势列） |
+| **AgentCapabilityMetricsAggregator** | `domain/capability/metrics.py` | 从 task_sessions.json 计算 4 类 Agent 能力指标（首次通过率 / 平均迭代 / 同类重复 / BLOCK 集中度）+ 能力警告 | 一期 |
+
+> **实施偏差说明**：原设计将 Agent 能力指标与治理演进指标合并放在 `domain/governance/metrics.py`；实施时拆分为 `domain/capability/` 独立包，理由是：(a) 两类指标关注主体不同（治理关注项目演进 vs 能力关注 Agent 表现）；(b) 能力警告仅 Dashboard 徽章呈现、不进 stdout，与治理指标的消费路径不同；(c) 二期"按 model 拆分能力评分"扩展时避免治理模块膨胀。本表同步更新为 5 个模块。
 
 ### 3.2 扩展模块（4 个）
 

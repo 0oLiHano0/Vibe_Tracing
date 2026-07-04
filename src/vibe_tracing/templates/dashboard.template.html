@@ -616,6 +616,15 @@
             <div class="nav-item" onclick="switchTab('evidences')">
                 <span>证据索引 / Evidences</span>
             </div>
+            <div class="nav-item" onclick="switchTab('acceptance')">
+                <span>验收存档 / Acceptance</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('capability')">
+                <span>Agent 能力 / Capability</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('governance')">
+                <span>治理演进 / Governance</span>
+            </div>
         </div>
 
         <div class="meta-info">
@@ -789,6 +798,170 @@
                         </thead>
                         <tbody id="evidence-table-body">
                             <!-- Evidence list rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: ACCEPTANCE ARCHIVE (Tab 5) -->
+        <div class="tab-content" id="tab-acceptance">
+            <div class="card">
+                <div class="card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                    验收存档 / Acceptance Archive
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
+                    所有已 CLOSED 的 task 验收摘要存档。每条记录包含 task 的建议行（accept / reject）、交付描述、严重风险、已解决与遗留 issue 统计。
+                </p>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Task ID</th>
+                                <th>Phase</th>
+                                <th>建议 / Recommendation</th>
+                                <th>交付 / Delivery</th>
+                                <th style="text-align:right;">已解决 BLOCK</th>
+                                <th style="text-align:right;">已解决 WARNING</th>
+                                <th style="text-align:right;">遗留 WARNING</th>
+                                <th>迭代次数</th>
+                                <th>Closed At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="acceptance-table-body">
+                            <!-- Acceptance archive rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: AGENT CAPABILITY (Tab 7) -->
+        <div class="tab-content" id="tab-capability">
+            <div class="card">
+                <div class="card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                    Agent 能力 / Agent Capability
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
+                    基于 task_sessions 的 4 类能力指标。能力警告仅以 Dashboard 徽章呈现，不阻断主流程、不在 stdout 提示。
+                </p>
+
+                <div id="capability-warnings-container" style="display:none; margin-bottom: 16px;">
+                    <div class="whitelist-manager" style="border-color: var(--status-warn); background-color: var(--status-warn-glow);">
+                        <div style="font-size:13px; font-weight:600; color:var(--status-warn); margin-bottom:4px;">
+                            能力警告 / Capability Warnings
+                        </div>
+                        <div class="whitelist-tags" id="capability-warnings-tags">
+                            <!-- Warning tags rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat-ftr-rate">-</div>
+                        <div class="stat-label">首次通过率 / First-Time-Right</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat-avg-iterations">-</div>
+                        <div class="stat-label">平均迭代次数 / Avg Iterations</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat-repeat-tasks">-</div>
+                        <div class="stat-label">同类重复 task 数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat-closed-count">-</div>
+                        <div class="stat-label">已 CLOSED task 数</div>
+                    </div>
+                </div>
+
+                <h3 style="font-size:15px; font-weight:600; color:var(--text-primary); margin-bottom:8px;">
+                    BLOCK 集中度 / Block Concentration (Top 3)
+                </h3>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>规则 / Rule ID</th>
+                                <th style="text-align:right;">BLOCK 次数</th>
+                                <th style="text-align:right;">占比 / Ratio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="block-concentration-body">
+                            <!-- Block concentration rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: GOVERNANCE EVOLUTION (Tab 8) -->
+        <div class="tab-content" id="tab-governance">
+            <div class="card">
+                <div class="card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    治理演进 / Governance Evolution
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
+                    全量规则触发统计、衍生 task 比例、按 PHASE 分组的平均迭代次数。数据从 <code>task_sessions.json</code> 聚合。
+                </p>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat-derived-ratio">-</div>
+                        <div class="stat-label">
+                            衍生 task 比例
+                            <span style="display:block; font-size:10px; color:var(--status-warn); margin-top:2px;">
+                                [近似指标，仅作参考] 基于标题关键词匹配
+                            </span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat-closed-task-count">-</div>
+                        <div class="stat-label">已 CLOSED task 数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat-phase-count">-</div>
+                        <div class="stat-label">已记录 PHASE 数</div>
+                    </div>
+                </div>
+
+                <h3 style="font-size:15px; font-weight:600; color:var(--text-primary); margin-bottom:8px;">
+                    全量规则触发表 / Rule Trigger Statistics
+                </h3>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>规则 / Rule ID</th>
+                                <th>描述 / Description</th>
+                                <th style="text-align:right;">BLOCK 次数</th>
+                                <th style="text-align:right;">WARNING 次数</th>
+                                <th>最近触发 / Last Triggered</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rule-stats-table-body">
+                            <!-- Rule stats rows -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 style="font-size:15px; font-weight:600; color:var(--text-primary); margin:24px 0 8px;">
+                    按 PHASE 平均迭代次数 / Average Iterations by Phase
+                </h3>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Phase ID</th>
+                                <th style="text-align:right;">平均迭代次数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="avg-iterations-table-body">
+                            <!-- Avg iterations rows -->
                         </tbody>
                     </table>
                 </div>
@@ -1442,9 +1615,201 @@
             });
         }
 
+        // Render Acceptance Archive Table (Tab 5)
+        function renderAcceptanceArchive() {
+            const tableBody = document.getElementById('acceptance-table-body');
+            if (!tableBody) return;
+            tableBody.innerHTML = '';
+
+            const archive = report.acceptance_archive || [];
+            if (archive.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align:center; padding:32px; color:var(--text-muted);">
+                            暂无验收存档。当 task 达到 CLOSED 状态（gate=PASS 且 commit 引用该 task）后，验收摘要将在此处归档。
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            archive.forEach(entry => {
+                const tr = document.createElement('tr');
+                const isAccept = entry.recommendation === 'accept';
+                const recClass = isAccept
+                    ? 'background-color: var(--status-pass-glow); color: var(--status-pass); border: 1px solid var(--status-pass);'
+                    : 'background-color: var(--status-fail-glow); color: var(--status-fail); border: 1px solid var(--status-fail);';
+                const recText = isAccept ? '[接受] accept' : '[驳回] reject';
+                const deliveryText = entry.delivery || '-';
+                const risks = entry.severe_risks || [];
+                const risksAttr = risks.length > 0
+                    ? `title="${risks.join('\n').replace(/"/g, '&quot;')}"`
+                    : '';
+                tr.innerHTML = `
+                    <td><b style="font-family:monospace; color:var(--accent-blue);">${entry.task_id}</b></td>
+                    <td><span style="font-size:12px; color:var(--text-secondary);">${entry.phase_id || '-'}</span></td>
+                    <td><span class="badge" style="${recClass}">${recText}</span></td>
+                    <td style="font-size:13px; max-width:360px; line-height:1.4;" ${risksAttr}>${deliveryText}</td>
+                    <td style="text-align:right;">${entry.resolved_block || 0}</td>
+                    <td style="text-align:right;">${entry.resolved_warning || 0}</td>
+                    <td style="text-align:right;">${entry.remaining_warning || 0}</td>
+                    <td>${entry.iterations || 0}</td>
+                    <td style="font-size:12px; color:var(--text-secondary);">${entry.closed_at ? new Date(entry.closed_at).toLocaleString() : '-'}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // Render Governance Evolution (Tab 8)
+        function renderGovernanceEvolution() {
+            const ruleBody = document.getElementById('rule-stats-table-body');
+            const iterBody = document.getElementById('avg-iterations-table-body');
+            const statRatio = document.getElementById('stat-derived-ratio');
+            const statClosed = document.getElementById('stat-closed-task-count');
+            const statPhase = document.getElementById('stat-phase-count');
+            if (!ruleBody || !iterBody) return;
+
+            const metrics = report.governance_metrics || {};
+            const ratio = typeof metrics.derived_task_ratio === 'number'
+                ? Math.round(metrics.derived_task_ratio * 100)
+                : 0;
+            const byPhase = metrics.avg_iterations_by_phase || {};
+            const ruleStats = report.rule_stats_table || [];
+            const archive = report.acceptance_archive || [];
+
+            if (statRatio) statRatio.textContent = `${ratio}%`;
+            if (statClosed) statClosed.textContent = archive.length;
+            if (statPhase) statPhase.textContent = Object.keys(byPhase).length;
+
+            // Rule stats table
+            ruleBody.innerHTML = '';
+            if (ruleStats.length === 0) {
+                ruleBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding:24px; color:var(--text-muted);">
+                            暂无规则触发记录
+                        </td>
+                    </tr>
+                `;
+            } else {
+                ruleStats.forEach(row => {
+                    const tr = document.createElement('tr');
+                    const neverTriggered = row.block_count === 0 && row.warning_count === 0;
+                    const rowStyle = neverTriggered
+                        ? 'opacity: 0.5; font-style: italic;'
+                        : '';
+                    const lastText = row.last_triggered
+                        ? new Date(row.last_triggered).toLocaleString()
+                        : '从未触发';
+                    tr.innerHTML = `
+                        <td style="${rowStyle}"><b style="font-family:monospace; color:var(--accent-blue);">${row.rule_id}</b></td>
+                        <td style="${rowStyle} font-size:13px;">${row.description || ''}</td>
+                        <td style="text-align:right; ${rowStyle}">${row.block_count}</td>
+                        <td style="text-align:right; ${rowStyle}">${row.warning_count}</td>
+                        <td style="font-size:12px; color:var(--text-secondary); ${rowStyle}">${lastText}</td>
+                    `;
+                    ruleBody.appendChild(tr);
+                });
+            }
+
+            // Avg iterations by phase
+            iterBody.innerHTML = '';
+            const phases = Object.entries(byPhase);
+            if (phases.length === 0) {
+                iterBody.innerHTML = `
+                    <tr>
+                        <td colspan="2" style="text-align:center; padding:24px; color:var(--text-muted);">
+                            暂无 PHASE 数据
+                        </td>
+                    </tr>
+                `;
+            } else {
+                phases
+                    .sort((a, b) => a[0].localeCompare(b[0]))
+                    .forEach(([phaseId, avg]) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><b style="font-family:monospace; color:var(--accent-blue);">${phaseId}</b></td>
+                            <td style="text-align:right;">${avg}</td>
+                        `;
+                        iterBody.appendChild(tr);
+                    });
+            }
+        }
+
+        // Render Agent Capability (Tab 7)
+        function renderAgentCapability() {
+            const statFtr = document.getElementById('stat-ftr-rate');
+            const statAvg = document.getElementById('stat-avg-iterations');
+            const statRepeat = document.getElementById('stat-repeat-tasks');
+            const statClosed = document.getElementById('stat-closed-count');
+            const concBody = document.getElementById('block-concentration-body');
+            const warningsContainer = document.getElementById('capability-warnings-container');
+            const warningsTags = document.getElementById('capability-warnings-tags');
+            if (!concBody) return;
+
+            const metrics = report.agent_capability_metrics || {};
+            const ftr = typeof metrics.first_time_right_rate === 'number'
+                ? metrics.first_time_right_rate : 0;
+            const avg = typeof metrics.avg_iterations === 'number'
+                ? metrics.avg_iterations : 0;
+            const repeat = metrics.same_category_repeat_tasks || 0;
+            const closedCount = metrics.closed_task_count || 0;
+            const concentration = metrics.block_concentration || [];
+            const warnings = metrics.capability_warnings || [];
+
+            if (statFtr) statFtr.textContent = `${Math.round(ftr * 100)}%`;
+            if (statAvg) statAvg.textContent = avg.toFixed(2);
+            if (statRepeat) statRepeat.textContent = repeat;
+            if (statClosed) statClosed.textContent = closedCount;
+
+            // Capability warnings badge
+            if (warningsContainer && warningsTags) {
+                warningsTags.innerHTML = '';
+                if (warnings.length === 0) {
+                    warningsContainer.style.display = 'none';
+                } else {
+                    warningsContainer.style.display = 'block';
+                    warnings.forEach(msg => {
+                        const tag = document.createElement('div');
+                        tag.className = 'whitelist-tag';
+                        tag.innerHTML = `<span>${msg}</span>`;
+                        warningsTags.appendChild(tag);
+                    });
+                }
+            }
+
+            // Block concentration table
+            concBody.innerHTML = '';
+            if (concentration.length === 0) {
+                concBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" style="text-align:center; padding:24px; color:var(--text-muted);">
+                            暂无 BLOCK 记录
+                        </td>
+                    </tr>
+                `;
+            } else {
+                concentration.forEach(row => {
+                    const tr = document.createElement('tr');
+                    const ratioText = typeof row.ratio === 'number'
+                        ? `${Math.round(row.ratio * 100)}%` : '0%';
+                    tr.innerHTML = `
+                        <td><b style="font-family:monospace; color:var(--accent-blue);">${row.rule_id}</b></td>
+                        <td style="text-align:right;">${row.block_count}</td>
+                        <td style="text-align:right;">${ratioText}</td>
+                    `;
+                    concBody.appendChild(tr);
+                });
+            }
+        }
+
         // Initialize the entire Dashboard UI
         renderDashboard();
         renderEvidenceTable();
+        renderAcceptanceArchive();
+        renderAgentCapability();
+        renderGovernanceEvolution();
     </script>
 </body>
 </html>

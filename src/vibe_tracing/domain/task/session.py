@@ -31,6 +31,7 @@ from vibe_tracing.domain.gate.types import (
     OutputState,
     Severity,
 )
+from vibe_tracing.infra.logging.logger import OperationalLogger
 
 SCHEMA_VERSION = "1.0.0"
 _FILENAME = "task_sessions.json"
@@ -216,7 +217,16 @@ class TaskSessionManager:
             return
         try:
             self._data = json.loads(text)
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError) as exc:
+            try:
+                OperationalLogger.get().warning(
+                    "task_sessions_parse_failed",
+                    f"task_sessions.json 解析失败，降级为空数据：{self._path}；错误：{exc}",
+                    path=str(self._path),
+                    error=str(exc),
+                )
+            except Exception:
+                pass  # logger 未初始化时不影响降级行为
             self._data = {"schema_version": SCHEMA_VERSION, "tasks": {}}
 
     def _save(self) -> None:

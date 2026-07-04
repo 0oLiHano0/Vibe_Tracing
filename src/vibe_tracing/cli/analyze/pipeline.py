@@ -22,6 +22,7 @@ VT 分析流水线编排模块
   domain/gate（门禁判定 + claim_coverage）、infra/db（数据库）
 """
 
+import json
 import re
 import subprocess
 import sys
@@ -38,6 +39,8 @@ from vibe_tracing.domain.evidence.builder import EvidenceBuilder
 from vibe_tracing.domain.context import UnifiedContext
 
 from vibe_tracing.cli.analyze.exceptions import _GateBlocked
+from vibe_tracing.domain.task.session import TaskSessionManager
+from vibe_tracing.domain.task.acceptance import AcceptanceSummaryBuilder
 from vibe_tracing.infra.loader.config import load_config, resolve_path
 from vibe_tracing.infra.loader.raw_input import RawInputLoader, STATUS_OK, STATUS_MISSING
 from vibe_tracing.infra.loader.prd_parser import PrdParser
@@ -167,12 +170,14 @@ def _load_context(
 def run_analyze(
     project_root: Path,
     output_dir: Optional[Path] = None,
+    task_status: Optional[str] = None,
 ) -> int:
     """执行完整的 VT 分析流水线。
 
     输入：
         project_root: 项目根目录（由 cli/main.py 传入）
         output_dir:   输出目录（可选，默认从 config.json 读取）
+        task_status:  可选 task_id；提供时仅查询并打印 session 状态后返回（不触发分析）
     前置条件：
         项目已完成 vt finalize（config.json 存在且有效）
     处理逻辑（8 个阶段）：
@@ -183,10 +188,14 @@ def run_analyze(
         5. load_prd + load_tasks + load_claims：将数据灌入数据库
         6. EvidenceBuilder.merge/apply/persist：构建证据
         7. _run_db_analysis：运行分析（db.check_*）
-        8. _evaluate_and_output：门禁判定 + 报告生成 + Dashboard 渲染
+        8. _evaluate_and_output：4 步编排（closed task 预检查 → gate 检测 → session 更新 → 报告 + 渲染）
     输出：
-        退出码：0=通过, 1=执行错误, 2=门禁 blocked
+        退出码：0=通过, 1=执行错误, 2=门禁 blocked, 3=closed task 引用
     """
+    # ── --task-status 短路路径（不触发分析）────────────────────────
+    if task_status:
+        return _print_task_status(project_root, task_status)
+
     conn = None
     try:
         # 获取 main() 已初始化的日志实例；若直接调用（非 main 路径），则自动初始化
@@ -386,6 +395,10 @@ def run_analyze(
 
         # ── 阶段 8：门禁判定 + 输出 ──────────────────────────────────────
         _t_eval = time.perf_counter()
+        session_mgr = TaskSessionManager(project_root)
+        task_name_lookup = {tid: t.title for tid, t in task_list_data.items()}
+        phase_id_lookup = {tid: t.phase_id for tid, t in task_list_data.items()}
+        model = _read_config_model(project_root)
         exit_code = _evaluate_and_output(
             ctx, merged_gaps, final_risks, compliance_res,
             output_dir, evidence_meta,
@@ -394,6 +407,10 @@ def run_analyze(
             conn=conn,
             analysis_details=analysis_details,
             current_commit_task_set=current_commit_task_set,
+            session_mgr=session_mgr,
+            task_name_lookup=task_name_lookup,
+            phase_id_lookup=phase_id_lookup,
+            model=model,
         )
         gate_decision = "blocked" if exit_code == 2 else "pass"
         vt_logger.info("phase_end", "Evaluate and output completed",
@@ -455,6 +472,54 @@ def _parse_commit_tasks(project_root: Path, task_list_data: dict) -> Set[str]:
                 task_id=tid,
             )
     return valid_ids
+
+
+def _read_config_model(project_root: Path) -> str:
+    """读取 .vibetracing/config.json 的 'model' 字段；缺失 / 损坏 / 无字段时返回 'unknown'。
+
+    用于 TaskSessionManager 写入 TaskSession.model。人类手动维护该字段；
+    VT 不校验其与实际执行模型的一致性（design_channel_separation.md 决策 10）。
+    """
+    config_path = Path(project_root) / ".vibetracing" / "config.json"
+    try:
+        text = config_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return "unknown"
+    try:
+        data = json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        from vibe_tracing.infra.logging.logger import OperationalLogger
+        OperationalLogger.get().warning(
+            "config_model_parse_failed",
+            f"config.json 解析失败，model 降级为 'unknown'：{config_path}",
+            path=str(config_path),
+        )
+        return "unknown"
+    if not isinstance(data, dict):
+        return "unknown"
+    model = data.get("model")
+    return model if isinstance(model, str) and model else "unknown"
+
+
+def _print_task_status(project_root: Path, task_id: str) -> int:
+    """--task-status 实现：仅查询并打印 task session 状态，不触发分析。
+
+    输出字段：task_id / phase_id / status / iterations / closed_at / model。
+    不存在时返回 1；成功返回 0。
+    """
+    session_mgr = TaskSessionManager(project_root)
+    session = session_mgr.get_session(task_id)
+    if session is None:
+        print(f"task {task_id} 在 task_sessions.json 中不存在。", file=sys.stderr)
+        return 1
+    print(f"task_id:    {session.task_id}")
+    print(f"phase_id:   {session.phase_id}")
+    print(f"status:     {session.status}")
+    print(f"iterations: {session.iterations}")
+    print(f"first_seen: {session.first_seen}")
+    print(f"closed_at:  {session.closed_at or '-'}")
+    print(f"model:      {session.model}")
+    return 0
 
 
 def _run_analysis_phase(
@@ -554,8 +619,22 @@ def _evaluate_and_output(
     conn=None,
     analysis_details: Optional[dict] = None,
     current_commit_task_set: Optional[Set[str]] = None,
+    session_mgr: Optional[TaskSessionManager] = None,
+    task_name_lookup: Optional[dict] = None,
+    phase_id_lookup: Optional[dict] = None,
+    model: str = "unknown",
 ) -> int:
-    """[阶段 8] 执行门禁判定并生成所有输出（报告、Dashboard、终端摘要）。"""
+    """[阶段 8] 4 步编排：closed task 预检查 → gate 检测 → session 更新 + 验收摘要 → 报告 + 渲染。
+
+    新增参数（T194）：
+        session_mgr: TaskSessionManager 实例；为 None 时跳过 closed task 预检查与 session 更新（保留旧行为）。
+        task_name_lookup: task_id → task title 映射，供 CLOSED 时写入 acceptance_summary.delivery。
+        phase_id_lookup: task_id → phase_id 映射，供首次 seen 时写入 TaskSession.phase_id。
+        model: 来自 config.json 的模型字符串，缺失时 'unknown'。
+
+    返回：
+        int: 退出码（0=通过, 2=gate blocked, 3=closed task 引用）。
+    """
     if not ctx.manifest:
         return 1
 
@@ -563,7 +642,24 @@ def _evaluate_and_output(
         analysis_details = {}
     if current_commit_task_set is None:
         current_commit_task_set = set()
+    if task_name_lookup is None:
+        task_name_lookup = {}
+    if phase_id_lookup is None:
+        phase_id_lookup = {}
 
+    # ── 步骤 1：closed task 预检查 → exit 3 短路 ─────────────────────
+    if session_mgr is not None and current_commit_task_set:
+        closed_refs = session_mgr.find_closed_references(current_commit_task_set)
+        if closed_refs:
+            refs_str = ", ".join(closed_refs)
+            print(
+                f"Error: commit 引用了已 CLOSED 的 task：{refs_str}。\n"
+                "CLOSED task 为终态，不可复活。请为新工作创建新的 task_id。",
+                file=sys.stderr,
+            )
+            return 3
+
+    # ── 步骤 2：gate 检测（行为不变）─────────────────────────────────
     active_gaps, active_risks = _run_analysis_phase(merged_gaps, final_risks)
 
     gate_res, states_and_signals = _run_gate_evaluation(
@@ -579,11 +675,43 @@ def _evaluate_and_output(
         analysis_details=analysis_details,
         isolated_tasks=analysis_details.get("isolated_tasks"),
     )
+    gate_decision = gate_res["gate_decision"]
 
+    # ── 步骤 3：session 更新 + 验收摘要（gate=PASS 时生成）────────────
+    if session_mgr is not None:
+        session_mgr.update_sessions(
+            current_commit_task_set,
+            states_and_signals,
+            gate_decision,
+            task_name_lookup,
+            phase_id_lookup,
+            model,
+        )
+
+    acceptance_summaries: Optional[list] = None
+    if (
+        session_mgr is not None
+        and gate_decision == "pass"
+        and current_commit_task_set
+    ):
+        acceptance_summaries = AcceptanceSummaryBuilder.build_list(
+            current_commit_task_set,
+            session_mgr.sessions,
+            states_and_signals,
+            project_root=project_root,
+        )
+
+    # ── 步骤 4：报告 + 渲染（签名不变，T197 统一负责变更）────────────
     report_doc = _build_report_document(
         ctx, gate_res, evidence_meta, merged_gaps, final_risks,
         compliance_res, output_dir, project_root,
         isolated_tasks=analysis_details.get("isolated_tasks"),
+        sessions=session_mgr.sessions if session_mgr is not None else None,
+        task_list_for_governance=(
+            ctx.task_result.tasks
+            if ctx.task_result and ctx.task_result.tasks
+            else []
+        ),
     )
 
     _render_output(
@@ -593,9 +721,10 @@ def _evaluate_and_output(
         staged_files=staged_files,
         conn=conn,
         states_and_signals=states_and_signals,
+        acceptance_summaries=acceptance_summaries,
     )
 
-    exit_code = 2 if gate_res["gate_decision"] == "blocked" else 0
+    exit_code = 2 if gate_decision == "blocked" else 0
     return exit_code
 
 

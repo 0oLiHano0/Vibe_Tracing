@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Optional
 
 from vibe_tracing.domain.context import UnifiedContext
+from vibe_tracing.domain.task.session import TaskSession
+from vibe_tracing.domain.governance.metrics import GovernanceMetricsAggregator
+from vibe_tracing.domain.capability.metrics import AgentCapabilityMetricsAggregator
 from vibe_tracing.cli.analyze.exceptions import _GateBlocked
 
 
@@ -21,6 +24,32 @@ def _rel_path_str(p: Path, project_root: Path) -> str:
     return str(p)
 
 
+def _build_acceptance_archive(sessions: dict) -> list:
+    """聚合所有 CLOSED task 的 acceptance_summary 为存档列表（按 closed_at 倒序）。"""
+    archive = []
+    for session in sessions.values():
+        if session.status != "CLOSED" or session.acceptance_summary is None:
+            continue
+        s = session.acceptance_summary
+        archive.append(
+            {
+                "task_id": session.task_id,
+                "phase_id": session.phase_id,
+                "closed_at": session.closed_at,
+                "iterations": session.iterations,
+                "model": session.model,
+                "recommendation": s.recommendation,
+                "delivery": s.delivery,
+                "severe_risks": list(s.severe_risks),
+                "resolved_block": s.resolved_block,
+                "resolved_warning": s.resolved_warning,
+                "remaining_warning": s.remaining_warning,
+            }
+        )
+    archive.sort(key=lambda r: r.get("closed_at", ""), reverse=True)
+    return archive
+
+
 def _build_report_document(
     ctx: UnifiedContext,
     gate_res: dict,
@@ -31,6 +60,8 @@ def _build_report_document(
     output_dir: Path,
     project_root: Path,
     isolated_tasks: Optional[list] = None,
+    sessions: Optional[dict] = None,
+    task_list_for_governance: Optional[list] = None,
 ) -> dict:
     """Assemble report document, build traceability report with metadata, and return it."""
     from vibe_tracing.infra.report.traceability import TraceabilityReportBuilder
@@ -72,6 +103,46 @@ def _build_report_document(
                 desc = f"孤立任务 {task['task_id']}: 缺少需求和验收标准关联"
             warnings.append(desc)
         report_doc["warnings"] = warnings
+
+    # ── T195：治理演进 / 验收存档 三个顶层 key ───────────────────────────
+    if sessions:
+        acceptance_archive = _build_acceptance_archive(sessions)
+        rule_stats_table = GovernanceMetricsAggregator.aggregate_rule_stats_table(
+            sessions
+        )
+        governance_metrics = {
+            "derived_task_ratio": GovernanceMetricsAggregator.aggregate_derived_task_ratio(
+                task_list_for_governance or [], sessions
+            ),
+            "avg_iterations_by_phase": GovernanceMetricsAggregator.aggregate_avg_iterations_by_phase(
+                sessions
+            ),
+        }
+    else:
+        acceptance_archive = []
+        rule_stats_table = []
+        governance_metrics = {
+            "derived_task_ratio": 0.0,
+            "avg_iterations_by_phase": {},
+        }
+    report_doc["acceptance_archive"] = acceptance_archive
+    report_doc["rule_stats_table"] = rule_stats_table
+    report_doc["governance_metrics"] = governance_metrics
+
+    # ── T196：Agent 能力指标 ────────────────────────────────────────────
+    if sessions:
+        report_doc["agent_capability_metrics"] = AgentCapabilityMetricsAggregator.compute_all(
+            sessions
+        )
+    else:
+        report_doc["agent_capability_metrics"] = {
+            "first_time_right_rate": 0.0,
+            "avg_iterations": 0.0,
+            "same_category_repeat_tasks": 0,
+            "block_concentration": [],
+            "capability_warnings": [],
+            "closed_task_count": 0,
+        }
 
     # Build and save traceability report
     report_builder = TraceabilityReportBuilder(project_root)

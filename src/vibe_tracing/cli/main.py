@@ -83,6 +83,11 @@ def _build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument(
         "--out", help="输出目录路径（默认：<project-root>/output）"
     )
+    analyze_parser.add_argument(
+        "--task-status",
+        metavar="TASK_ID",
+        help="仅查询指定 task 的 session 状态（不触发分析）",
+    )
 
     # ---------- 子命令 2：init（项目初始化）----------
     # 用途：在新项目中创建 VT 所需的模板文件（PRD、constraints、task_list 等）
@@ -292,7 +297,7 @@ def _dispatch(args, project_root: Path) -> int:
         else:
             output_dir = None  # 在 run_analyze 内部从 config 解析
 
-        return run_analyze(project_root, output_dir)
+        return run_analyze(project_root, output_dir, task_status=getattr(args, "task_status", None))
 
     elif args.command == "init":
         # init 命令：创建模板文件，name 和 prefix 可选

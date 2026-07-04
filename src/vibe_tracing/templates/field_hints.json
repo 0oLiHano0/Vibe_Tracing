@@ -396,5 +396,32 @@
       "valid_input": "有效输入 → 应正常处理",
       "default": "根据 AC 描述推导具体测试场景"
     }
+  },
+  "issue_type_impacts": {
+    "_comment": "issue_type → business_impact 系统默认值，供 AcceptanceSummaryBuilder 判定 severe_risks。取值 high|low|none。项目级覆写在 .vibetracing/business_impacts.json。",
+    "no_claim": {
+      "business_impact": "high",
+      "description": "任务缺少 Agent Claim 声明，覆盖链中断"
+    },
+    "chain_broken": {
+      "business_impact": "high",
+      "description": "需求 → 任务 → Claim → 证据链断裂，MUST 级架构合规问题"
+    },
+    "chain_misaligned": {
+      "business_impact": "high",
+      "description": "需求 → 任务 → Claim 对齐偏差，MUST 级架构合规问题"
+    },
+    "task_failed": {
+      "business_impact": "high",
+      "description": "任务执行失败（测试未通过 / 工具报错）"
+    },
+    "isolated_task": {
+      "business_impact": "low",
+      "description": "孤立任务（未关联需求），治理健康指标"
+    },
+    "substandard": {
+      "business_impact": "low",
+      "description": "质量不达标（如测试覆盖不足），WARNING 级"
+    }
   }
 }

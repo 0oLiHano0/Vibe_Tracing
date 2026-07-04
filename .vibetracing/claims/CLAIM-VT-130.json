@@ -1,0 +1,32 @@
+{
+  "claim_id": "CLAIM-VT-130",
+  "related_task": "TASK-VT-181",
+  "claimed_status": "completed",
+  "timestamp": "2026-07-03T12:00:00Z",
+  "code_refs": [
+    "src/vibe_tracing/domain/gate/baseline.py",
+    "src/vibe_tracing/domain/gate/signal_computer.py",
+    "src/vibe_tracing/domain/gate/engine.py",
+    "src/vibe_tracing/cli/analyze/pipeline.py",
+    "src/vibe_tracing/cli/analyze/output.py",
+    "src/vibe_tracing/cli/analyze/reports.py",
+    "src/vibe_tracing/cli/main.py",
+    "src/vibe_tracing/domain/gate/__init__.py"
+  ],
+  "test_refs": [
+    "tests/test_baseline.py",
+    "tests/test_signal_computer.py",
+    "tests/test_rule_engine_integration.py",
+    "tests/test_merge_gate_engine.py",
+    "tests/test_cli_analyze.py"
+  ],
+  "doc_refs": [
+    "docs/design_rule_engine.md",
+    "docs/design_historical_debt_mechanism.md",
+    "docs/task_list.json"
+  ],
+  "evidence_refs": [
+    "AC-VT-001-01"
+  ],
+  "notes": "PHASE-VT-013 核心重构（TASK-VT-181~185）：Baseline 快照机制（observed 信号）、SignalComputer 信号计算器（六类问题→五元信号）、engine.py 精简为 issue 检测器（detect_all_issues + _check_* 方法返回 DetectedIssue）、pipeline 四层调度（detect→SignalComputer→F→aggregate）。activated 信号从文件路径血缘改为 Task 承诺（commit message + VT_TASKS 取并集+交叉验证）。删除旧 evaluate()、_compute_gate_decision()、_tag_reason、_is_current。"
+}

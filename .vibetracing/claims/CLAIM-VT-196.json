@@ -1,0 +1,22 @@
+{
+  "claim_id": "CLAIM-VT-196",
+  "related_task": "TASK-VT-196",
+  "claimed_status": "completed",
+  "timestamp": "2026-07-04T12:00:00Z",
+  "code_refs": [
+    "src/vibe_tracing/domain/capability/__init__.py",
+    "src/vibe_tracing/domain/capability/metrics.py"
+  ],
+  "test_refs": [
+    "tests/test_agent_capability_metrics.py"
+  ],
+  "doc_refs": [
+    "docs/design_channel_separation.md",
+    "docs/task_list.json"
+  ],
+  "evidence_refs": [
+    "AC-VT-001-01",
+    "AC-VT-010-01"
+  ],
+  "notes": "PHASE-VT-016 一期步骤 4：AgentCapabilityMetricsAggregator 四项能力指标（First-time-right 率、平均迭代次数、同类问题重复率、BLOCK 集中度）+ capability_warnings 阈值判定 + Dashboard Tab 7（Agent 能力面板）。警告仅 Dashboard 徽章，不阻断 stdout（决策 5）。"
+}

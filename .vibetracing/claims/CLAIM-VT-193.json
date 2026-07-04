@@ -1,0 +1,23 @@
+{
+  "claim_id": "CLAIM-VT-193",
+  "related_task": "TASK-VT-193",
+  "claimed_status": "completed",
+  "timestamp": "2026-07-04T12:00:00Z",
+  "code_refs": [
+    "src/vibe_tracing/domain/task/acceptance.py",
+    "src/vibe_tracing/domain/task/business_impact.py",
+    "src/vibe_tracing/templates/field_hints.json"
+  ],
+  "test_refs": [
+    "tests/test_acceptance_summary_builder.py"
+  ],
+  "doc_refs": [
+    "docs/design_channel_separation.md",
+    "docs/task_list.json"
+  ],
+  "evidence_refs": [
+    "AC-VT-001-01",
+    "AC-VT-010-01"
+  ],
+  "notes": "PHASE-VT-016 一期步骤 3：AcceptanceSummaryBuilder.build_list 按 task 独立输出验收摘要（recommendation / delivery / severe_risks / resolved_block / resolved_warning / remaining_warning / iterations）；BusinessImpactResolver 双层查找（项目覆写 business_impacts.json > field_hints.json 默认 > 'high' 兜底）；field_hints.json 所有 issue hint 新增 business_impact 字段。"
+}

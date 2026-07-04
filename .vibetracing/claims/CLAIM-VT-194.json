@@ -1,0 +1,22 @@
+{
+  "claim_id": "CLAIM-VT-194",
+  "related_task": "TASK-VT-194",
+  "claimed_status": "completed",
+  "timestamp": "2026-07-04T12:00:00Z",
+  "code_refs": [
+    "src/vibe_tracing/cli/analyze/pipeline.py",
+    "src/vibe_tracing/cli/main.py"
+  ],
+  "test_refs": [
+    "tests/test_pipeline_t194.py"
+  ],
+  "doc_refs": [
+    "docs/design_channel_separation.md",
+    "docs/task_list.json"
+  ],
+  "evidence_refs": [
+    "AC-VT-001-01",
+    "AC-VT-010-01"
+  ],
+  "notes": "PHASE-VT-016 一期步骤 2：pipeline 四步编排（closed task 预检查 exit 3 → gate 检测 → session 更新 + 验收摘要生成 → 报告 + 渲染）；_evaluate_and_output 签名扩展 4 参数（session_mgr / task_name_lookup / phase_id_lookup / model）；新增 --task-status CLI 参数（与 analyze 互斥）；config.json model 字段读取（缺失默认 'unknown'）。"
+}

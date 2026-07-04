@@ -1,7 +1,7 @@
 {
-  "run_id": "RUN-5102cf00-72a9-42da-9636-2191e62b317d",
+  "run_id": "RUN-30d5b37c-86ec-4561-83bb-2ea03980edfa",
   "project_id": "PROJECT-VT",
-  "scan_time": "2026-07-04T22:25:59.298681+08:00",
+  "scan_time": "2026-07-04T22:28:01.255010+08:00",
   "gate_decision": "blocked",
   "per_issue_states": [
     {
@@ -3211,24 +3211,24 @@
     {
       "issue_id": "chain_broken:TASK-VT-192:A-1",
       "issue_type": "chain_broken",
-      "state": "CURRENT_BLOCK",
+      "state": "HISTORICAL",
       "severity": "BLOCK",
       "task_id": "TASK-VT-192",
       "reason": "Task TASK-VT-192 引用不存在的约束 A-1。",
       "observed": true,
-      "activated": true,
+      "activated": false,
       "resolved": false,
       "accepted": false
     },
     {
       "issue_id": "chain_broken:TASK-VT-192:A-2",
       "issue_type": "chain_broken",
-      "state": "CURRENT_BLOCK",
+      "state": "HISTORICAL",
       "severity": "BLOCK",
       "task_id": "TASK-VT-192",
       "reason": "Task TASK-VT-192 引用不存在的约束 A-2。",
       "observed": true,
-      "activated": true,
+      "activated": false,
       "resolved": false,
       "accepted": false
     },
@@ -3319,24 +3319,24 @@
     {
       "issue_id": "chain_broken:TASK-VT-198:A-1",
       "issue_type": "chain_broken",
-      "state": "HISTORICAL",
+      "state": "CURRENT_BLOCK",
       "severity": "BLOCK",
       "task_id": "TASK-VT-198",
       "reason": "Task TASK-VT-198 引用不存在的约束 A-1。",
       "observed": true,
-      "activated": false,
+      "activated": true,
       "resolved": false,
       "accepted": false
     },
     {
       "issue_id": "chain_broken:TASK-VT-198:A-2",
       "issue_type": "chain_broken",
-      "state": "HISTORICAL",
+      "state": "CURRENT_BLOCK",
       "severity": "BLOCK",
       "task_id": "TASK-VT-198",
       "reason": "Task TASK-VT-198 引用不存在的约束 A-2。",
       "observed": true,
-      "activated": false,
+      "activated": true,
       "resolved": false,
       "accepted": false
     },
@@ -9852,6 +9852,20 @@
       "reason": "Task TASK-VT-191 引用不存在的约束 A-1。"
     },
     {
+      "issue_id": "chain_broken:TASK-VT-192:A-1",
+      "issue_type": "chain_broken",
+      "severity": "BLOCK",
+      "task_id": "TASK-VT-192",
+      "reason": "Task TASK-VT-192 引用不存在的约束 A-1。"
+    },
+    {
+      "issue_id": "chain_broken:TASK-VT-192:A-2",
+      "issue_type": "chain_broken",
+      "severity": "BLOCK",
+      "task_id": "TASK-VT-192",
+      "reason": "Task TASK-VT-192 引用不存在的约束 A-2。"
+    },
+    {
       "issue_id": "chain_broken:TASK-VT-193:A-1",
       "issue_type": "chain_broken",
       "severity": "BLOCK",
@@ -9899,20 +9913,6 @@
       "severity": "BLOCK",
       "task_id": "TASK-VT-197",
       "reason": "Task TASK-VT-197 引用不存在的约束 A-2。"
-    },
-    {
-      "issue_id": "chain_broken:TASK-VT-198:A-1",
-      "issue_type": "chain_broken",
-      "severity": "BLOCK",
-      "task_id": "TASK-VT-198",
-      "reason": "Task TASK-VT-198 引用不存在的约束 A-1。"
-    },
-    {
-      "issue_id": "chain_broken:TASK-VT-198:A-2",
-      "issue_type": "chain_broken",
-      "severity": "BLOCK",
-      "task_id": "TASK-VT-198",
-      "reason": "Task TASK-VT-198 引用不存在的约束 A-2。"
     },
     {
       "issue_id": "chain_broken:RISK-VT-001",
@@ -17694,2606 +17694,2606 @@
     {
       "rule_id": "no_claim",
       "description": "任务缺少 Agent Claim 声明",
-      "block_count": 17,
+      "block_count": 34,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-192",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-192]",
       "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
+    },
+    {
+      "rule_id": "chain_broken:TASK-VT-198",
+      "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-198]",
+      "block_count": 2,
+      "warning_count": 0,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-193",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-193]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-194",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-194]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-195",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-195]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-196",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-196]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-197",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-197]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-198",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-198]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-199",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-199]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-200",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-200]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-201",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-201]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-202",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-202]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-203",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-203]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-204",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-204]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-205",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-205]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-206",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-206]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-207",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-207]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-208",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-208]",
-      "block_count": 1,
+      "block_count": 2,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-256",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-256]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-257",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-257]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-258",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-258]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-259",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-259]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-260",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-260]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-261",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-261]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-262",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-262]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-263",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-263]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-264",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-264]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-265",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-265]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-266",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-266]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-267",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-267]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-268",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-268]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-269",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-269]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-270",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-270]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-271",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-271]",
       "block_count": 0,
-      "warning_count": 1,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "warning_count": 2,
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "task_failed",
       "description": "任务执行失败（测试未通过 / 工具报错）",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-164",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-164]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-165",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-165]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-166",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-166]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-167",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-167]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-168",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-168]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-169",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-169]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-170",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-170]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-171",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-171]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-176",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-176]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-177",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-177]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-179",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-179]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-180",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-180]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-181",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-181]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-182",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-182]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-183",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-183]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-184",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-184]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-185",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-185]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-186",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-186]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-187",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-187]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-188",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-188]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-189",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-189]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-190",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-190]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-191",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-191]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-193",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-193]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-194",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-194]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-195",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-195]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-196",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-196]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:TASK-VT-197",
       "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-197]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
-    },
-    {
-      "rule_id": "chain_broken:TASK-VT-198",
-      "description": "需求 → 任务 → Claim → 证据链断裂 [TASK-VT-198]",
-      "block_count": 0,
-      "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-001",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-001]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-002",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-002]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-003",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-003]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-004",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-005",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-005]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-006",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-006]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-007",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-007]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-008",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-008]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-009",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-009]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-010",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-010]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-011",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-011]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-012",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-012]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-013",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-013]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-014",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-014]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-015",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-015]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-016",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-016]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-017",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-017]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-018",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-018]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-019",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-019]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-020",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-020]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-021",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-021]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-022",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-022]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-023",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-023]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-024",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-024]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-025",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-025]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-026",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-026]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-027",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-027]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-028",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-028]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-029",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-029]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-030",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-030]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-031",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-031]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-032",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-032]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-033",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-033]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-034",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-034]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-035",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-035]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-036",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-036]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-037",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-037]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-038",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-038]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-039",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-039]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-040",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-040]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-041",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-041]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-042",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-042]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-043",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-043]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-044",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-044]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-045",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-045]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-046",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-046]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-047",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-047]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-048",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-048]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-049",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-049]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-050",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-050]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-051",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-051]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-052",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-052]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-053",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-053]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-054",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-054]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-055",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-055]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-056",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-056]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-057",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-057]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-058",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-058]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-059",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-059]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-060",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-060]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-061",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-061]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-062",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-062]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-063",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-063]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-064",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-064]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-065",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-065]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-066",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-066]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-067",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-067]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-068",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-068]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-069",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-069]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-070",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-070]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-071",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-071]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-072",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-072]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-073",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-073]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-074",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-074]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-075",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-075]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-076",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-076]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-077",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-077]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-078",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-078]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-079",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-079]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-080",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-080]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-081",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-081]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-082",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-082]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-083",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-083]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-084",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-084]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-085",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-085]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-086",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-086]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-087",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-087]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-088",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-088]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-089",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-089]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-090",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-090]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-091",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-091]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-092",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-092]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-093",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-093]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-094",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-094]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-095",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-095]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-096",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-096]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-097",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-097]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-098",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-098]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-099",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-099]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-100",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-100]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-101",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-101]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-102",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-102]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-103",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-103]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-104",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-104]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-105",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-105]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-106",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-106]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-107",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-107]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-108",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-108]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-109",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-109]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-110",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-110]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-111",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-111]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-112",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-112]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-113",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-113]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-114",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-114]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-115",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-115]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-116",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-116]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-117",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-117]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-118",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-118]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-119",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-119]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-120",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-120]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-121",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-121]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-122",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-122]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-123",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-123]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-124",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-124]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-125",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-125]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-126",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-126]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-127",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-127]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-128",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-128]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-129",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-129]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-130",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-130]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-131",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-131]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-132",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-132]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-133",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-133]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-134",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-134]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-135",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-135]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-136",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-136]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-137",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-137]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-138",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-138]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-139",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-139]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-140",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-140]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-141",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-141]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-142",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-142]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-143",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-143]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-144",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-144]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-145",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-145]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-146",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-146]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-147",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-147]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-148",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-148]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-149",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-149]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-150",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-150]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-151",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-151]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-152",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-152]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-153",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-153]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-154",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-154]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-155",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-155]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-156",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-156]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-157",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-157]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-158",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-158]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-159",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-159]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-160",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-160]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-161",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-161]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-162",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-162]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-163",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-163]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-164",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-164]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-165",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-165]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-166",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-166]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-167",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-167]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-168",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-168]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-169",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-169]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-170",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-170]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-171",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-171]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-172",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-172]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-173",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-173]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-174",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-174]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-175",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-175]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-176",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-176]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-177",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-177]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-178",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-178]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-179",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-179]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-180",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-180]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-181",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-181]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-182",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-182]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-183",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-183]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-184",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-184]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-185",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-185]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-186",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-186]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-187",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-187]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-188",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-188]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-189",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-189]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-190",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-190]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-191",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-191]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "chain_broken:RISK-VT-192",
       "description": "需求 → 任务 → Claim → 证据链断裂 [RISK-VT-192]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-209",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-209]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-210",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-210]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-211",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-211]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-212",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-212]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-213",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-213]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-214",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-214]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-215",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-215]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-216",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-216]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-217",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-217]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-218",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-218]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-219",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-219]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-220",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-220]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-221",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-221]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-222",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-222]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-223",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-223]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-224",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-224]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-225",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-225]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-226",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-226]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-227",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-227]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-228",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-228]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-229",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-229]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-230",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-230]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-231",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-231]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-232",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-232]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-233",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-233]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-234",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-234]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-235",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-235]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-236",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-236]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-237",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-237]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-238",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-238]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-239",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-239]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-240",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-240]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-241",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-241]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-242",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-242]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-243",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-243]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-244",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-244]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-245",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-245]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-246",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-246]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-247",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-247]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-248",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-248]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-249",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-249]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-250",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-250]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-251",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-251]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-252",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-252]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-253",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-253]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-254",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-254]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:RISK-VT-255",
       "description": "质量不达标（测试覆盖 / Linter 违规） [RISK-VT-255]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-002",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-002]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-003",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-003]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-004",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-005",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-005]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-006",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-006]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-007",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-007]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-008",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-008]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-009",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-009]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-010",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-010]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-011",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-011]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-012",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-012]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-013",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-013]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-014",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-014]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-015",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-015]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:PRINCIPLE-VT-018",
       "description": "质量不达标（测试覆盖 / Linter 违规） [PRINCIPLE-VT-018]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:DEP-VT-003",
       "description": "质量不达标（测试覆盖 / Linter 违规） [DEP-VT-003]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:DEP-VT-004",
       "description": "质量不达标（测试覆盖 / Linter 违规） [DEP-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:DEP-VT-005",
       "description": "质量不达标（测试覆盖 / Linter 违规） [DEP-VT-005]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:DEP-VT-008",
       "description": "质量不达标（测试覆盖 / Linter 违规） [DEP-VT-008]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FLOW-VT-001",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FLOW-VT-001]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FLOW-VT-002",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FLOW-VT-002]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FLOW-VT-003",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FLOW-VT-003]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FLOW-VT-004",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FLOW-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FLOW-VT-005",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FLOW-VT-005]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FLOW-VT-006",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FLOW-VT-006]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FLOW-VT-009",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FLOW-VT-009]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:STORE-VT-002",
       "description": "质量不达标（测试覆盖 / Linter 违规） [STORE-VT-002]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:STORE-VT-003",
       "description": "质量不达标（测试覆盖 / Linter 违规） [STORE-VT-003]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:STORE-VT-004",
       "description": "质量不达标（测试覆盖 / Linter 违规） [STORE-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:ERR-VT-001",
       "description": "质量不达标（测试覆盖 / Linter 违规） [ERR-VT-001]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:ERR-VT-002",
       "description": "质量不达标（测试覆盖 / Linter 违规） [ERR-VT-002]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:ERR-VT-003",
       "description": "质量不达标（测试覆盖 / Linter 违规） [ERR-VT-003]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:ERR-VT-004",
       "description": "质量不达标（测试覆盖 / Linter 违规） [ERR-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:ERR-VT-005",
       "description": "质量不达标（测试覆盖 / Linter 违规） [ERR-VT-005]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:LOG-VT-001",
       "description": "质量不达标（测试覆盖 / Linter 违规） [LOG-VT-001]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:LOG-VT-002",
       "description": "质量不达标（测试覆盖 / Linter 违规） [LOG-VT-002]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:LOG-VT-010",
       "description": "质量不达标（测试覆盖 / Linter 违规） [LOG-VT-010]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:LOG-VT-011",
       "description": "质量不达标（测试覆盖 / Linter 违规） [LOG-VT-011]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:LOG-VT-014",
       "description": "质量不达标（测试覆盖 / Linter 违规） [LOG-VT-014]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:SEC-VT-001",
       "description": "质量不达标（测试覆盖 / Linter 违规） [SEC-VT-001]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:SEC-VT-002",
       "description": "质量不达标（测试覆盖 / Linter 违规） [SEC-VT-002]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:SEC-VT-003",
       "description": "质量不达标（测试覆盖 / Linter 违规） [SEC-VT-003]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:SEC-VT-004",
       "description": "质量不达标（测试覆盖 / Linter 违规） [SEC-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:TECH-VT-001",
       "description": "质量不达标（测试覆盖 / Linter 违规） [TECH-VT-001]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:TECH-VT-004",
       "description": "质量不达标（测试覆盖 / Linter 违规） [TECH-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:TECH-VT-005",
       "description": "质量不达标（测试覆盖 / Linter 违规） [TECH-VT-005]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:TECH-VT-007",
       "description": "质量不达标（测试覆盖 / Linter 违规） [TECH-VT-007]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FORBID-VT-001",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FORBID-VT-001]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FORBID-VT-002",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FORBID-VT-002]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FORBID-VT-003",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FORBID-VT-003]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FORBID-VT-004",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FORBID-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FORBID-VT-005",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FORBID-VT-005]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FORBID-VT-006",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FORBID-VT-006]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:FORBID-VT-007",
       "description": "质量不达标（测试覆盖 / Linter 违规） [FORBID-VT-007]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:GATE-VT-002",
       "description": "质量不达标（测试覆盖 / Linter 违规） [GATE-VT-002]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:GATE-VT-003",
       "description": "质量不达标（测试覆盖 / Linter 违规） [GATE-VT-003]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:GATE-VT-004",
       "description": "质量不达标（测试覆盖 / Linter 违规） [GATE-VT-004]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:GATE-VT-005",
       "description": "质量不达标（测试覆盖 / Linter 违规） [GATE-VT-005]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:GATE-VT-008",
       "description": "质量不达标（测试覆盖 / Linter 违规） [GATE-VT-008]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:GATE-VT-009",
       "description": "质量不达标（测试覆盖 / Linter 违规） [GATE-VT-009]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:GATE-VT-010",
       "description": "质量不达标（测试覆盖 / Linter 违规） [GATE-VT-010]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:GATE-VT-011",
       "description": "质量不达标（测试覆盖 / Linter 违规） [GATE-VT-011]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:GATE-VT-012",
       "description": "质量不达标（测试覆盖 / Linter 违规） [GATE-VT-012]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:src/vibe_tracing/cli/analyze/pipeline.py",
       "description": "质量不达标（测试覆盖 / Linter 违规） [src/vibe_tracing/cli/analyze/pipeline.py]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:src/vibe_tracing/domain/gate/signal_computer.py",
       "description": "质量不达标（测试覆盖 / Linter 违规） [src/vibe_tracing/domain/gate/signal_computer.py]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:src/vibe_tracing/cli/analyze/output.py",
       "description": "质量不达标（测试覆盖 / Linter 违规） [src/vibe_tracing/cli/analyze/output.py]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:src/vibe_tracing/cli/analyze/reports.py",
       "description": "质量不达标（测试覆盖 / Linter 违规） [src/vibe_tracing/cli/analyze/reports.py]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:src/vibe_tracing/domain/task/session.py",
       "description": "质量不达标（测试覆盖 / Linter 违规） [src/vibe_tracing/domain/task/session.py]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     },
     {
       "rule_id": "substandard:src/vibe_tracing/cli/init.py",
       "description": "质量不达标（测试覆盖 / Linter 违规） [src/vibe_tracing/cli/init.py]",
       "block_count": 0,
       "warning_count": 0,
-      "last_triggered": "2026-07-04T14:25:59.417620Z"
+      "last_triggered": "2026-07-04T14:28:01.367645Z"
     }
   ],
   "governance_metrics": {
@@ -20309,9 +20309,9 @@
     "closed_task_count": 0
   },
   "metadata": {
-    "run_id": "RUN-5102cf00-72a9-42da-9636-2191e62b317d",
+    "run_id": "RUN-30d5b37c-86ec-4561-83bb-2ea03980edfa",
     "project_id": "PROJECT-VT",
-    "scan_time": "2026-07-04T22:25:59.298681+08:00",
+    "scan_time": "2026-07-04T22:28:01.255010+08:00",
     "input_files": {
       "prd": "docs/prd.md",
       "architecture_constraints": "docs/architecture_constraints.json",

@@ -1,0 +1,22 @@
+{
+  "claim_id": "CLAIM-VT-201",
+  "related_task": "TASK-VT-195",
+  "claimed_status": "completed",
+  "timestamp": "2026-07-07T12:00:00Z",
+  "code_refs": [
+    "src/vibe_tracing/domain/governance/category_mapper.py",
+    "src/vibe_tracing/domain/governance/metrics.py",
+    "src/vibe_tracing/cli/analyze/reports.py",
+    "src/vibe_tracing/templates/dashboard.template.html"
+  ],
+  "test_refs": [
+    "tests/test_category_mapper.py",
+    "tests/test_governance_metrics.py",
+    "tests/test_phase1_mvp_e2e.py"
+  ],
+  "doc_refs": [
+    "docs/design/phase_channel_separation.md"
+  ],
+  "evidence_refs": [],
+  "notes": "二期治理演进重构：将技术三层规则触发表（rule_registry 28 条）替换为 5 分类验收链条模型（category_mapper）。新建 category_mapper.py 实现 issue_counts key → 5 人类验收节点映射（链路完整性/交付凭证/证据验证/交付质量/过程合规）；metrics.py aggregate_rule_stats_table → aggregate_category_summary 返回 5 分类状态卡片（status/gate_level/details）；reports.py report_doc key 从 rule_stats_table/by_phase/by_task → category_summary/by_phase/by_task；Dashboard Tab 8 从规则表格改为 5 分类状态卡片 + 可展开明细 + 全局/PHASE/TASK 三视图；删除 rule_registry.py + test_rule_registry.py；检测逻辑（engine）未改动，仅表现层重构。全量 1163 测试通过。"
+}

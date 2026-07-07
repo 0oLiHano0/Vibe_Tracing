@@ -1,10 +1,10 @@
-"""GovernanceMetricsAggregator + _build_acceptance_archive + report_doc 三个新 key。
+"""GovernanceMetricsAggregator (5 分类) + _build_acceptance_archive + report_doc。
 
-覆盖 docs/design_channel_separation.md §2.3.4 / §3.2.3 + TASK-VT-195 DOD：
-    - 规则触发表聚合 + 降序 + 从未触发沉底
+覆盖 docs/design/phase_channel_separation.md §2.3.4 / §3.2.3 + TASK-VT-195 DOD：
+    - 5 分类验收链条汇总（aggregate_category_summary）
     - 衍生 task 比例（命中 / 未命中 / 空 task 列表）
     - 按 PHASE 分组的平均迭代次数（仅 CLOSED task）
-    - reports._build_report_document 新增 acceptance_archive / rule_stats_table / governance_metrics
+    - reports._build_report_document 新增 acceptance_archive / category_summary / governance_metrics
     - Dashboard 模板新增 Tab 5 / Tab 8（容器存在 + 数据非空）
 """
 
@@ -17,6 +17,7 @@ import pytest
 
 from vibe_tracing.domain.task.session import AcceptanceSummary, TaskSession
 from vibe_tracing.domain.governance.metrics import GovernanceMetricsAggregator
+from vibe_tracing.domain.governance.category_mapper import CATEGORIES
 from vibe_tracing.cli.analyze.reports import _build_acceptance_archive
 
 
@@ -46,71 +47,162 @@ def _session(
     )
 
 
-# ---------------------------------------------------------------------- #
-# DOD-VT-195-01: 规则触发表降序 + 从未触发沉底
-# ---------------------------------------------------------------------- #
-def test_rule_stats_table_sorted_by_block_desc() -> None:
-    sessions = {
-        "T1": _session("T1", issue_counts={
-            "no_claim": {"BLOCK": 1, "WARNING": 0},
-            "chain_broken": {"BLOCK": 5, "WARNING": 2},
-        }),
-        "T2": _session("T2", issue_counts={
-            "substandard:coverage": {"BLOCK": 0, "WARNING": 3},
-        }),
-    }
-    rows = GovernanceMetricsAggregator.aggregate_rule_stats_table(sessions)
-    # chain_broken (5) > no_claim (1) > substandard:coverage (0 block but 3 warn, not sunk)
-    rule_ids = [r["rule_id"] for r in rows]
-    assert rule_ids[0] == "chain_broken"
-    assert rule_ids[1] == "no_claim"
-
-
-def test_rule_stats_table_warning_only_sunk_below_block() -> None:
-    """0-block+N-warn 条目排在正 block 条目之下；(0,0) 沉底。"""
-    sessions = {
-        "T1": _session("T1", issue_counts={
-            "high_block": {"BLOCK": 10, "WARNING": 0},
-            "warn_only": {"BLOCK": 0, "WARNING": 5},
-            "low_block": {"BLOCK": 1, "WARNING": 0},
-            "never": {"BLOCK": 0, "WARNING": 0},
-        }),
-    }
-    rows = GovernanceMetricsAggregator.aggregate_rule_stats_table(sessions)
-    rule_ids = [r["rule_id"] for r in rows]
-    # 正 block 在前（high_block > low_block）；warn_only (0 block) 在它们之后；never 沉底
-    assert rule_ids.index("high_block") < rule_ids.index("low_block")
-    assert rule_ids.index("low_block") < rule_ids.index("warn_only")
-    assert rule_ids[-1] == "never"
+def _find_cat(result: list, category: str) -> dict:
+    return next(r for r in result if r["category"] == category)
 
 
 # ---------------------------------------------------------------------- #
-# DOD-VT-195-02: 规则条目字段完整
+# aggregate_category_summary: 基本结构
 # ---------------------------------------------------------------------- #
-def test_rule_stats_table_entry_fields_complete() -> None:
+def test_category_summary_returns_five_entries() -> None:
+    result = GovernanceMetricsAggregator.aggregate_category_summary({})
+    assert len(result) == 5
+    cat_ids = [r["category"] for r in result]
+    expected = [c["id"] for c in CATEGORIES]
+    assert cat_ids == expected
+
+
+def test_category_summary_empty_sessions_all_passed() -> None:
+    result = GovernanceMetricsAggregator.aggregate_category_summary({})
+    assert all(r["status"] == "passed" for r in result)
+    assert all(r["block_count"] == 0 for r in result)
+    assert all(r["warning_count"] == 0 for r in result)
+    assert all(r["details"] == [] for r in result)
+
+
+def test_category_summary_entry_fields_complete() -> None:
     sessions = {
         "T1": _session("T1", issue_counts={
             "chain_broken:GATE-VT-006": {"BLOCK": 3, "WARNING": 1},
         }),
     }
-    rows = GovernanceMetricsAggregator.aggregate_rule_stats_table(sessions)
-    assert len(rows) == 1
-    r = rows[0]
-    assert r["rule_id"] == "chain_broken:GATE-VT-006"
-    assert r["block_count"] == 3
-    assert r["warning_count"] == 1
-    assert r["last_triggered"] != ""
-    assert isinstance(r["description"], str) and r["description"]
+    result = GovernanceMetricsAggregator.aggregate_category_summary(sessions)
+    quality = _find_cat(result, "交付质量")
+    assert quality["status"] == "failed"
+    assert quality["gate_level"] == "WARNING"
+    assert quality["block_count"] == 3
+    assert quality["warning_count"] == 1
+    assert len(quality["details"]) == 1
+    assert quality["details"][0]["rule_id"] == "chain_broken:GATE-VT-006"
 
 
-def test_rule_stats_table_description_includes_subtype() -> None:
+# ---------------------------------------------------------------------- #
+# aggregate_category_summary: 分类映射正确性
+# ---------------------------------------------------------------------- #
+def test_category_summary_maps_to_correct_categories() -> None:
     sessions = {
         "T1": _session("T1", issue_counts={
+            "no_claim": {"BLOCK": 2, "WARNING": 0},
+            "task_failed": {"BLOCK": 1, "WARNING": 0},
+            "isolated_task": {"BLOCK": 0, "WARNING": 3},
             "chain_broken:GATE-VT-006": {"BLOCK": 1, "WARNING": 0},
+            "chain_broken:proposal:r1": {"BLOCK": 1, "WARNING": 0},
         }),
     }
-    rows = GovernanceMetricsAggregator.aggregate_rule_stats_table(sessions)
-    assert "GATE-VT-006" in rows[0]["description"]
+    result = GovernanceMetricsAggregator.aggregate_category_summary(sessions)
+
+    assert _find_cat(result, "交付凭证")["block_count"] == 2
+    assert _find_cat(result, "证据验证")["block_count"] == 1
+    assert _find_cat(result, "链路完整性")["warning_count"] == 3
+    assert _find_cat(result, "交付质量")["block_count"] == 1
+    assert _find_cat(result, "过程合规")["block_count"] == 1
+
+
+def test_category_summary_status_failed_when_block() -> None:
+    sessions = {"T1": _session("T1", issue_counts={
+        "no_claim": {"BLOCK": 1, "WARNING": 0},
+    })}
+    result = GovernanceMetricsAggregator.aggregate_category_summary(sessions)
+    assert _find_cat(result, "交付凭证")["status"] == "failed"
+
+
+def test_category_summary_status_warning_when_only_warning() -> None:
+    sessions = {"T1": _session("T1", issue_counts={
+        "isolated_task": {"BLOCK": 0, "WARNING": 2},
+    })}
+    result = GovernanceMetricsAggregator.aggregate_category_summary(sessions)
+    assert _find_cat(result, "链路完整性")["status"] == "warning"
+
+
+def test_category_summary_status_passed_when_no_issues() -> None:
+    sessions = {"T1": _session("T1", issue_counts={
+        "no_claim": {"BLOCK": 1, "WARNING": 0},
+    })}
+    result = GovernanceMetricsAggregator.aggregate_category_summary(sessions)
+    assert _find_cat(result, "链路完整性")["status"] == "passed"
+    assert _find_cat(result, "证据验证")["status"] == "passed"
+
+
+# ---------------------------------------------------------------------- #
+# aggregate_category_summary: 多 session 聚合
+# ---------------------------------------------------------------------- #
+def test_category_summary_aggregates_across_sessions() -> None:
+    sessions = {
+        "T1": _session("T1", issue_counts={
+            "no_claim": {"BLOCK": 2, "WARNING": 1},
+        }),
+        "T2": _session("T2", issue_counts={
+            "no_claim": {"BLOCK": 3, "WARNING": 0},
+        }),
+    }
+    result = GovernanceMetricsAggregator.aggregate_category_summary(sessions)
+    proof = _find_cat(result, "交付凭证")
+    assert proof["block_count"] == 5
+    assert proof["warning_count"] == 1
+
+
+def test_category_summary_details_sorted_by_block_desc() -> None:
+    sessions = {"T1": _session("T1", issue_counts={
+        "chain_broken:GATE-VT-006": {"BLOCK": 1, "WARNING": 0},
+        "chain_broken:GATE-VT-001": {"BLOCK": 5, "WARNING": 0},
+    })}
+    result = GovernanceMetricsAggregator.aggregate_category_summary(sessions)
+    quality = _find_cat(result, "交付质量")
+    assert quality["details"][0]["rule_id"] == "chain_broken:GATE-VT-001"
+    assert quality["details"][1]["rule_id"] == "chain_broken:GATE-VT-006"
+
+
+# ---------------------------------------------------------------------- #
+# aggregate_category_summary: phase_filter / task_filter
+# ---------------------------------------------------------------------- #
+def test_category_summary_phase_filter() -> None:
+    sessions = {
+        "T1": _session("T1", phase_id="PHASE-VT-015", issue_counts={
+            "no_claim": {"BLOCK": 5, "WARNING": 0},
+        }),
+        "T2": _session("T2", phase_id="PHASE-VT-016", issue_counts={
+            "no_claim": {"BLOCK": 3, "WARNING": 1},
+        }),
+    }
+    r15 = GovernanceMetricsAggregator.aggregate_category_summary(sessions, phase_filter="PHASE-VT-015")
+    assert _find_cat(r15, "交付凭证")["block_count"] == 5
+
+    r16 = GovernanceMetricsAggregator.aggregate_category_summary(sessions, phase_filter="PHASE-VT-016")
+    assert _find_cat(r16, "交付凭证")["block_count"] == 3
+    assert _find_cat(r16, "交付凭证")["warning_count"] == 1
+
+
+def test_category_summary_task_filter() -> None:
+    sessions = {
+        "T1": _session("T1", issue_counts={"no_claim": {"BLOCK": 5, "WARNING": 0}}),
+        "T2": _session("T2", issue_counts={"no_claim": {"BLOCK": 2, "WARNING": 3}}),
+    }
+    r1 = GovernanceMetricsAggregator.aggregate_category_summary(sessions, task_filter="T1")
+    assert _find_cat(r1, "交付凭证")["block_count"] == 5
+
+    r2 = GovernanceMetricsAggregator.aggregate_category_summary(sessions, task_filter="T2")
+    assert _find_cat(r2, "交付凭证")["block_count"] == 2
+    assert _find_cat(r2, "交付凭证")["warning_count"] == 3
+
+
+def test_category_summary_phase_filter_no_match() -> None:
+    sessions = {
+        "T1": _session("T1", phase_id="PHASE-VT-015", issue_counts={
+            "no_claim": {"BLOCK": 5, "WARNING": 0},
+        }),
+    }
+    result = GovernanceMetricsAggregator.aggregate_category_summary(sessions, phase_filter="PHASE-VT-999")
+    assert all(r["status"] == "passed" for r in result)
 
 
 # ---------------------------------------------------------------------- #
@@ -156,7 +248,7 @@ def test_avg_iterations_by_phase_closed_only() -> None:
     sessions = {
         "T1": _session("T1", phase_id="PHASE-VT-015", iterations=2, status="CLOSED"),
         "T2": _session("T2", phase_id="PHASE-VT-015", iterations=4, status="CLOSED"),
-        "T3": _session("T3", phase_id="PHASE-VT-015", iterations=10, status="IN_PROGRESS"),  # skipped
+        "T3": _session("T3", phase_id="PHASE-VT-015", iterations=10, status="IN_PROGRESS"),
         "T4": _session("T4", phase_id="PHASE-VT-016", iterations=3, status="CLOSED"),
     }
     result = GovernanceMetricsAggregator.aggregate_avg_iterations_by_phase(sessions)
@@ -169,7 +261,7 @@ def test_avg_iterations_by_phase_empty_sessions() -> None:
 
 
 # ---------------------------------------------------------------------- #
-# DOD-VT-195-05: acceptance_archive 聚合 + report_doc 三个新 key
+# DOD-VT-195-05: acceptance_archive 聚合 + report_doc 新 key
 # ---------------------------------------------------------------------- #
 def test_acceptance_archive_filters_closed_and_sorts_by_closed_at_desc() -> None:
     sessions = {
@@ -179,7 +271,7 @@ def test_acceptance_archive_filters_closed_and_sorts_by_closed_at_desc() -> None
                            recommendation="accept", delivery="task 1 交付",
                            resolved_block=1, resolved_warning=2, remaining_warning=0,
                        )),
-        "T2": _session("T2", phase_id="PHASE-1", status="IN_PROGRESS"),  # excluded
+        "T2": _session("T2", phase_id="PHASE-1", status="IN_PROGRESS"),
         "T3": _session("T3", phase_id="PHASE-1", status="CLOSED",
                        closed_at="2026-07-04T10:30:00Z",
                        acceptance_summary=AcceptanceSummary(
@@ -189,11 +281,11 @@ def test_acceptance_archive_filters_closed_and_sorts_by_closed_at_desc() -> None
                        )),
         "T4": _session("T4", phase_id="PHASE-1", status="CLOSED",
                        closed_at="2026-07-03T09:00:00Z",
-                       acceptance_summary=None),  # excluded
+                       acceptance_summary=None),
     }
     archive = _build_acceptance_archive(sessions)
     assert len(archive) == 2
-    assert archive[0]["task_id"] == "T3"  # most recent closed_at
+    assert archive[0]["task_id"] == "T3"
     assert archive[1]["task_id"] == "T1"
     assert archive[0]["recommendation"] == "reject"
     assert archive[0]["severe_risks"] == ["risk A"]
@@ -207,7 +299,7 @@ def test_acceptance_archive_empty_when_no_closed() -> None:
     ) == []
 
 
-def test_build_report_document_adds_three_keys(tmp_path: Path) -> None:
+def test_build_report_document_adds_category_keys(tmp_path: Path) -> None:
     from vibe_tracing.cli.analyze.reports import _build_report_document
     from vibe_tracing.domain.context import UnifiedContext
 
@@ -257,10 +349,15 @@ def test_build_report_document_adds_three_keys(tmp_path: Path) -> None:
         )
 
     assert "acceptance_archive" in doc
-    assert "rule_stats_table" in doc
+    assert "category_summary" in doc
+    assert "category_by_phase" in doc
+    assert "category_by_task" in doc
     assert "governance_metrics" in doc
     assert isinstance(doc["acceptance_archive"], list)
-    assert isinstance(doc["rule_stats_table"], list)
+    assert isinstance(doc["category_summary"], list)
+    assert len(doc["category_summary"]) == 5
+    assert isinstance(doc["category_by_phase"], dict)
+    assert isinstance(doc["category_by_task"], dict)
     assert "derived_task_ratio" in doc["governance_metrics"]
     assert "avg_iterations_by_phase" in doc["governance_metrics"]
 
@@ -304,7 +401,10 @@ def test_build_report_document_default_empty_when_no_sessions(tmp_path: Path) ->
         )
 
     assert doc["acceptance_archive"] == []
-    assert doc["rule_stats_table"] == []
+    assert len(doc["category_summary"]) == 5
+    assert all(c["status"] == "passed" for c in doc["category_summary"])
+    assert doc["category_by_phase"] == {}
+    assert doc["category_by_task"] == {}
     assert doc["governance_metrics"] == {
         "derived_task_ratio": 0.0, "avg_iterations_by_phase": {},
     }
@@ -319,7 +419,7 @@ def test_dashboard_template_has_tab_5_and_tab_8_containers() -> None:
     assert 'id="tab-acceptance"' in html
     assert 'id="tab-governance"' in html
     assert 'id="acceptance-table-body"' in html
-    assert 'id="rule-stats-table-body"' in html
+    assert 'id="category-summary-body"' in html
     assert 'id="avg-iterations-table-body"' in html
 
 
@@ -336,6 +436,18 @@ def test_dashboard_template_existing_tabs_intact() -> None:
     html = path.read_text(encoding="utf-8")
     for tab_id in ("tab-overview", "tab-traceability", "tab-debts", "tab-evidences"):
         assert f'id="{tab_id}"' in html
+
+
+def test_dashboard_template_category_multi_view_elements() -> None:
+    path = Path("src/vibe_tracing/templates/dashboard.template.html")
+    html = path.read_text(encoding="utf-8")
+    assert 'id="category-view-switcher"' in html
+    assert 'id="category-view-global"' in html
+    assert 'id="category-view-phase"' in html
+    assert 'id="category-view-task"' in html
+    assert 'id="category-phase-container"' in html
+    assert 'id="category-task-selector"' in html
+    assert 'switchCategoryView' in html
 
 
 def test_dashboard_renderer_produces_html_with_new_tabs(tmp_path: Path) -> None:
@@ -373,13 +485,24 @@ def test_dashboard_renderer_produces_html_with_new_tabs(tmp_path: Path) -> None:
                 "remaining_warning": 1,
             },
         ],
-        "rule_stats_table": [
+        "category_summary": [
             {
-                "rule_id": "no_claim",
-                "description": "任务缺少 Agent Claim 声明",
+                "category": "链路完整性",
+                "description": "PRD→Task→Claim 链路是否完整",
+                "status": "passed",
+                "gate_level": "BLOCK",
+                "block_count": 0,
+                "warning_count": 0,
+                "details": [],
+            },
+            {
+                "category": "交付凭证",
+                "description": "代码是否交付并声明",
+                "status": "failed",
+                "gate_level": "BLOCK",
                 "block_count": 3,
                 "warning_count": 0,
-                "last_triggered": "2026-07-04T10:30:00Z",
+                "details": [{"rule_id": "no_claim", "block_count": 3, "warning_count": 0}],
             },
         ],
         "governance_metrics": {
@@ -398,4 +521,4 @@ def test_dashboard_renderer_produces_html_with_new_tabs(tmp_path: Path) -> None:
     assert 'id="tab-acceptance"' in html
     assert 'id="tab-governance"' in html
     assert "TASK-VT-190" in html
-    assert "no_claim" in html
+    assert "交付凭证" in html

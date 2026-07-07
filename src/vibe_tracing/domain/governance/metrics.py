@@ -1,10 +1,10 @@
-"""Governance metrics aggregator — 规则触发表 / 衍生比例 / 平均迭代。
+"""Governance metrics aggregator — 5 分类验收链条汇总 / 衍生比例 / 平均迭代。
 
-基于 docs/design_channel_separation.md §2.3.4 / §3.1。
+基于 docs/design/phase_channel_separation.md §2.3.4 / §3.1。
 
 三类指标：
-    1. 全量规则触发统计表（aggregate_rule_stats_table）：
-        按 BLOCK 次数降序；从未触发（block_count=0 且 warning_count=0）沉底。
+    1. 5 分类验收链条汇总（aggregate_category_summary）：
+        按人类验收思维路径分 5 个节点：链路完整性 / 交付凭证 / 证据验证 / 交付质量 / 过程合规。
     2. 衍生 task 比例（aggregate_derived_task_ratio）：
         标题关键词匹配（'修复/优化/调整 TASK-VT-XXX'），近似指标。
     3. 任务平均迭代次数（aggregate_avg_iterations_by_phase）：
@@ -19,75 +19,89 @@ import re
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
+from vibe_tracing.domain.governance.category_mapper import (
+    CATEGORIES,
+    categorize,
+)
 from vibe_tracing.domain.task.session import TaskSession
 
 
 _DERIVED_TITLE_RE = re.compile(r"(修复|优化|调整)\s*TASK-[A-Z]+-\d+")
-
-_ISSUE_TYPE_DESCRIPTIONS: Dict[str, str] = {
-    "no_claim": "任务缺少 Agent Claim 声明",
-    "chain_broken": "需求 → 任务 → Claim → 证据链断裂",
-    "chain_misaligned": "需求 → 任务 → Claim 对齐偏差",
-    "task_failed": "任务执行失败（测试未通过 / 工具报错）",
-    "isolated_task": "孤立任务（未关联需求 / 验收标准）",
-    "substandard": "质量不达标（测试覆盖 / Linter 违规）",
-}
 
 
 class GovernanceMetricsAggregator:
     """从 task_sessions 聚合治理演进三类指标。"""
 
     # ------------------------------------------------------------------ #
-    # 1. 全量规则触发表
+    # 1. 5 分类验收链条汇总
     # ------------------------------------------------------------------ #
     @staticmethod
-    def aggregate_rule_stats_table(
+    def aggregate_category_summary(
         sessions: Dict[str, TaskSession],
+        *,
+        phase_filter: Optional[str] = None,
+        task_filter: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """返回 list[dict]，按 block_count 降序；block=0 且 warning=0 的条目沉底。
+        """返回 5 个验收节点汇总，每个节点含状态、计数、明细。
 
-        条目字段：rule_id / description / block_count / warning_count / last_triggered
+        返回字段：category / status / gate_level / block_count / warning_count / details
+        status: "passed" (无 issue) / "warning" (仅 WARNING) / "failed" (有 BLOCK)
+        details: [{rule_id, block_count, warning_count}] 该分类下的具体条目
         """
-        counts: Dict[str, Dict[str, int]] = defaultdict(
-            lambda: {"block": 0, "warning": 0}
-        )
-        last_triggered: Dict[str, str] = {}
+        cat_gate: Dict[str, str] = {c["id"]: c["gate"] for c in CATEGORIES}
+        cat_desc: Dict[str, str] = {c["id"]: c["description"] for c in CATEGORIES}
+
+        cat_counts: Dict[str, Dict[str, int]] = {
+            c["id"]: {"block": 0, "warning": 0} for c in CATEGORIES
+        }
+        detail_map: Dict[str, Dict[str, Dict[str, int]]] = {
+            c["id"]: {} for c in CATEGORIES
+        }
 
         for session in sessions.values():
-            triggered_at = session.closed_at or session.first_seen
-            for rule_id, bucket in session.issue_counts.items():
-                counts[rule_id]["block"] += int(bucket.get("BLOCK", 0))
-                counts[rule_id]["warning"] += int(bucket.get("WARNING", 0))
-                prev = last_triggered.get(rule_id, "")
-                if triggered_at and triggered_at > prev:
-                    last_triggered[rule_id] = triggered_at
+            if phase_filter and session.phase_id != phase_filter:
+                continue
+            if task_filter and session.task_id != task_filter:
+                continue
+            for key, bucket in session.issue_counts.items():
+                cat = categorize(key)
+                b = int(bucket.get("BLOCK", 0))
+                w = int(bucket.get("WARNING", 0))
+                cat_counts[cat]["block"] += b
+                cat_counts[cat]["warning"] += w
+                if key not in detail_map[cat]:
+                    detail_map[cat][key] = {"block": 0, "warning": 0}
+                detail_map[cat][key]["block"] += b
+                detail_map[cat][key]["warning"] += w
 
-        rows: List[Dict[str, Any]] = []
-        for rule_id, c in counts.items():
-            rows.append(
-                {
-                    "rule_id": rule_id,
-                    "description": GovernanceMetricsAggregator._describe_rule(rule_id),
-                    "block_count": c["block"],
-                    "warning_count": c["warning"],
-                    "last_triggered": last_triggered.get(rule_id, ""),
-                }
-            )
+        result: List[Dict[str, Any]] = []
+        for c in CATEGORIES:
+            cid = c["id"]
+            bc = cat_counts[cid]["block"]
+            wc = cat_counts[cid]["warning"]
+            if bc > 0:
+                status = "failed"
+            elif wc > 0:
+                status = "warning"
+            else:
+                status = "passed"
 
-        def sort_key(row: Dict[str, Any]):
-            is_never = row["block_count"] == 0 and row["warning_count"] == 0
-            return (1 if is_never else 0, -row["block_count"])
+            details = [
+                {"rule_id": k, "block_count": v["block"], "warning_count": v["warning"]}
+                for k, v in detail_map[cid].items()
+            ]
+            details.sort(key=lambda d: (-d["block_count"], d["rule_id"]))
 
-        rows.sort(key=sort_key)
-        return rows
-
-    @staticmethod
-    def _describe_rule(rule_id: str) -> str:
-        base_type = rule_id.split(":")[0] if ":" in rule_id else rule_id
-        desc = _ISSUE_TYPE_DESCRIPTIONS.get(base_type)
-        if desc and ":" in rule_id:
-            return f"{desc} [{rule_id.split(':', 1)[1]}]"
-        return desc or rule_id
+            result.append({
+                "category": cid,
+                "description": cat_desc[cid],
+                "status": status,
+                "gate_level": cat_gate[cid],
+                "block_count": bc,
+                "warning_count": wc,
+                "details": details,
+            })
+        return result
 
     # ------------------------------------------------------------------ #
     # 2. 衍生 task 比例

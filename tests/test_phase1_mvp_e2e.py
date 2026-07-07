@@ -1,9 +1,9 @@
 """Phase 1 MVP 端到端集成验证（T198）。
 
-覆盖 docs/design_channel_separation.md §5.2 测试策略 + 一期交付验收：
+覆盖 docs/design/phase_channel_separation.md §5.2 测试策略 + 一期交付验收：
     1. 完整 4 步编排（closed task 预检 → gate → session 更新 + 摘要 → 报告 + 渲染）
     2. 真实 TaskSessionManager ↔ AcceptanceSummaryBuilder 交互
-    3. report_doc 新 key（acceptance_archive / rule_stats_table / governance_metrics / agent_capability_metrics）
+    3. report_doc 新 key（acceptance_archive / category_summary / governance_metrics / agent_capability_metrics）
     4. stdout 中不含反思提示（Channel 分离落地验证）
     5. 多次 analyze 不修改 CLOSED task 数据（immutability）
     6. Dashboard 模板含 4 个新 Tab 容器
@@ -334,11 +334,11 @@ def test_e2e_report_doc_contains_new_top_level_keys(tmp_path: Path):
 
     assert exit_code == 0
     assert "acceptance_archive" in captured_report
-    assert "rule_stats_table" in captured_report
+    assert "category_summary" in captured_report
     assert "governance_metrics" in captured_report
     assert "agent_capability_metrics" in captured_report
     assert isinstance(captured_report["acceptance_archive"], list)
-    assert isinstance(captured_report["rule_stats_table"], list)
+    assert isinstance(captured_report["category_summary"], list)
     assert isinstance(captured_report["governance_metrics"], dict)
     assert isinstance(captured_report["agent_capability_metrics"], dict)
     # CLOSED task 应出现在 acceptance_archive
@@ -356,7 +356,7 @@ def test_dashboard_template_contains_new_tabs():
         "tab-acceptance",
         "tab-governance",
         "tab-capability",
-        "rule-stats-table-body",
+        "category-summary-body",
         "acceptance-table-body",
         "block-concentration-body",
         "avg-iterations-table-body",
@@ -401,9 +401,9 @@ def test_stdout_no_reflection_prompts_in_render_output(tmp_path: Path, capsys, m
 
 
 # -------------------------------------------------------------------- #
-# E2E #8：规则触发表排序（block 降序 + 从未触发沉底）
+# E2E #8：5 分类验收链条汇总
 # -------------------------------------------------------------------- #
-def test_e2e_rule_stats_table_sort_order(tmp_path: Path):
+def test_e2e_category_summary_aggregation(tmp_path: Path):
     from vibe_tracing.domain.task.session import TaskSession
     sessions = {
         "A": TaskSession(
@@ -428,20 +428,20 @@ def test_e2e_rule_stats_table_sort_order(tmp_path: Path):
             task_id="D", phase_id="P1", status="CLOSED",
             first_seen="2026-07-04T08:00:00Z", closed_at="2026-07-04T09:00:00Z",
             iterations=1,
-            issue_counts={},  # 从未触发
+            issue_counts={},
         ),
     }
-    rows = GovernanceMetricsAggregator.aggregate_rule_stats_table(sessions)
-    rule_ids = [r["rule_id"] for r in rows]
-    # no_claim (BLOCK=10) 首位；task_failed (BLOCK=1) 其次；substandard (WARNING=5) 第三；D 从未触发末位
-    assert rule_ids[0] == "no_claim"
-    assert rule_ids[1] == "task_failed"
-    assert rule_ids[-1] in ("", ) or rows[-1]["block_count"] == 0
-    # 从未触发一定在最后
-    never_rows = [r for r in rows if r["block_count"] == 0 and r["warning_count"] == 0]
-    if never_rows:
-        assert rows[-1]["block_count"] == 0
-        assert rows[-1]["warning_count"] == 0
+    result = GovernanceMetricsAggregator.aggregate_category_summary(sessions)
+    assert len(result) == 5
+    cat_map = {c["category"]: c for c in result}
+    assert cat_map["交付凭证"]["status"] == "failed"
+    assert cat_map["交付凭证"]["block_count"] == 10
+    assert cat_map["交付质量"]["status"] == "warning"
+    assert cat_map["交付质量"]["warning_count"] == 5
+    assert cat_map["证据验证"]["status"] == "failed"
+    assert cat_map["证据验证"]["block_count"] == 1
+    assert cat_map["链路完整性"]["status"] == "passed"
+    assert cat_map["过程合规"]["status"] == "passed"
 
 
 # -------------------------------------------------------------------- #

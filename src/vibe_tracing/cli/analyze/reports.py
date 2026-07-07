@@ -104,12 +104,26 @@ def _build_report_document(
             warnings.append(desc)
         report_doc["warnings"] = warnings
 
-    # ── T195：治理演进 / 验收存档 三个顶层 key ───────────────────────────
+    # ── T195：治理演进 / 验收存档 ────────────────────────────────────────
     if sessions:
         acceptance_archive = _build_acceptance_archive(sessions)
-        rule_stats_table = GovernanceMetricsAggregator.aggregate_rule_stats_table(
+        category_summary = GovernanceMetricsAggregator.aggregate_category_summary(
             sessions
         )
+        phase_ids = sorted({s.phase_id for s in sessions.values() if s.phase_id})
+        category_by_phase = {
+            pid: GovernanceMetricsAggregator.aggregate_category_summary(
+                sessions, phase_filter=pid
+            )
+            for pid in phase_ids
+        }
+        task_ids = sorted(sessions.keys())
+        category_by_task = {
+            tid: GovernanceMetricsAggregator.aggregate_category_summary(
+                sessions, task_filter=tid
+            )
+            for tid in task_ids
+        }
         governance_metrics = {
             "derived_task_ratio": GovernanceMetricsAggregator.aggregate_derived_task_ratio(
                 task_list_for_governance or [], sessions
@@ -120,13 +134,17 @@ def _build_report_document(
         }
     else:
         acceptance_archive = []
-        rule_stats_table = []
+        category_summary = GovernanceMetricsAggregator.aggregate_category_summary({})
+        category_by_phase = {}
+        category_by_task = {}
         governance_metrics = {
             "derived_task_ratio": 0.0,
             "avg_iterations_by_phase": {},
         }
     report_doc["acceptance_archive"] = acceptance_archive
-    report_doc["rule_stats_table"] = rule_stats_table
+    report_doc["category_summary"] = category_summary
+    report_doc["category_by_phase"] = category_by_phase
+    report_doc["category_by_task"] = category_by_task
     report_doc["governance_metrics"] = governance_metrics
 
     # ── T196：Agent 能力指标 ────────────────────────────────────────────

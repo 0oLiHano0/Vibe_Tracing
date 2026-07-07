@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vibe Tracing 治理 Dashboard</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap');
+
         :root {
-            --bg-primary: #090d16;
-            --bg-secondary: #0d1527;
-            --bg-card: #131b2e;
-            --bg-card-hover: #1e294b;
+            --bg-primary: #080c16;
+            --bg-secondary: #0c1222;
+            --bg-card: rgba(18, 26, 47, 0.6);
+            --bg-card-hover: rgba(28, 39, 69, 0.7);
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
             --text-muted: #475569;
@@ -25,7 +27,7 @@
             --status-warn: #f59e0b;
             --status-warn-glow: rgba(245, 158, 11, 0.15);
             
-            --border-color: #1e293b;
+            --border-color: rgba(255, 255, 255, 0.08);
             --transition-speed: 0.2s;
         }
 
@@ -36,13 +38,15 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                              radial-gradient(circle at 0% 100%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
         }
 
         /* Scrollbar */
@@ -63,9 +67,9 @@
 
         /* Header Navigation */
         .top-nav {
-            background-color: rgba(13, 21, 39, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background-color: rgba(12, 18, 34, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
@@ -93,12 +97,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            font-size: 16px;
+            font-weight: 800;
+            font-size: 15px;
+            font-family: 'Outfit', sans-serif;
             box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            color: #ffffff;
         }
 
         .brand-name {
+            font-family: 'Outfit', sans-serif;
             font-size: 18px;
             font-weight: 700;
             letter-spacing: 0.5px;
@@ -129,14 +136,15 @@
 
         .nav-item:hover {
             color: var(--text-primary);
-            background-color: var(--bg-card);
+            background-color: rgba(255, 255, 255, 0.03);
             border-color: var(--border-color);
         }
 
         .nav-item.active {
             color: var(--text-primary);
             background-color: rgba(59, 130, 246, 0.15);
-            border-color: var(--accent-blue);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.1);
         }
 
         .meta-info {
@@ -183,23 +191,31 @@
         /* General Card Styling */
         .card {
             background-color: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 24px;
             display: flex;
             flex-direction: column;
             gap: 16px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
         }
 
         .card-title {
+            font-family: 'Outfit', sans-serif;
             font-size: 18px;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .card-title svg {
+            color: var(--accent-blue);
         }
 
         /* Verdict Banner */
@@ -209,141 +225,202 @@
             justify-content: space-between;
             padding: 24px;
             border-radius: 12px;
-            border-width: 1px;
-            border-style: solid;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: all 0.3s ease;
         }
 
         .verdict-banner.pass {
-            background-color: var(--status-pass-glow);
-            border-color: var(--status-pass);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.05);
         }
 
         .verdict-banner.warn {
-            background-color: var(--status-warn-glow);
-            border-color: var(--status-warn);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.02) 100%);
+            border-color: rgba(245, 158, 11, 0.3);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.05);
         }
 
-        .verdict-banner.blocked {
-            background-color: var(--status-fail-glow);
-            border-color: var(--status-fail);
+        .verdict-banner.fail, .verdict-banner.blocked {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%);
+            border-color: rgba(239, 68, 68, 0.3);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.05);
         }
 
         .verdict-text {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
 
         .verdict-title {
-            font-size: 24px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 22px;
             font-weight: 700;
-            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .verdict-desc {
             font-size: 14px;
             color: var(--text-secondary);
+            line-height: 1.5;
         }
 
-        /* Stepper Pipeline */
-        .pipeline-stepper {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 12px;
-            margin: 12px 0;
-        }
-
-        .step-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 16px;
+        /* Business Dimensions Grid */
+        .dimensions-grid {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            position: relative;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .dimension-card {
+            background-color: rgba(30, 41, 59, 0.25);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
             cursor: pointer;
-            transition: all var(--transition-speed);
+            transition: all var(--transition-speed) ease;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
 
-        .step-card.pass {
-            border-left: 4px solid var(--status-pass);
+        .dimension-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            background-color: rgba(30, 41, 59, 0.4);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-1px);
         }
 
-        .step-card.warn {
-            border-left: 4px solid var(--status-warn);
+        /* Border highlights based on status */
+        .dimension-card.pass {
+            border-left: 5px solid var(--status-pass);
         }
 
-        .step-card.blocked {
-            border-left: 4px solid var(--status-fail);
+        .dimension-card.warn {
+            border-left: 5px solid var(--status-warn);
         }
 
-        .step-card.disabled {
-            opacity: 0.35;
+        .dimension-card.fail {
+            border-left: 5px solid var(--status-fail);
+        }
+
+        .dimension-card.disabled {
+            opacity: 0.4;
             cursor: not-allowed;
             pointer-events: none;
         }
 
-        .step-num {
-            font-size: 11px;
-            color: var(--text-secondary);
-            font-weight: bold;
-        }
-
-        .step-name {
-            font-size: 15px;
-            font-weight: 600;
-        }
-
-        .step-status {
-            font-size: 12px;
-            font-weight: 500;
-            align-self: flex-start;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        .step-status.pass { background-color: var(--status-pass-glow); color: var(--status-pass); }
-        .step-status.warn { background-color: var(--status-warn-glow); color: var(--status-warn); }
-        .step-status.blocked { background-color: var(--status-fail-glow); color: var(--status-fail); }
-
-        /* Diagnostic Panel */
-        .diagnostic-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .diag-item {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background-color: rgba(255, 255, 255, 0.02);
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .diag-header {
+        .dim-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            user-select: none;
         }
 
-        .diag-badge {
-            font-size: 11px;
-            padding: 2px 8px;
+        .dim-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .dim-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dim-icon.pass {
+            background-color: var(--status-pass-glow);
+            color: var(--status-pass);
+        }
+
+        .dim-icon.warn {
+            background-color: var(--status-warn-glow);
+            color: var(--status-warn);
+        }
+
+        .dim-icon.fail {
+            background-color: var(--status-fail-glow);
+            color: var(--status-fail);
+        }
+
+        .dim-title-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .dim-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .dim-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .dim-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
             border-radius: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .diag-badge.blocked { background-color: var(--status-fail-glow); color: var(--status-fail); border: 1px solid var(--status-fail); }
-        .diag-badge.warn { background-color: var(--status-warn-glow); color: var(--status-warn); border: 1px solid var(--status-warn); }
+        .dim-badge.pass {
+            background-color: var(--status-pass-glow);
+            color: var(--status-pass);
+        }
+
+        .dim-badge.warn {
+            background-color: var(--status-warn-glow);
+            color: var(--status-warn);
+        }
+
+        .dim-badge.fail {
+            background-color: var(--status-fail-glow);
+            color: var(--status-fail);
+        }
+
+        /* Detail collapsible section with transition */
+        .dim-detail-wrapper {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dimension-card.expanded .dim-detail-wrapper {
+            max-height: 1000px;
+        }
+
+        .dim-detail-content {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            cursor: default;
+        }
 
         .diag-desc {
             font-size: 14px;
             line-height: 1.5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
         }
 
         /* 5-Column Trace Layout */
@@ -362,6 +439,7 @@
         }
 
         .column-header {
+            font-family: 'Outfit', sans-serif;
             font-size: 15px;
             font-weight: 700;
             color: var(--text-secondary);
@@ -390,7 +468,7 @@
         }
 
         .trace-card {
-            background-color: var(--bg-card);
+            background-color: rgba(30, 41, 59, 0.3);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 14px;
@@ -400,12 +478,15 @@
             cursor: pointer;
             transition: all var(--transition-speed);
             position: relative;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
 
         .trace-card:hover, .trace-card.highlighted {
             border-color: var(--accent-blue);
             box-shadow: 0 0 10px var(--accent-blue-glow);
             transform: translateY(-2px);
+            background-color: rgba(30, 41, 59, 0.5);
         }
 
         .trace-card.dimmed {
@@ -442,9 +523,12 @@
 
         .badge {
             font-size: 10px;
-            padding: 1px 6px;
+            padding: 2px 6px;
             border-radius: 4px;
-            font-weight: bold;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .badge.must { background-color: var(--status-fail-glow); color: var(--status-fail); }
@@ -461,12 +545,13 @@
             color: var(--status-warn);
             border: 1px solid var(--status-warn);
             font-size: 10px;
-            padding: 2px 6px;
+            padding: 3px 8px;
             border-radius: 4px;
             cursor: pointer;
             transition: all var(--transition-speed);
             margin-top: 6px;
             align-self: flex-start;
+            font-weight: 500;
         }
 
         .whitelist-btn:hover {
@@ -493,6 +578,7 @@
         }
 
         .data-table th {
+            font-family: 'Outfit', sans-serif;
             color: var(--text-secondary);
             font-weight: 600;
             background-color: rgba(255, 255, 255, 0.01);
@@ -530,21 +616,28 @@
         .stat-card {
             background-color: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 16px;
+            border-radius: 12px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
         }
 
         .stat-val {
-            font-size: 24px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
             font-weight: 700;
+            background: linear-gradient(135deg, #ffffff 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .stat-label {
             font-size: 12px;
             color: var(--text-secondary);
+            line-height: 1.4;
         }
 
         /* Whitelist Manager in UI */
@@ -567,20 +660,197 @@
 
         .whitelist-tag {
             background-color: rgba(245, 158, 11, 0.15);
-            border: 1px solid var(--status-warn);
+            border: 1px solid rgba(245, 158, 11, 0.4);
             color: var(--status-warn);
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
             font-size: 12px;
             display: flex;
             align-items: center;
             gap: 6px;
+            font-weight: 500;
         }
 
         .whitelist-tag-remove {
             cursor: pointer;
             font-weight: bold;
             color: var(--text-primary);
+        }
+
+        /* Layout layout for Overall Status and Dimensions */
+        .verdict-row {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .dim-status-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .dim-status-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .dim-status-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .dim-status-card.active {
+            border-color: var(--accent-blue);
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(255, 255, 255, 0.01) 100%);
+            box-shadow: 0 0 16px rgba(37, 99, 235, 0.2);
+        }
+
+        .dim-status-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+        }
+        
+        .dim-status-icon.pass {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.2);
+            color: var(--status-pass);
+        }
+        .dim-status-icon.fail {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--status-fail);
+        }
+        .dim-status-icon.warn {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.2);
+            color: var(--status-warn);
+        }
+
+        .dim-status-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden;
+        }
+
+        .dim-status-title {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dim-status-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+            width: fit-content;
+        }
+
+        .dim-status-badge.pass {
+            background-color: var(--status-pass-glow);
+            color: var(--status-pass);
+        }
+        .dim-status-badge.fail {
+            background-color: var(--status-fail-glow);
+            color: var(--status-fail);
+        }
+        .dim-status-badge.warn {
+            background-color: var(--status-warn-glow);
+            color: var(--status-warn);
+        }
+
+        /* Responsive styling via media queries */
+        @media (max-width: 1200px) {
+            .verdict-row {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .trace-layout {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 16px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+                margin-top: 110px;
+            }
+
+            .top-nav {
+                flex-direction: column;
+                height: auto;
+                padding: 12px 16px;
+                gap: 12px;
+            }
+
+            .nav-menu {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 4px;
+            }
+
+            .nav-item {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            .meta-info {
+                width: 100%;
+                justify-content: space-around;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .trace-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .column-body {
+                max-height: 50vh;
+            }
+
+            .dim-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .dim-badge {
+                align-self: flex-end;
+            }
+
+            .dim-status-cards {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
         }
     </style>
 </head>
@@ -594,25 +864,25 @@
         
         <div class="nav-menu">
             <div class="nav-item active" onclick="switchTab('overview')">
-                <span>概览 / Overview</span>
+                <span>概览</span>
             </div>
             <div class="nav-item" onclick="switchTab('traceability')">
-                <span>追溯关系 / Traceability</span>
+                <span>追溯关系</span>
             </div>
             <div class="nav-item" onclick="switchTab('debts')">
-                <span>历史债务 / Debts</span>
+                <span>历史债务</span>
             </div>
             <div class="nav-item" onclick="switchTab('evidences')">
-                <span>证据索引 / Evidences</span>
+                <span>证据索引</span>
             </div>
             <div class="nav-item" onclick="switchTab('acceptance')">
-                <span>验收存档 / Acceptance</span>
+                <span>验收存档</span>
             </div>
             <div class="nav-item" onclick="switchTab('capability')">
-                <span>Agent 能力 / Capability</span>
+                <span>Agent 能力</span>
             </div>
             <div class="nav-item" onclick="switchTab('governance')">
-                <span>治理演进 / Governance</span>
+                <span>治理演进</span>
             </div>
         </div>
 
@@ -627,11 +897,18 @@
     <div class="container">
         <!-- TAB: OVERVIEW -->
         <div class="tab-content active" id="tab-overview">
-            <!-- Verdict Banner -->
-            <div class="verdict-banner" id="verdict-banner-container">
-                <div class="verdict-text">
-                    <div class="verdict-title" id="verdict-title-text">-</div>
-                    <div class="verdict-desc" id="verdict-desc-text">-</div>
+            <!-- Verdict Row (Four Dimension Cards + Overall Status) -->
+            <div class="verdict-row">
+                <!-- Compact Dimension Status Cards -->
+                <div class="dim-status-cards" id="dim-status-cards-container">
+                    <!-- Four compact cards will be rendered here dynamically -->
+                </div>
+                <!-- Verdict Banner -->
+                <div class="verdict-banner" id="verdict-banner-container">
+                    <div class="verdict-text">
+                        <div class="verdict-title" id="verdict-title-text">-</div>
+                        <div class="verdict-desc" id="verdict-desc-text">-</div>
+                    </div>
                 </div>
             </div>
 
@@ -643,7 +920,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-val" id="stat-tasks">-</div>
-                    <div class="stat-label">关联任务数 (Done / 总数)</div>
+                    <div class="stat-label">关联任务数 (已完成 / 总数)</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-val" id="stat-claims">-</div>
@@ -651,29 +928,21 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-val" id="stat-tests">-</div>
-                    <div class="stat-label">测试通过率 / 覆盖率</div>
+                    <div class="stat-label">测试通过率与平均覆盖率</div>
                 </div>
             </div>
 
-            <!-- Pipeline Stepper -->
-            <div class="card">
-                <div class="card-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                    质量门禁六维评估流水线 / Six-Dimensional Quality Gate Pipeline
-                </div>
-                <div class="pipeline-stepper" id="pipeline-stepper-container">
-                    <!-- Steps will be rendered here dynamically -->
-                </div>
-            </div>
-
-            <!-- Detailed Diagnostics -->
-            <div class="card">
-                <div class="card-title" id="diagnostic-title">
+            <!-- Business Dimension Details Panel -->
+            <div class="card" id="dimension-details-card" style="margin-top: 24px;">
+                <div class="card-title" id="dimension-details-title">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    诊断详情与修复建议 / Diagnostics & Resolution Guidelines
+                    诊断明细与验收证据 / 业务约束
                 </div>
-                <div class="diagnostic-grid" id="diagnostic-container">
-                    <!-- Diagnostic details -->
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
+                    点击上方维度卡片可切换查看该维度的诊断详情、修复建议与合规证据。
+                </p>
+                <div id="dimension-details-content">
+                    <!-- Dynamic details content for the active dimension -->
                 </div>
             </div>
         </div>
@@ -776,7 +1045,7 @@
                     证据索引 / Full Traceability Chain
                 </div>
                 <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
-                    需求 → AC → 任务 → 声明 → 验证与测试 的全链路追踪视图。链路断裂字段显示为灰色 <code style="background:rgba(100,116,139,0.15); padding:1px 6px; border-radius:4px;">—</code>，未声明 claim 的任务额外标注 <span style="color:var(--status-warn);">⚠️ 未声明</span>。
+                    需求 → AC → 任务 → 声明 → 验证与测试 的全链路追踪视图。链路断裂字段显示为灰色 <code style="background:rgba(100,116,139,0.15); padding:1px 6px; border-radius:4px;">—</code>，未声明 claim 的任务额外标注 <span class="badge" style="background-color:var(--status-warn-glow); color:var(--status-warn); border:1px solid rgba(245,158,11,0.3); font-weight:600;">未声明</span>。
                 </p>
                 <div class="data-table-container">
                     <table class="data-table">
@@ -902,7 +1171,7 @@
                     治理演进 / Governance Evolution
                 </div>
                 <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
-                    全量规则触发统计、衍生 task 比例、按 PHASE 分组的平均迭代次数。数据从 <code>task_sessions.json</code> 聚合。
+                    按人类验收链条的 5 个断点分类：链路完整性 → 交付凭证 → 证据验证 → 交付质量 → 过程合规。数据从 <code>task_sessions.json</code> 聚合。
                 </p>
 
                 <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
@@ -926,23 +1195,39 @@
                 </div>
 
                 <h3 style="font-size:15px; font-weight:600; color:var(--text-primary); margin-bottom:8px;">
-                    全量规则触发表 / Rule Trigger Statistics
+                    验收链条分类 / Acceptance Chain Categories
                 </h3>
-                <div class="data-table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>规则 / Rule ID</th>
-                                <th>描述 / Description</th>
-                                <th style="text-align:right;">BLOCK 次数</th>
-                                <th style="text-align:right;">WARNING 次数</th>
-                                <th>最近触发 / Last Triggered</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rule-stats-table-body">
-                            <!-- Rule stats rows -->
-                        </tbody>
-                    </table>
+                <div id="category-view-switcher" style="display:flex; gap:8px; margin-bottom:12px;">
+                    <button class="category-view-btn active" onclick="switchCategoryView('global')" data-view="global"
+                        style="padding:4px 14px; font-size:12px; border:1px solid var(--border-color); border-radius:4px; cursor:pointer; background:var(--accent-blue); color:#fff;">
+                        全局视图
+                    </button>
+                    <button class="category-view-btn" onclick="switchCategoryView('phase')" data-view="phase"
+                        style="padding:4px 14px; font-size:12px; border:1px solid var(--border-color); border-radius:4px; cursor:pointer; background:transparent; color:var(--text-secondary);">
+                        按 PHASE
+                    </button>
+                    <button class="category-view-btn" onclick="switchCategoryView('task')" data-view="task"
+                        style="padding:4px 14px; font-size:12px; border:1px solid var(--border-color); border-radius:4px; cursor:pointer; background:transparent; color:var(--text-secondary);">
+                        按 TASK
+                    </button>
+                </div>
+
+                <div id="category-view-global" class="category-view-panel">
+                    <div id="category-summary-body"></div>
+                </div>
+
+                <div id="category-view-phase" class="category-view-panel" style="display:none;">
+                    <div id="category-phase-container"></div>
+                </div>
+
+                <div id="category-view-task" class="category-view-panel" style="display:none;">
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:13px; color:var(--text-secondary); margin-right:8px;">选择 Task：</label>
+                        <select id="category-task-selector" onchange="renderTaskCategoryView()"
+                            style="padding:4px 8px; font-size:12px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                        </select>
+                    </div>
+                    <div id="category-task-body"></div>
                 </div>
 
                 <h3 style="font-size:15px; font-weight:600; color:var(--text-primary); margin:24px 0 8px;">
@@ -1052,98 +1337,100 @@
             document.getElementById('tab-' + tabId).classList.add('active');
         }
 
-        // Stepper Stage Navigation Helper
-        function scrollToDiagnostic(stageId) {
-            const el = document.getElementById('diag-stage-' + stageId);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.style.outline = "2px solid var(--accent-blue)";
-                setTimeout(() => el.style.outline = "none", 1500);
+        // SVG icon helper matching AC-VT-006-04
+        function getIconSvg(status, size = 16) {
+            const style = `width:${size}px; height:${size}px; vertical-align: middle; flex-shrink:0;`;
+            if (status === 'pass') {
+                return `<svg class="status-icon pass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="${style} color:var(--status-pass);"><circle cx="12" cy="12" r="10"></circle><polyline points="8 12 11 15 16 9"></polyline></svg>`;
+            } else if (status === 'fail' || status === 'blocked') {
+                return `<svg class="status-icon fail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="${style} color:var(--status-fail);"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+            } else if (status === 'warn') {
+                return `<svg class="status-icon warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="${style} color:var(--status-warn);"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+            } else {
+                return `<svg class="status-icon disabled" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="${style} color:var(--text-muted);"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>`;
             }
         }
 
-        // Main Evaluation & Pipeline Generation
-        function evaluatePipeline() {
+        // Selection state for active business dimension details panel
+        let selectedDimensionId = 'constraints';
+
+        function selectDimension(dimId) {
+            selectedDimensionId = dimId;
+            renderDashboard();
+        }
+
+        let firstRender = true;
+
+        // Render Dashboard Overview Page
+        function renderDashboard() {
             const whitelist = getWhitelist();
 
-            const pipeline = {
-                1: { id: 1, name: "链条中断", status: "pass", errors: [], code: "broken_chain" },
-                2: { id: 2, name: "链条错位", status: "pass", errors: [], code: "misaligned_chain" },
-                3: { id: 3, name: "孤立任务", status: "pass", errors: [], code: "isolated_task" },
-                4: { id: 4, name: "无声明", status: "pass", errors: [], code: "no_claim" },
-                5: { id: 5, name: "任务失败", status: "pass", errors: [], code: "task_failed" },
-                6: { id: 6, name: "任务不达标", status: "pass", errors: [], code: "substandard_task" }
-            };
-
-            // Direct mapping of issue_type to pipeline stages
-            const STAGE_MAPPING = {
-                "chain_broken": 1,
-                "chain_misaligned": 2,
-                "isolated_task": 3,
-                "no_claim": 4,
-                "task_failed": 5,
-                "substandard": 6
+            // Compute dimensions status
+            const dims = {
+                constraints: { id: "constraints", name: "业务约束", subtitle: "检查需求、验收标准与任务的完整链路关系", status: "pass", errors: [] },
+                declarations: { id: "declarations", name: "完成声明", subtitle: "检查相关开发任务的 Claim 声明提交情况", status: "pass", errors: [] },
+                tests: { id: "tests", name: "测试结果", subtitle: "评估测试通过情况以及代码覆盖率是否达标", status: "pass", errors: [] },
+                audits: { id: "audits", name: "质量检查", subtitle: "进行架构契约合规性、死代码以及静态代码检查", status: "pass", errors: [] }
             };
 
             const perIssueStates = report.per_issue_states || [];
             perIssueStates.forEach(item => {
-                const stageId = STAGE_MAPPING[item.issue_type] || 6;
-
-                // Only evaluate active issues for the pipeline stages (blocked / warning)
                 if (item.state === "CURRENT_BLOCK" || item.state === "CURRENT_WARNING") {
+                    const isBlock = item.state === "CURRENT_BLOCK";
+                    let targetDim = "audits";
+                    
+                    if (item.issue_type === "chain_broken" || item.issue_type === "chain_misaligned" || item.issue_type === "isolated_task") {
+                        targetDim = "constraints";
+                    } else if (item.issue_type === "no_claim") {
+                        targetDim = "declarations";
+                    } else if (item.issue_type === "task_failed" || item.issue_type === "task_substandard" || item.issue_type === "substandard") {
+                        targetDim = "tests";
+                    }
+
                     if (item.issue_type === 'isolated_task') {
-                        if (!whitelist.includes(item.task_id)) {
-                            pipeline[stageId].status = "warn";
+                        const isWhitelisted = whitelist.includes(item.task_id);
+                        if (!isWhitelisted) {
+                            dims[targetDim].status = "warn";
+                            dims[targetDim].errors.push({ id: item.task_id, text: item.reason, isIsolated: true, isWhitelisted: false });
+                        } else {
+                            dims[targetDim].errors.push({ id: item.task_id, text: item.reason, isIsolated: true, isWhitelisted: true });
                         }
-                        pipeline[stageId].errors.push({ id: item.task_id, text: item.reason });
                     } else {
-                        if (item.state === "CURRENT_BLOCK") {
-                            pipeline[stageId].status = "blocked";
-                        } else if (item.state === "CURRENT_WARNING") {
-                            if (pipeline[stageId].status !== "blocked") {
-                                pipeline[stageId].status = "warn";
-                            }
+                        if (isBlock) {
+                            dims[targetDim].status = "fail";
+                        } else if (dims[targetDim].status !== "fail") {
+                            dims[targetDim].status = "warn";
                         }
-                        pipeline[stageId].errors.push(item.reason);
+                        dims[targetDim].errors.push({ text: item.reason, isIsolated: false });
                     }
                 }
             });
 
-            // Cascading Downstream Greying-out (時序依賴阻斷)
-            let isBlocked = false;
+            // Add architectural compliance violations to audits
+            const archViolations = report.architecture_violations || [];
+            archViolations.forEach(violation => {
+                dims.audits.status = "fail";
+                const vText = violation.description || violation.reason || violation;
+                dims.audits.errors.push({ text: `架构约束违反: ${vText}`, isIsolated: false });
+            });
 
-            if (pipeline[1].status === "blocked") isBlocked = true;
-            if (isBlocked) pipeline[2].status = "disabled";
-
-            if (pipeline[2].status === "blocked") isBlocked = true;
-            if (isBlocked) pipeline[4].status = "disabled";
-
-            if (pipeline[4].status === "blocked") isBlocked = true;
-            if (isBlocked) pipeline[5].status = "disabled";
-
-            if (pipeline[5].status === "blocked") isBlocked = true;
-            if (isBlocked) pipeline[6].status = "disabled";
-
-            return pipeline;
-        }
-
-        // Render Dashboard Overview Page
-        function renderDashboard() {
-            const pipeline = evaluatePipeline();
-            const whitelist = getWhitelist();
+            const archCompliance = report.architecture_compliance_status || [];
+            archCompliance.forEach(c => {
+                if (c.status === "violated" || c.status === "FAILED") {
+                    dims.audits.status = "fail";
+                    dims.audits.errors.push({ text: `架构契约阻断 (${c.rule_id}): ${c.description || c.reason || ''}`, isIsolated: false });
+                } else if (c.status === "warning") {
+                    if (dims.audits.status !== "fail") dims.audits.status = "warn";
+                    dims.audits.errors.push({ text: `架构契约告警 (${c.rule_id}): ${c.description || c.reason || ''}`, isIsolated: false });
+                }
+            });
 
             // Calculate overall gate decision
             let finalDecision = "pass";
-            let reasonsList = [];
-
-            for (let i = 1; i <= 6; i++) {
-                const stage = pipeline[i];
-                if (stage.status === "blocked") {
-                    finalDecision = "blocked";
-                    reasonsList.push(`[${stage.name}] 发现阻断级错误`);
-                } else if (stage.status === "warn" && finalDecision !== "blocked") {
-                    finalDecision = "warn";
-                }
+            if (dims.constraints.status === "fail" || dims.declarations.status === "fail" || dims.tests.status === "fail" || dims.audits.status === "fail") {
+                finalDecision = "blocked";
+            } else if (dims.constraints.status === "warn" || dims.declarations.status === "warn" || dims.tests.status === "warn" || dims.audits.status === "warn") {
+                finalDecision = "warn";
             }
 
             // Update Verdict Banner UI
@@ -1153,14 +1440,17 @@
 
             banner.className = 'verdict-banner ' + finalDecision;
             if (finalDecision === 'blocked') {
-                vTitle.textContent = 'GATE BLOCKED / 门禁阻断';
-                vDesc.textContent = '仓库门禁不予放行。代码提交中存在客观链路缺陷或测试验证失败，请引导 Agent 优先修复以下诊断问题。';
+                vTitle.textContent = '交付未达标';
+                vTitle.style.color = 'var(--status-fail)';
+                vDesc.textContent = '存在链条断裂或测试失败等硬性缺陷。';
             } else if (finalDecision === 'warn') {
-                vTitle.textContent = 'GATE WARNING / 质量告警';
-                vDesc.textContent = '门禁存在告警。系统无客观链路硬阻碍，但存在未归入需求的孤立任务或覆盖率不达标。允许在人工审查风险后放行。';
+                vTitle.textContent = '交付存在告警';
+                vTitle.style.color = 'var(--status-warn)';
+                vDesc.textContent = '存在覆盖率不达标或白名单孤立任务等次要告警。';
             } else {
-                vTitle.textContent = 'GATE PASSED / 门禁通过';
-                vDesc.textContent = '完美合规！所有设计引用完整、逻辑一致、测试全部通过且代码质量达标。允许合并进入主线。';
+                vTitle.textContent = '建议验收';
+                vTitle.style.color = 'var(--status-pass)';
+                vDesc.textContent = '所有设计引用完整、逻辑一致、测试全部通过。';
             }
 
             // Update Stats Grid
@@ -1191,76 +1481,93 @@
             const avgCov = validCovFiles.length > 0 ? Math.round(validCovFiles.reduce((acc, curr) => acc + curr.percent_covered, 0) / validCovFiles.length) : 0;
             document.getElementById('stat-tests').textContent = `${testRate}% 通 / 平均覆盖率 ${avgCov}%`;
 
-            // Render Stepper Component
-            const stepperContainer = document.getElementById('pipeline-stepper-container');
-            stepperContainer.innerHTML = '';
-
-            for (let i = 1; i <= 6; i++) {
-                const stage = pipeline[i];
-                const card = document.createElement('div');
-                card.className = `step-card ${stage.status}`;
-                card.onclick = () => scrollToDiagnostic(i);
-                
-                let iconSymbol = "🟢";
-                let statusText = "已通过";
-                if (stage.status === 'blocked') { iconSymbol = "🔴"; statusText = "已阻断"; }
-                else if (stage.status === 'warn') { iconSymbol = "🟡"; statusText = "有告警"; }
-                else if (stage.status === 'disabled') { iconSymbol = "⚪"; statusText = "未激活"; }
-
-                card.innerHTML = `
-                    <div class="step-num">评估维度 0${i}</div>
-                    <div class="step-name">${stage.name}</div>
-                    <div class="step-status ${stage.status}">${iconSymbol} ${statusText}</div>
-                `;
-                stepperContainer.appendChild(card);
+            // If first render, auto-select first issue dimension
+            if (firstRender) {
+                const issueDimKey = Object.keys(dims).find(key => dims[key].status === 'fail' || dims[key].status === 'warn');
+                if (issueDimKey) {
+                    selectedDimensionId = issueDimKey;
+                }
+                firstRender = false;
             }
 
-            // Render Diagnostics Grid
-            const diagnosticContainer = document.getElementById('diagnostic-container');
-            diagnosticContainer.innerHTML = '';
+            // Render Compact Dimension Status Cards
+            const dimsContainer = document.getElementById('dim-status-cards-container');
+            if (dimsContainer) {
+                dimsContainer.innerHTML = '';
+                Object.values(dims).forEach(dim => {
+                    const card = document.createElement('div');
+                    card.className = `dim-status-card ${dim.status}`;
+                    if (dim.id === selectedDimensionId) {
+                        card.classList.add('active');
+                    }
+                    card.onclick = () => selectDimension(dim.id);
 
-            for (let i = 1; i <= 6; i++) {
-                const stage = pipeline[i];
-                if (stage.status === 'pass' || stage.status === 'disabled') continue;
+                    let statusLabel = "已通过";
+                    if (dim.status === "fail") statusLabel = "未达标";
+                    else if (dim.status === "warn") statusLabel = "有告警";
 
-                const diagCard = document.createElement('div');
-                diagCard.className = 'diag-item';
-                diagCard.id = 'diag-stage-' + i;
+                    card.innerHTML = `
+                        <div class="dim-status-icon ${dim.status}">
+                            ${getIconSvg(dim.status)}
+                        </div>
+                        <div class="dim-status-info">
+                            <span class="dim-status-title">${dim.name}</span>
+                            <span class="dim-status-badge ${dim.status}">${statusLabel}</span>
+                        </div>
+                    `;
+                    dimsContainer.appendChild(card);
+                });
+            }
 
-                let diagBadgeClass = stage.status === 'blocked' ? 'blocked' : 'warn';
-                let diagBadgeText = stage.status === 'blocked' ? '阻断 / Blocked' : '警告 / Warn';
+            // Render Selected Dimension Details Panel
+            const activeDim = dims[selectedDimensionId];
+            const detailsTitle = document.getElementById('dimension-details-title');
+            if (detailsTitle) {
+                detailsTitle.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    诊断明细与验收证据 / ${activeDim.name}
+                `;
+            }
 
-                let errorsHTML = '';
-                if (stage.code === 'isolated_task') {
-                    // Render isolated tasks with whitelisting action directly
-                    stage.errors.forEach(err => {
-                        errorsHTML += `
-                            <div class="diag-desc" style="display:flex; justify-content:space-between; align-items:center;">
-                                <span>⚠️ ${err.text}</span>
-                                <button class="whitelist-btn" style="margin-top:0;" onclick="addToWhitelist('${err.id}')">加入本地白名单</button>
-                            </div>
-                        `;
-                    });
+            const detailsContent = document.getElementById('dimension-details-content');
+            if (detailsContent) {
+                detailsContent.innerHTML = '';
+                
+                let errorsHTML = "";
+                if (activeDim.errors.length === 0) {
+                    errorsHTML = `<div class="diag-desc" style="color: var(--status-pass); font-weight: 500; padding: 12px 0;">
+                        ${getIconSvg('pass', 18)} 完美合规！该维度所有指标符合验收交付要求。
+                    </div>`;
                 } else {
-                    stage.errors.forEach(err => {
-                        errorsHTML += `<div class="diag-desc">❌ ${err}</div>`;
+                    activeDim.errors.forEach(err => {
+                        if (err.isIsolated) {
+                            if (!err.isWhitelisted) {
+                                errorsHTML += `
+                                    <div class="diag-desc" style="display:flex; justify-content:space-between; align-items:center; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.03); padding: 10px 0;">
+                                        <span style="display:flex; align-items:center; gap:8px;">${getIconSvg('warn')} ${err.text}</span>
+                                        <button class="whitelist-btn" style="margin-top:0;" onclick="addToWhitelist('${err.id}'); event.stopPropagation();">加入本地白名单</button>
+                                    </div>
+                                `;
+                            } else {
+                                errorsHTML += `
+                                    <div class="diag-desc" style="color:var(--status-warn); width: 100%; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(255,255,255,0.03); padding: 10px 0;">
+                                        <span style="display:flex; align-items:center; gap:8px;">${getIconSvg('warn')} [已加入白名单] ${err.text}</span>
+                                        <button class="whitelist-btn" style="margin-top:0; background:rgba(239,68,68,0.1); color:var(--status-fail); border-color:rgba(239,68,68,0.3);" onclick="removeFromWhitelist('${err.id}'); event.stopPropagation();">移出白名单</button>
+                                    </div>
+                                `;
+                            }
+                        } else {
+                            const icon = activeDim.status === 'fail' ? getIconSvg('fail') : getIconSvg('warn');
+                            errorsHTML += `
+                                <div class="diag-desc" style="border-bottom: 1px solid rgba(255,255,255,0.03); padding: 10px 0;">
+                                    ${icon} ${err.text}
+                                </div>
+                            `;
+                        }
                     });
                 }
-
-                diagCard.innerHTML = `
-                    <div class="diag-header">
-                        <span style="font-weight: 600; font-size:16px;">评估维度 0${i} - ${stage.name}</span>
-                        <span class="diag-badge ${diagBadgeClass}">${diagBadgeText}</span>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        ${errorsHTML}
-                    </div>
-                `;
-                diagnosticContainer.appendChild(diagCard);
-            }
-
-            if (diagnosticContainer.children.length === 0) {
-                diagnosticContainer.innerHTML = '<div style="text-align:center; padding: 24px; color: var(--text-secondary);">✨ 完美合规！所有指标一切正常，无诊断问题。</div>';
+                
+                detailsContent.innerHTML = errorsHTML;
             }
 
             // Render Whitelisted Tasks list
@@ -1665,7 +1972,7 @@
                         claimHTML += `<div style="margin-top:4px;"><span class="status-badge" style="background:rgba(100,116,139,0.12); color:${covColor};">cov ${pct}%</span></div>`;
                     }
                 } else if (!_chainNull(item.task_id)) {
-                    claimHTML = `<span style="color:var(--status-warn); font-weight:600;">⚠️ 未声明</span>`;
+                    claimHTML = `<span class="badge" style="background-color:var(--status-warn-glow); color:var(--status-warn); border:1px solid rgba(245,158,11,0.3); font-weight:600; display:inline-flex; align-items:center; gap:4px;">${getIconSvg('warn', 12)} 未声明</span>`;
                 }
 
                 // Column 5: Test & Coverage
@@ -1741,80 +2048,159 @@
             });
         }
 
-        // Render Governance Evolution (Tab 8)
+        // Render Governance Evolution (Tab 8) — 5 分类验收链条
+        const _CAT_STATUS_COLORS = {
+            passed: {bg: 'var(--status-ok)', text: '#fff', label: 'PASS'},
+            warning: {bg: 'var(--status-warn)', text: '#fff', label: 'WARN'},
+            failed: {bg: 'var(--status-fail, #e53e3e)', text: '#fff', label: 'FAIL'},
+        };
+
+        function _renderCategoryCards(containerEl, categoryData) {
+            containerEl.innerHTML = '';
+            if (!categoryData || categoryData.length === 0) {
+                containerEl.innerHTML = '<p style="text-align:center; padding:24px; color:var(--text-muted);">暂无分类数据</p>';
+                return;
+            }
+            categoryData.forEach(cat => {
+                const sc = _CAT_STATUS_COLORS[cat.status] || _CAT_STATUS_COLORS.passed;
+                const hasDetails = cat.details && cat.details.length > 0;
+                const card = document.createElement('div');
+                card.style.cssText = 'border:1px solid var(--border-color); border-radius:6px; margin-bottom:10px; overflow:hidden;';
+
+                const header = document.createElement('div');
+                header.style.cssText = 'display:flex; align-items:center; padding:12px 16px; gap:12px; cursor:' + (hasDetails ? 'pointer' : 'default') + '; background:var(--bg-secondary);';
+
+                header.innerHTML = `
+                    <span style="display:inline-block; padding:2px 10px; border-radius:4px; background:${sc.bg}; color:${sc.text}; font-size:11px; font-weight:700; min-width:40px; text-align:center;">${sc.label}</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:600; font-size:14px; color:var(--text-primary);">${cat.category}</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">${cat.description || ''}</div>
+                    </div>
+                    <div style="text-align:right; font-size:12px; color:var(--text-secondary);">
+                        <div>BLOCK: <b style="color:${cat.block_count > 0 ? 'var(--status-fail, #e53e3e)' : 'var(--text-primary)'}">${cat.block_count}</b></div>
+                        <div>WARN: <b style="color:${cat.warning_count > 0 ? 'var(--status-warn)' : 'var(--text-primary)'}">${cat.warning_count}</b></div>
+                    </div>
+                    ${hasDetails ? '<span style="font-size:10px; color:var(--text-muted);">&#9660;</span>' : ''}
+                `;
+                card.appendChild(header);
+
+                if (hasDetails) {
+                    const detailDiv = document.createElement('div');
+                    detailDiv.style.cssText = 'display:none; padding:8px 16px 12px; border-top:1px solid var(--border-color);';
+                    let detailHtml = '<table class="data-table" style="margin:0;"><thead><tr><th>Issue Key</th><th style="text-align:right;">BLOCK</th><th style="text-align:right;">WARNING</th></tr></thead><tbody>';
+                    cat.details.forEach(d => {
+                        detailHtml += `<tr><td style="font-family:monospace; font-size:12px; color:var(--accent-blue);">${d.rule_id}</td><td style="text-align:right;">${d.block_count}</td><td style="text-align:right;">${d.warning_count}</td></tr>`;
+                    });
+                    detailHtml += '</tbody></table>';
+                    detailDiv.innerHTML = detailHtml;
+                    card.appendChild(detailDiv);
+
+                    header.addEventListener('click', () => {
+                        const isOpen = detailDiv.style.display !== 'none';
+                        detailDiv.style.display = isOpen ? 'none' : 'block';
+                    });
+                }
+                containerEl.appendChild(card);
+            });
+        }
+
+        function switchCategoryView(view) {
+            document.querySelectorAll('.category-view-btn').forEach(btn => {
+                const isActive = btn.getAttribute('data-view') === view;
+                btn.style.background = isActive ? 'var(--accent-blue)' : 'transparent';
+                btn.style.color = isActive ? '#fff' : 'var(--text-secondary)';
+            });
+            document.querySelectorAll('.category-view-panel').forEach(p => p.style.display = 'none');
+            const panel = document.getElementById('category-view-' + view);
+            if (panel) panel.style.display = '';
+        }
+
+        function renderPhaseCategoryView() {
+            const container = document.getElementById('category-phase-container');
+            if (!container) return;
+            const byPhase = report.category_by_phase || {};
+            const phaseIds = Object.keys(byPhase).sort();
+            if (phaseIds.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding:24px; color:var(--text-muted);">暂无 PHASE 数据</p>';
+                return;
+            }
+            container.innerHTML = '';
+            phaseIds.forEach(pid => {
+                const details = document.createElement('details');
+                details.style.marginBottom = '8px';
+                const summary = document.createElement('summary');
+                summary.style.cssText = 'cursor:pointer; padding:8px 12px; font-size:13px; font-weight:600; color:var(--accent-blue); font-family:monospace; background:var(--bg-secondary); border-radius:4px;';
+                const cats = byPhase[pid];
+                const failedCount = cats.filter(c => c.status === 'failed').length;
+                const warnCount = cats.filter(c => c.status === 'warning').length;
+                summary.textContent = `${pid}（${failedCount} FAIL / ${warnCount} WARN / ${cats.length} 分类）`;
+                details.appendChild(summary);
+                const bodyDiv = document.createElement('div');
+                bodyDiv.style.marginTop = '4px';
+                details.appendChild(bodyDiv);
+                container.appendChild(details);
+                _renderCategoryCards(bodyDiv, cats);
+            });
+        }
+
+        function renderTaskCategoryView() {
+            const selector = document.getElementById('category-task-selector');
+            const body = document.getElementById('category-task-body');
+            if (!selector || !body) return;
+            const byTask = report.category_by_task || {};
+            const taskIds = Object.keys(byTask).sort();
+            if (taskIds.length === 0) {
+                body.innerHTML = '<p style="text-align:center; padding:24px; color:var(--text-muted);">暂无 Task 数据</p>';
+                return;
+            }
+            if (selector.options.length === 0) {
+                taskIds.forEach(tid => {
+                    const opt = document.createElement('option');
+                    opt.value = tid;
+                    opt.textContent = tid;
+                    selector.appendChild(opt);
+                });
+            }
+            const selected = selector.value || taskIds[0];
+            _renderCategoryCards(body, byTask[selected] || []);
+        }
+
         function renderGovernanceEvolution() {
-            const ruleBody = document.getElementById('rule-stats-table-body');
             const iterBody = document.getElementById('avg-iterations-table-body');
             const statRatio = document.getElementById('stat-derived-ratio');
             const statClosed = document.getElementById('stat-closed-task-count');
             const statPhase = document.getElementById('stat-phase-count');
-            if (!ruleBody || !iterBody) return;
 
             const metrics = report.governance_metrics || {};
             const ratio = typeof metrics.derived_task_ratio === 'number'
                 ? Math.round(metrics.derived_task_ratio * 100)
                 : 0;
             const byPhase = metrics.avg_iterations_by_phase || {};
-            const ruleStats = report.rule_stats_table || [];
+            const categorySummary = report.category_summary || [];
             const archive = report.acceptance_archive || [];
 
             if (statRatio) statRatio.textContent = `${ratio}%`;
             if (statClosed) statClosed.textContent = archive.length;
             if (statPhase) statPhase.textContent = Object.keys(byPhase).length;
 
-            // Rule stats table
-            ruleBody.innerHTML = '';
-            if (ruleStats.length === 0) {
-                ruleBody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align:center; padding:24px; color:var(--text-muted);">
-                            暂无规则触发记录
-                        </td>
-                    </tr>
-                `;
-            } else {
-                ruleStats.forEach(row => {
-                    const tr = document.createElement('tr');
-                    const neverTriggered = row.block_count === 0 && row.warning_count === 0;
-                    const rowStyle = neverTriggered
-                        ? 'opacity: 0.5; font-style: italic;'
-                        : '';
-                    const lastText = row.last_triggered
-                        ? new Date(row.last_triggered).toLocaleString()
-                        : '从未触发';
-                    tr.innerHTML = `
-                        <td style="${rowStyle}"><b style="font-family:monospace; color:var(--accent-blue);">${row.rule_id}</b></td>
-                        <td style="${rowStyle} font-size:13px;">${row.description || ''}</td>
-                        <td style="text-align:right; ${rowStyle}">${row.block_count}</td>
-                        <td style="text-align:right; ${rowStyle}">${row.warning_count}</td>
-                        <td style="font-size:12px; color:var(--text-secondary); ${rowStyle}">${lastText}</td>
-                    `;
-                    ruleBody.appendChild(tr);
-                });
-            }
+            const globalBody = document.getElementById('category-summary-body');
+            if (globalBody) _renderCategoryCards(globalBody, categorySummary);
 
-            // Avg iterations by phase
-            iterBody.innerHTML = '';
-            const phases = Object.entries(byPhase);
-            if (phases.length === 0) {
-                iterBody.innerHTML = `
-                    <tr>
-                        <td colspan="2" style="text-align:center; padding:24px; color:var(--text-muted);">
-                            暂无 PHASE 数据
-                        </td>
-                    </tr>
-                `;
-            } else {
-                phases
-                    .sort((a, b) => a[0].localeCompare(b[0]))
-                    .forEach(([phaseId, avg]) => {
+            renderPhaseCategoryView();
+            renderTaskCategoryView();
+
+            if (iterBody) {
+                iterBody.innerHTML = '';
+                const phases = Object.entries(byPhase);
+                if (phases.length === 0) {
+                    iterBody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:24px; color:var(--text-muted);">暂无 PHASE 数据</td></tr>`;
+                } else {
+                    phases.sort((a, b) => a[0].localeCompare(b[0])).forEach(([phaseId, avg]) => {
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td><b style="font-family:monospace; color:var(--accent-blue);">${phaseId}</b></td>
-                            <td style="text-align:right;">${avg}</td>
-                        `;
+                        tr.innerHTML = `<td><b style="font-family:monospace; color:var(--accent-blue);">${phaseId}</b></td><td style="text-align:right;">${avg}</td>`;
                         iterBody.appendChild(tr);
                     });
+                }
             }
         }
 

@@ -18,8 +18,6 @@
     "docs/design_rule_engine.md",
     "docs/task_list.json"
   ],
-  "evidence_refs": [
-    "AC-VT-010-01"
-  ],
+  "evidence_refs": [],
   "notes": "PHASE-VT-013 Dashboard 适配 + 自动核销（TASK-VT-186~188）：Dashboard 展示 per-issue 状态（CURRENT_BLOCK/CURRENT_WARNING/HISTORICAL/ACCEPTED/RESOLVED），severity 颜色透传。resolved 信号从人工 mark_complete 改为覆盖即核销（all gap_targets ⊆ current_claim_coverage）。traceability_report.json 新增 per_issue_states 字段。旧 _historical_debt_count 计数器替换为 historical_issues 列表。"
 }

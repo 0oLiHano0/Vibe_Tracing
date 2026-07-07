@@ -14,9 +14,6 @@
     "docs/design_channel_separation.md",
     "docs/task_list.json"
   ],
-  "evidence_refs": [
-    "AC-VT-001-01",
-    "AC-VT-010-01"
-  ],
+  "evidence_refs": [],
   "notes": "PHASE-VT-016 一期步骤 6：ChannelRenderer 显式 stdout/Dashboard 分流；channel.py 实现 print_section_separator + print_acceptance_summary（每 task 独立 section，中文业务语言）；output.py 删除 _print_gate_summary 和 _print_reflection_prompts，gate summary 精简为单行；stdout 信噪比从 42% → 90%+。"
 }

@@ -15,9 +15,6 @@
     "docs/design_channel_separation.md",
     "docs/tech_debt/phase16_audit_fix_plan.md"
   ],
-  "evidence_refs": [
-    "AC-VT-001-01",
-    "AC-VT-010-01"
-  ],
+  "evidence_refs": [],
   "notes": "PHASE-VT-016 一期审计 H3 修复：config.json schema 迁移 1.0.0 -> 1.1.0（新增 model 字段）。infra/loader/config.py 新增 migrate_config() 函数（幂等；显式 == 比较避免字符串版本号陷阱 \"1.10.0\" < \"1.9.0\"）；_TARGET_SCHEMA = \"1.1.0\" 常量；templates/config.template.json 同步升级；cli/init.py 在已有 config 分支调用 migrate_config 替代 json.load；cli/finalize.py 在 load_config 后调用 migrate_config；运行时 .vibetracing/config.json 已迁移（project_id / paths / language_tool_matrix 等字段保留完整）。"
 }

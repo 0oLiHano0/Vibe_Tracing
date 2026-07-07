@@ -11,9 +11,6 @@
     "docs/design_channel_separation.md",
     "docs/tech_debt/five_principles_audit.md"
   ],
-  "evidence_refs": [
-    "AC-VT-001-01",
-    "AC-VT-010-01"
-  ],
+  "evidence_refs": [],
   "notes": "PHASE-VT-016 一期 E2E 验证：10 个端到端测试覆盖完整 pipeline 路径（gate pass 验收摘要输出、gate blocked 无摘要、closed task exit 3、immutability、report_doc 新 key、Dashboard 新 Tab、无反思 stdout、规则表排序、无能力警告 stdout、无 emoji stdout）。五原则审查记录写入 tech_debt。"
 }

@@ -13,9 +13,6 @@
     "docs/design_channel_separation.md",
     "docs/task_list.json"
   ],
-  "evidence_refs": [
-    "AC-VT-001-01",
-    "AC-VT-010-01"
-  ],
+  "evidence_refs": [],
   "notes": "PHASE-VT-016 一期步骤 1：TaskSessionManager 实现 — task_sessions.json schema（schema_version + tasks dict）、TaskSession dataclass、状态机 OPEN → IN_PROGRESS → CLOSED、迭代计数、issue_counts 复合 key 累加（issue_type / issue_type:rule_id / issue_type:subtype）、find_closed_references 返回已 CLOSED task_id 列表、CLOSED 后 immutability 不可修改、OperationalLogger warning 降级处理。"
 }

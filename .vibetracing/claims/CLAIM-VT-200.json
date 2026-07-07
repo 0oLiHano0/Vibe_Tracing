@@ -11,9 +11,6 @@
     "docs/design_channel_separation.md",
     "docs/tech_debt/phase16_audit_fix_plan.md"
   ],
-  "evidence_refs": [
-    "AC-VT-001-01",
-    "AC-VT-010-01"
-  ],
+  "evidence_refs": [],
   "notes": "PHASE-VT-016 一期审计 H3 修复配套测试：test_scaffolding.py 的 test_run_init_creates_scaffolding 断言更新。原断言预期 vt init 重复运行时已有 config.json 不被修改（{custom: true}），H3 迁移逻辑按设计 §3.3.3 对已有 config 执行 schema 升级（补 schema_version=1.1.0 + model 字段），属于预期行为而非回归。新断言验证 custom 数据保留 + schema_version 升至 1.1.0 + model 字段补入，与 H3 迁移语义一致。"
 }

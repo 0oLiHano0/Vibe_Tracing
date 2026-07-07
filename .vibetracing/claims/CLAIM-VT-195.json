@@ -15,9 +15,6 @@
     "docs/design_channel_separation.md",
     "docs/task_list.json"
   ],
-  "evidence_refs": [
-    "AC-VT-001-01",
-    "AC-VT-010-01"
-  ],
+  "evidence_refs": [],
   "notes": "PHASE-VT-016 一期步骤 5：GovernanceMetricsAggregator 三项聚合（全量规则触发表按 BLOCK 降序 + 从未触发沉底、衍生 task 比例标题关键词匹配近似指标、按 PHASE 平均迭代次数）；reports.py 新增 acceptance_archive / rule_stats_table / governance_metrics 三个顶层 key；Dashboard 新增 Tab 5（验收存档）+ Tab 8（治理演进）。"
 }

@@ -1,6 +1,6 @@
 """Acceptance summary builder — 每 task 一份验收摘要 + 建议行判定。
 
-基于 docs/design_channel_separation.md §2.3.2 / §3.2.1。
+基于 docs/design/phase_channel_separation.md §2.3.2 / §3.2.1。
 
 触发条件：gate=PASS 且 current_commit_task_set 非空。
 多 task 处理：按 task 独立输出多份摘要，不合并。

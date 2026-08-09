@@ -1,6 +1,6 @@
 """AcceptanceSummaryBuilder + BusinessImpactResolver 单元测试。
 
-覆盖 docs/design_channel_separation.md §2.3.2 / §3.2.1 + TASK-VT-193 DOD：
+覆盖 docs/design/phase_channel_separation.md §2.3.2 / §3.2.1 + TASK-VT-193 DOD：
     - build_list 签名与返回结构（每 task 一份 summary dict）
     - recommendation 判定（severe_risks 为空 → accept / 非空 → reject）
     - resolved_block / resolved_warning / remaining_warning 三类计数

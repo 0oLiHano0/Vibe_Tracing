@@ -2,8 +2,8 @@
 
 **审查日期**: 2026-07-04
 **审查方法**: 4 个 subagent 并行审查 + 3 个 subagent 根因分析
-**审查依据**: `docs/design_channel_separation.md` + `docs/business_task_reflection_trajectory.md`
-**设计文档补完**: 本次审查发现 2 处设计文档缺口，已在 `docs/design_channel_separation.md` 中补完
+**审查依据**: `docs/design/phase_channel_separation.md` + `docs/business_task_reflection_trajectory.md`
+**设计文档补完**: 本次审查发现 2 处设计文档缺口，已在 `docs/design/phase_channel_separation.md` 中补完
 
 ---
 
@@ -65,7 +65,7 @@ TASK-VT-193 的 `ai_coding_guidance` 显式列出 ac_missing_evidence，但 `ato
 
 ## 3. 设计文档补完记录
 
-以下 2 处已在 `docs/design_channel_separation.md` 中补完：
+以下 2 处已在 `docs/design/phase_channel_separation.md` 中补完：
 
 | 补完位置 | 内容 | 解决问题 |
 |---|---|---|

@@ -58,19 +58,19 @@ class TestNewDashboardLayout:
         assert 'class="sidebar"' not in rendered_dashboard
 
     def test_new_tab_menu_items(self, rendered_dashboard: str):
-        """Verify the 4 core tabs (Overview, Traceability, Debts, Evidences) exist."""
-        assert "Overview" in rendered_dashboard
-        assert "Traceability" in rendered_dashboard
-        assert "Debts" in rendered_dashboard
-        assert "Evidences" in rendered_dashboard
+        """Verify the 4 core tabs (概览, 追溯关系, 历史债务, 证据索引) exist."""
+        assert "概览" in rendered_dashboard
+        assert "追溯关系" in rendered_dashboard
+        assert "历史债务" in rendered_dashboard
+        assert "证据索引" in rendered_dashboard
         # Legacy tabs are completely removed
         assert "Bootstrap" not in rendered_dashboard
         assert "Decisions" not in rendered_dashboard
 
-    def test_six_dimension_pipeline_container_exists(self, rendered_dashboard: str):
-        """The 6-dimension pipeline container is present."""
-        assert 'id="pipeline-stepper-container"' in rendered_dashboard
-        assert '质量门禁六维评估流水线' in rendered_dashboard
+    def test_four_business_dimensions_container_exists(self, rendered_dashboard: str):
+        """The 4-dimension business evaluation container is present."""
+        assert 'id="dim-status-cards-container"' in rendered_dashboard
+        assert '诊断明细与验收证据' in rendered_dashboard
 
     def test_five_column_trace_layout_exists(self, rendered_dashboard: str):
         """The 5-column trace tree is present."""

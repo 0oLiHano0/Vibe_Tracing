@@ -1,7 +1,7 @@
 """
 规则引擎纯函数 F 的完备性测试。
 
-覆盖 design_rule_engine_formal_fsm.md §7.4 完整枚举表的全部 32 种输入组合。
+覆盖 gate_engine_design.md §5.5 完整枚举表的全部 32 种输入组合。
 """
 
 import pytest

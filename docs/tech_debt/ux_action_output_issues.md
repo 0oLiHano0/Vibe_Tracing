@@ -4,10 +4,10 @@
 **创建**：2026-07-04
 **来源**：PHASE-VT-015 验证阶段识别
 **关联**：
-- `docs/design_agent_action_unification.md`
+- `docs/design/phase_channel_action_unification.md`
 - `docs/tech_debt/design_requires_human_field.md`（requires_human 字段为独立条目，不在本文范围）
 
-> 本文档记录 PHASE-VT-015 验证过程中发现的 3 个 UX / 实现瑕疵。三者**非架构性问题**（架构级 channel 分离问题见 `docs/design_channel_separation.md`），但影响用户感知与 Agent 消费质量。
+> 本文档记录 PHASE-VT-015 验证过程中发现的 3 个 UX / 实现瑕疵。三者**非架构性问题**（架构级 channel 分离问题见 `docs/design/phase_channel_separation.md`），但影响用户感知与 Agent 消费质量。
 
 ---
 
@@ -71,7 +71,7 @@ PHASE-VT-015 验证时 7 个 CURRENT issue 的 fingerprint 均不在 baseline（
 
 ### 建议修复
 
-`design_rule_engine.md` 未明确 baseline 更新策略。可选方案：
+`gate_engine_design.md` 未明确 baseline 更新策略。可选方案：
 
 | 方案 | 触发时机 | 优点 | 缺点 |
 |---|---|---|---|
@@ -83,7 +83,7 @@ PHASE-VT-015 验证时 7 个 CURRENT issue 的 fingerprint 均不在 baseline（
 
 ### 落地前置
 
-需先明确 baseline 的设计意图（是"一次性初始化"还是"债务基线"），再选方案。建议在 `docs/design_rule_engine.md` 的 Baseline 章节补充策略说明。
+需先明确 baseline 的设计意图（是"一次性初始化"还是"债务基线"），再选方案。建议在 `gate_engine_design.md` 中补充策略说明。
 
 ---
 
@@ -121,9 +121,9 @@ PHASE-VT-015 验证时 7 个 CURRENT issue 的 fingerprint 均不在 baseline（
 | 项 | 优先级 | 工作量 | 前置依赖 |
 |---|---|---|---|
 | UX 瑕疵 1（术语对齐） | 中 | 30 分钟 | 无 |
-| UX 瑕疵 2（baseline 刷新） | 中 | 2-4 小时（含设计决策） | `design_rule_engine.md` 策略补充 |
+| UX 瑕疵 2（baseline 刷新） | 中 | 2-4 小时（含设计决策） | `gate_engine_design.md` 策略补充 |
 | UX 瑕疵 3（reason 拼接） | 低 | 1 小时（含定位） | 无 |
 
 三者可作为独立 TASK 推进，不绑定特定 PHASE。
 
-**注意**：上述 3 项在 channel 分离架构落地后可能需要重新评估（参见 `docs/design_channel_separation.md`）。特别是 UX 瑕疵 1 的"预存债务"标签，若 channel 分离后终端不再承载 HISTORICAL 信息，术语冲突自然消失。
+**注意**：上述 3 项在 channel 分离架构落地后可能需要重新评估（参见 `docs/design/phase_channel_separation.md`）。特别是 UX 瑕疵 1 的"预存债务"标签，若 channel 分离后终端不再承载 HISTORICAL 信息，术语冲突自然消失。

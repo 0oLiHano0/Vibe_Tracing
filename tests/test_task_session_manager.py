@@ -1,6 +1,6 @@
 """TaskSessionManager 单元测试。
 
-覆盖 docs/design_channel_separation.md §3.3.2 + TASK-VT-192 DOD：
+覆盖 docs/design/phase_channel_separation.md §3.3.2 + TASK-VT-192 DOD：
     - schema 读写、文件不存在时的加载行为
     - OPEN → IN_PROGRESS → CLOSED 状态机
     - CLOSED task immutability

@@ -4,8 +4,8 @@
 **创建**：2026-07-04
 **定位**：业务需求源头文档，**架构设计的输入**
 **关联**：
-- `docs/design_channel_separation.md`（channel 架构设计，**待基于本文档整体重写**）
-- `docs/design_agent_action_unification.md`（issue 级分流契约，**PHASE-VT-015 已落地**；作为本文 §2.1.6 跨通道审计在 issue 粒度的底层依据）
+- `docs/design/phase_channel_separation.md`（channel 架构设计，**待基于本文档整体重写**）
+- `docs/design/phase_channel_action_unification.md`（issue 级分流契约，**PHASE-VT-015 已落地**；作为本文 §2.1.6 跨通道审计在 issue 粒度的底层依据）
 - `docs/tech_debt/ux_action_output_issues.md`（UX 瑕疵，本文落地后瑕疵 1 自然消解）
 - `docs/tech_debt/design_requires_human_field.md`（独立条目，不冲突）
 
@@ -107,8 +107,6 @@ Coverage: {pct}% ({status}, target: 80%)
 ```
 
 **验收摘要段**（仅 `gate=PASS 且 current_commit_task_set 非空` 时打印）：结构见规则 1。Agent 不响应该段，仅作为任务交付的最后动作输出。
-
-**总量目标**：约 50-70 行（vs 现状 120+ 行，信噪比从 42% → 90%+）。
 
 #### 2.1.5 Dashboard 内容补充清单
 
@@ -666,7 +664,7 @@ A (数据采集) → B (immutability) → C (task 验收摘要) → F (gate 精�
 
 > 本节列出**架构层**需要回答的问题，业务层已无疑问。架构设计师从这些问题出发，不回头质疑业务规则。
 
-**已解决**：以下问题已在 `docs/design_channel_separation.md`（已批准，PHASE-VT-016 待实施）中给出架构答案，不再在本文维护：
+**已解决**：以下问题已在 `docs/design/phase_channel_separation.md`（已批准，PHASE-VT-016 待实施）中给出架构答案，不再在本文维护：
 
 1. ~~`.vibetracing/task_sessions.json` 的并发写入策略与跨版本 schema 迁移机制~~ → 单进程模型，无需锁；`schema_version` 保留，迁移按需实现（YAGNI）
 2. ~~Task immutability 检查应放在 `_check_*` 系列的哪个位置~~ → pipeline 预检查，在 `detect_all_issues` 之前，命中则 exit code 3

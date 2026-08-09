@@ -4,7 +4,7 @@
 解释层的核心：为每个 issue 计算 (observed, activated, resolved, accepted, severity)，
 规则引擎 F 消费这些信号产出 OutputState。
 
-design_rule_engine.md §11.2 信号构造规则。
+gate_engine_design.md §9.2 信号构造规则。
 """
 
 from typing import Any, Dict, List, Optional, Set, Tuple

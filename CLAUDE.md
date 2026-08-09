@@ -40,7 +40,7 @@ DashBoard 是让用户能够快速通过从 PRD 开始的完整生命周期链�
 
 | # | 规则 | 判定 |
 |---|------|------|
-| A-1 | **允许**以 `docs/refactoring_design.md` 和 `docs/architecture_vision.md` 作为唯一设计基线 | 设计即目标 |
+| A-1 | **允许**以 `docs/design/vision_Analyze_Arch_Redesign.md` 作为 vt analyze 架构设计基线 | 设计即目标 |
 | A-2 | **禁止**代码向现状妥协而偏离设计文档 | 代码必须向设计对齐 |
 | A-3 | **禁止**修改设计文档以适配当前代码 | 设计文档是目标，不是现状描述 |
 
@@ -77,10 +77,10 @@ DashBoard 是让用户能够快速通过从 PRD 开始的完整生命周期链�
 
 ## 现阶段重要文档
 
-- `docs/refactoring_design.md` — Analyze pipeline 的架构细节
-- `docs/spec_pipeline_stage_1.md` — Pipeline 第一阶段的技术细节
-- `docs/spec_infra_loader.md` — Loader 包的技术细节
-- `docs/refactoring_architecture_vision.md` — 重构的架构愿景
+- `docs/design/vision_redesign.md` — Analyze pipeline 的架构细节
+- `docs/design/spec_pipeline_stage_1.md` — Pipeline 第一阶段的技术细节
+- `docs/design/spec_infra_loader.md` — Loader 包的技术细节
+- `docs/design/vision_Analyze_Arch_Redesign.md` — vt analyze 架构设计
 
 ## 运行时日志排错指南
 

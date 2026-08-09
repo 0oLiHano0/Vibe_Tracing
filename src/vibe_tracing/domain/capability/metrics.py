@@ -1,6 +1,6 @@
 """Agent capability metrics aggregator — 4 类指标 + 能力警告。
 
-基于 docs/design_channel_separation.md §3.2.4（agent_capability_metrics）与
+基于 docs/design/phase_channel_separation.md §3.2.4（agent_capability_metrics）与
 §2.3.4（决策 5：Agent 能力警告不阻断主流程、不在 stdout 提示、仅 Dashboard 徽章）。
 
 四类指标：

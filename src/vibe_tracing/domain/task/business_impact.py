@@ -1,6 +1,6 @@
 """Business impact resolver — 双层查找：项目覆写 > field_hints 默认 > 'high' 兜底。
 
-基于 docs/design_channel_separation.md §2.3.2 / §3.3.4 / §3.3.5。
+基于 docs/design/phase_channel_separation.md §2.3.2 / §3.3.4 / §3.3.5。
 
 查找优先级：
     1. 项目覆写 .vibetracing/business_impacts.json

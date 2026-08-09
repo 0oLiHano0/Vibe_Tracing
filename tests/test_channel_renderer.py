@@ -1,6 +1,6 @@
 """Unit tests for ChannelRenderer + print_acceptance_summary (T197).
 
-覆盖 docs/design_channel_separation.md §2.2 / §2.3.2：
+覆盖 docs/design/phase_channel_separation.md §2.2 / §2.3.2：
   - print_acceptance_summary：空输入不输出；每 task 一个 section；
     accept / reject 文本正确；迭代次数可选；无 emoji。
   - ChannelRenderer.render_stdout：gate=pass 且有 commit set 时输出摘要；

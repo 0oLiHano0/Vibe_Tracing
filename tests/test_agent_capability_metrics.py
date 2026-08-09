@@ -1,6 +1,6 @@
 """Unit tests for AgentCapabilityMetricsAggregator (T196).
 
-覆盖 docs/design_channel_separation.md §3.2.4 agent_capability_metrics：
+覆盖 docs/design/phase_channel_separation.md §3.2.4 agent_capability_metrics：
   - first_time_right_rate
   - avg_iterations
   - same_category_repeat_tasks

@@ -131,5 +131,12 @@
     "violations_count": 0,
     "command": "ruff check src/vibe_tracing/cli/finalize.py --output-format=json",
     "carried_over": false
+  },
+  {
+    "source_path": "src/vibe_tracing/domain/governance/category_mapper.py",
+    "outcome": "compliant",
+    "violations_count": 0,
+    "command": "ruff check src/vibe_tracing/domain/governance/category_mapper.py --output-format=json",
+    "carried_over": false
   }
 ]

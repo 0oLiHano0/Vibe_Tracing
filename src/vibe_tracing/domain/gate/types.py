@@ -1,7 +1,7 @@
 """
 规则引擎核心类型定义和纯状态变换函数 F。
 
-基于 design_rule_engine.md v3 和 design_rule_engine_formal_fsm.md v2。
+基于 gate_engine_design.md。
 规则引擎是纯函数：f(五元信号) → 状态。相同输入永远产生相同输出。
 """
 
@@ -108,7 +108,7 @@ class IssueSignal:
 def F(observed: bool, activated: bool, resolved: bool, accepted: bool, severity: Severity) -> OutputState:
     """规则引擎纯函数：五元信号 → 输出状态。
 
-    优先级短路求值（design_rule_engine.md §3.1）：
+    优先级短路求值（gate_engine_design.md §3）：
     Step 1: resolved=true → RESOLVED（终止）
     Step 2: accepted=true → ACCEPTED（终止）
     Step 3: observed=true ∧ activated=false → HISTORICAL（终止）
@@ -120,7 +120,7 @@ def F(observed: bool, activated: bool, resolved: bool, accepted: bool, severity:
     - Invariant 2 (ACTIVE 域): ¬(observed=true ∧ activated=false) → ACTIVE 域，severity 参与判定。
     - Invariant 3 (RESOLVED 优先): resolved=true → RESOLVED，覆盖所有其他轴。
 
-    完备性：32 种输入组合全部覆盖（design_rule_engine_formal_fsm.md §7.2）。
+    完备性：32 种输入组合全部覆盖（gate_engine_design.md §5.3）。
     互斥性：每种组合命中且仅命中一条规则（§7.3）。
     """
     if resolved:

@@ -1,6 +1,6 @@
 """Channel renderer — stdout vs Dashboard 分流调度（T197）。
 
-基于 docs/design_channel_separation.md §2.2 / §3.1。
+基于 docs/design/phase_channel_separation.md §2.2 / §3.1。
 
 stdout 结构（Agent 通道）：
     1. Agent 指令段（含 GATE DECISION + actions）

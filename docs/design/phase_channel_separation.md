@@ -1,13 +1,13 @@
 # Channel 分离与任务反思架构设计
 
-**状态**：已批准（PHASE-VT-016 待实施）
+**状态**：已批准，一期 MVP 已完成（2026-07-04~07-06），二期待实施
 **创建**：2026-07-04
 **定位**：基于 `docs/business_task_reflection_trajectory.md` 的架构设计（一期 + 二期合并设计、分期实施）
 **业务规范源头**：`docs/business_task_reflection_trajectory.md`（已锁定，不可变）
 
 **关联**：
 - `docs/business_task_reflection_trajectory.md`（业务规范，架构设计的唯一输入）
-- `docs/design_agent_action_unification.md`（PHASE-VT-015 已落地，issue 级分流底层依据）
+- `docs/design/phase_channel_action_unification.md`（PHASE-VT-015 已落地，issue 级分流底层依据）
 
 ---
 

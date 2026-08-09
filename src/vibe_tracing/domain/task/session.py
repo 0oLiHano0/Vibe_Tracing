@@ -1,6 +1,6 @@
 """Task session manager — task_sessions.json 读写、状态机、immutability、closed task 检测。
 
-基于 docs/design_channel_separation.md §3.1 / §3.3.2。
+基于 docs/design/phase_channel_separation.md §3.1 / §3.3.2。
 
 状态机：
     OPEN (首次 seen，隐式，不持久化) → IN_PROGRESS (创建即进入) → CLOSED (gate=PASS 且 task 在当前 commit set)
@@ -68,7 +68,7 @@ class AcceptanceSummary:
 class TaskSession:
     """单 task 的会话记录。
 
-    字段严格匹配 docs/design_channel_separation.md §3.3.2 schema：
+    字段严格匹配 docs/design/phase_channel_separation.md §3.3.2 schema：
         task_id, phase_id, status, first_seen, closed_at, iterations,
         issue_counts, model, acceptance_summary
     """

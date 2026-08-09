@@ -1,6 +1,6 @@
 """_evaluate_and_output 4 步编排 + --task-status + config.model 读取 — 单元测试。
 
-覆盖 docs/design_channel_separation.md §3.2.1 + TASK-VT-194 DOD：
+覆盖 docs/design/phase_channel_separation.md §3.2.1 + TASK-VT-194 DOD：
     - closed task 预检查 → exit 3（短路）
     - gate=PASS 时 session CLOSED + acceptance_summary 生成
     - gate=BLOCKED 时 session 保持 IN_PROGRESS

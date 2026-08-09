@@ -5,7 +5,7 @@
 **来源**：PHASE-VT-015 review 中识别的遗留功能性问题
 **关联**：
 - `src/vibe_tracing/cli/analyze/actions.py::_is_human_decision`
-- `docs/design_channel_separation.md`（架构级 channel 分离，优先于本条目）
+- `docs/design/phase_channel_separation.md`（架构级 channel 分离，优先于本条目）
 - `docs/tech_debt/ux_action_output_issues.md`（同属 tech_debt 目录的兄弟条目）
 
 ---

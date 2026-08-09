@@ -158,7 +158,7 @@ Step 5: 状态输出
 - **o=1（在基线中）+ 未激活**：经典历史债务 → HISTORICAL。语义正确。
 - **o=0（不在基线中）+ 未激活**：非基线 issue 未被当前提交处理 → ACTIVE 域 → CURRENT_BLOCK/WARNING。被 F 正确阻拦。语义正确。
 
-两种情况都被 F 正确覆盖，不存在"漏网之鱼"。详见 `design_rule_engine_formal_fsm.md` Section 9。
+两种情况都被 F 正确覆盖，不存在"漏网之鱼"。详见 `gate_engine_design.md` §5.7。
 
 ---
 

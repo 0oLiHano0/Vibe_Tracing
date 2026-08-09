@@ -333,3 +333,69 @@ loader 包内部不记录日志事件。日志由调用方（`pipeline.py:run_an
 | **PRD-Arch 校验** | `domain/compliance/prd_arch_validator.py` | 调用 `PrdParser.parse_file()` 独立解析 PRD |
 | **变更提案引擎** | `domain/governance/change_proposal.py` | 调用 `load_config()` 读取配置 |
 | **幽灵代码检测** | `domain/gate/claim_coverage.py` | 使用 `ctx.config` 构建白名单路径 |
+
+---
+
+## 7. 工具执行产物（证据 JSON 结构）
+
+> 以下文件由工具执行阶段（pipeline stage 3）生成，存放在 `output/evidences/`，后续被 DB 加载阶段（stage 5）读入内存 SQLite。
+
+### test_results.json
+
+```json
+[{
+  "nodeid": "tests/test_auth.py::test_login_success",
+  "outcome": "passed",
+  "exit_code": 0,
+  "command": "pytest tests/test_auth.py..."
+}]
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `nodeid` | string | pytest node ID，用作匹配键 |
+| `outcome` | string | `"passed"` / `"failed"` / `"error"` / `"skipped"` |
+| `exit_code` | int | 测试退出码 |
+| `command` | string | 执行的命令（可读用途） |
+
+### coverage_reports.json
+
+```json
+[{
+  "source_path": "src/vibe_tracing/db.py",
+  "percent_covered": 85.5,
+  "num_statements": 42,
+  "status": "compliant"
+}]
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `source_path` | string | 代码文件相对路径 |
+| `percent_covered` | float | 覆盖率百分比 (0–100) |
+| `num_statements` | int | 语句总数 |
+| `status` | string | `"compliant"` / `"violated"` / `"unclear"` |
+
+### 单个 Claim 文件
+
+```json
+{
+  "claim_id": "CLAIM-VT-001",
+  "related_task": "TASK-VT-001",
+  "code_refs": ["src/vibe_tracing/db.py"],
+  "test_refs": ["tests/test_db.py::test_init"],
+  "notes": "Implemented db helper",
+  "content_hash": "sha256...",
+  "timestamp": "2026-06-13T12:00:00Z"
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `claim_id` | string | Claim ID，格式 `CLAIM-{prefix}-\d+` |
+| `related_task` | string | 关联的 Task ID |
+| `code_refs` | string[] | 涉及的代码文件 |
+| `test_refs` | string[] | 涉及的测试 nodeid |
+| `notes` | string | 人类/Agent 备注 |
+| `content_hash` | string | 文件内容 SHA-256 |
+| `timestamp` | string | ISO 8601 时间戳 |

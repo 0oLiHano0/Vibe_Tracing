@@ -16,64 +16,43 @@ AI Coding Agent 的一致性校验框架。将技术产物（代码、测试、C
 
 ```text
 .
+├── pyproject.toml                      # 包配置、依赖与 CLI 入口
 ├── docs/
 │   ├── prd.md                          # 需求文档（REQ/AC）
 │   ├── architecture_constraints.json   # 架构约束
 │   ├── task_list.json                  # 开发任务
-│   ├── refactoring_design.md           # 重构设计（接口+步骤+删除清单）
-│   ├── architecture_vision.md          # 架构愿景（设计原则+校验规范）
-│   └── architecture_change_log.md      # 架构变更日志
+│   ├── architecture_change_log.md      # 架构变更日志
+│   ├── business_logic/                 # 业务逻辑（锁定源头）
+│   ├── design/                         # 代码架构设计（编码/重构依据）
+│   └── tech_debt/                      # 技术债务条目
 ├── src/vibe_tracing/
-│   ├── cli/                            # 入口与编排层
-│   │   ├── main.py                     # CLI 入口
-│   │   ├── common.py                   # 共享工具（_load_context 等）
-│   │   └── analyze/                    # vt analyze 子命令
-│   │       ├── pipeline.py             # 流水线调度（12 阶段）
-│   │       ├── gates.py                # Gate 2 前置条件
-│   │       ├── tools.py                # 工具执行
-│   │       ├── reports.py              # 报告生成
-│   │       └── output.py               # 终端输出
+│   ├── cli/                            # CLI 命令与编排层
+│   │   ├── main.py                     # 命令入口
+│   │   ├── init.py / doctor.py         # 项目初始化与健康检查
+│   │   ├── accept.py / finalize.py     # 人工验收与交付收尾
+│   │   └── analyze/                    # analyze 流水线、输出与报告
 │   ├── domain/                         # 领域层
 │   │   ├── context.py                  # UnifiedContext
-│   │   ├── evidence_builder.py         # 证据构建（merge+apply+persist）
-│   │   ├── merge_gate_engine.py        # 门禁判定引擎
-│   │   ├── risk_advisor.py             # 风险建议
-│   │   ├── architecture_compliance_checker.py
-│   │   ├── ghost_code_reconciler.py    # 幽灵代码检测
-│   │   ├── tool_evidence_adapter.py    # 工具执行引擎
-│   │   ├── raw_input_loader.py         # 原始输入加载
-│   │   ├── prd_parser.py              # PRD 解析
-│   │   ├── task_loader.py             # Task 加载
-│   │   ├── claim_loader.py            # Claim 加载
-│   │   ├── dashboard_renderer.py       # Dashboard 渲染
-│   │   ├── traceability_report_builder.py
-│   │   ├── reflection_prompts.py       # 反思提示
-│   │   └── architecture_change_proposal.py
-│   ├── analyzers/                      # 追踪分析器
-│   │   ├── requirement_task_analyzer.py
-│   │   ├── ac_test_analyzer.py
-│   │   └── claim_evidence_analyzer.py
+│   │   ├── capability/                 # Agent 能力指标
+│   │   ├── compliance/                 # PRD 与架构合规校验
+│   │   ├── evidence/                   # 证据构建与合并结果
+│   │   ├── gate/                       # 门禁、基线与信号计算
+│   │   ├── governance/                 # 治理指标与变更提案
+│   │   ├── risk/                       # 风险建议
+│   │   └── task/                       # 任务会话、验收与业务影响
 │   └── infra/                          # 基础设施层
 │       ├── db/                         # 内存 SQLite
-│       │   ├── schema.py               # 表结构 + init_in_memory_db
-│       │   ├── loaders.py              # load_tasks, load_claims, load_prd 等
-│       │   ├── queries.py              # check_* 查询函数 + get_full_chain
-│       │   └── exports.py              # upsert_*, purge_stale_cache
-│       ├── validation/                 # 格式校验
-│       │   ├── checks.py              # validate_inputs 入口
-│       │   ├── ids.py                 # ID 正则 + 生成
-│       │   ├── schema_validator.py    # JSON Schema 校验器
-│       │   └── schemas/               # JSON Schema 契约文件
-│       ├── config/                     # 枚举与 hints
+│       ├── loader/                     # PRD、Task、Claim 与配置加载
+│       ├── validation/                 # 输入与 Schema 校验
+│       ├── compliance/                 # 架构约束加载
+│       ├── report/                     # Dashboard、追溯报告与反思提示
+│       ├── config/                     # 枚举、边界与动态提示
 │       ├── logging/                    # JSONL 运行日志
-│       ├── git/                        # Git 工具
-│       └── tools/                      # 工具路径解析
-├── tests/
-└── .vibetracing/                       # VT 治理数据
-    ├── config.json
-    ├── claims/CLAIM-*.json             # 一任务一声明文件
-    ├── human_decisions.json
-    └── logs/
+│       └── tools/                      # 外部工具执行、解析与路径解析
+│   └── templates/                      # 初始化时使用的治理文件与 Dashboard 模板
+├── tests/                              # 单元测试与端到端测试
+├── output/                             # analyze 生成的报告与证据（运行产物）
+└── .vibetracing/                       # 被分析项目的治理数据（运行时创建）
 ```
 
 ---
@@ -114,6 +93,6 @@ pytest
 
 | 文档 | 内容 |
 |------|------|
-| [refactoring_design.md](docs/refactoring_design.md) | 重构设计：接口契约、实施步骤、变更清单、删除清单 |
-| [architecture_vision.md](docs/architecture_vision.md) | 架构愿景：设计原则、双层校验规范、门禁规则 |
+| [vision_redesign.md](docs/design/vision_redesign.md) | 重构设计：接口契约、实施步骤、变更清单、删除清单 |
+| [vision_Analyze_Arch_Redesign.md](docs/design/vision_Analyze_Arch_Redesign.md) | vt analyze 架构设计：设计原则、接口契约、包结构、数据流 |
 | [prd.md](docs/prd.md) | 需求文档：REQ/AC 定义 |
